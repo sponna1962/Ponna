@@ -110,3 +110,4 @@ npm run dev         # site on :3000
 ## Suggested next step
 
 The core product loop and its monetization path are now built end to end in code: student practices → hits their quota → buys a plan (real Razorpay order + webhook-verified activation) → keeps practicing with the new quota. The admin panel covers every section of §7. What remains is exactly three things only you can provide: an SMS/OTP provider account for real student login, your actual Razorpay business credentials, and hosting for your domain (Razorpay's webhook needs a public HTTPS URL to reach). Beyond that, I'd treat this as ready to hand to a developer for the polish pass noted above (tests, error states, rate limiting) before a real launch — I've been thorough about flagging what's a solid foundation versus what still needs review, and that line is worth taking seriously before this goes live with real students and real money.
+
