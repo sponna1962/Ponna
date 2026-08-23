@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useLanguage } from '../../../lib/language-context';
-import { apiUrl } from '../../../lib/api-config';
+import { studentFetch } from '../../../lib/student-fetch';
 import { LanguageToggle } from '../../../components/LanguageToggle';
 
 // Quiz-taking screen — implements §4.3 (Taking a Quiz): one question per
@@ -59,7 +59,7 @@ export default function QuizSessionPage() {
   }, [sessionId]);
 
   async function loadSession() {
-    const res = await fetch(apiUrl(`/quiz/${sessionId}`));
+    const res = await studentFetch(`/quiz/${sessionId}`);
     if (!res.ok) return;
     const data: SessionData = await res.json();
     setSession(data);
@@ -76,7 +76,7 @@ export default function QuizSessionPage() {
   }
 
   async function loadResults() {
-    const res = await fetch(apiUrl(`/quiz/${sessionId}/results`));
+    const res = await studentFetch(`/quiz/${sessionId}/results`);
     if (res.ok) setResults(await res.json());
   }
 
@@ -85,7 +85,7 @@ export default function QuizSessionPage() {
     const question = session.questions[currentIndex];
     setSubmitting(true);
 
-    const res = await fetch(apiUrl(`/quiz/${sessionId}/answer`), {
+    const res = await studentFetch(`/quiz/${sessionId}/answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionId: question.questionId, selectedOption: selected }),
@@ -100,7 +100,7 @@ export default function QuizSessionPage() {
     const isLast = currentIndex === session.questions.length - 1;
 
     if (isLast) {
-      await fetch(apiUrl(`/quiz/${sessionId}/complete`), { method: 'POST' });
+      await studentFetch(`/quiz/${sessionId}/complete`, { method: 'POST' });
       await loadResults();
       setSession({ ...session, status: 'COMPLETED' });
       return;
