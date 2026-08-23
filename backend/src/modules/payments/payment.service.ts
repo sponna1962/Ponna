@@ -57,7 +57,7 @@ export class PaymentService {
       throw new Error(`Razorpay order creation failed: ${response.status} ${await response.text()}`);
     }
 
-    const order = await response.json();
+   const order = (await response.json()) as { id: string; amount: number; currency: string };
     return { orderId: order.id, amount: order.amount, currency: order.currency, keyId: RAZORPAY_KEY_ID };
   }
 
