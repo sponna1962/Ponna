@@ -76,7 +76,7 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
       throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as { content?: { text?: string }[] };
     const text = data.content?.[0]?.text ?? '';
     const cleaned = text.replace(/```json|```/g, '').trim();
 
