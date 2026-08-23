@@ -27,6 +27,14 @@ model User {
   email          String?   @unique
   name           String?
   preferredLang  Language  @default(TA)
+
+  // Profile completion fields (§ profile-completion requirement) — nullable
+  // because initial signup is intentionally minimal (name + phone/OTP only).
+  // Required only when the student tries to view Rank or pay for a plan.
+  district           String?
+  cityTownVillage    String?
+  preparingFor       String[] @default([]) // multiple exam preferences, e.g. ["TNPSC", "Banking"]
+
   createdAt      DateTime  @default(now())
 
   subscriptions      Subscription[]
