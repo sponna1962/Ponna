@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
 
 // Question Management — implements §7.1: add individual questions, list with
-// status filter, publish/unpublish, disable, and manage difficulty.
-// Bulk upload lives on its own page (/admin/questions/upload).
+// status filter, publish/unpublish, disable, manage difficulty, and full
+// edit-in-place (question text, options, correct answer) — including for
+// already-published questions, so a typo or wrong answer key can be fixed
+// without disabling and re-adding the question.
 
 type Question = {
   id: string;
@@ -32,6 +34,7 @@ export default function AdminQuestionsPage() {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null); // null = "add new" mode; a question id = "editing that question"
 
   async function loadQuestions() {
     const res = await adminFetch(`/admin/questions?status=${statusFilter}`);
@@ -44,19 +47,68 @@ export default function AdminQuestionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
-  async function submitNewQuestion() {
-    setFormError(null);
-    const res = await adminFetch('/admin/questions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, difficulty: form.difficulty || undefined }),
-    });
-    if (!res.ok) {
-      const body = await res.json();
-      setFormError(body.error ?? 'Failed to add question');
-      return;
-    }
+  function startAdd() {
+    setEditingId(null);
     setForm(emptyForm);
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  function startEdit(q: Question) {
+    setEditingId(q.id);
+    setForm({
+      questionText: q.questionText,
+      optionA: q.optionA,
+      optionB: q.optionB,
+      optionC: q.optionC,
+      optionD: q.optionD,
+      correctOption: q.correctOption,
+      language: 'TA', // language isn't editable here; kept for the shared form shape
+      difficulty: q.difficulty ?? '',
+    });
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  async function submitForm() {
+    setFormError(null);
+
+    if (editingId) {
+      // Editing an existing question — PATCH, works the same whether it's
+      // currently Draft, Published, or Disabled; status is untouched here.
+      const res = await adminFetch(`/admin/questions/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionText: form.questionText,
+          optionA: form.optionA,
+          optionB: form.optionB,
+          optionC: form.optionC,
+          optionD: form.optionD,
+          correctOption: form.correctOption,
+          difficulty: form.difficulty || null,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        setFormError(body.error ?? 'Failed to save changes');
+        return;
+      }
+    } else {
+      const res = await adminFetch('/admin/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, difficulty: form.difficulty || undefined }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        setFormError(body.error ?? 'Failed to add question');
+        return;
+      }
+    }
+
+    setForm(emptyForm);
+    setEditingId(null);
     setShowForm(false);
     loadQuestions();
   }
@@ -85,7 +137,7 @@ export default function AdminQuestionsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={{ fontSize: 20 }}>Questions</h1>
         <button
-          onClick={() => setShowForm((s) => !s)}
+          onClick={() => (showForm ? setShowForm(false) : startAdd())}
           style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
         >
           {showForm ? 'Cancel' : '+ Add Question'}
@@ -94,6 +146,9 @@ export default function AdminQuestionsPage() {
 
       {showForm && (
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, marginBottom: 24, maxWidth: 560 }}>
+          <h2 style={{ fontSize: 14, marginBottom: 12, color: '#64748b' }}>
+            {editingId ? 'Edit Question' : 'New Question'}
+          </h2>
           <textarea
             placeholder="Question text"
             value={form.questionText}
@@ -117,13 +172,15 @@ export default function AdminQuestionsPage() {
                 {['A', 'B', 'C', 'D'].map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </label>
-            <label style={{ fontSize: 13 }}>
-              Language:{' '}
-              <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
-                <option value="TA">Tamil</option>
-                <option value="EN">English</option>
-              </select>
-            </label>
+            {!editingId && (
+              <label style={{ fontSize: 13 }}>
+                Language:{' '}
+                <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+                  <option value="TA">Tamil</option>
+                  <option value="EN">English</option>
+                </select>
+              </label>
+            )}
             <label style={{ fontSize: 13 }}>
               Difficulty:{' '}
               <select value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
@@ -133,8 +190,8 @@ export default function AdminQuestionsPage() {
               </select>
             </label>
           </div>
-          <button onClick={submitNewQuestion} style={{ padding: '8px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}>
-            Save as Draft
+          <button onClick={submitForm} style={{ padding: '8px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}>
+            {editingId ? 'Save Changes' : 'Save as Draft'}
           </button>
           {formError && <p style={{ color: '#dc2626', fontSize: 13, marginTop: 8 }}>{formError}</p>}
         </div>
@@ -172,7 +229,14 @@ export default function AdminQuestionsPage() {
         <tbody>
           {questions.map((q) => (
             <tr key={q.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
-              <td style={{ padding: 10, maxWidth: 320 }}>{q.questionText}</td>
+              <td style={{ padding: 10, maxWidth: 320 }}>
+                {q.questionText}
+                {!q.difficulty && (
+                  <div style={{ color: '#d97706', fontSize: 11, marginTop: 4 }}>
+                    ⚠ No difficulty set — won't appear in any student quiz until set below
+                  </div>
+                )}
+              </td>
               <td style={{ padding: 10 }}>
                 <select value={q.difficulty ?? ''} onChange={(e) => setDifficulty(q.id, e.target.value)}>
                   <option value="">—</option>
@@ -184,6 +248,7 @@ export default function AdminQuestionsPage() {
                 {q.aiSuggestedDifficulty ? `${q.aiSuggestedDifficulty} (${q.aiConfidence?.toFixed(0)}%)` : '—'}
               </td>
               <td style={{ padding: 10 }}>
+                <button onClick={() => startEdit(q)} style={{ marginRight: 8, fontSize: 12 }}>Edit</button>
                 {q.status !== 'PUBLISHED' && (
                   <button onClick={() => setStatus(q.id, 'publish')} style={{ marginRight: 8, fontSize: 12 }}>Publish</button>
                 )}
