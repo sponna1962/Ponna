@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
-import { apiUrl } from '../../lib/api-config';
+import { studentFetch } from '../../lib/student-fetch';
 
 // Implements §4.4: identical dashboard layout for free and paid users, plus
 // §4.5 language toggle. Average %, Questions Answered, Correct Answers always
@@ -15,11 +15,10 @@ type DashboardData = { OVERALL?: Bucket; MEDIUM?: Bucket; HARD?: Bucket };
 export default function DashboardPage() {
   const { t } = useLanguage();
   const [data, setData] = useState<DashboardData>({});
-  const [isPaidUser, setIsPaidUser] = useState(false); // comes from auth/subscription context in production
+  const [isPaidUser, setIsPaidUser] = useState(false); // TODO: derive from the student's active subscription — see README "known gaps"
 
   useEffect(() => {
-    // Placeholder userId — replace with authenticated session user
-    fetch(apiUrl('/students/demo-user/dashboard'))
+    studentFetch('/students/me/dashboard')
       .then((r) => r.json())
       .then(setData)
       .catch(() => {});
