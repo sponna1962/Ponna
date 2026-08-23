@@ -1,10 +1,12 @@
-// Ranking Engine — implements §8.1 (Ranking Formula).
-//
-// - Primary metric: average accuracy % within a bucket (OVERALL / MEDIUM / HARD)
-// - Eligibility: minimum questions answered in that bucket (admin-configurable, default 50)
-// - Tie-break: (1) accuracy %, (2) questions answered, (3) earliest updatedAt
+// Ranking Engine — implements §8.1 (Ranking Formula) plus the two-check Rank
+// gate from the profile-completion requirement:
+//   Rank is shown only if BOTH (1) the student's plan is eligible (paid) AND
+//   (2) their profile (district, city/town/village, preparing-for) is
+//   complete. Free practice and basic score viewing (avg %, answered,
+//   correct) never require either check.
 
 import { PrismaClient, PerformanceBucket, QuizMode } from '@prisma/client';
+import { isProfileComplete } from '../profile/profile.service';
 
 const prisma = new PrismaClient();
 
@@ -75,17 +77,40 @@ export class RankingService {
     }
   }
 
-  /** Dashboard read — same shape for free and paid; caller decides whether to mask `rank`. */
+  /**
+   * Dashboard read. Rank is only populated in the response when BOTH gates
+   * pass (plan eligible + profile complete) — otherwise it's null, and the
+   * two flags tell the frontend exactly which CTA to show ("Upgrade your
+   * plan" vs "Complete your profile") rather than a generic "locked" state.
+   */
   async getStudentDashboard(userId: string) {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: {
+        subscriptions: { where: { status: 'ACTIVE' }, include: { plan: true }, take: 1, orderBy: { cycleStart: 'desc' } },
+      },
+    });
+
+    const planEligible = user.subscriptions.some((s) => s.plan.code !== 'FREE');
+    const profileComplete = isProfileComplete(user);
+    const rankUnlocked = planEligible && profileComplete;
+
     const rows = await prisma.userPerformanceSummary.findMany({ where: { userId } });
-    return rows.reduce((acc, r) => {
+    const buckets = rows.reduce((acc, r) => {
       acc[r.bucket] = {
         averagePercent: r.averagePercent,
         questionsAnswered: r.questionsAnswered,
         correctAnswers: r.correctAnswers,
-        rank: r.rank, // null = not yet eligible
+        // rank stays null even for eligible users until they clear the
+        // §8.1 minimum-questions threshold — that's a separate, orthogonal
+        // gate from planEligible/profileComplete and needs no flag of its
+        // own (the frontend already shows "not yet eligible" for null rank
+        // when rankUnlocked is true).
+        rank: rankUnlocked ? r.rank : null,
       };
       return acc;
     }, {} as Record<string, unknown>);
+
+    return { buckets, planEligible, profileComplete, rankUnlocked };
   }
 }
