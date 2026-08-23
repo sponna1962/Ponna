@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
+import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
 
 // Mode selection + session start, implementing §4.2 / §4.3, with §4.5 language
@@ -65,7 +66,10 @@ export default function QuizStartPage() {
   return (
     <main style={{ padding: 16, maxWidth: 480, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h1 style={{ fontSize: 20, margin: 0 }}>{t.quiz.title}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <StudentMenu />
+          <h1 style={{ fontSize: 20, margin: 0 }}>{t.quiz.title}</h1>
+        </div>
         <LanguageToggle />
       </div>
 
