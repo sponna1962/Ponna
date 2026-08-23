@@ -1,0 +1,325 @@
+// PONNA.in — Database Schema
+// Implements the finalized Project Requirements Document (v1.1)
+// ORM: Prisma / PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────
+// USERS & AUTH
+// ─────────────────────────────────────────────────────────
+
+enum StaffRole {
+  SUPER_ADMIN
+  CONTENT_ADMIN
+  VIEWER_STAFF
+}
+
+model User {
+  id             String    @id @default(uuid())
+  phone          String?   @unique
+  email          String?   @unique
+  name           String?
+  preferredLang  Language  @default(TA)
+  createdAt      DateTime  @default(now())
+
+  subscriptions      Subscription[]
+  quizSessions       QuizSession[]
+  answerHistory       UserQuestionHistory[]
+  performanceSummary  UserPerformanceSummary[]
+
+  @@index([phone])
+  @@index([email])
+}
+
+// Internal staff accounts — separate from students, per §3 (multi-role admin access)
+model StaffUser {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         StaffRole
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  createdBy    String?
+
+  @@index([role])
+}
+
+// ─────────────────────────────────────────────────────────
+// PLANS & SUBSCRIPTIONS  (§5 Plans & Quota)
+// ─────────────────────────────────────────────────────────
+
+enum PlanCode {
+  FREE
+  PLAN_20
+  PLAN_50
+}
+
+model Plan {
+  id            String   @id @default(uuid())
+  code          PlanCode @unique
+  name          String
+  dailyLimit    Int?     // Free = 5/day; null for paid plans (no daily sub-limit, per §5)
+  cycleLimit    Int?     // Plan 20 = 600, Plan 50 = 1500; null for Free
+  cycleDays     Int      @default(30)
+  price         Decimal? @db.Decimal(10, 2) // finalized separately, see §13 Open Items
+  active        Boolean  @default(true)
+
+  subscriptions Subscription[]
+}
+
+// One row per purchase cycle. Renewal is manual (§5) — a new row is created on
+// each re-purchase; unused quota does NOT carry forward (enforced at query time:
+// only the current active Subscription's counters are read).
+model Subscription {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  planId           String
+  plan             Plan      @relation(fields: [planId], references: [id])
+
+  cycleStart       DateTime  @default(now())
+  cycleEnd         DateTime  // cycleStart + plan.cycleDays
+
+  questionsUsedInCycle Int   @default(0) // shared pool across Mixed/Medium/Hard, deducted at session start (§4.3, §5)
+  dailyUsedDate        DateTime? // for FREE plan's daily reset tracking
+  questionsUsedToday   Int   @default(0)
+
+  razorpayPaymentId String? @unique // set on paid plans once payment is confirmed via webhook; used for idempotency on retried webhook deliveries
+
+  status           SubscriptionStatus @default(ACTIVE)
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, status])
+  @@index([cycleEnd])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+}
+
+// ─────────────────────────────────────────────────────────
+// EXAM TAXONOMY  (§6.2 Metadata)
+// ─────────────────────────────────────────────────────────
+
+model ExamType {
+  id       String        @id @default(uuid())
+  name     String        @unique // TNPSC, UPSC, Banking, Police, etc.
+  subTypes ExamSubType[]
+  questions Question[]
+}
+
+model ExamSubType {
+  id         String    @id @default(uuid())
+  examTypeId String
+  examType   ExamType  @relation(fields: [examTypeId], references: [id])
+  name       String    // e.g. "Group 1", "Group 4"
+
+  questions  Question[]
+
+  @@unique([examTypeId, name])
+}
+
+// ─────────────────────────────────────────────────────────
+// QUESTIONS  (§6 Question Database)
+// ─────────────────────────────────────────────────────────
+
+enum Difficulty {
+  MEDIUM
+  HARD
+}
+
+enum QuestionStatus {
+  DRAFT
+  PUBLISHED
+  DISABLED
+}
+
+enum QuestionCategory {
+  STANDARD
+  CURRENT_AFFAIRS
+}
+
+enum Language {
+  TA
+  EN
+}
+
+model Question {
+  id               String            @id @default(uuid())
+  questionText     String
+  optionA          String
+  optionB          String
+  optionC          String
+  optionD          String
+  correctOption    CorrectOption
+
+  language         Language
+  // Nullable link so a TA/EN pair can later be treated as one logical question
+  // without any schema change (§6.2 Tamil/English translation linking)
+  translationGroupId String?
+
+  examTypeId       String?
+  examType         ExamType?         @relation(fields: [examTypeId], references: [id])
+  examSubTypeId    String?
+  examSubType      ExamSubType?      @relation(fields: [examSubTypeId], references: [id])
+
+  difficulty       Difficulty?       // nullable until AI classification / admin sets it
+  status           QuestionStatus    @default(DRAFT)
+  category         QuestionCategory  @default(STANDARD)
+  relevanceDate    DateTime?         // set for CURRENT_AFFAIRS questions, drives the 90-day recency window (§6.4)
+
+  contentHash      String            // duplicate detection
+  sourceBatchId    String?           // which bulk upload this came from
+
+  aiSuggestedDifficulty Difficulty?
+  aiConfidence          Float?       // 0–100, drives auto-publish vs Needs Review queue (§7.3, §9)
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  history          UserQuestionHistory[]
+  sessionQuestions QuizSessionQuestion[]
+
+  @@index([status, difficulty, category])
+  @@index([contentHash])
+  @@index([translationGroupId])
+  @@index([category, relevanceDate])
+}
+
+enum CorrectOption {
+  A
+  B
+  C
+  D
+}
+
+// ─────────────────────────────────────────────────────────
+// QUIZ SESSIONS  (§4.3 Taking a Quiz — resilience to disconnection)
+// ─────────────────────────────────────────────────────────
+
+enum QuizMode {
+  MIXED
+  MEDIUM
+  HARD
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+model QuizSession {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  mode            QuizMode
+  totalQuestions  Int
+  status          SessionStatus @default(IN_PROGRESS)
+
+  startedAt       DateTime      @default(now())
+  lastActivityAt  DateTime      @default(now())
+  completedAt     DateTime?
+
+  questions       QuizSessionQuestion[]
+
+  @@index([userId, status])
+  @@index([status, lastActivityAt]) // for the abandonment sweep job
+}
+
+model QuizSessionQuestion {
+  id            String       @id @default(uuid())
+  sessionId     String
+  session       QuizSession  @relation(fields: [sessionId], references: [id])
+  questionId    String
+  question      Question     @relation(fields: [questionId], references: [id])
+  sequenceNumber Int
+
+  answered      Boolean      @default(false)
+  selectedOption CorrectOption?
+  isCorrect     Boolean?
+  answeredAt    DateTime?
+
+  @@unique([sessionId, questionId])
+  @@index([sessionId, sequenceNumber])
+}
+
+// Permanent record of every question a student has actually answered.
+// Drives "unseen-first" allocation (§6.4) and performance rollups (§8).
+// Abandoned/unanswered reserved questions are NOT written here — only answered ones.
+model UserQuestionHistory {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  questionId      String
+  question        Question   @relation(fields: [questionId], references: [id])
+  difficulty      Difficulty // denormalized copy at answer-time, for fast bucket aggregation
+  modeTakenIn     QuizMode
+  answeredCorrectly Boolean
+  answeredAt      DateTime   @default(now())
+
+  @@unique([userId, questionId]) // one history row per (user, question) — repeats overwrite/upsert per repetition policy
+  @@index([userId, difficulty])
+  @@index([userId, answeredAt])
+}
+
+// ─────────────────────────────────────────────────────────
+// PERFORMANCE & RANKING  (§8 Ranking System)
+// ─────────────────────────────────────────────────────────
+
+// One row per (user, bucket). Bucket OVERALL = Mixed rollup across all answers;
+// MEDIUM/HARD = filtered by difficulty. Maintained incrementally on each answer
+// submission so rank queries don't scan raw history (§8.1 Recalculation note).
+model UserPerformanceSummary {
+  id               String        @id @default(uuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id])
+  bucket           PerformanceBucket
+  questionsAnswered Int          @default(0)
+  correctAnswers    Int          @default(0)
+  averagePercent    Float        @default(0)
+  rank              Int?         // null until eligibility threshold met (§8.1)
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([userId, bucket])
+  @@index([bucket, averagePercent])
+}
+
+enum PerformanceBucket {
+  OVERALL
+  MEDIUM
+  HARD
+}
+
+// ─────────────────────────────────────────────────────────
+// ADMIN-CONFIGURABLE SETTINGS  (§7.7, §8.1 — nothing hardcoded)
+// ─────────────────────────────────────────────────────────
+
+// Single-row (or keyed) settings table. Seed values match the launch defaults
+// agreed in the requirements doc; every value here is editable from the admin panel.
+model PlatformSettings {
+  id                          String   @id @default("singleton")
+
+  repetitionStrategy          String   @default("UNSEEN_FIRST_THEN_OLDEST") // configurable per §6.4
+  repeatAfterDays             Int?     // used only if strategy = REPEAT_AFTER_DAYS
+
+  caMaxFor5Q                  Int      @default(1)   // Current Affairs caps per session size, §6.4
+  caMaxFor20Q                 Int      @default(2)
+  caMaxFor50Q                 Int      @default(5)
+  caRecencyWindowDays         Int      @default(90)   // §6.4
+
+  aiConfidenceThreshold       Float    @default(85)   // §7.3 / §9
+  rankingEligibilityMinQuestions Int   @default(50)   // §8.1
+
+  sessionInactivityHours      Int      @default(48)   // abandonment window, §4.3 / §13
+
+  updatedAt                   DateTime @updatedAt
+}

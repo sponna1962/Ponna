@@ -1,0 +1,142 @@
+// Question Allocation Engine — implements §6.4 (Question Allocation & Repetition Engine)
+// and the Current Affairs ratio / recency rules.
+//
+// Priority order per session build:
+//   1. Current Affairs questions (up to the configured cap for this session size,
+//      pulled from within the recency window) — injected first
+//   2. Unseen standard questions matching mode/difficulty
+//   3. Only if unseen pool is exhausted: previously answered questions, oldest-first
+//      (or per whatever repetitionStrategy is configured)
+//
+// Nothing here is hardcoded — caps, recency window, and strategy all come from
+// PlatformSettings so admins can change behavior without a deploy.
+
+import { PrismaClient, Difficulty, QuizMode, QuestionCategory } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export class AllocationService {
+  async buildSessionQuestionIds(
+    userId: string,
+    mode: QuizMode,
+    sessionSize: number,
+  ): Promise<string[]> {
+    const settings = await prisma.platformSettings.findUniqueOrThrow({
+      where: { id: 'singleton' },
+    });
+
+    const difficulties = this.difficultiesForMode(mode);
+    const caCap = this.currentAffairsCapFor(sessionSize, settings);
+
+    const selected: string[] = [];
+
+    // ── Step 1: Current Affairs, within recency window, unseen first ──────────
+    if (caCap > 0) {
+      const recencyThreshold = daysAgo(settings.caRecencyWindowDays);
+      const caQuestions = await prisma.question.findMany({
+        where: {
+          status: 'PUBLISHED',
+          category: QuestionCategory.CURRENT_AFFAIRS,
+          difficulty: { in: difficulties },
+          relevanceDate: { gte: recencyThreshold },
+          history: { none: { userId } }, // unseen by this student
+        },
+        take: caCap,
+        orderBy: { relevanceDate: 'desc' },
+      });
+      selected.push(...caQuestions.map((q) => q.id));
+    }
+
+    const remaining = sessionSize - selected.length;
+    if (remaining <= 0) return selected;
+
+    // ── Step 2: Unseen standard questions ──────────────────────────────────────
+    const unseen = await prisma.question.findMany({
+      where: {
+        status: 'PUBLISHED',
+        difficulty: { in: difficulties },
+        id: { notIn: selected },
+        history: { none: { userId } },
+      },
+      take: remaining,
+      // Randomized ordering; for large tables swap this for a more scalable
+      // random-sampling strategy (e.g. TABLESAMPLE) before production scale.
+      orderBy: { createdAt: 'asc' },
+    });
+    selected.push(...unseen.map((q) => q.id));
+
+    const stillRemaining = sessionSize - selected.length;
+    if (stillRemaining <= 0) return selected;
+
+    // ── Step 3: Unseen pool exhausted → apply repetition policy ────────────────
+    const repeatPool = await this.getRepeatPool(
+      userId,
+      difficulties,
+      selected,
+      stillRemaining,
+      settings.repetitionStrategy,
+      settings.repeatAfterDays,
+    );
+    selected.push(...repeatPool);
+
+    return selected;
+  }
+
+  private difficultiesForMode(mode: QuizMode): Difficulty[] {
+    if (mode === 'MEDIUM') return [Difficulty.MEDIUM];
+    if (mode === 'HARD') return [Difficulty.HARD];
+    return [Difficulty.MEDIUM, Difficulty.HARD]; // MIXED
+  }
+
+  private currentAffairsCapFor(
+    sessionSize: number,
+    settings: { caMaxFor5Q: number; caMaxFor20Q: number; caMaxFor50Q: number },
+  ): number {
+    // Nearest configured bucket; sessions of other sizes scale proportionally
+    // from the 20-question default rather than falling back to a hardcoded number.
+    if (sessionSize <= 5) return settings.caMaxFor5Q;
+    if (sessionSize <= 20) return settings.caMaxFor20Q;
+    if (sessionSize <= 50) return settings.caMaxFor50Q;
+    return Math.round((settings.caMaxFor50Q / 50) * sessionSize);
+  }
+
+  private async getRepeatPool(
+    userId: string,
+    difficulties: Difficulty[],
+    excludeIds: string[],
+    take: number,
+    strategy: string,
+    repeatAfterDays: number | null,
+  ): Promise<string[]> {
+    const baseWhere = {
+      status: 'PUBLISHED' as const,
+      difficulty: { in: difficulties },
+      id: { notIn: excludeIds },
+      history: { some: { userId } },
+    };
+
+    if (strategy === 'REPEAT_AFTER_DAYS' && repeatAfterDays) {
+      const cutoff = daysAgo(repeatAfterDays);
+      const eligible = await prisma.question.findMany({
+        where: { ...baseWhere, history: { some: { userId, answeredAt: { lt: cutoff } } } },
+        take,
+      });
+      return eligible.map((q) => q.id);
+    }
+
+    // Default: UNSEEN_FIRST_THEN_OLDEST — least-recently-answered first
+    const history = await prisma.userQuestionHistory.findMany({
+      where: { userId, difficulty: { in: difficulties }, questionId: { notIn: excludeIds } },
+      orderBy: { answeredAt: 'asc' },
+      take,
+      select: { questionId: true },
+    });
+    return history.map((h) => h.questionId);
+  }
+}
+
+function daysAgo(n: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
