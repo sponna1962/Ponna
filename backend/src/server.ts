@@ -19,8 +19,9 @@ import { SettingsService } from './modules/admin/settings.service';
 import { StudentManagementService } from './modules/admin/student-management.service';
 import { PlansService } from './modules/admin/plans.service';
 import { startScheduledJobs } from './modules/scheduled-jobs';
-import { PaymentService } from './modules/payments/payment.service';
+import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest } from './modules/auth/student-auth.service';
+import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
 // CORS: in production the frontend (Vercel) and backend (Railway) are on
@@ -52,6 +53,7 @@ const studentManagementService = new StudentManagementService();
 const plansService = new PlansService();
 const paymentService = new PaymentService();
 const studentAuthService = new StudentAuthService();
+const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
 // STUDENT AUTH  (§4.1) — Firebase Phone Auth verification
@@ -145,6 +147,28 @@ app.get('/students/me/dashboard', requireStudentAuth, async (req: StudentAuthedR
   }
 });
 
+// GET /students/me/profile
+app.get('/students/me/profile', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const profile = await profileService.getProfile(req.studentUserId!);
+    res.json(profile);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load profile' });
+  }
+});
+
+// PATCH /students/me/profile  { name?, district?, cityTownVillage?, preparingFor? }
+app.patch('/students/me/profile', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const result = await profileService.updateProfile(req.studentUserId!, req.body);
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
 // ─────────────────────────────────────────────────────────
 // PAYMENTS  (§5, §7.6) — Razorpay
 // ─────────────────────────────────────────────────────────
@@ -157,6 +181,11 @@ app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthed
     res.json(order);
   } catch (err: any) {
     console.error(err);
+    if (err instanceof ProfileIncompleteError) {
+      // Distinct error code so the frontend can redirect to /profile rather
+      // than just showing a generic payment-failed message.
+      return res.status(400).json({ error: err.message, code: 'PROFILE_INCOMPLETE' });
+    }
     res.status(400).json({ error: err.message ?? 'Failed to create payment order' });
   }
 });
