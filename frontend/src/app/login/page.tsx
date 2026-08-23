@@ -62,7 +62,7 @@ export default function LoginPage() {
 
       const { token } = await res.json();
       localStorage.setItem('ponna_student_token', token);
-      window.location.href = '/dashboard';
+      window.location.href = '/home';
     } catch (err) {
       console.error(err);
       setError(t.login.verifyError);
