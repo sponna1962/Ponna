@@ -10,11 +10,19 @@
 
 import { PrismaClient, PlanCode } from '@prisma/client';
 import crypto from 'crypto';
+import { isProfileComplete } from '../profile/profile.service';
 
 const prisma = new PrismaClient();
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+export class ProfileIncompleteError extends Error {
+  constructor() {
+    super('Please complete your profile (district, city/town/village, preparing for) before purchasing a plan.');
+    this.name = 'ProfileIncompleteError';
+  }
+}
 
 export class PaymentService {
   /**
@@ -22,8 +30,18 @@ export class PaymentService {
    * returned order id to open Razorpay's checkout widget. No Subscription
    * exists yet at this point — it's only created once the webhook confirms
    * payment actually succeeded.
+   *
+   * Profile completion is required before payment (profile-completion
+   * requirement) — checked server-side, not just hidden in the UI, since a
+   * paid plan is exactly the kind of action that shouldn't be bypassable by
+   * calling the API directly.
    */
   async createOrder(userId: string, planCode: PlanCode) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (!isProfileComplete(user)) {
+      throw new ProfileIncompleteError();
+    }
+
     if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
       throw new Error('Razorpay is not configured — set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.');
     }
@@ -57,7 +75,7 @@ export class PaymentService {
       throw new Error(`Razorpay order creation failed: ${response.status} ${await response.text()}`);
     }
 
-   const order = (await response.json()) as { id: string; amount: number; currency: string };
+    const order = (await response.json()) as { id: string; amount: number; currency: string };
     return { orderId: order.id, amount: order.amount, currency: order.currency, keyId: RAZORPAY_KEY_ID };
   }
 
