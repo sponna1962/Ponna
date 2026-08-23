@@ -16,6 +16,11 @@ import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
 
+// Forces this page to render dynamically rather than at build time — required
+// because useSearchParams() (reading the ?complete=1 flag) otherwise fails
+// Next.js's static-export prerendering with an opaque build error.
+export const dynamic = 'force-dynamic';
+
 const EXAM_OPTIONS = ['TNPSC', 'UPSC', 'Banking', 'Police', 'SSC', 'Railways'];
 
 type ProfileData = {
