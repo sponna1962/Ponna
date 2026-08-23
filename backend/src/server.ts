@@ -20,6 +20,7 @@ import { StudentManagementService } from './modules/admin/student-management.ser
 import { PlansService } from './modules/admin/plans.service';
 import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService } from './modules/payments/payment.service';
+import { StudentAuthService, requireStudentAuth, StudentAuthedRequest } from './modules/auth/student-auth.service';
 
 const app = express();
 // CORS: in production the frontend (Vercel) and backend (Railway) are on
@@ -50,16 +51,34 @@ const settingsService = new SettingsService();
 const studentManagementService = new StudentManagementService();
 const plansService = new PlansService();
 const paymentService = new PaymentService();
+const studentAuthService = new StudentAuthService();
+
+// ─────────────────────────────────────────────────────────
+// STUDENT AUTH  (§4.1) — Firebase Phone Auth verification
+// ─────────────────────────────────────────────────────────
+
+// POST /auth/firebase-login  { firebaseIdToken }
+// Called by the frontend after Firebase's client SDK confirms the OTP.
+app.post('/auth/firebase-login', async (req, res) => {
+  try {
+    const { firebaseIdToken } = req.body;
+    const result = await studentAuthService.loginWithFirebaseToken(firebaseIdToken);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(401).json({ error: err.message ?? 'Login failed' });
+  }
+});
 
 // ─────────────────────────────────────────────────────────
 // STUDENT ROUTES
 // ─────────────────────────────────────────────────────────
 
-// POST /quiz/start  { userId, mode: 'MIXED'|'MEDIUM'|'HARD', sessionSize }
-app.post('/quiz/start', async (req, res) => {
+// POST /quiz/start  { mode: 'MIXED'|'MEDIUM'|'HARD', sessionSize }  — userId now comes from the JWT, not the request body
+app.post('/quiz/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    const { userId, mode, sessionSize } = req.body;
-    const session = await sessionService.startSession(userId, mode, sessionSize);
+    const { mode, sessionSize } = req.body;
+    const session = await sessionService.startSession(req.studentUserId!, mode, sessionSize);
     res.json(session);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
@@ -71,7 +90,7 @@ app.post('/quiz/start', async (req, res) => {
 });
 
 // GET /quiz/:sessionId  — session + questions for the quiz-taking UI
-app.get('/quiz/:sessionId', async (req, res) => {
+app.get('/quiz/:sessionId', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
     const session = await sessionService.getSessionForStudent(req.params.sessionId);
     res.json(session);
@@ -82,7 +101,7 @@ app.get('/quiz/:sessionId', async (req, res) => {
 });
 
 // POST /quiz/:sessionId/answer  { questionId, selectedOption }
-app.post('/quiz/:sessionId/answer', async (req, res) => {
+app.post('/quiz/:sessionId/answer', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
     const { questionId, selectedOption } = req.body;
     const result = await sessionService.submitAnswer(req.params.sessionId, questionId, selectedOption);
@@ -94,7 +113,7 @@ app.post('/quiz/:sessionId/answer', async (req, res) => {
 });
 
 // POST /quiz/:sessionId/complete
-app.post('/quiz/:sessionId/complete', async (req, res) => {
+app.post('/quiz/:sessionId/complete', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
     const session = await sessionService.completeSession(req.params.sessionId);
     res.json(session);
@@ -105,7 +124,7 @@ app.post('/quiz/:sessionId/complete', async (req, res) => {
 });
 
 // GET /quiz/:sessionId/results — score summary for the results screen
-app.get('/quiz/:sessionId/results', async (req, res) => {
+app.get('/quiz/:sessionId/results', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
     const results = await sessionService.getSessionResults(req.params.sessionId);
     res.json(results);
@@ -115,10 +134,10 @@ app.get('/quiz/:sessionId/results', async (req, res) => {
   }
 });
 
-// GET /students/:userId/dashboard
-app.get('/students/:userId/dashboard', async (req, res) => {
+// GET /students/me/dashboard — userId comes from the JWT
+app.get('/students/me/dashboard', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    const dashboard = await rankingService.getStudentDashboard(req.params.userId);
+    const dashboard = await rankingService.getStudentDashboard(req.studentUserId!);
     res.json(dashboard);
   } catch (err) {
     console.error(err);
@@ -130,12 +149,11 @@ app.get('/students/:userId/dashboard', async (req, res) => {
 // PAYMENTS  (§5, §7.6) — Razorpay
 // ─────────────────────────────────────────────────────────
 
-// POST /payments/create-order  { userId, planCode: 'PLAN_20'|'PLAN_50' }
-// Returns what the frontend needs to open Razorpay's checkout widget.
-app.post('/payments/create-order', async (req, res) => {
+// POST /payments/create-order  { planCode: 'PLAN_20'|'PLAN_50' } — userId comes from the JWT
+app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    const { userId, planCode } = req.body;
-    const order = await paymentService.createOrder(userId, planCode);
+    const { planCode } = req.body;
+    const order = await paymentService.createOrder(req.studentUserId!, planCode);
     res.json(order);
   } catch (err: any) {
     console.error(err);
