@@ -4,14 +4,14 @@
 //     → confidence >= threshold → auto-publish
 //     → confidence <  threshold → stays Draft, lands in "Needs Review" queue
 //
-// Uses the Anthropic API directly. Requires ANTHROPIC_API_KEY in the
+// Uses the Google Gemini API directly. Requires GEMINI_API_KEY in the
 // environment — this is a real account/credential you provide (see README).
 
 import { PrismaClient, Difficulty, QuestionStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_MODEL = 'claude-sonnet-4-6';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = 'gemini-1.5-flash'; // fast + cheap, appropriate for a per-question classification call
 
 interface ClassificationResult {
   difficulty: Difficulty;
@@ -21,13 +21,13 @@ interface ClassificationResult {
 
 export class ClassificationService {
   /**
-   * Classifies a single question via the Anthropic API. The prompt includes
+   * Classifies a single question via the Gemini API. The prompt includes
    * exam type/sub-type context, since "Medium" for TNPSC Group 4 and "Medium"
    * for UPSC are not the same bar (§9).
    */
   async classifyQuestion(questionId: string): Promise<ClassificationResult> {
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY is not set — AI classification is unavailable until this is configured.');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set — AI classification is unavailable until this is configured.');
     }
 
     const question = await prisma.question.findUniqueOrThrow({
@@ -58,26 +58,26 @@ Guidance:
 Respond with ONLY a JSON object, no other text, no markdown fences:
 {"difficulty": "MEDIUM" or "HARD", "confidence": <0-100 integer>, "reasoning": "<one short sentence>"}`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 200 },
+        }),
       },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 200,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
+    );
 
     if (!response.ok) {
-      throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
+      throw new Error(`Gemini API error: ${response.status} ${await response.text()}`);
     }
 
-    const data = (await response.json()) as { content?: { text?: string }[] };
-    const text = data.content?.[0]?.text ?? '';
+    const data = (await response.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     const cleaned = text.replace(/```json|```/g, '').trim();
 
     let parsed: { difficulty: string; confidence: number; reasoning: string };
