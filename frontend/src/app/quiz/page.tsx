@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
-import { apiUrl } from '../../lib/api-config';
+import { studentFetch } from '../../lib/student-fetch';
 
 // Mode selection + session start, implementing §4.2 / §4.3, with §4.5 language
 // toggle. On start, calls the backend which reserves quota and builds the
@@ -16,10 +16,10 @@ export default function QuizStartPage() {
 
   async function startQuiz(sessionSize: number) {
     setError(null);
-    const res = await fetch(apiUrl('/quiz/start'), {
+    const res = await studentFetch('/quiz/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: 'demo-user', mode, sessionSize }),
+      body: JSON.stringify({ mode, sessionSize }),
     });
     if (!res.ok) {
       const body = await res.json();
