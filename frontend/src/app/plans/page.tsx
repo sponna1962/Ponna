@@ -5,6 +5,7 @@ import Script from 'next/script';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
 import { LanguageToggle } from '../../components/LanguageToggle';
+import { StudentMenu } from '../../components/StudentMenu';
 
 // Plan purchase page — the student-facing half of the payment loop. Calls
 // POST /payments/create-order to get a Razorpay order, then opens Razorpay's
@@ -81,7 +82,10 @@ export default function PlansPage() {
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, margin: 0 }}>{t.plans.title}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <StudentMenu />
+          <h1 style={{ fontSize: 20, margin: 0 }}>{t.plans.title}</h1>
+        </div>
         <LanguageToggle />
       </div>
 
