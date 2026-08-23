@@ -10,16 +10,10 @@
 // separate screen to build or keep in sync.
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
-
-// Forces this page to render dynamically rather than at build time — required
-// because useSearchParams() (reading the ?complete=1 flag) otherwise fails
-// Next.js's static-export prerendering with an opaque build error.
-export const dynamic = 'force-dynamic';
 
 const EXAM_OPTIONS = ['TNPSC', 'UPSC', 'Banking', 'Police', 'SSC', 'Railways'];
 
@@ -36,8 +30,17 @@ type ProfileData = {
 
 export default function ProfilePage() {
   const { t, lang, setLang } = useLanguage();
-  const searchParams = useSearchParams();
-  const cameFromGate = searchParams.get('complete') === '1'; // set when redirected here because a gate blocked the student
+  // Read ?complete=1 via the plain browser API rather than Next's
+  // useSearchParams(), which requires a Suspense boundary during static
+  // export and caused an opaque build failure. This is read once on mount,
+  // client-side only — fine here since it only controls a UI banner.
+  const [cameFromGate, setCameFromGate] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCameFromGate(new URLSearchParams(window.location.search).get('complete') === '1');
+    }
+  }, []);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [district, setDistrict] = useState('');
