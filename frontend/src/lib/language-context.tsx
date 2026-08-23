@@ -13,7 +13,7 @@ const STORAGE_KEY = 'ponna_lang';
 type LanguageContextValue = {
   lang: Lang;
   setLang: (lang: Lang) => void;
-  t: typeof translations['ta'];
+t: (typeof translations)[Lang];
 };
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
