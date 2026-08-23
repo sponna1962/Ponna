@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Script from 'next/script';
 import { useLanguage } from '../../lib/language-context';
-import { apiUrl } from '../../lib/api-config';
+import { studentFetch } from '../../lib/student-fetch';
 import { LanguageToggle } from '../../components/LanguageToggle';
 
 // Plan purchase page — the student-facing half of the payment loop. Calls
@@ -33,10 +33,10 @@ export default function PlansPage() {
     setLoadingPlan(planCode);
 
     try {
-      const res = await fetch(apiUrl('/payments/create-order'), {
+      const res = await studentFetch('/payments/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'demo-user', planCode }), // replace with authenticated user id
+        body: JSON.stringify({ planCode }),
       });
       if (!res.ok) {
         const body = await res.json();
