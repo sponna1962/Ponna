@@ -40,6 +40,13 @@ export default function PlansPage() {
       });
       if (!res.ok) {
         const body = await res.json();
+        if (body.code === 'PROFILE_INCOMPLETE') {
+          // Server-side gate (not just a UI nicety) — see payment.service.ts.
+          // Redirect to the same Profile page used for the Rank gate, with
+          // the same "?complete=1" flag so it shows the completion banner.
+          window.location.href = '/profile?complete=1';
+          return;
+        }
         throw new Error(body.error ?? t.plans.paymentError);
       }
       const order = await res.json();
@@ -55,7 +62,7 @@ export default function PlansPage() {
           // Subscription is only created once Razorpay's webhook lands on the
           // backend (usually within seconds). This just tells the student
           // what's happening rather than claiming the plan is active yet.
-          window.location.href = '/dashboard?payment=processing';
+          window.location.href = '/home?payment=processing';
         },
         modal: {
           ondismiss: () => setLoadingPlan(null),
