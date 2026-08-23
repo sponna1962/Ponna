@@ -3,8 +3,8 @@
 // rank recomputation (§8.1). Imported once from server.ts on startup.
 
 import cron from 'node-cron';
-import { SessionService } from '../quiz/session.service';
-import { RankingService } from '../ranking/ranking.service';
+import { SessionService } from './quiz/session.service';
+import { RankingService } from './ranking/ranking.service';
 
 const sessionService = new SessionService();
 const rankingService = new RankingService();
