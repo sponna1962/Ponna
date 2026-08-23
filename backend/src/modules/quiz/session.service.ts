@@ -13,7 +13,13 @@ const allocation = new AllocationService();
 const ranking = new RankingService();
 
 export class SessionService {
-  /** Starts a new session, or returns the existing in-progress one if present. */
+  /**
+   * Starts a new session, or returns the existing in-progress one if present.
+   * If an in-progress session exists with a DIFFERENT mode/size than what
+   * was just requested, `resumedWithDifferentSelection: true` is included so
+   * the frontend can show a clear "you're continuing your earlier X session"
+   * message instead of silently ignoring the student's new choice.
+   */
   async startSession(userId: string, mode: QuizMode, requestedSize: number) {
     const existing = await prisma.quizSession.findFirst({
       where: { userId, status: SessionStatus.IN_PROGRESS },
@@ -21,7 +27,8 @@ export class SessionService {
     });
     if (existing) {
       // §4.3: same session resumes exactly where the student left off, no re-deduction
-      return existing;
+      const differs = existing.mode !== mode || existing.totalQuestions !== requestedSize;
+      return { ...existing, resumedWithDifferentSelection: differs };
     }
 
     // Build the eligible question list FIRST, before touching quota. This is
