@@ -1,48 +1,74 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { firebaseAuth } from '../../lib/firebase';
 import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { apiUrl } from '../../lib/api-config';
 
-// Login page implementing §4.1 (Account — mobile OTP-based login) with §4.5
-// language toggle wired in. NOTE: posts to /api/auth/* endpoints which are
-// NOT yet implemented in the backend — see README for the OTP provider
-// dependency. This page is wired for that flow already.
+// Login page implementing §4.1 (Account — mobile OTP-based login) using
+// Firebase Phone Auth. Firebase's client SDK sends/verifies the OTP directly
+// with Google's servers (via an invisible reCAPTCHA) — our backend is only
+// involved AFTER Firebase confirms the phone number, to verify that result
+// and issue our own session JWT (see student-auth.service.ts).
 
 export default function LoginPage() {
   const { t } = useLanguage();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
   async function requestOtp() {
     setError(null);
-    const res = await fetch(apiUrl('/auth/request-otp'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
-    });
-    if (!res.ok) {
+    setLoading(true);
+    try {
+      // A fresh RecaptchaVerifier is created per attempt — reusing a stale
+      // one across retries is a common source of confusing Firebase errors.
+      const verifier = new RecaptchaVerifier(firebaseAuth, recaptchaContainerRef.current!, {
+        size: 'invisible',
+      });
+      const fullPhone = phone.startsWith('+') ? phone : `+91${phone}`; // defaults to India country code
+      confirmationRef.current = await signInWithPhoneNumber(firebaseAuth, fullPhone, verifier);
+      setOtpSent(true);
+    } catch (err) {
+      console.error(err);
       setError(t.login.sendError);
-      return;
+    } finally {
+      setLoading(false);
     }
-    setOtpSent(true);
   }
 
   async function verifyOtp() {
     setError(null);
-    const res = await fetch(apiUrl('/auth/verify-otp'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, otp }),
-    });
-    if (!res.ok) {
+    setLoading(true);
+    try {
+      if (!confirmationRef.current) throw new Error('No OTP request in progress');
+      const credential = await confirmationRef.current.confirm(otp);
+      const firebaseIdToken = await credential.user.getIdToken();
+
+      // Now exchange the verified Firebase token for our own session JWT.
+      const res = await fetch(apiUrl('/auth/firebase-login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firebaseIdToken }),
+      });
+      if (!res.ok) throw new Error('Backend login failed');
+
+      const { token } = await res.json();
+      localStorage.setItem('ponna_student_token', token);
+      window.location.href = '/dashboard';
+    } catch (err) {
+      console.error(err);
       setError(t.login.verifyError);
-      return;
+    } finally {
+      setLoading(false);
     }
-    window.location.href = '/dashboard';
   }
 
   return (
@@ -75,11 +101,15 @@ export default function LoginPage() {
         </>
       )}
 
+      {/* Invisible reCAPTCHA anchor required by Firebase — renders nothing visible */}
+      <div ref={recaptchaContainerRef} />
+
       <button
         onClick={otpSent ? verifyOtp : requestOtp}
+        disabled={loading || !phone}
         style={{ width: '100%', padding: 14, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none' }}
       >
-        {otpSent ? t.login.verify : t.login.sendOtp}
+        {loading ? '…' : otpSent ? t.login.verify : t.login.sendOtp}
       </button>
 
       {error && <p style={{ color: '#dc2626', marginTop: 12 }}>{error}</p>}
