@@ -1,111 +1,368 @@
 'use client';
 
-import { useState } from 'react';
-import { adminFetch } from '../../../../lib/admin-fetch';
+import { useEffect, useState } from 'react';
+import { adminFetch } from '../../../lib/admin-fetch';
 
-// Bulk Upload — implements §6.3/§7.1: CSV upload, per-row validation and
-// duplicate-detection report shown right after upload.
+// Question Management — implements §7.1, extended with:
+//   - bilingual add form (Tamil + English side by side, auto-translate on blur)
+//   - bulk select + Classify/Publish/Delete Selected
+//   - search box
+//   - exam year (admin-only "previous year question" metadata)
 
-type RowResult =
-  | { rowNumber: number; status: 'inserted'; questionId: string }
-  | { rowNumber: number; status: 'duplicate'; existingQuestionId?: string; reason: string }
-  | { rowNumber: number; status: 'invalid'; reason: string };
+type Question = {
+  id: string;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctOption: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'DISABLED';
+  difficulty: 'MEDIUM' | 'HARD' | null;
+  aiSuggestedDifficulty: 'MEDIUM' | 'HARD' | null;
+  aiConfidence: number | null;
+  language: 'TA' | 'EN';
+  examYear: number | null;
+  translationGroupId: string | null;
+  examType: { name: string } | null;
+  examSubType: { name: string } | null;
+};
 
-export default function BulkUploadPage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<{ summary: any; results: RowResult[] } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const emptyLangFields = { questionText: '', optionA: '', optionB: '', optionC: '', optionD: '' };
 
-  async function upload() {
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    const formData = new FormData();
-    formData.append('file', file);
+export default function AdminQuestionsPage() {
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [statusFilter, setStatusFilter] = useState('DRAFT');
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  const [showForm, setShowForm] = useState(false);
+  const [ta, setTa] = useState(emptyLangFields);
+  const [en, setEn] = useState(emptyLangFields);
+  const [correctOption, setCorrectOption] = useState('A');
+  const [examYear, setExamYear] = useState('');
+  const [translating, setTranslating] = useState<'ta' | 'en' | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  async function loadQuestions() {
+    const params = new URLSearchParams({ status: statusFilter });
+    if (search.trim()) params.set('search', search.trim());
+    const res = await adminFetch(`/admin/questions?${params.toString()}`);
+    const data = await res.json();
+    setQuestions(data.items ?? []);
+    setSelected(new Set());
+  }
+
+  useEffect(() => {
+    loadQuestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) => (prev.size === questions.length ? new Set() : new Set(questions.map((q) => q.id))));
+  }
+
+  // ── Bi-directional auto-translate: when admin finishes typing in one
+  // language's Question field, fill the other language's fields automatically. ──
+  async function autoTranslate(fromLang: 'ta' | 'en') {
+    const source = fromLang === 'ta' ? ta : en;
+    if (!source.questionText.trim() || !source.optionA || !source.optionB || !source.optionC || !source.optionD) return;
+
+    setTranslating(fromLang === 'ta' ? 'en' : 'ta');
     try {
-      const res = await adminFetch('/admin/questions/bulk-upload', { method: 'POST', body: formData });
-      if (!res.ok) {
-        const body = await res.json();
-        setError(body.error ?? 'Upload failed');
-        return;
+      const res = await adminFetch('/admin/questions/translate-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: source, fromLang: fromLang.toUpperCase() }),
+      });
+      if (res.ok) {
+        const translated = await res.json();
+        fromLang === 'ta' ? setEn(translated) : setTa(translated);
       }
-      setResult(await res.json());
     } finally {
-      setUploading(false);
+      setTranslating(null);
     }
+  }
+
+  function startAdd() {
+    setEditingId(null);
+    setTa(emptyLangFields);
+    setEn(emptyLangFields);
+    setCorrectOption('A');
+    setExamYear('');
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  async function submitBilingual() {
+    setFormError(null);
+    const hasTa = ta.questionText.trim().length > 0;
+    const hasEn = en.questionText.trim().length > 0;
+    if (!hasTa && !hasEn) {
+      setFormError('Enter the question in at least one language.');
+      return;
+    }
+
+    const res = await adminFetch('/admin/questions/bilingual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ta: hasTa ? { ...ta, correctOption, examYear: examYear ? Number(examYear) : undefined } : { ...emptyLangFields, correctOption },
+        en: hasEn ? { ...en, correctOption, examYear: examYear ? Number(examYear) : undefined } : { ...emptyLangFields, correctOption },
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json();
+      setFormError(body.error ?? 'Failed to save question');
+      return;
+    }
+    setShowForm(false);
+    loadQuestions();
+  }
+
+  async function setStatus(id: string, action: 'publish' | 'disable' | 'draft') {
+    await adminFetch(`/admin/questions/${id}/${action}`, { method: 'POST' });
+    loadQuestions();
+  }
+
+  async function setDifficulty(id: string, difficulty: string) {
+    await adminFetch(`/admin/questions/${id}/difficulty`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ difficulty }),
+    });
+    loadQuestions();
+  }
+
+  async function classifyNow(id: string) {
+    const res = await adminFetch(`/admin/questions/${id}/classify`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`AI classification failed: ${body.error ?? 'Unknown error'}`);
+      return;
+    }
+    loadQuestions();
+  }
+
+  // ── Bulk actions ──────────────────────────────────────────────
+  async function bulkAction(action: 'bulk-publish' | 'bulk-disable' | 'bulk-classify' | 'bulk-delete') {
+    if (selected.size === 0) return;
+    if (action === 'bulk-delete' && !confirm(`Delete ${selected.size} question(s)? This cannot be undone.`)) return;
+
+    const res = await adminFetch(`/admin/questions/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Action failed: ${body.error ?? 'Unknown error'}`);
+    }
+    loadQuestions();
   }
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Bulk Upload</h1>
-      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 8, maxWidth: 640 }}>
-        <strong>Format A (single language):</strong> <code>question, option_a, option_b, option_c, option_d, correct_answer</code>.
-        Optional: <code>exam_type, exam_sub_type, language</code> (ta/en, defaults to ta), <code>exam_year</code>.
-        The missing language is generated automatically in the background (AI translation) as a linked Draft — review it before publishing.
-      </p>
-      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, maxWidth: 640 }}>
-        <strong>Format B (bilingual — no AI translation needed):</strong> <code>question_ta, question_en, option_a_ta, option_a_en, option_b_ta, option_b_en, option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer</code>.
-        Optional: <code>exam_type, exam_sub_type, exam_year</code>. Use this when your source already has both languages (e.g. a bilingual exam paper) — both rows are inserted directly, linked, no translation step.
-      </p>
-      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, maxWidth: 640 }}>
-        Uploaded questions land as Draft and go through AI difficulty classification before publishing.
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20 }}>Questions</h1>
+        <button
+          onClick={() => (showForm ? setShowForm(false) : startAdd())}
+          style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
+        >
+          {showForm ? 'Cancel' : '+ Add Question'}
+        </button>
+      </div>
 
-      <input type="file" accept=".csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ marginBottom: 12 }} />
-      <br />
-      <button
-        onClick={upload}
-        disabled={!file || uploading}
-        style={{ padding: '8px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
-      >
-        {uploading ? 'Uploading…' : 'Upload'}
-      </button>
-
-      {error && <p style={{ color: '#dc2626', marginTop: 12, fontSize: 13 }}>{error}</p>}
-
-      {result && (
-        <div style={{ marginTop: 24 }}>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-            <Stat label="Inserted" value={result.summary.inserted} color="#16a34a" />
-            <Stat label="Duplicates" value={result.summary.duplicates} color="#d97706" />
-            <Stat label="Invalid" value={result.summary.invalid} color="#dc2626" />
+      {showForm && (
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, marginBottom: 24, maxWidth: 900 }}>
+          <h2 style={{ fontSize: 14, marginBottom: 12, color: '#64748b' }}>
+            New Question — type in either language, the other auto-fills when you click away
+          </h2>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <LangFormBlock
+              label={`Tamil ${translating === 'ta' ? '(translating…)' : ''}`}
+              fields={ta}
+              setFields={setTa}
+              onBlurQuestion={() => autoTranslate('ta')}
+            />
+            <LangFormBlock
+              label={`English ${translating === 'en' ? '(translating…)' : ''}`}
+              fields={en}
+              setFields={setEn}
+              onBlurQuestion={() => autoTranslate('en')}
+            />
           </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', fontSize: 13 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
-                <th style={{ padding: 8 }}>Row</th>
-                <th style={{ padding: 8 }}>Status</th>
-                <th style={{ padding: 8 }}>Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.results.map((r) => (
-                <tr key={r.rowNumber} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: 8 }}>{r.rowNumber}</td>
-                  <td style={{ padding: 8, color: r.status === 'inserted' ? '#16a34a' : r.status === 'duplicate' ? '#d97706' : '#dc2626' }}>
-                    {r.status}
-                  </td>
-                  <td style={{ padding: 8, color: '#64748b' }}>
-                    {r.status === 'inserted' ? (r.note ? `${r.questionId} — ${r.note}` : r.questionId) : r.reason}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 12 }}>
+            <label style={{ fontSize: 13 }}>
+              Correct:{' '}
+              <select value={correctOption} onChange={(e) => setCorrectOption(e.target.value)}>
+                {['A', 'B', 'C', 'D'].map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </label>
+            <label style={{ fontSize: 13 }}>
+              Exam Year (optional):{' '}
+              <input
+                type="number"
+                value={examYear}
+                onChange={(e) => setExamYear(e.target.value)}
+                placeholder="e.g. 2024"
+                style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }}
+              />
+            </label>
+          </div>
+
+          <button onClick={submitBilingual} style={{ padding: '8px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}>
+            Save as Draft (both languages)
+          </button>
+          {formError && <p style={{ color: '#dc2626', fontSize: 13, marginTop: 8 }}>{formError}</p>}
         </div>
       )}
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        {['DRAFT', 'PUBLISHED', 'DISABLED'].map((s) => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 16,
+              border: '1px solid #cbd5e1',
+              background: statusFilter === s ? '#0f172a' : '#fff',
+              color: statusFilter === s ? '#fff' : '#334155',
+              fontSize: 13,
+            }}
+          >
+            {s}
+          </button>
+        ))}
+        <input
+          placeholder="Search question text..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && loadQuestions()}
+          style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, minWidth: 220 }}
+        />
+        <button onClick={loadQuestions} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 13 }}>Search</button>
+      </div>
+
+      {selected.size > 0 && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#f1f5f9', padding: 10, borderRadius: 8, marginBottom: 12 }}>
+          <span style={{ fontSize: 13, color: '#334155' }}>{selected.size} selected</span>
+          <button onClick={() => bulkAction('bulk-classify')} style={{ fontSize: 12, padding: '6px 12px' }}>Classify Selected with AI</button>
+          <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
+          <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
+          <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
+        </div>
+      )}
+
+      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+        <thead>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0', fontSize: 13, color: '#64748b' }}>
+            <th style={{ padding: 10 }}>
+              <input type="checkbox" checked={selected.size === questions.length && questions.length > 0} onChange={toggleSelectAll} />
+            </th>
+            <th style={{ padding: 10 }}>Question</th>
+            <th style={{ padding: 10 }}>Lang</th>
+            <th style={{ padding: 10 }}>Exam</th>
+            <th style={{ padding: 10 }}>Year</th>
+            <th style={{ padding: 10 }}>Difficulty</th>
+            <th style={{ padding: 10 }}>AI Suggestion</th>
+            <th style={{ padding: 10 }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {questions.map((q) => (
+            <tr key={q.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
+              <td style={{ padding: 10 }}>
+                <input type="checkbox" checked={selected.has(q.id)} onChange={() => toggleSelect(q.id)} />
+              </td>
+              <td style={{ padding: 10, maxWidth: 320 }}>
+                {q.questionText}
+                {q.translationGroupId && <span style={{ marginLeft: 6, fontSize: 11, color: '#94a3b8' }}>🔗 linked</span>}
+                {!q.difficulty && (
+                  <div style={{ color: '#d97706', fontSize: 11, marginTop: 4 }}>
+                    ⚠ No difficulty set — won't appear in any student quiz until set below
+                  </div>
+                )}
+              </td>
+              <td style={{ padding: 10 }}>{q.language}</td>
+              <td style={{ padding: 10, color: '#64748b', fontSize: 12 }}>
+                {q.examType ? `${q.examType.name}${q.examSubType ? ' — ' + q.examSubType.name : ''}` : '—'}
+              </td>
+              <td style={{ padding: 10, color: '#64748b' }}>{q.examYear ?? '—'}</td>
+              <td style={{ padding: 10 }}>
+                <select value={q.difficulty ?? ''} onChange={(e) => setDifficulty(q.id, e.target.value)}>
+                  <option value="">—</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HARD">Hard</option>
+                </select>
+              </td>
+              <td style={{ padding: 10, color: '#64748b' }}>
+                {q.aiSuggestedDifficulty ? `${q.aiSuggestedDifficulty} (${q.aiConfidence?.toFixed(0)}%)` : '—'}
+              </td>
+              <td style={{ padding: 10 }}>
+                {q.status !== 'PUBLISHED' && (
+                  <button onClick={() => setStatus(q.id, 'publish')} style={{ marginRight: 8, fontSize: 12 }}>Publish</button>
+                )}
+                {q.status !== 'DISABLED' && (
+                  <button onClick={() => setStatus(q.id, 'disable')} style={{ marginRight: 8, fontSize: 12 }}>Disable</button>
+                )}
+                {q.status === 'DRAFT' && !q.aiSuggestedDifficulty && (
+                  <button onClick={() => classifyNow(q.id)} style={{ fontSize: 12 }}>Classify with AI</button>
+                )}
+              </td>
+            </tr>
+          ))}
+          {questions.length === 0 && (
+            <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No questions in this status.</td></tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+function LangFormBlock({
+  label,
+  fields,
+  setFields,
+  onBlurQuestion,
+}: {
+  label: string;
+  fields: typeof emptyLangFields;
+  setFields: (f: typeof emptyLangFields) => void;
+  onBlurQuestion: () => void;
+}) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 20px' }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#64748b' }}>{label}</div>
+    <div style={{ flex: 1 }}>
+      <h3 style={{ fontSize: 13, color: '#0f172a', marginBottom: 8 }}>{label}</h3>
+      <textarea
+        placeholder="Question text"
+        value={fields.questionText}
+        onChange={(e) => setFields({ ...fields, questionText: e.target.value })}
+        onBlur={onBlurQuestion}
+        style={{ width: '100%', padding: 8, marginBottom: 8, borderRadius: 6, border: '1px solid #cbd5e1' }}
+        rows={2}
+      />
+      {(['optionA', 'optionB', 'optionC', 'optionD'] as const).map((opt, i) => (
+        <input
+          key={opt}
+          placeholder={`Option ${String.fromCharCode(65 + i)}`}
+          value={fields[opt]}
+          onChange={(e) => setFields({ ...fields, [opt]: e.target.value })}
+          style={{ width: '100%', padding: 6, marginBottom: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+        />
+      ))}
     </div>
   );
 }
