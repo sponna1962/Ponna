@@ -31,7 +31,45 @@ export class QuotaService {
    * Must be called inside the same DB transaction as QuizSession creation
    * to avoid a race between the check and the deduction.
    */
+  /**
+   * Read-only — how many questions the student could start a session with
+   * right now, without reserving anything. Used by the simplified quiz flow
+   * (mode-only selection, no size picker) to cap a session to whatever's
+   * actually left, rather than requesting a fixed size and getting a hard
+   * rejection when it doesn't fit.
+   */
+  async getRemainingQuota(userId: string): Promise<number> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { isTestAccount: true } });
+    if (user?.isTestAccount) return Number.MAX_SAFE_INTEGER; // unlimited
+
+    const subscription = await this.getActiveSubscription(userId);
+    if (subscription) {
+      const plan = await prisma.plan.findUnique({ where: { id: subscription.planId } });
+      if (plan && plan.code !== 'FREE') {
+        return Math.max((plan.cycleLimit ?? 0) - subscription.questionsUsedInCycle, 0);
+      }
+    }
+
+    const freePlan = await prisma.plan.findUnique({ where: { code: 'FREE' } });
+    if (!freePlan) return 0;
+    const today = startOfDay(new Date());
+    const sub = await prisma.subscription.findFirst({
+      where: { userId, planId: freePlan.id, status: SubscriptionStatus.ACTIVE },
+    });
+    const usedToday = sub?.dailyUsedDate && isSameDay(sub.dailyUsedDate, today) ? sub.questionsUsedToday : 0;
+    return Math.max((freePlan.dailyLimit ?? 5) - usedToday, 0);
+  }
+
   async reserveQuota(userId: string, requestedSize: number): Promise<QuotaCheckResult> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { isTestAccount: true } });
+    if (user?.isTestAccount) {
+      // Finalized requirement: Test Accounts bypass ALL quota restrictions —
+      // no daily/cycle limit, no plan-expiry check, nothing deducted. Return
+      // exactly what was requested as "remaining" since the concept of a
+      // shrinking pool doesn't apply here.
+      return { allowed: true, remaining: requestedSize };
+    }
+
     const subscription = await this.getActiveSubscription(userId);
 
     if (!subscription) {
