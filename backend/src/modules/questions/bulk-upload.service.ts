@@ -29,7 +29,7 @@ const prisma = new PrismaClient();
 const translationService = new TranslationService();
 
 export type RowResult =
-  | { rowNumber: number; status: 'inserted'; questionId: string; secondLanguageQueued?: boolean }
+  | { rowNumber: number; status: 'inserted'; questionId: string; secondLanguageQueued?: boolean; note?: string }
   | { rowNumber: number; status: 'duplicate'; existingQuestionId?: string; reason: string }
   | { rowNumber: number; status: 'invalid'; reason: string };
 
@@ -191,15 +191,22 @@ export class BulkUploadService {
     const { examTypeId, examSubTypeId } = await this.resolveExamTaxonomy(raw.exam_type, raw.exam_sub_type);
     let firstId: string | null = null;
     let groupId: string | null = null;
+    const skippedLanguages: string[] = []; // languages that were duplicates — noted, but don't block the other language
 
     if (hasTa) {
       const result = await this.insertOneLanguageRow(
         raw, 'ta', Language.TA, correctAnswer as CorrectOption, examTypeId, examSubTypeId,
         batchId, examYear, seenHashesInFile, rowNumber, groupId,
       );
-      if ('error' in result) return result.error;
-      firstId = result.id;
-      groupId = result.id;
+      if ('error' in result) {
+        // A duplicate in one language doesn't block inserting the other —
+        // only a genuinely invalid row (missing options) is fatal to the row.
+        if (result.error.status === 'invalid') return result.error;
+        skippedLanguages.push('TA');
+      } else {
+        firstId = result.id;
+        groupId = result.id;
+      }
     }
 
     if (hasEn) {
@@ -207,12 +214,26 @@ export class BulkUploadService {
         raw, 'en', Language.EN, correctAnswer as CorrectOption, examTypeId, examSubTypeId,
         batchId, examYear, seenHashesInFile, rowNumber, groupId,
       );
-      if ('error' in result) return result.error;
-      if (!firstId) firstId = result.id;
-      if (!groupId) groupId = result.id;
+      if ('error' in result) {
+        if (result.error.status === 'invalid') return result.error;
+        skippedLanguages.push('EN');
+      } else {
+        if (!firstId) firstId = result.id;
+        if (!groupId) groupId = result.id;
+      }
     }
 
-    return { rowNumber, status: 'inserted', questionId: firstId! };
+    if (!firstId) {
+      // Both languages were duplicates — the whole row is a no-op.
+      return { rowNumber, status: 'duplicate', reason: 'Both language versions already exist in the bank' };
+    }
+
+    return {
+      rowNumber,
+      status: 'inserted',
+      questionId: firstId,
+      ...(skippedLanguages.length > 0 ? { note: `${skippedLanguages.join(', ')} version already existed — only the other language was inserted` } : {}),
+    };
   }
 
   /** Inserts one language's version of a bilingual-format row. Returns either the new question's id, or a RowResult describing why it was rejected. */
