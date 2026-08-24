@@ -84,6 +84,15 @@ async function main() {
     await prisma.examAuthority.upsert({ where: { name }, create: { name }, update: {} });
   }
 
+  // Mark the QA/testing phone number as a Test Account — bypasses quota,
+  // excluded from rankings. Safe to re-run: no-op if the user hasn't logged
+  // in yet (created on first Firebase login, not here), and idempotent
+  // once they have.
+  await prisma.user.updateMany({
+    where: { phone: '+919489000123' },
+    data: { isTestAccount: true },
+  });
+
   console.log('Seed complete.');
 }
 
