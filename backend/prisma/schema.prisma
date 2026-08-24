@@ -35,6 +35,13 @@ model User {
   cityTownVillage    String?
   preparingFor       String[] @default([]) // multiple exam preferences, e.g. ["TNPSC", "Banking"]
 
+  // Test/QA accounts (finalized requirement) — bypasses ALL quota
+  // restrictions (free daily limit, paid cycle limit, plan expiry) and is
+  // excluded from ranking calculations and student analytics, so QA
+  // activity never pollutes real student data. Off by default; only Super
+  // Admin can flip this from the admin panel (Students section).
+  isTestAccount      Boolean  @default(false)
+
   createdAt      DateTime  @default(now())
 
   subscriptions      Subscription[]
