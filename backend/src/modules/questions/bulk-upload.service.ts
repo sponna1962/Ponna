@@ -29,12 +29,21 @@ const prisma = new PrismaClient();
 const translationService = new TranslationService();
 
 export type RowResult =
-  | { rowNumber: number; status: 'inserted'; questionId: string; secondLanguageQueued?: boolean; note?: string }
+  | { rowNumber: number; status: 'inserted'; questionId: string; questionText: string; secondLanguageQueued?: boolean; note?: string }
   | { rowNumber: number; status: 'duplicate'; existingQuestionId?: string; reason: string }
   | { rowNumber: number; status: 'invalid'; reason: string };
 
+/** Batch-wide defaults, set once by the admin before upload, applied to every
+ * row that doesn't specify its own exam_type/exam_sub_type/exam_year column —
+ * saves repeating the same exam metadata on every line of a single-exam CSV. */
+export interface BatchDefaults {
+  examType?: string;
+  examSubType?: string;
+  examYear?: number;
+}
+
 export class BulkUploadService {
-  async processCsv(csvContent: string, uploadedBy: string): Promise<{ batchId: string; results: RowResult[] }> {
+  async processCsv(csvContent: string, uploadedBy: string, batchDefaults: BatchDefaults = {}): Promise<{ batchId: string; results: RowResult[] }> {
     const batchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const rawRows: Record<string, string>[] = parse(csvContent, {
       columns: true,
@@ -50,9 +59,17 @@ export class BulkUploadService {
 
     for (let i = 0; i < rawRows.length; i++) {
       const rowNumber = i + 2;
-      const raw = rawRows[i];
+      // Row-level exam_type/exam_sub_type/exam_year win if present; otherwise
+      // fall back to the batch-wide defaults the admin set before uploading.
+      const raw = {
+        ...rawRows[i],
+        exam_type: rawRows[i].exam_type?.trim() || batchDefaults.examType || '',
+        exam_sub_type: rawRows[i].exam_sub_type?.trim() || batchDefaults.examSubType || '',
+      };
 
-      const examYear = raw.exam_year?.trim() ? parseInt(raw.exam_year.trim(), 10) : undefined;
+      const examYear = raw.exam_year?.trim()
+        ? parseInt(raw.exam_year.trim(), 10)
+        : batchDefaults.examYear;
 
       if (isBilingualFormat) {
         const outcome = await this.processBilingualRow(raw, rowNumber, batchId, examYear, seenHashesInFile);
@@ -167,7 +184,7 @@ export class BulkUploadService {
     });
 
     seenHashesInFile.set(contentHash, rowNumber);
-    return { rowNumber, status: 'inserted', questionId: created.id, secondLanguageQueued: true };
+    return { rowNumber, status: 'inserted', questionId: created.id, questionText: fields.questionText, secondLanguageQueued: true };
   }
 
   private async processBilingualRow(
@@ -190,6 +207,7 @@ export class BulkUploadService {
 
     const { examTypeId, examSubTypeId } = await this.resolveExamTaxonomy(raw.exam_type, raw.exam_sub_type);
     let firstId: string | null = null;
+    let firstText: string | null = null;
     let groupId: string | null = null;
     const skippedLanguages: string[] = []; // languages that were duplicates — noted, but don't block the other language
 
@@ -205,6 +223,7 @@ export class BulkUploadService {
         skippedLanguages.push('TA');
       } else {
         firstId = result.id;
+        firstText = result.questionText;
         groupId = result.id;
       }
     }
@@ -218,7 +237,7 @@ export class BulkUploadService {
         if (result.error.status === 'invalid') return result.error;
         skippedLanguages.push('EN');
       } else {
-        if (!firstId) firstId = result.id;
+        if (!firstId) { firstId = result.id; firstText = result.questionText; }
         if (!groupId) groupId = result.id;
       }
     }
@@ -232,11 +251,12 @@ export class BulkUploadService {
       rowNumber,
       status: 'inserted',
       questionId: firstId,
+      questionText: firstText!,
       ...(skippedLanguages.length > 0 ? { note: `${skippedLanguages.join(', ')} version already existed — only the other language was inserted` } : {}),
     };
   }
 
-  /** Inserts one language's version of a bilingual-format row. Returns either the new question's id, or a RowResult describing why it was rejected. */
+  /** Inserts one language's version of a bilingual-format row. Returns either the new question's id+text, or a RowResult describing why it was rejected. */
   private async insertOneLanguageRow(
     raw: Record<string, string>,
     suffix: 'ta' | 'en',
@@ -249,7 +269,7 @@ export class BulkUploadService {
     seenHashesInFile: Map<string, number>,
     rowNumber: number,
     groupId: string | null,
-  ): Promise<{ id: string } | { error: RowResult }> {
+  ): Promise<{ id: string; questionText: string } | { error: RowResult }> {
     const fields = {
       questionText: (raw[`question_${suffix}`] ?? '').trim(),
       optionA: (raw[`option_a_${suffix}`] ?? '').trim(),
@@ -296,7 +316,7 @@ export class BulkUploadService {
     }
 
     seenHashesInFile.set(contentHash, rowNumber);
-    return { id: created.id };
+    return { id: created.id, questionText: fields.questionText };
   }
 
   summarize(results: RowResult[]) {
