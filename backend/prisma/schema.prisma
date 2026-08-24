@@ -184,6 +184,11 @@ model Question {
   category         QuestionCategory  @default(STANDARD)
   relevanceDate    DateTime?         // set for CURRENT_AFFAIRS questions, drives the 90-day recency window (§6.4)
 
+  // Previous Year Question metadata — admin-panel-only for now (not shown to
+  // students yet; whether/how to surface this is a future decision).
+  examYear              Int?
+  isPreviousYearQuestion Boolean     @default(false)
+
   contentHash      String            // duplicate detection
   sourceBatchId    String?           // which bulk upload this came from
 
