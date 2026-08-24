@@ -13,7 +13,7 @@ const navItems = [
   { href: '/admin/questions/upload', label: 'Bulk Upload' },
   { href: '/admin/questions/review', label: 'Needs Review' },
   { href: '/admin/current-affairs', label: 'Current Affairs' },
-  { href: '/admin/exam-types', label: 'Exam Types' },
+  { href: '/admin/exam-taxonomy', label: 'Exam Taxonomy' },
   { href: '/admin/students', label: 'Students' },
   { href: '/admin/plans', label: 'Plans' },
   { href: '/admin/staff', label: 'Staff' },
@@ -24,8 +24,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
 
-  // Hooks must run unconditionally — the guard itself no-ops on the login page.
-  const checked = useRequireStaffAuth();
+  // Hooks must run unconditionally — `skip` tells it to no-op on the login page
+  // itself, avoiding a redirect-to-self reload loop (see hook's comment).
+  const checked = useRequireStaffAuth(isLoginPage);
 
   function logout() {
     localStorage.removeItem('ponna_staff_token');
