@@ -190,58 +190,92 @@ export class BulkUploadService {
 
     const { examTypeId, examSubTypeId } = await this.resolveExamTaxonomy(raw.exam_type, raw.exam_sub_type);
     let firstId: string | null = null;
-    let translationGroupId: string | null = null;
+    let groupId: string | null = null;
 
-    for (const [lang, present] of [[Language.TA, hasTa], [Language.EN, hasEn]] as const) {
-      if (!present) continue;
+    if (hasTa) {
+      const result = await this.insertOneLanguageRow(
+        raw, 'ta', Language.TA, correctAnswer as CorrectOption, examTypeId, examSubTypeId,
+        batchId, examYear, seenHashesInFile, rowNumber, groupId,
+      );
+      if ('error' in result) return result.error;
+      firstId = result.id;
+      groupId = result.id;
+    }
 
-      const fields = {
-        questionText: raw[`question_${lang.toLowerCase()}`].trim(),
-        optionA: raw[`option_a_${lang.toLowerCase()}`]?.trim() ?? '',
-        optionB: raw[`option_b_${lang.toLowerCase()}`]?.trim() ?? '',
-        optionC: raw[`option_c_${lang.toLowerCase()}`]?.trim() ?? '',
-        optionD: raw[`option_d_${lang.toLowerCase()}`]?.trim() ?? '',
-      };
-      if (!fields.optionA || !fields.optionB || !fields.optionC || !fields.optionD) {
-        return { rowNumber, status: 'invalid', reason: `Missing option(s) for ${lang} in row ${rowNumber}` };
-      }
-
-      const contentHash = computeContentHash(fields);
-      if (seenHashesInFile.has(contentHash)) {
-        return { rowNumber, status: 'duplicate', reason: `Duplicate of row ${seenHashesInFile.get(contentHash)} within this upload` };
-      }
-      const existing = await prisma.question.findFirst({ where: { contentHash, language: lang }, select: { id: true } });
-      if (existing) {
-        return { rowNumber, status: 'duplicate', existingQuestionId: existing.id, reason: `${lang} version matches an existing question` };
-      }
-
-      const created = await prisma.question.create({
-        data: {
-          ...fields,
-          correctOption: correctAnswer as CorrectOption,
-          language: lang,
-          examTypeId,
-          examSubTypeId,
-          category: QuestionCategory.STANDARD,
-          status: QuestionStatus.DRAFT,
-          contentHash,
-          sourceBatchId: batchId,
-          examYear,
-          translationGroupId: translationGroupId ?? undefined,
-        },
-        select: { id: true },
-      });
-
-      seenHashesInFile.set(contentHash, rowNumber);
-      if (!firstId) {
-        firstId = created.id;
-        translationGroupId = created.id;
-        // Link the first-created row to itself as the group id.
-        await prisma.question.update({ where: { id: created.id }, data: { translationGroupId: created.id } });
-      }
+    if (hasEn) {
+      const result = await this.insertOneLanguageRow(
+        raw, 'en', Language.EN, correctAnswer as CorrectOption, examTypeId, examSubTypeId,
+        batchId, examYear, seenHashesInFile, rowNumber, groupId,
+      );
+      if ('error' in result) return result.error;
+      if (!firstId) firstId = result.id;
+      if (!groupId) groupId = result.id;
     }
 
     return { rowNumber, status: 'inserted', questionId: firstId! };
+  }
+
+  /** Inserts one language's version of a bilingual-format row. Returns either the new question's id, or a RowResult describing why it was rejected. */
+  private async insertOneLanguageRow(
+    raw: Record<string, string>,
+    suffix: 'ta' | 'en',
+    lang: Language,
+    correctOption: CorrectOption,
+    examTypeId: string | undefined,
+    examSubTypeId: string | undefined,
+    batchId: string,
+    examYear: number | undefined,
+    seenHashesInFile: Map<string, number>,
+    rowNumber: number,
+    groupId: string | null,
+  ): Promise<{ id: string } | { error: RowResult }> {
+    const fields = {
+      questionText: (raw[`question_${suffix}`] ?? '').trim(),
+      optionA: (raw[`option_a_${suffix}`] ?? '').trim(),
+      optionB: (raw[`option_b_${suffix}`] ?? '').trim(),
+      optionC: (raw[`option_c_${suffix}`] ?? '').trim(),
+      optionD: (raw[`option_d_${suffix}`] ?? '').trim(),
+    };
+    if (!fields.optionA || !fields.optionB || !fields.optionC || !fields.optionD) {
+      return { error: { rowNumber, status: 'invalid', reason: `Missing option(s) for ${lang} in row ${rowNumber}` } };
+    }
+
+    const contentHash = computeContentHash(fields);
+    if (seenHashesInFile.has(contentHash)) {
+      return { error: { rowNumber, status: 'duplicate', reason: `Duplicate of row ${seenHashesInFile.get(contentHash)} within this upload` } };
+    }
+    const existing = await prisma.question.findFirst({ where: { contentHash, language: lang }, select: { id: true } });
+    if (existing) {
+      return { error: { rowNumber, status: 'duplicate', existingQuestionId: existing.id, reason: `${lang} version matches an existing question` } };
+    }
+
+    const created = await prisma.question.create({
+      data: {
+        questionText: fields.questionText,
+        optionA: fields.optionA,
+        optionB: fields.optionB,
+        optionC: fields.optionC,
+        optionD: fields.optionD,
+        correctOption,
+        language: lang,
+        examTypeId,
+        examSubTypeId,
+        category: QuestionCategory.STANDARD,
+        status: QuestionStatus.DRAFT,
+        contentHash,
+        sourceBatchId: batchId,
+        examYear,
+        translationGroupId: groupId ?? undefined,
+      },
+      select: { id: true },
+    });
+
+    if (!groupId) {
+      await prisma.question.update({ where: { id: created.id }, data: { translationGroupId: created.id } });
+    }
+
+    seenHashesInFile.set(contentHash, rowNumber);
+    return { id: created.id };
   }
 
   summarize(results: RowResult[]) {
