@@ -229,6 +229,7 @@ export class BulkUploadService {
           examYear,
           translationGroupId: translationGroupId ?? undefined,
         },
+        select: { id: true },
       });
 
       seenHashesInFile.set(contentHash, rowNumber);
