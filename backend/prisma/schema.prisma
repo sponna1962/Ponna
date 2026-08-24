@@ -114,25 +114,39 @@ enum SubscriptionStatus {
 }
 
 // ─────────────────────────────────────────────────────────
-// EXAM TAXONOMY  (§6.2 Metadata)
+// EXAM TAXONOMY — Authority → Category → Sub-Category (optional)
+// Replaces the earlier 2-level ExamType/ExamSubType entirely (no parallel
+// systems). Fully dynamic: Super Admin can add new Authorities, Categories,
+// and Sub-Categories from the admin panel at any time — nothing here is
+// hardcoded at the schema level, only the initial seed data is.
 // ─────────────────────────────────────────────────────────
 
-model ExamType {
-  id       String        @id @default(uuid())
-  name     String        @unique // TNPSC, UPSC, Banking, Police, etc.
-  subTypes ExamSubType[]
-  questions Question[]
+model ExamAuthority {
+  id         String         @id @default(uuid())
+  name       String         @unique // TNPSC, UPSC, SSC, Railway / RRB, Banking, TNUSRB, TRB, NEET, Teacher Eligibility, Other
+  categories ExamCategory[]
+  questions  Question[]
 }
 
-model ExamSubType {
-  id         String    @id @default(uuid())
-  examTypeId String
-  examType   ExamType  @relation(fields: [examTypeId], references: [id])
-  name       String    // e.g. "Group 1", "Group 4"
+model ExamCategory {
+  id            String            @id @default(uuid())
+  authorityId   String
+  authority     ExamAuthority     @relation(fields: [authorityId], references: [id])
+  name          String            // e.g. "Group Examinations", "Technical Services", "Civil Services"
+  subCategories ExamSubCategory[]
+  questions     Question[]
 
+  @@unique([authorityId, name])
+}
+
+model ExamSubCategory {
+  id         String       @id @default(uuid())
+  categoryId String
+  category   ExamCategory @relation(fields: [categoryId], references: [id])
+  name       String       // e.g. "Group I", "Group IV", "Preliminary"
   questions  Question[]
 
-  @@unique([examTypeId, name])
+  @@unique([categoryId, name])
 }
 
 // ─────────────────────────────────────────────────────────
@@ -160,6 +174,16 @@ enum Language {
   EN
 }
 
+// Where a question came from — every question carries this, and all
+// questions live in ONE master bank regardless of source; this is metadata
+// for filtering/search, never a separate table per source.
+enum SourceType {
+  PREVIOUS_EXAM
+  BOOK
+  ORIGINAL
+  OTHER
+}
+
 model Question {
   id               String            @id @default(uuid())
   questionText     String
@@ -174,20 +198,28 @@ model Question {
   // without any schema change (§6.2 Tamil/English translation linking)
   translationGroupId String?
 
-  examTypeId       String?
-  examType         ExamType?         @relation(fields: [examTypeId], references: [id])
-  examSubTypeId    String?
-  examSubType      ExamSubType?      @relation(fields: [examSubTypeId], references: [id])
+  // Authority → Category → Sub-Category (all optional at the DB level — "not
+  // necessarily mandatory in every situation"; Category alone plus Exam Year
+  // is a valid, complete classification, e.g. TNPSC → Group IV → 2024 with
+  // no Sub-Category or Exam Name needed).
+  authorityId    String?
+  authority      ExamAuthority?    @relation(fields: [authorityId], references: [id])
+  categoryId     String?
+  examCategory   ExamCategory?     @relation(fields: [categoryId], references: [id])
+  subCategoryId  String?
+  subCategory    ExamSubCategory?  @relation(fields: [subCategoryId], references: [id])
+  examName       String?           // free text, only when Category/Sub-Category aren't specific enough (e.g. "Assistant Public Prosecutor, Grade II")
+  examYear       Int?              // mainly meaningful for PREVIOUS_EXAM source type
+
+  // Source — admin/backend-only metadata, not shown to students in this version.
+  sourceType     SourceType        @default(ORIGINAL)
+  sourceName     String?           // e.g. "TNPSC Group IV Question Paper 2024"
+  internalNotes  String?           // admin-only, never surfaced anywhere else
 
   difficulty       Difficulty?       // nullable until AI classification / admin sets it
   status           QuestionStatus    @default(DRAFT)
-  category         QuestionCategory  @default(STANDARD)
+  category         QuestionCategory  @default(STANDARD) // Standard vs Current Affairs — unrelated to ExamCategory above, kept for §6.4 allocation logic
   relevanceDate    DateTime?         // set for CURRENT_AFFAIRS questions, drives the 90-day recency window (§6.4)
-
-  // Previous Year Question metadata — admin-panel-only for now (not shown to
-  // students yet; whether/how to surface this is a future decision).
-  examYear              Int?
-  isPreviousYearQuestion Boolean     @default(false)
 
   contentHash      String            // duplicate detection
   sourceBatchId    String?           // which bulk upload this came from
@@ -205,6 +237,7 @@ model Question {
   @@index([contentHash])
   @@index([translationGroupId])
   @@index([category, relevanceDate])
+  @@index([authorityId, categoryId, subCategoryId])
 }
 
 enum CorrectOption {
