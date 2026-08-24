@@ -393,7 +393,9 @@ app.post('/admin/questions/bulk-classify', requireStaffAuth, canEditQuestions, a
   }
 });
 
-// POST /admin/questions/bulk-upload  (multipart form, field name "file")
+// POST /admin/questions/bulk-upload  (multipart form, field name "file", plus
+// optional exam_type/exam_sub_type/exam_year fields — set once for the whole
+// batch, applied to any row that doesn't specify its own)
 app.post(
   '/admin/questions/bulk-upload',
   requireStaffAuth,
@@ -403,7 +405,12 @@ app.post(
     try {
       if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
       const csvContent = req.file.buffer.toString('utf-8');
-      const { batchId, results } = await bulkUploadService.processCsv(csvContent, req.staff!.staffId);
+      const batchDefaults = {
+        examType: req.body.exam_type || undefined,
+        examSubType: req.body.exam_sub_type || undefined,
+        examYear: req.body.exam_year ? Number(req.body.exam_year) : undefined,
+      };
+      const { batchId, results } = await bulkUploadService.processCsv(csvContent, req.staff!.staffId, batchDefaults);
 
       // Kick off AI classification for this batch in the background — the
       // upload response returns immediately with the row report; classification
