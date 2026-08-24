@@ -20,6 +20,8 @@ export interface QuestionInput {
   category?: QuestionCategory;
   relevanceDate?: Date;
   sourceBatchId?: string;
+  examYear?: number;
+  isPreviousYearQuestion?: boolean;
 }
 
 export class QuestionService {
@@ -63,10 +65,35 @@ export class QuestionService {
         category: input.category ?? QuestionCategory.STANDARD,
         relevanceDate: input.relevanceDate,
         sourceBatchId: input.sourceBatchId,
+        examYear: input.examYear,
+        isPreviousYearQuestion: input.isPreviousYearQuestion ?? false,
         status: QuestionStatus.DRAFT, // always lands as Draft; AI classification / admin promotes it (§7.3, §9)
         contentHash,
       },
     });
+  }
+
+  /**
+   * Creates BOTH language versions of a question in one call, linked by a
+   * shared translationGroupId — used by the admin form's bi-directional
+   * translate-and-review flow, where the admin has already seen and approved
+   * both languages before clicking Publish/Save. Both rows land as Draft,
+   * same as a normal single-language add.
+   */
+  async createBilingualPair(
+    ta: Omit<QuestionInput, 'language'>,
+    en: Omit<QuestionInput, 'language'>,
+  ): Promise<{ taId: string; enId: string }> {
+    const taRecord = await this.create({ ...ta, language: Language.TA });
+    const enRecord = await this.create({ ...en, language: Language.EN });
+
+    const groupId = taRecord.id;
+    await prisma.$transaction([
+      prisma.question.update({ where: { id: taRecord.id }, data: { translationGroupId: groupId } }),
+      prisma.question.update({ where: { id: enRecord.id }, data: { translationGroupId: groupId } }),
+    ]);
+
+    return { taId: taRecord.id, enId: enRecord.id };
   }
 
   async update(id: string, input: Partial<QuestionInput>) {
@@ -94,6 +121,7 @@ export class QuestionService {
     examTypeId?: string;
     category?: QuestionCategory;
     language?: Language;
+    search?: string; // matches question text, case-insensitive substring
     page?: number;
     pageSize?: number;
   }) {
@@ -106,6 +134,7 @@ export class QuestionService {
       examTypeId: filters.examTypeId,
       category: filters.category,
       language: filters.language,
+      ...(filters.search ? { questionText: { contains: filters.search, mode: 'insensitive' as const } } : {}),
     };
 
     const [items, total] = await Promise.all([
@@ -119,6 +148,17 @@ export class QuestionService {
     ]);
 
     return { items, total, page, pageSize };
+  }
+
+  /** Bulk actions for the admin panel's "select multiple, act once" flow. */
+  async bulkSetStatus(ids: string[], status: QuestionStatus) {
+    const result = await prisma.question.updateMany({ where: { id: { in: ids } }, data: { status } });
+    return { count: result.count };
+  }
+
+  async bulkDelete(ids: string[]) {
+    const result = await prisma.question.deleteMany({ where: { id: { in: ids } } });
+    return { count: result.count };
   }
 
   /** Quick-entry for Current Affairs, per §7.2 — minimal required fields. */
