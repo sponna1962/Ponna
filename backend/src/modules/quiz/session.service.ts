@@ -15,28 +15,36 @@ const ranking = new RankingService();
 export class SessionService {
   /**
    * Starts a new session, or returns the existing in-progress one if present.
-   * If an in-progress session exists with a DIFFERENT mode/size than what
-   * was just requested, `resumedWithDifferentSelection: true` is included so
-   * the frontend can show a clear "you're continuing your earlier X session"
-   * message instead of silently ignoring the student's new choice.
+   * Simplified flow (finalized requirement): the student only picks a mode —
+   * there is no session-size selection anymore. The session size is
+   * whatever's smaller of (a) eligible questions available for this mode and
+   * (b) the student's remaining quota right now. A Free student with 3
+   * questions left today gets a 3-question session, not a rejection.
    */
-  async startSession(userId: string, mode: QuizMode, requestedSize: number) {
+  async startSession(userId: string, mode: QuizMode) {
     const existing = await prisma.quizSession.findFirst({
       where: { userId, status: SessionStatus.IN_PROGRESS },
       include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
     if (existing) {
       // §4.3: same session resumes exactly where the student left off, no re-deduction
-      const differs = existing.mode !== mode || existing.totalQuestions !== requestedSize;
+      const differs = existing.mode !== mode;
       return { ...existing, resumedWithDifferentSelection: differs };
     }
 
-    // Build the eligible question list FIRST, before touching quota. This is
-    // a deliberate fix over an earlier version of this method, which reserved
-    // the full requested quota up front and only then discovered the bank
-    // didn't have enough questions — charging the student for questions they
-    // could never receive. Quota is now reserved for the ACTUAL session size.
-    const questionIds = await allocation.buildSessionQuestionIds(userId, mode, requestedSize);
+    const remainingQuota = await quota.getRemainingQuota(userId);
+    if (remainingQuota <= 0) {
+      throw new QuotaExceededError(
+        'You have used all your questions for today. Upgrade your plan to keep practicing, or come back tomorrow.',
+      );
+    }
+
+    // Build the eligible question list FIRST, before touching quota — same
+    // reasoning as before: never reserve quota for questions that can't
+    // actually be delivered. Cap the request at a generous ceiling (100) so
+    // allocation doesn't need to know about quota at all; the real cap is
+    // whichever is smaller of quota and eligible questions.
+    const questionIds = await allocation.buildSessionQuestionIds(userId, mode, Math.min(remainingQuota, 100));
     const actualSize = questionIds.length;
 
     if (actualSize === 0) {
@@ -64,13 +72,7 @@ export class SessionService {
       include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
 
-    return {
-      ...session,
-      // Lets the frontend show "Only 12 of 20 questions available right now"
-      // instead of silently serving a shorter session.
-      requestedSize,
-      shortfall: requestedSize - actualSize,
-    };
+    return { ...session, resumedWithDifferentSelection: false };
   }
 
   async submitAnswer(
