@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
 
-// Question Management — implements §7.1: add individual questions, list with
-// status filter, publish/unpublish, disable, manage difficulty, and full
-// edit-in-place (question text, options, correct answer) — including for
-// already-published questions, so a typo or wrong answer key can be fixed
-// without disabling and re-adding the question.
+// Question Management — implements §7.1, extended with:
+//   - bilingual add form (Tamil + English side by side, auto-translate on blur)
+//   - bulk select + Classify/Publish/Delete Selected
+//   - search box
+//   - exam year (admin-only "previous year question" metadata)
 
 type Question = {
   id: string;
@@ -21,25 +21,35 @@ type Question = {
   difficulty: 'MEDIUM' | 'HARD' | null;
   aiSuggestedDifficulty: 'MEDIUM' | 'HARD' | null;
   aiConfidence: number | null;
+  language: 'TA' | 'EN';
+  examYear: number | null;
+  translationGroupId: string | null;
 };
 
-const emptyForm = {
-  questionText: '', optionA: '', optionB: '', optionC: '', optionD: '',
-  correctOption: 'A', language: 'TA', difficulty: '',
-};
+const emptyLangFields = { questionText: '', optionA: '', optionB: '', optionC: '', optionD: '' };
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [statusFilter, setStatusFilter] = useState('DRAFT');
-  const [form, setForm] = useState(emptyForm);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null); // null = "add new" mode; a question id = "editing that question"
+  const [ta, setTa] = useState(emptyLangFields);
+  const [en, setEn] = useState(emptyLangFields);
+  const [correctOption, setCorrectOption] = useState('A');
+  const [examYear, setExamYear] = useState('');
+  const [translating, setTranslating] = useState<'ta' | 'en' | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   async function loadQuestions() {
-    const res = await adminFetch(`/admin/questions?status=${statusFilter}`);
+    const params = new URLSearchParams({ status: statusFilter });
+    if (search.trim()) params.set('search', search.trim());
+    const res = await adminFetch(`/admin/questions?${params.toString()}`);
     const data = await res.json();
     setQuestions(data.items ?? []);
+    setSelected(new Set());
   }
 
   useEffect(() => {
@@ -47,68 +57,72 @@ export default function AdminQuestionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
-  function startAdd() {
-    setEditingId(null);
-    setForm(emptyForm);
-    setFormError(null);
-    setShowForm(true);
-  }
-
-  function startEdit(q: Question) {
-    setEditingId(q.id);
-    setForm({
-      questionText: q.questionText,
-      optionA: q.optionA,
-      optionB: q.optionB,
-      optionC: q.optionC,
-      optionD: q.optionD,
-      correctOption: q.correctOption,
-      language: 'TA', // language isn't editable here; kept for the shared form shape
-      difficulty: q.difficulty ?? '',
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
     });
-    setFormError(null);
-    setShowForm(true);
   }
 
-  async function submitForm() {
-    setFormError(null);
+  function toggleSelectAll() {
+    setSelected((prev) => (prev.size === questions.length ? new Set() : new Set(questions.map((q) => q.id))));
+  }
 
-    if (editingId) {
-      // Editing an existing question — PATCH, works the same whether it's
-      // currently Draft, Published, or Disabled; status is untouched here.
-      const res = await adminFetch(`/admin/questions/${editingId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questionText: form.questionText,
-          optionA: form.optionA,
-          optionB: form.optionB,
-          optionC: form.optionC,
-          optionD: form.optionD,
-          correctOption: form.correctOption,
-          difficulty: form.difficulty || null,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json();
-        setFormError(body.error ?? 'Failed to save changes');
-        return;
-      }
-    } else {
-      const res = await adminFetch('/admin/questions', {
+  // ── Bi-directional auto-translate: when admin finishes typing in one
+  // language's Question field, fill the other language's fields automatically. ──
+  async function autoTranslate(fromLang: 'ta' | 'en') {
+    const source = fromLang === 'ta' ? ta : en;
+    if (!source.questionText.trim() || !source.optionA || !source.optionB || !source.optionC || !source.optionD) return;
+
+    setTranslating(fromLang === 'ta' ? 'en' : 'ta');
+    try {
+      const res = await adminFetch('/admin/questions/translate-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, difficulty: form.difficulty || undefined }),
+        body: JSON.stringify({ fields: source, fromLang: fromLang.toUpperCase() }),
       });
-      if (!res.ok) {
-        const body = await res.json();
-        setFormError(body.error ?? 'Failed to add question');
-        return;
+      if (res.ok) {
+        const translated = await res.json();
+        fromLang === 'ta' ? setEn(translated) : setTa(translated);
       }
+    } finally {
+      setTranslating(null);
+    }
+  }
+
+  function startAdd() {
+    setEditingId(null);
+    setTa(emptyLangFields);
+    setEn(emptyLangFields);
+    setCorrectOption('A');
+    setExamYear('');
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  async function submitBilingual() {
+    setFormError(null);
+    const hasTa = ta.questionText.trim().length > 0;
+    const hasEn = en.questionText.trim().length > 0;
+    if (!hasTa && !hasEn) {
+      setFormError('Enter the question in at least one language.');
+      return;
     }
 
-    setForm(emptyForm);
-    setEditingId(null);
+    const res = await adminFetch('/admin/questions/bilingual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ta: hasTa ? { ...ta, correctOption, examYear: examYear ? Number(examYear) : undefined } : { ...emptyLangFields, correctOption },
+        en: hasEn ? { ...en, correctOption, examYear: examYear ? Number(examYear) : undefined } : { ...emptyLangFields, correctOption },
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json();
+      setFormError(body.error ?? 'Failed to save question');
+      return;
+    }
     setShowForm(false);
     loadQuestions();
   }
@@ -132,6 +146,19 @@ export default function AdminQuestionsPage() {
     loadQuestions();
   }
 
+  // ── Bulk actions ──────────────────────────────────────────────
+  async function bulkAction(action: 'bulk-publish' | 'bulk-disable' | 'bulk-classify' | 'bulk-delete') {
+    if (selected.size === 0) return;
+    if (action === 'bulk-delete' && !confirm(`Delete ${selected.size} question(s)? This cannot be undone.`)) return;
+
+    await adminFetch(`/admin/questions/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    });
+    loadQuestions();
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -145,66 +172,58 @@ export default function AdminQuestionsPage() {
       </div>
 
       {showForm && (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, marginBottom: 24, maxWidth: 560 }}>
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, marginBottom: 24, maxWidth: 900 }}>
           <h2 style={{ fontSize: 14, marginBottom: 12, color: '#64748b' }}>
-            {editingId ? 'Edit Question' : 'New Question'}
+            New Question — type in either language, the other auto-fills when you click away
           </h2>
-          <textarea
-            placeholder="Question text"
-            value={form.questionText}
-            onChange={(e) => setForm({ ...form, questionText: e.target.value })}
-            style={{ width: '100%', padding: 10, marginBottom: 10, borderRadius: 6, border: '1px solid #cbd5e1' }}
-            rows={2}
-          />
-          {(['optionA', 'optionB', 'optionC', 'optionD'] as const).map((opt, i) => (
-            <input
-              key={opt}
-              placeholder={`Option ${String.fromCharCode(65 + i)}`}
-              value={form[opt]}
-              onChange={(e) => setForm({ ...form, [opt]: e.target.value })}
-              style={{ width: '100%', padding: 8, marginBottom: 8, borderRadius: 6, border: '1px solid #cbd5e1' }}
+          <div style={{ display: 'flex', gap: 16 }}>
+            <LangFormBlock
+              label={`Tamil ${translating === 'ta' ? '(translating…)' : ''}`}
+              fields={ta}
+              setFields={setTa}
+              onBlurQuestion={() => autoTranslate('ta')}
             />
-          ))}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+            <LangFormBlock
+              label={`English ${translating === 'en' ? '(translating…)' : ''}`}
+              fields={en}
+              setFields={setEn}
+              onBlurQuestion={() => autoTranslate('en')}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 12 }}>
             <label style={{ fontSize: 13 }}>
               Correct:{' '}
-              <select value={form.correctOption} onChange={(e) => setForm({ ...form, correctOption: e.target.value })}>
+              <select value={correctOption} onChange={(e) => setCorrectOption(e.target.value)}>
                 {['A', 'B', 'C', 'D'].map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </label>
-            {!editingId && (
-              <label style={{ fontSize: 13 }}>
-                Language:{' '}
-                <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
-                  <option value="TA">Tamil</option>
-                  <option value="EN">English</option>
-                </select>
-              </label>
-            )}
             <label style={{ fontSize: 13 }}>
-              Difficulty:{' '}
-              <select value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
-                <option value="">Unset (AI will suggest)</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HARD">Hard</option>
-              </select>
+              Exam Year (optional):{' '}
+              <input
+                type="number"
+                value={examYear}
+                onChange={(e) => setExamYear(e.target.value)}
+                placeholder="e.g. 2024"
+                style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }}
+              />
             </label>
           </div>
-          <button onClick={submitForm} style={{ padding: '8px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}>
-            {editingId ? 'Save Changes' : 'Save as Draft'}
+
+          <button onClick={submitBilingual} style={{ padding: '8px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}>
+            Save as Draft (both languages)
           </button>
           {formError && <p style={{ color: '#dc2626', fontSize: 13, marginTop: 8 }}>{formError}</p>}
         </div>
       )}
 
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         {['DRAFT', 'PUBLISHED', 'DISABLED'].map((s) => (
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
             style={{
               padding: '6px 14px',
-              marginRight: 8,
               borderRadius: 16,
               border: '1px solid #cbd5e1',
               background: statusFilter === s ? '#0f172a' : '#fff',
@@ -215,12 +234,35 @@ export default function AdminQuestionsPage() {
             {s}
           </button>
         ))}
+        <input
+          placeholder="Search question text..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && loadQuestions()}
+          style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, minWidth: 220 }}
+        />
+        <button onClick={loadQuestions} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 13 }}>Search</button>
       </div>
+
+      {selected.size > 0 && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#f1f5f9', padding: 10, borderRadius: 8, marginBottom: 12 }}>
+          <span style={{ fontSize: 13, color: '#334155' }}>{selected.size} selected</span>
+          <button onClick={() => bulkAction('bulk-classify')} style={{ fontSize: 12, padding: '6px 12px' }}>Classify Selected with AI</button>
+          <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
+          <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
+          <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
+        </div>
+      )}
 
       <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
         <thead>
           <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0', fontSize: 13, color: '#64748b' }}>
+            <th style={{ padding: 10 }}>
+              <input type="checkbox" checked={selected.size === questions.length && questions.length > 0} onChange={toggleSelectAll} />
+            </th>
             <th style={{ padding: 10 }}>Question</th>
+            <th style={{ padding: 10 }}>Lang</th>
+            <th style={{ padding: 10 }}>Year</th>
             <th style={{ padding: 10 }}>Difficulty</th>
             <th style={{ padding: 10 }}>AI Suggestion</th>
             <th style={{ padding: 10 }}>Actions</th>
@@ -229,14 +271,20 @@ export default function AdminQuestionsPage() {
         <tbody>
           {questions.map((q) => (
             <tr key={q.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
+              <td style={{ padding: 10 }}>
+                <input type="checkbox" checked={selected.has(q.id)} onChange={() => toggleSelect(q.id)} />
+              </td>
               <td style={{ padding: 10, maxWidth: 320 }}>
                 {q.questionText}
+                {q.translationGroupId && <span style={{ marginLeft: 6, fontSize: 11, color: '#94a3b8' }}>🔗 linked</span>}
                 {!q.difficulty && (
                   <div style={{ color: '#d97706', fontSize: 11, marginTop: 4 }}>
                     ⚠ No difficulty set — won't appear in any student quiz until set below
                   </div>
                 )}
               </td>
+              <td style={{ padding: 10 }}>{q.language}</td>
+              <td style={{ padding: 10, color: '#64748b' }}>{q.examYear ?? '—'}</td>
               <td style={{ padding: 10 }}>
                 <select value={q.difficulty ?? ''} onChange={(e) => setDifficulty(q.id, e.target.value)}>
                   <option value="">—</option>
@@ -248,7 +296,6 @@ export default function AdminQuestionsPage() {
                 {q.aiSuggestedDifficulty ? `${q.aiSuggestedDifficulty} (${q.aiConfidence?.toFixed(0)}%)` : '—'}
               </td>
               <td style={{ padding: 10 }}>
-                <button onClick={() => startEdit(q)} style={{ marginRight: 8, fontSize: 12 }}>Edit</button>
                 {q.status !== 'PUBLISHED' && (
                   <button onClick={() => setStatus(q.id, 'publish')} style={{ marginRight: 8, fontSize: 12 }}>Publish</button>
                 )}
@@ -262,10 +309,45 @@ export default function AdminQuestionsPage() {
             </tr>
           ))}
           {questions.length === 0 && (
-            <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No questions in this status.</td></tr>
+            <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No questions in this status.</td></tr>
           )}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function LangFormBlock({
+  label,
+  fields,
+  setFields,
+  onBlurQuestion,
+}: {
+  label: string;
+  fields: typeof emptyLangFields;
+  setFields: (f: typeof emptyLangFields) => void;
+  onBlurQuestion: () => void;
+}) {
+  return (
+    <div style={{ flex: 1 }}>
+      <h3 style={{ fontSize: 13, color: '#0f172a', marginBottom: 8 }}>{label}</h3>
+      <textarea
+        placeholder="Question text"
+        value={fields.questionText}
+        onChange={(e) => setFields({ ...fields, questionText: e.target.value })}
+        onBlur={onBlurQuestion}
+        style={{ width: '100%', padding: 8, marginBottom: 8, borderRadius: 6, border: '1px solid #cbd5e1' }}
+        rows={2}
+      />
+      {(['optionA', 'optionB', 'optionC', 'optionD'] as const).map((opt, i) => (
+        <input
+          key={opt}
+          placeholder={`Option ${String.fromCharCode(65 + i)}`}
+          value={fields[opt]}
+          onChange={(e) => setFields({ ...fields, [opt]: e.target.value })}
+          style={{ width: '100%', padding: 6, marginBottom: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+        />
+      ))}
     </div>
   );
 }
