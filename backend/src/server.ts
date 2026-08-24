@@ -78,11 +78,14 @@ app.post('/auth/firebase-login', async (req, res) => {
 // STUDENT ROUTES
 // ─────────────────────────────────────────────────────────
 
-// POST /quiz/start  { mode: 'MIXED'|'MEDIUM'|'HARD', sessionSize }  — userId now comes from the JWT, not the request body
+// POST /quiz/start  { mode: 'MIXED'|'MEDIUM'|'HARD' } — userId from the JWT.
+// Simplified flow (finalized requirement): no sessionSize — the session
+// automatically gets as many questions as the student's remaining quota
+// allows (capped by question availability).
 app.post('/quiz/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    const { mode, sessionSize } = req.body;
-    const session = await sessionService.startSession(req.studentUserId!, mode, sessionSize);
+    const { mode } = req.body;
+    const session = await sessionService.startSession(req.studentUserId!, mode);
     res.json(session);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
@@ -554,6 +557,17 @@ app.get('/admin/students/:id', requireStaffAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(404).json({ error: 'Student not found' });
+  }
+});
+
+// POST /admin/students/:id/test-account  { isTestAccount: boolean } — Super Admin only (finalized requirement)
+app.post('/admin/students/:id/test-account', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const result = await studentManagementService.setTestAccount(req.params.id, !!req.body.isTestAccount);
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update test account status' });
   }
 });
 
