@@ -2,20 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
+import { ExamTaxonomyPicker, TaxonomyValue } from '../../../components/ExamTaxonomyPicker';
 
-// Question Management — implements §7.1, extended with:
-//   - bilingual add form (Tamil + English side by side, auto-translate on blur)
-//   - bulk select + Classify/Publish/Delete Selected
-//   - search box
-//   - exam year (admin-only "previous year question" metadata)
+// Question Management — bilingual add form with the new Authority → Category
+// → Sub-Category classification, Source Type metadata, bulk select actions,
+// and search.
 
 type Question = {
   id: string;
   questionText: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
   correctOption: string;
   status: 'DRAFT' | 'PUBLISHED' | 'DISABLED';
   difficulty: 'MEDIUM' | 'HARD' | null;
@@ -24,11 +19,21 @@ type Question = {
   language: 'TA' | 'EN';
   examYear: number | null;
   translationGroupId: string | null;
-  examType: { name: string } | null;
-  examSubType: { name: string } | null;
+  authority: { name: string } | null;
+  examCategory: { name: string } | null;
+  subCategory: { name: string } | null;
+  sourceType: 'PREVIOUS_EXAM' | 'BOOK' | 'ORIGINAL' | 'OTHER';
 };
 
 const emptyLangFields = { questionText: '', optionA: '', optionB: '', optionC: '', optionD: '' };
+const emptyTaxonomy: TaxonomyValue = { authorityId: '', categoryId: '', subCategoryId: '' };
+
+const SOURCE_TYPES = [
+  { value: 'ORIGINAL', label: 'Original / Admin Created' },
+  { value: 'PREVIOUS_EXAM', label: 'Previous Exam' },
+  { value: 'BOOK', label: 'Book / Study Material' },
+  { value: 'OTHER', label: 'Other' },
+];
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -40,10 +45,13 @@ export default function AdminQuestionsPage() {
   const [ta, setTa] = useState(emptyLangFields);
   const [en, setEn] = useState(emptyLangFields);
   const [correctOption, setCorrectOption] = useState('A');
+  const [taxonomy, setTaxonomy] = useState<TaxonomyValue>(emptyTaxonomy);
+  const [examName, setExamName] = useState('');
   const [examYear, setExamYear] = useState('');
+  const [sourceType, setSourceType] = useState('ORIGINAL');
+  const [sourceName, setSourceName] = useState('');
   const [translating, setTranslating] = useState<'ta' | 'en' | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
 
   async function loadQuestions() {
     const params = new URLSearchParams({ status: statusFilter });
@@ -71,8 +79,6 @@ export default function AdminQuestionsPage() {
     setSelected((prev) => (prev.size === questions.length ? new Set() : new Set(questions.map((q) => q.id))));
   }
 
-  // ── Bi-directional auto-translate: when admin finishes typing in one
-  // language's Question field, fill the other language's fields automatically. ──
   async function autoTranslate(fromLang: 'ta' | 'en') {
     const source = fromLang === 'ta' ? ta : en;
     if (!source.questionText.trim() || !source.optionA || !source.optionB || !source.optionC || !source.optionD) return;
@@ -94,11 +100,14 @@ export default function AdminQuestionsPage() {
   }
 
   function startAdd() {
-    setEditingId(null);
     setTa(emptyLangFields);
     setEn(emptyLangFields);
     setCorrectOption('A');
+    setTaxonomy(emptyTaxonomy);
+    setExamName('');
     setExamYear('');
+    setSourceType('ORIGINAL');
+    setSourceName('');
     setFormError(null);
     setShowForm(true);
   }
@@ -112,12 +121,23 @@ export default function AdminQuestionsPage() {
       return;
     }
 
+    const shared = {
+      correctOption,
+      authorityId: taxonomy.authorityId || undefined,
+      categoryId: taxonomy.categoryId || undefined,
+      subCategoryId: taxonomy.subCategoryId || undefined,
+      examName: examName.trim() || undefined,
+      examYear: examYear ? Number(examYear) : undefined,
+      sourceType,
+      sourceName: sourceName.trim() || undefined,
+    };
+
     const res = await adminFetch('/admin/questions/bilingual', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ta: hasTa ? { ...ta, correctOption, examYear: examYear ? Number(examYear) : undefined } : { ...emptyLangFields, correctOption },
-        en: hasEn ? { ...en, correctOption, examYear: examYear ? Number(examYear) : undefined } : { ...emptyLangFields, correctOption },
+        ta: hasTa ? { ...ta, ...shared } : { ...emptyLangFields, ...shared },
+        en: hasEn ? { ...en, ...shared } : { ...emptyLangFields, ...shared },
       }),
     });
     if (!res.ok) {
@@ -153,7 +173,6 @@ export default function AdminQuestionsPage() {
     loadQuestions();
   }
 
-  // ── Bulk actions ──────────────────────────────────────────────
   async function bulkAction(action: 'bulk-publish' | 'bulk-disable' | 'bulk-classify' | 'bulk-delete') {
     if (selected.size === 0) return;
     if (action === 'bulk-delete' && !confirm(`Delete ${selected.size} question(s)? This cannot be undone.`)) return;
@@ -188,36 +207,44 @@ export default function AdminQuestionsPage() {
             New Question — type in either language, the other auto-fills when you click away
           </h2>
           <div style={{ display: 'flex', gap: 16 }}>
-            <LangFormBlock
-              label={`Tamil ${translating === 'ta' ? '(translating…)' : ''}`}
-              fields={ta}
-              setFields={setTa}
-              onBlurQuestion={() => autoTranslate('ta')}
-            />
-            <LangFormBlock
-              label={`English ${translating === 'en' ? '(translating…)' : ''}`}
-              fields={en}
-              setFields={setEn}
-              onBlurQuestion={() => autoTranslate('en')}
-            />
+            <LangFormBlock label={`Tamil ${translating === 'ta' ? '(translating…)' : ''}`} fields={ta} setFields={setTa} onBlurQuestion={() => autoTranslate('ta')} />
+            <LangFormBlock label={`English ${translating === 'en' ? '(translating…)' : ''}`} fields={en} setFields={setEn} onBlurQuestion={() => autoTranslate('en')} />
           </div>
 
-          <div style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 12 }}>
+          <div style={{ marginTop: 16, marginBottom: 12 }}>
             <label style={{ fontSize: 13 }}>
               Correct:{' '}
               <select value={correctOption} onChange={(e) => setCorrectOption(e.target.value)}>
                 {['A', 'B', 'C', 'D'].map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </label>
+          </div>
+
+          <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12, marginBottom: 12 }}>
+            <ExamTaxonomyPicker value={taxonomy} onChange={setTaxonomy} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+            <label style={{ fontSize: 13 }}>
+              Exam Name (optional):{' '}
+              <input value={examName} onChange={(e) => setExamName(e.target.value)} placeholder="e.g. Assistant Public Prosecutor, Grade II" style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 220 }} />
+            </label>
             <label style={{ fontSize: 13 }}>
               Exam Year (optional):{' '}
-              <input
-                type="number"
-                value={examYear}
-                onChange={(e) => setExamYear(e.target.value)}
-                placeholder="e.g. 2024"
-                style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }}
-              />
+              <input type="number" value={examYear} onChange={(e) => setExamYear(e.target.value)} placeholder="2024" style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }} />
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+            <label style={{ fontSize: 13 }}>
+              Source Type:{' '}
+              <select value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
+                {SOURCE_TYPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </label>
+            <label style={{ fontSize: 13 }}>
+              Source Name (optional, admin-only):{' '}
+              <input value={sourceName} onChange={(e) => setSourceName(e.target.value)} placeholder="e.g. TNPSC Group IV Question Paper" style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 220 }} />
             </label>
           </div>
 
@@ -233,14 +260,7 @@ export default function AdminQuestionsPage() {
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 16,
-              border: '1px solid #cbd5e1',
-              background: statusFilter === s ? '#0f172a' : '#fff',
-              color: statusFilter === s ? '#fff' : '#334155',
-              fontSize: 13,
-            }}
+            style={{ padding: '6px 14px', borderRadius: 16, border: '1px solid #cbd5e1', background: statusFilter === s ? '#0f172a' : '#fff', color: statusFilter === s ? '#fff' : '#334155', fontSize: 13 }}
           >
             {s}
           </button>
@@ -273,8 +293,8 @@ export default function AdminQuestionsPage() {
             </th>
             <th style={{ padding: 10 }}>Question</th>
             <th style={{ padding: 10 }}>Lang</th>
-            <th style={{ padding: 10 }}>Exam</th>
-            <th style={{ padding: 10 }}>Year</th>
+            <th style={{ padding: 10 }}>Classification</th>
+            <th style={{ padding: 10 }}>Source</th>
             <th style={{ padding: 10 }}>Difficulty</th>
             <th style={{ padding: 10 }}>AI Suggestion</th>
             <th style={{ padding: 10 }}>Actions</th>
@@ -286,20 +306,17 @@ export default function AdminQuestionsPage() {
               <td style={{ padding: 10 }}>
                 <input type="checkbox" checked={selected.has(q.id)} onChange={() => toggleSelect(q.id)} />
               </td>
-              <td style={{ padding: 10, maxWidth: 320 }}>
+              <td style={{ padding: 10, maxWidth: 300 }}>
                 {q.questionText}
-                {q.translationGroupId && <span style={{ marginLeft: 6, fontSize: 11, color: '#94a3b8' }}>🔗 linked</span>}
-                {!q.difficulty && (
-                  <div style={{ color: '#d97706', fontSize: 11, marginTop: 4 }}>
-                    ⚠ No difficulty set — won't appear in any student quiz until set below
-                  </div>
-                )}
+                {q.translationGroupId && <span style={{ marginLeft: 6, fontSize: 11, color: '#94a3b8' }}>🔗</span>}
+                {!q.difficulty && <div style={{ color: '#d97706', fontSize: 11, marginTop: 4 }}>⚠ No difficulty set — won't appear in any student quiz</div>}
               </td>
               <td style={{ padding: 10 }}>{q.language}</td>
               <td style={{ padding: 10, color: '#64748b', fontSize: 12 }}>
-                {q.examType ? `${q.examType.name}${q.examSubType ? ' — ' + q.examSubType.name : ''}` : '—'}
+                {q.authority ? `${q.authority.name}${q.examCategory ? ' → ' + q.examCategory.name : ''}${q.subCategory ? ' → ' + q.subCategory.name : ''}` : '—'}
+                {q.examYear && <div>{q.examYear}</div>}
               </td>
-              <td style={{ padding: 10, color: '#64748b' }}>{q.examYear ?? '—'}</td>
+              <td style={{ padding: 10, color: '#64748b', fontSize: 12 }}>{SOURCE_TYPES.find((s) => s.value === q.sourceType)?.label ?? q.sourceType}</td>
               <td style={{ padding: 10 }}>
                 <select value={q.difficulty ?? ''} onChange={(e) => setDifficulty(q.id, e.target.value)}>
                   <option value="">—</option>
@@ -311,15 +328,9 @@ export default function AdminQuestionsPage() {
                 {q.aiSuggestedDifficulty ? `${q.aiSuggestedDifficulty} (${q.aiConfidence?.toFixed(0)}%)` : '—'}
               </td>
               <td style={{ padding: 10 }}>
-                {q.status !== 'PUBLISHED' && (
-                  <button onClick={() => setStatus(q.id, 'publish')} style={{ marginRight: 8, fontSize: 12 }}>Publish</button>
-                )}
-                {q.status !== 'DISABLED' && (
-                  <button onClick={() => setStatus(q.id, 'disable')} style={{ marginRight: 8, fontSize: 12 }}>Disable</button>
-                )}
-                {q.status === 'DRAFT' && !q.aiSuggestedDifficulty && (
-                  <button onClick={() => classifyNow(q.id)} style={{ fontSize: 12 }}>Classify with AI</button>
-                )}
+                {q.status !== 'PUBLISHED' && <button onClick={() => setStatus(q.id, 'publish')} style={{ marginRight: 8, fontSize: 12 }}>Publish</button>}
+                {q.status !== 'DISABLED' && <button onClick={() => setStatus(q.id, 'disable')} style={{ marginRight: 8, fontSize: 12 }}>Disable</button>}
+                {q.status === 'DRAFT' && !q.aiSuggestedDifficulty && <button onClick={() => classifyNow(q.id)} style={{ fontSize: 12 }}>Classify with AI</button>}
               </td>
             </tr>
           ))}
