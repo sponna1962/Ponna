@@ -1,7 +1,11 @@
 // Question Service — implements §7.1 (Question Management): add/edit/disable,
 // publish/unpublish, exact-duplicate detection on create/edit.
+//
+// Classification uses the 3-level Authority → Category → Sub-Category
+// taxonomy (see exam-taxonomy.service.ts) plus Source Type metadata — see
+// the schema comments for why each field is optional.
 
-import { PrismaClient, QuestionStatus, Difficulty, Language, QuestionCategory, CorrectOption } from '@prisma/client';
+import { PrismaClient, QuestionStatus, Difficulty, Language, QuestionCategory, CorrectOption, SourceType } from '@prisma/client';
 import { computeContentHash } from '../../common/content-hash';
 
 const prisma = new PrismaClient();
@@ -14,14 +18,18 @@ export interface QuestionInput {
   optionD: string;
   correctOption: CorrectOption;
   language: Language;
-  examTypeId?: string;
-  examSubTypeId?: string;
+  authorityId?: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  examName?: string;
+  examYear?: number;
+  sourceType?: SourceType;
+  sourceName?: string;
+  internalNotes?: string;
   difficulty?: Difficulty;
   category?: QuestionCategory;
   relevanceDate?: Date;
   sourceBatchId?: string;
-  examYear?: number;
-  isPreviousYearQuestion?: boolean;
 }
 
 export class QuestionService {
@@ -59,14 +67,18 @@ export class QuestionService {
         optionD: input.optionD,
         correctOption: input.correctOption,
         language: input.language,
-        examTypeId: input.examTypeId,
-        examSubTypeId: input.examSubTypeId,
+        authorityId: input.authorityId,
+        categoryId: input.categoryId,
+        subCategoryId: input.subCategoryId,
+        examName: input.examName,
+        examYear: input.examYear,
+        sourceType: input.sourceType ?? SourceType.ORIGINAL,
+        sourceName: input.sourceName,
+        internalNotes: input.internalNotes,
         difficulty: input.difficulty,
         category: input.category ?? QuestionCategory.STANDARD,
         relevanceDate: input.relevanceDate,
         sourceBatchId: input.sourceBatchId,
-        examYear: input.examYear,
-        isPreviousYearQuestion: input.isPreviousYearQuestion ?? false,
         status: QuestionStatus.DRAFT, // always lands as Draft; AI classification / admin promotes it (§7.3, §9)
         contentHash,
       },
@@ -118,7 +130,8 @@ export class QuestionService {
   async list(filters: {
     status?: QuestionStatus;
     difficulty?: Difficulty;
-    examTypeId?: string;
+    authorityId?: string;
+    categoryId?: string;
     category?: QuestionCategory;
     language?: Language;
     search?: string; // matches question text, case-insensitive substring
@@ -131,7 +144,8 @@ export class QuestionService {
     const where = {
       status: filters.status,
       difficulty: filters.difficulty,
-      examTypeId: filters.examTypeId,
+      authorityId: filters.authorityId,
+      categoryId: filters.categoryId,
       category: filters.category,
       language: filters.language,
       ...(filters.search ? { questionText: { contains: filters.search, mode: 'insensitive' as const } } : {}),
@@ -143,7 +157,7 @@ export class QuestionService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
-        include: { examType: true, examSubType: true },
+        include: { authority: true, examCategory: true, subCategory: true },
       }),
       prisma.question.count({ where }),
     ]);
@@ -181,6 +195,7 @@ export class QuestionService {
         relevanceDate: new Date(),
         difficulty: Difficulty.MEDIUM, // sensible default, editable later per §7.2
         status: input.publish ? QuestionStatus.PUBLISHED : QuestionStatus.DRAFT,
+        sourceType: SourceType.ORIGINAL,
         contentHash,
       },
     });
