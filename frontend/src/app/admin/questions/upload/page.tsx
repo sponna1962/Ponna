@@ -2,140 +2,196 @@
 
 import { useState } from 'react';
 import { adminFetch } from '../../../../lib/admin-fetch';
+import { ExamTaxonomyPicker, TaxonomyValue } from '../../../../components/ExamTaxonomyPicker';
 
-// Bulk Upload — implements §6.3/§7.1: CSV upload, per-row validation and
-// duplicate-detection report shown right after upload. Also asks the admin
-// once, before uploading, which exam/year this whole file is for — so a
-// single-exam CSV doesn't need to repeat that on every row (see
-// BatchDefaults in bulk-upload.service.ts). Per-row exam_type/exam_sub_type/
-// exam_year columns in the CSV still take priority if present.
+// Bulk Upload — Step 1: Source Type, Step 2: metadata (applies to the whole
+// file — never repeated per row), Step 3: upload CSV → Validate → Preview →
+// Confirm Import. Exact-duplicate detection only in V1; no per-row
+// checkboxes — the admin reviews the summary/list, then imports every valid,
+// non-duplicate row in one action.
 
-type RowResult =
-  | { rowNumber: number; status: 'inserted'; questionId: string; questionText: string; note?: string }
-  | { rowNumber: number; status: 'duplicate'; existingQuestionId?: string; reason: string }
-  | { rowNumber: number; status: 'invalid'; reason: string };
+const SOURCE_TYPES = [
+  { value: 'PREVIOUS_EXAM', label: 'Previous Exam' },
+  { value: 'BOOK', label: 'Book / Study Material' },
+  { value: 'ORIGINAL', label: 'Original / Admin Created' },
+  { value: 'OTHER', label: 'Other' },
+];
+
+type PreviewRow = {
+  rowNumber: number;
+  status: 'valid' | 'invalid' | 'duplicate';
+  reason?: string;
+  data?: any;
+};
 
 export default function BulkUploadPage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [examType, setExamType] = useState('');
-  const [examSubType, setExamSubType] = useState('');
+  const [sourceType, setSourceType] = useState('PREVIOUS_EXAM');
+  const [taxonomy, setTaxonomy] = useState<TaxonomyValue>({ authorityId: '', categoryId: '', subCategoryId: '' });
+  const [examName, setExamName] = useState('');
   const [examYear, setExamYear] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<{ summary: any; results: RowResult[] } | null>(null);
+  const [sourceName, setSourceName] = useState('');
+
+  const [file, setFile] = useState<File | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [preview, setPreview] = useState<{ summary: any; rows: PreviewRow[] } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ inserted: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function upload() {
+  async function runPreview() {
     if (!file) return;
-    setUploading(true);
+    setPreviewing(true);
     setError(null);
+    setImportResult(null);
     const formData = new FormData();
     formData.append('file', file);
-    if (examType.trim()) formData.append('exam_type', examType.trim());
-    if (examSubType.trim()) formData.append('exam_sub_type', examSubType.trim());
-    if (examYear.trim()) formData.append('exam_year', examYear.trim());
 
     try {
-      const res = await adminFetch('/admin/questions/bulk-upload', { method: 'POST', body: formData });
+      const res = await adminFetch('/admin/questions/bulk-upload/preview', { method: 'POST', body: formData });
       if (!res.ok) {
         const body = await res.json();
-        setError(body.error ?? 'Upload failed');
+        setError(body.error ?? 'Preview failed');
         return;
       }
-      setResult(await res.json());
+      setPreview(await res.json());
     } finally {
-      setUploading(false);
+      setPreviewing(false);
+    }
+  }
+
+  async function confirmImport() {
+    if (!preview) return;
+    setImporting(true);
+    setError(null);
+    const validRows = preview.rows.filter((r) => r.status === 'valid').map((r) => r.data);
+
+    const batchMeta = {
+      authorityId: taxonomy.authorityId || undefined,
+      categoryId: taxonomy.categoryId || undefined,
+      subCategoryId: taxonomy.subCategoryId || undefined,
+      examName: examName.trim() || undefined,
+      examYear: examYear ? Number(examYear) : undefined,
+      sourceType,
+      sourceName: sourceName.trim() || undefined,
+    };
+
+    try {
+      const res = await adminFetch('/admin/questions/bulk-upload/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: validRows, batchMeta }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        setError(body.error ?? 'Import failed');
+        return;
+      }
+      setImportResult(await res.json());
+      setPreview(null);
+      setFile(null);
+    } finally {
+      setImporting(false);
     }
   }
 
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 8 }}>Bulk Upload</h1>
-      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 8, maxWidth: 640 }}>
-        <strong>Format A (single language):</strong> <code>question, option_a, option_b, option_c, option_d, correct_answer</code>.
-        The missing language is generated automatically in the background (AI translation) as a linked Draft — review it before publishing.
-      </p>
       <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, maxWidth: 640 }}>
-        <strong>Format B (bilingual — no AI translation needed):</strong> <code>question_ta, question_en, option_a_ta, option_a_en, option_b_ta, option_b_en, option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer</code>.
-        Use this when your source already has both languages (e.g. a bilingual exam paper) — both rows are inserted directly, linked, no translation step.
+        Set the exam metadata once below — every question in the file inherits it, so you never
+        repeat the exam/year/source on every CSV row.
       </p>
 
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16, maxWidth: 480 }}>
-        <h2 style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>
-          This exam/year applies to the whole file below (skip this if your CSV already has its own exam_type/exam_sub_type/exam_year columns per row)
-        </h2>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6 }}>Exam Type</label>
-        <input
-          value={examType}
-          onChange={(e) => setExamType(e.target.value)}
-          placeholder="e.g. TET, TNPSC"
-          style={{ width: '100%', padding: 8, marginBottom: 10, borderRadius: 6, border: '1px solid #cbd5e1' }}
-        />
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6 }}>Exam Sub-Type</label>
-        <input
-          value={examSubType}
-          onChange={(e) => setExamSubType(e.target.value)}
-          placeholder="e.g. Education (Paper 617), Group 4"
-          style={{ width: '100%', padding: 8, marginBottom: 10, borderRadius: 6, border: '1px solid #cbd5e1' }}
-        />
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6 }}>Exam Year (admin-only metadata)</label>
-        <input
-          type="number"
-          value={examYear}
-          onChange={(e) => setExamYear(e.target.value)}
-          placeholder="e.g. 2024"
-          style={{ width: 120, padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }}
-        />
+      {/* Step 1 — Source Type */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16, maxWidth: 560 }}>
+        <h2 style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>Step 1 — Source Type</h2>
+        <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} style={{ padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', width: '100%' }}>
+          {SOURCE_TYPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
       </div>
 
-      <input type="file" accept=".csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ marginBottom: 12 }} />
-      <br />
-      <button
-        onClick={upload}
-        disabled={!file || uploading}
-        style={{ padding: '8px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
-      >
-        {uploading ? 'Uploading…' : 'Upload'}
-      </button>
+      {/* Step 2 — Metadata */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16, maxWidth: 640 }}>
+        <h2 style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>Step 2 — Exam Metadata (applies to the whole file)</h2>
+        <div style={{ marginBottom: 10 }}>
+          <ExamTaxonomyPicker value={taxonomy} onChange={setTaxonomy} />
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+          <label style={{ fontSize: 13 }}>
+            Exam Name (optional):{' '}
+            <input value={examName} onChange={(e) => setExamName(e.target.value)} placeholder="e.g. Assistant Public Prosecutor, Grade II" style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', minWidth: 220 }} />
+          </label>
+          <label style={{ fontSize: 13 }}>
+            Exam Year (optional):{' '}
+            <input type="number" value={examYear} onChange={(e) => setExamYear(e.target.value)} placeholder="2024" style={{ width: 90, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1' }} />
+          </label>
+        </div>
+        <label style={{ fontSize: 13, display: 'block' }}>
+          Source Name (optional, admin-only):{' '}
+          <input value={sourceName} onChange={(e) => setSourceName(e.target.value)} placeholder="e.g. TNPSC Group IV Question Paper 2024" style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', width: '100%', marginTop: 4 }} />
+        </label>
+      </div>
 
-      {error && <p style={{ color: '#dc2626', marginTop: 12, fontSize: 13 }}>{error}</p>}
+      {/* Step 3 — Upload */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16, maxWidth: 640 }}>
+        <h2 style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>Step 3 — Upload CSV</h2>
+        <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
+          Columns: <code>question_ta, question_en, option_a_ta, option_a_en, option_b_ta, option_b_en, option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer</code>.
+          A row needs at least one language fully filled in — the other is generated automatically after import if missing.
+        </p>
+        <input type="file" accept=".csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ marginBottom: 12 }} />
+        <br />
+        <button onClick={runPreview} disabled={!file || previewing} style={{ padding: '8px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}>
+          {previewing ? 'Validating…' : 'Validate & Preview'}
+        </button>
+      </div>
 
-      {result && (
-        <div style={{ marginTop: 24 }}>
+      {error && <p style={{ color: '#dc2626', marginBottom: 12, fontSize: 13 }}>{error}</p>}
+
+      {importResult && (
+        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: 16, marginBottom: 16, maxWidth: 640 }}>
+          <strong>Imported {importResult.inserted} question(s) as Draft.</strong> They'll go through AI difficulty
+          classification shortly — check the Needs Review queue or the Questions list.
+        </div>
+      )}
+
+      {preview && (
+        <div style={{ maxWidth: 700 }}>
           <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-            <Stat label="Inserted" value={result.summary.inserted} color="#16a34a" />
-            <Stat label="Duplicates" value={result.summary.duplicates} color="#d97706" />
-            <Stat label="Invalid" value={result.summary.invalid} color="#dc2626" />
+            <Stat label="Total" value={preview.summary.total} color="#334155" />
+            <Stat label="Valid" value={preview.summary.valid} color="#16a34a" />
+            <Stat label="Duplicate" value={preview.summary.duplicate} color="#d97706" />
+            <Stat label="Invalid" value={preview.summary.invalid} color="#dc2626" />
           </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', fontSize: 13 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', fontSize: 13, marginBottom: 16 }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
                 <th style={{ padding: 8 }}>Row</th>
                 <th style={{ padding: 8 }}>Status</th>
-                <th style={{ padding: 8 }}>Question</th>
+                <th style={{ padding: 8 }}>Question / Reason</th>
               </tr>
             </thead>
             <tbody>
-              {result.results.map((r) => (
+              {preview.rows.map((r) => (
                 <tr key={r.rowNumber} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: 8 }}>{r.rowNumber}</td>
-                  <td style={{ padding: 8, color: r.status === 'inserted' ? '#16a34a' : r.status === 'duplicate' ? '#d97706' : '#dc2626' }}>
-                    {r.status}
-                  </td>
-                  <td style={{ padding: 8, color: '#334155', maxWidth: 480 }}>
-                    {r.status === 'inserted' ? (
-                      <>
-                        {r.questionText}
-                        {r.note && <div style={{ color: '#d97706', fontSize: 11, marginTop: 2 }}>{r.note}</div>}
-                      </>
-                    ) : (
-                      <span style={{ color: '#64748b' }}>{r.reason}</span>
-                    )}
+                  <td style={{ padding: 8, color: r.status === 'valid' ? '#16a34a' : r.status === 'duplicate' ? '#d97706' : '#dc2626' }}>{r.status}</td>
+                  <td style={{ padding: 8, color: '#334155', maxWidth: 420 }}>
+                    {r.status === 'valid' ? (r.data?.questionTextTa || r.data?.questionTextEn) : r.reason}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          <button
+            onClick={confirmImport}
+            disabled={importing || preview.summary.valid === 0}
+            style={{ padding: '10px 24px', borderRadius: 6, background: '#16a34a', color: '#fff', border: 'none', fontWeight: 600 }}
+          >
+            {importing ? 'Importing…' : `Confirm Import (${preview.summary.valid} questions)`}
+          </button>
         </div>
       )}
     </div>
