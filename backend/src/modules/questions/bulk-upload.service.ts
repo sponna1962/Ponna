@@ -61,11 +61,9 @@ export class BulkUploadService {
       const rowNumber = i + 2;
       // Row-level exam_type/exam_sub_type/exam_year win if present; otherwise
       // fall back to the batch-wide defaults the admin set before uploading.
-      const raw = {
-        ...rawRows[i],
-        exam_type: rawRows[i].exam_type?.trim() || batchDefaults.examType || '',
-        exam_sub_type: rawRows[i].exam_sub_type?.trim() || batchDefaults.examSubType || '',
-      };
+         const raw = rawRows[i];
+   raw.exam_type = raw.exam_type?.trim() || batchDefaults.examType || '';
+   raw.exam_sub_type = raw.exam_sub_type?.trim() || batchDefaults.examSubType || '';
 
       const examYear = raw.exam_year?.trim()
         ? parseInt(raw.exam_year.trim(), 10)
