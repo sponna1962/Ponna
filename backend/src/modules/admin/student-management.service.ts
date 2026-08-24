@@ -43,6 +43,7 @@ export class StudentManagementService {
         email: u.email,
         preferredLang: u.preferredLang,
         createdAt: u.createdAt,
+        isTestAccount: u.isTestAccount,
         activePlan: u.subscriptions[0]?.plan.name ?? 'Free',
         performance: u.performanceSummary.reduce((acc, p) => {
           acc[p.bucket] = { questionsAnswered: p.questionsAnswered, averagePercent: p.averagePercent, rank: p.rank };
@@ -53,6 +54,11 @@ export class StudentManagementService {
       page,
       pageSize,
     };
+  }
+
+  /** Super Admin only (enforced at the route level) — toggle Test Account status. */
+  async setTestAccount(userId: string, isTestAccount: boolean) {
+    return prisma.user.update({ where: { id: userId }, data: { isTestAccount }, select: { id: true, isTestAccount: true } });
   }
 
   async getStudentDetail(userId: string) {
@@ -67,13 +73,14 @@ export class StudentManagementService {
     return user;
   }
 
-  /** Aggregate platform stats for a simple overview at the top of the student list (§7.5). */
+  /** Aggregate platform stats for a simple overview at the top of the student list (§7.5).
+   * Test Accounts are excluded — QA activity shouldn't inflate real usage numbers. */
   async getPlatformStats() {
     const [totalStudents, activeSubscriptions, totalSessionsCompleted, totalQuestionsAnswered] = await Promise.all([
-      prisma.user.count(),
-      prisma.subscription.count({ where: { status: 'ACTIVE', plan: { code: { in: ['PLAN_20', 'PLAN_50'] } } } }),
-      prisma.quizSession.count({ where: { status: 'COMPLETED' } }),
-      prisma.userQuestionHistory.count(),
+      prisma.user.count({ where: { isTestAccount: false } }),
+      prisma.subscription.count({ where: { status: 'ACTIVE', plan: { code: { in: ['PLAN_20', 'PLAN_50'] } }, user: { isTestAccount: false } } }),
+      prisma.quizSession.count({ where: { status: 'COMPLETED', user: { isTestAccount: false } } }),
+      prisma.userQuestionHistory.count({ where: { user: { isTestAccount: false } } }),
     ]);
 
     return { totalStudents, activeSubscriptions, totalSessionsCompleted, totalQuestionsAnswered };
