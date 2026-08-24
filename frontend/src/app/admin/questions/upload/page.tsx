@@ -40,10 +40,17 @@ export default function BulkUploadPage() {
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 8 }}>Bulk Upload</h1>
-      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, maxWidth: 560 }}>
-        CSV columns required: <code>question, option_a, option_b, option_c, option_d, correct_answer</code>.
-        Optional: <code>exam_type, exam_sub_type, language</code> (ta/en, defaults to ta).
-        Uploaded questions land as Draft and go through AI classification before publishing.
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 8, maxWidth: 640 }}>
+        <strong>Format A (single language):</strong> <code>question, option_a, option_b, option_c, option_d, correct_answer</code>.
+        Optional: <code>exam_type, exam_sub_type, language</code> (ta/en, defaults to ta), <code>exam_year</code>.
+        The missing language is generated automatically in the background (AI translation) as a linked Draft — review it before publishing.
+      </p>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, maxWidth: 640 }}>
+        <strong>Format B (bilingual — no AI translation needed):</strong> <code>question_ta, question_en, option_a_ta, option_a_en, option_b_ta, option_b_en, option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer</code>.
+        Optional: <code>exam_type, exam_sub_type, exam_year</code>. Use this when your source already has both languages (e.g. a bilingual exam paper) — both rows are inserted directly, linked, no translation step.
+      </p>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, maxWidth: 640 }}>
+        Uploaded questions land as Draft and go through AI difficulty classification before publishing.
       </p>
 
       <input type="file" accept=".csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ marginBottom: 12 }} />
