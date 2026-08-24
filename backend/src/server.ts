@@ -268,14 +268,15 @@ app.post('/admin/staff/:id/deactivate', requireStaffAuth, requireRole('SUPER_ADM
 
 const canEditQuestions = requireRole('SUPER_ADMIN', 'CONTENT_ADMIN');
 
-// GET /admin/questions?status=DRAFT&difficulty=MEDIUM&page=1&search=piaget
+// GET /admin/questions?status=DRAFT&difficulty=MEDIUM&page=1&search=piaget&authorityId=...&categoryId=...
 app.get('/admin/questions', requireStaffAuth, async (req, res) => {
   try {
-    const { status, difficulty, examTypeId, category, language, search, page, pageSize } = req.query;
+    const { status, difficulty, authorityId, categoryId, category, language, search, page, pageSize } = req.query;
     const result = await questionService.list({
       status: status as any,
       difficulty: difficulty as any,
-      examTypeId: examTypeId as string,
+      authorityId: authorityId as string,
+      categoryId: categoryId as string,
       category: category as any,
       language: language as any,
       search: search as string,
@@ -393,11 +394,11 @@ app.post('/admin/questions/bulk-classify', requireStaffAuth, canEditQuestions, a
   }
 });
 
-// POST /admin/questions/bulk-upload  (multipart form, field name "file", plus
-// optional exam_type/exam_sub_type/exam_year fields — set once for the whole
-// batch, applied to any row that doesn't specify its own)
+// POST /admin/questions/bulk-upload/preview  (multipart form, field name "file")
+// Phase 1 — parses, validates, exact-duplicate-checks. Writes NOTHING to the
+// database yet; the admin reviews the summary/list before confirming import.
 app.post(
-  '/admin/questions/bulk-upload',
+  '/admin/questions/bulk-upload/preview',
   requireStaffAuth,
   canEditQuestions,
   upload.single('file'),
@@ -405,29 +406,37 @@ app.post(
     try {
       if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
       const csvContent = req.file.buffer.toString('utf-8');
-      const batchDefaults = {
-        examType: req.body.exam_type || undefined,
-        examSubType: req.body.exam_sub_type || undefined,
-        examYear: req.body.exam_year ? Number(req.body.exam_year) : undefined,
-      };
-      const { batchId, results } = await bulkUploadService.processCsv(csvContent, req.staff!.staffId, batchDefaults);
-
-      // Kick off AI classification for this batch in the background — the
-      // upload response returns immediately with the row report; classification
-      // results show up in the Needs Review queue / auto-publish shortly after.
-      // (Fire-and-forget here; for large batches in production, hand this to a
-      // proper job queue instead of an in-process async call.)
-      classificationService.classifyPendingQuestions(batchId).catch((err) =>
-        console.error(`Background classification failed for batch ${batchId}:`, err),
-      );
-
-      res.json({ batchId, summary: bulkUploadService.summarize(results), results });
+      const result = await bulkUploadService.preview(csvContent);
+      res.json(result);
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: 'Bulk upload failed' });
+      res.status(500).json({ error: 'Preview failed — check the CSV format' });
     }
   },
 );
+
+// POST /admin/questions/bulk-upload/confirm
+// Phase 2 — { rows: PreviewRow['data'][], batchMeta: {...} }. Only the rows
+// the admin approved (valid, non-duplicate) should be sent here — the
+// frontend filters preview results down to 'valid' before calling this.
+app.post('/admin/questions/bulk-upload/confirm', requireStaffAuth, canEditQuestions, async (req: AuthedRequest, res) => {
+  try {
+    const { rows, batchMeta } = req.body;
+    const { batchId, inserted } = await bulkUploadService.confirmImport(rows, batchMeta, req.staff!.staffId);
+
+    // Kick off AI classification for this batch in the background — see
+    // note in the previous version of this route for why this is
+    // fire-and-forget rather than awaited.
+    classificationService.classifyPendingQuestions(batchId).catch((err) =>
+      console.error(`Background classification failed for batch ${batchId}:`, err),
+    );
+
+    res.json({ batchId, inserted });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Import failed' });
+  }
+});
 
 // ─────────────────────────────────────────────────────────
 // AI CLASSIFICATION  (§9) — Super Admin + Content Admin
@@ -477,19 +486,27 @@ app.get('/admin/ai/accuracy', requireStaffAuth, async (_req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────
-// EXAM TAXONOMY  (§7.1)
+// EXAM TAXONOMY — Authority → Category → Sub-Category (dynamic, Super Admin managed)
 // ─────────────────────────────────────────────────────────
 
-app.get('/admin/exam-types', requireStaffAuth, async (_req, res) => {
-  res.json(await examTaxonomyService.listExamTypes());
+// GET /admin/exam-taxonomy — full tree, for the Taxonomy Management page and cascading dropdowns
+app.get('/admin/exam-taxonomy', requireStaffAuth, async (_req, res) => {
+  res.json(await examTaxonomyService.listFullTree());
 });
 
-app.post('/admin/exam-types', requireStaffAuth, canEditQuestions, async (req, res) => {
-  res.json(await examTaxonomyService.createExamType(req.body.name));
+// POST /admin/exam-taxonomy/authorities  { name } — Super Admin only
+app.post('/admin/exam-taxonomy/authorities', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await examTaxonomyService.createAuthority(req.body.name));
 });
 
-app.post('/admin/exam-types/:examTypeId/sub-types', requireStaffAuth, canEditQuestions, async (req, res) => {
-  res.json(await examTaxonomyService.createExamSubType(req.params.examTypeId, req.body.name));
+// POST /admin/exam-taxonomy/authorities/:authorityId/categories  { name }
+app.post('/admin/exam-taxonomy/authorities/:authorityId/categories', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await examTaxonomyService.createCategory(req.params.authorityId, req.body.name));
+});
+
+// POST /admin/exam-taxonomy/categories/:categoryId/sub-categories  { name }
+app.post('/admin/exam-taxonomy/categories/:categoryId/sub-categories', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await examTaxonomyService.createSubCategory(req.params.categoryId, req.body.name));
 });
 
 // ─────────────────────────────────────────────────────────
