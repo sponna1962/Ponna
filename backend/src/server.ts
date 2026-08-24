@@ -12,6 +12,7 @@ import { RankingService } from './modules/ranking/ranking.service';
 import { QuotaExceededError } from './modules/quota/quota.service';
 import { QuestionService } from './modules/questions/question.service';
 import { BulkUploadService } from './modules/questions/bulk-upload.service';
+import { TranslationService } from './modules/questions/translation.service';
 import { ExamTaxonomyService } from './modules/admin/exam-taxonomy.service';
 import { StaffAuthService, requireStaffAuth, requireRole, AuthedRequest } from './modules/admin/staff-auth.service';
 import { ClassificationService } from './modules/ai/classification.service';
@@ -45,6 +46,7 @@ const sessionService = new SessionService();
 const rankingService = new RankingService();
 const questionService = new QuestionService();
 const bulkUploadService = new BulkUploadService();
+const translationService = new TranslationService();
 const examTaxonomyService = new ExamTaxonomyService();
 const staffAuthService = new StaffAuthService();
 const classificationService = new ClassificationService();
@@ -266,16 +268,17 @@ app.post('/admin/staff/:id/deactivate', requireStaffAuth, requireRole('SUPER_ADM
 
 const canEditQuestions = requireRole('SUPER_ADMIN', 'CONTENT_ADMIN');
 
-// GET /admin/questions?status=DRAFT&difficulty=MEDIUM&page=1
+// GET /admin/questions?status=DRAFT&difficulty=MEDIUM&page=1&search=piaget
 app.get('/admin/questions', requireStaffAuth, async (req, res) => {
   try {
-    const { status, difficulty, examTypeId, category, language, page, pageSize } = req.query;
+    const { status, difficulty, examTypeId, category, language, search, page, pageSize } = req.query;
     const result = await questionService.list({
       status: status as any,
       difficulty: difficulty as any,
       examTypeId: examTypeId as string,
       category: category as any,
       language: language as any,
+      search: search as string,
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
     });
@@ -330,6 +333,66 @@ app.post('/admin/questions/current-affairs', requireStaffAuth, canEditQuestions,
     res.status(500).json({ error: 'Failed to add current affairs question' });
   }
 });
+
+// POST /admin/questions/translate-preview  { fields: {questionText, optionA..D}, fromLang }
+// Used by the admin form's live "type in one language, other auto-fills" flow.
+// Does NOT save anything — just returns the translation for the admin to review.
+app.post('/admin/questions/translate-preview', requireStaffAuth, canEditQuestions, async (req, res) => {
+  try {
+    const { fields, fromLang } = req.body;
+    const translated = await translationService.previewTranslation(fields, fromLang);
+    res.json(translated);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message ?? 'Translation failed' });
+  }
+});
+
+// POST /admin/questions/bilingual  { ta: {...}, en: {...} }
+// Creates both language versions at once, linked by translationGroupId —
+// used when the admin has reviewed both languages in the form and clicks Publish/Save.
+app.post('/admin/questions/bilingual', requireStaffAuth, canEditQuestions, async (req, res) => {
+  try {
+    const { ta, en } = req.body;
+    const result = await questionService.createBilingualPair(ta, en);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(409).json({ error: err.message ?? 'Failed to create question pair' });
+  }
+});
+
+// ── Bulk actions (select multiple in the admin list, act once) ──────────
+
+// POST /admin/questions/bulk-publish  { ids: string[] }
+app.post('/admin/questions/bulk-publish', requireStaffAuth, canEditQuestions, async (req, res) => {
+  const result = await questionService.bulkSetStatus(req.body.ids, 'PUBLISHED');
+  res.json(result);
+});
+
+// POST /admin/questions/bulk-disable  { ids: string[] }
+app.post('/admin/questions/bulk-disable', requireStaffAuth, canEditQuestions, async (req, res) => {
+  const result = await questionService.bulkSetStatus(req.body.ids, 'DISABLED');
+  res.json(result);
+});
+
+// POST /admin/questions/bulk-delete  { ids: string[] } — Super Admin only, this is destructive
+app.post('/admin/questions/bulk-delete', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  const result = await questionService.bulkDelete(req.body.ids);
+  res.json(result);
+});
+
+// POST /admin/questions/bulk-classify  { ids: string[] }
+app.post('/admin/questions/bulk-classify', requireStaffAuth, canEditQuestions, async (req, res) => {
+  try {
+    const result = await classificationService.classifyQuestionIds(req.body.ids);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message ?? 'Bulk classification failed' });
+  }
+});
+
 // POST /admin/questions/bulk-upload  (multipart form, field name "file")
 app.post(
   '/admin/questions/bulk-upload',
