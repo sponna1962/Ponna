@@ -143,6 +143,7 @@ export class QuestionService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
+        include: { examType: true, examSubType: true },
       }),
       prisma.question.count({ where }),
     ]);
