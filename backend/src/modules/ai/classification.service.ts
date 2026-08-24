@@ -151,6 +151,25 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
     return { processed: pending.length, autoPublished, needsReview };
   }
 
+  /** Classifies a specific list of question ids (used by the admin panel's "Classify Selected" bulk action). */
+  async classifyQuestionIds(ids: string[]): Promise<{ processed: number; autoPublished: number; needsReview: number }> {
+    let autoPublished = 0;
+    let needsReview = 0;
+
+    for (const id of ids) {
+      try {
+        const { autoPublished: published } = await this.classifyAndApply(id);
+        published ? autoPublished++ : needsReview++;
+      } catch (err) {
+        console.error(`Classification failed for question ${id}:`, err);
+        needsReview++;
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
+    return { processed: ids.length, autoPublished, needsReview };
+  }
+
   /** The Needs Review queue: drafts that were classified but fell below threshold, or weren't auto-published. */
   async getNeedsReviewQueue() {
     return prisma.question.findMany({
