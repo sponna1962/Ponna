@@ -32,12 +32,12 @@ export class ClassificationService {
 
     const question = await prisma.question.findUniqueOrThrow({
       where: { id: questionId },
-      include: { examType: true, examSubType: true },
+      include: { authority: true, examCategory: true, subCategory: true },
     });
 
-    const examContext = question.examType
-      ? `Exam: ${question.examType.name}${question.examSubType ? ' — ' + question.examSubType.name : ''}`
-      : 'Exam: General competitive exam (no specific type tagged)';
+    const examContext = question.authority
+      ? `Exam: ${question.authority.name}${question.examCategory ? ' — ' + question.examCategory.name : ''}${question.subCategory ? ' — ' + question.subCategory.name : ''}`
+      : 'Exam: General competitive exam (no specific authority tagged)';
 
     const prompt = `You are classifying a competitive-exam practice question as MEDIUM or HARD difficulty, calibrated to the exam context given.
 
