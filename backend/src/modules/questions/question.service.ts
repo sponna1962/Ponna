@@ -171,9 +171,38 @@ export class QuestionService {
     return { count: result.count };
   }
 
+  /**
+   * Deletes questions the student has never answered (safe — no other table
+   * references them). For questions that DO have answer history, hard-
+   * deleting would violate a foreign-key constraint (Postgres RESTRICT) and
+   * would also silently corrupt that student's stats — so those are
+   * DISABLED instead, which removes them from any future quiz without
+   * touching already-recorded history.
+   */
   async bulkDelete(ids: string[]) {
-    const result = await prisma.question.deleteMany({ where: { id: { in: ids } } });
-    return { count: result.count };
+    const withHistory = await prisma.userQuestionHistory.findMany({
+      where: { questionId: { in: ids } },
+      select: { questionId: true },
+      distinct: ['questionId'],
+    });
+    const withSessionRefs = await prisma.quizSessionQuestion.findMany({
+      where: { questionId: { in: ids } },
+      select: { questionId: true },
+      distinct: ['questionId'],
+    });
+    const referencedIds = new Set([...withHistory.map((h) => h.questionId), ...withSessionRefs.map((s) => s.questionId)]);
+
+    const safeToDelete = ids.filter((id) => !referencedIds.has(id));
+    const mustDisableInstead = ids.filter((id) => referencedIds.has(id));
+
+    const [deleted] = await Promise.all([
+      safeToDelete.length > 0 ? prisma.question.deleteMany({ where: { id: { in: safeToDelete } } }) : { count: 0 },
+      mustDisableInstead.length > 0
+        ? prisma.question.updateMany({ where: { id: { in: mustDisableInstead } }, data: { status: QuestionStatus.DISABLED } })
+        : Promise.resolve(),
+    ]);
+
+    return { count: deleted.count, disabledInstead: mustDisableInstead.length };
   }
 
   /** Quick-entry for Current Affairs, per §7.2 — minimal required fields. */
