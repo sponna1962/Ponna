@@ -65,7 +65,11 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 200 },
+          // thinkingBudget: 0 disables the model's internal reasoning tokens
+          // for this deterministic, short-answer task — without it, newer
+          // Gemini "thinking" models spend the token budget on hidden
+          // reasoning and truncate the actual JSON output before it's complete.
+          generationConfig: { temperature: 0.2, maxOutputTokens: 500, thinkingConfig: { thinkingBudget: 0 } },
         }),
       },
     );
