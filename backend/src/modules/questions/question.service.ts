@@ -205,6 +205,22 @@ export class QuestionService {
     return { count: deleted.count, disabledInstead: mustDisableInstead.length };
   }
 
+  /**
+   * Permanently deletes questions REGARDLESS of answer history — deletes the
+   * history/session references first, then the question. This is a QA/launch-
+   * prep tool only (Super Admin, extra confirmation in the UI): using this on
+   * questions real students have answered corrupts their recorded stats.
+   * Never call this from any student-facing or automated path.
+   */
+  async forceBulkDelete(ids: string[]) {
+    await prisma.$transaction([
+      prisma.userQuestionHistory.deleteMany({ where: { questionId: { in: ids } } }),
+      prisma.quizSessionQuestion.deleteMany({ where: { questionId: { in: ids } } }),
+      prisma.question.deleteMany({ where: { id: { in: ids } } }),
+    ]);
+    return { count: ids.length };
+  }
+
   /** Quick-entry for Current Affairs, per §7.2 — minimal required fields. */
   async createCurrentAffairs(input: {
     questionText: string;
