@@ -7,9 +7,18 @@ import { studentFetch } from '../../../lib/student-fetch';
 import { LanguageToggle } from '../../../components/LanguageToggle';
 
 // Quiz-taking screen — implements §4.3 (Taking a Quiz): one question per
-// screen, resumable (on load, jumps to the first unanswered question rather
-// than always starting at question 1 — this is what makes disconnect/resume
-// work from the student's point of view), and ends in a results summary.
+// screen, resumable, ends in a results summary.
+//
+// Real-Time Language Toggle (finalized requirement): switching Tamil/English
+// mid-quiz swaps ONLY the displayed text of the CURRENT question — it never
+// loads a different question, never re-fetches the session, and never
+// touches answer/selection state. This works because `selected` and
+// `correctOption` below are stored as OPTION LETTERS (A/B/C/D), not text —
+// and a bilingual pair is guaranteed to share the same correct-option letter
+// (enforced when the pair is created/classified) — so the letter-based state
+// stays valid no matter which language is currently displayed.
+
+type LangContent = { questionText: string; optionA: string; optionB: string; optionC: string; optionD: string };
 
 type SessionQuestion = {
   sequenceNumber: number;
@@ -17,14 +26,10 @@ type SessionQuestion = {
   answered: boolean;
   selectedOption: string | null;
   isCorrect: boolean | null;
-  correctOption: string | null; // present once answered=true (see getSessionForStudent)
-  questionText: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
+  correctOption: string | null; // present once answered=true
   difficulty: 'MEDIUM' | 'HARD';
   category: 'STANDARD' | 'CURRENT_AFFAIRS';
+  content: Partial<Record<'TA' | 'EN', LangContent>>; // whichever language(s) exist for this question
 };
 
 type SessionData = {
@@ -43,14 +48,14 @@ type Results = {
 };
 
 export default function QuizSessionPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const params = useParams();
   const sessionId = params.sessionId as string;
 
   const [session, setSession] = useState<SessionData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [correctOption, setCorrectOption] = useState<string | null>(null); // revealed the instant an option is picked
+  const [selected, setSelected] = useState<string | null>(null); // option LETTER — language-independent
+  const [correctOption, setCorrectOption] = useState<string | null>(null); // option LETTER
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<Results | null>(null);
 
@@ -70,13 +75,10 @@ export default function QuizSessionPage() {
       return;
     }
 
-    // Resume at the first unanswered question — this is the disconnect/resume
-    // guarantee from §4.3 made visible in the UI.
     const firstUnanswered = data.questions.findIndex((q) => !q.answered);
     const idx = firstUnanswered === -1 ? data.questions.length - 1 : firstUnanswered;
     setCurrentIndex(idx);
 
-    // If resuming onto an already-answered question, restore its locked state.
     const q = data.questions[idx];
     if (q?.answered) {
       setSelected(q.selectedOption);
@@ -89,12 +91,9 @@ export default function QuizSessionPage() {
     if (res.ok) setResults(await res.json());
   }
 
-  // Selecting an option IS submitting — one action, no separate "submit"
-  // step. The answer locks immediately and both correct/incorrect are shown
-  // at once (finalized requirement: this is a practice platform, feedback
-  // must be instant, not just "you were right/wrong").
+  // Selecting an option IS submitting — locks immediately, shows feedback at once.
   async function selectOption(letter: string) {
-    if (!session || selected || submitting) return; // already locked — ignore further clicks
+    if (!session || selected || submitting) return;
     setSelected(letter);
     setSubmitting(true);
 
@@ -123,9 +122,6 @@ export default function QuizSessionPage() {
     const nextIndex = currentIndex + 1;
     setCurrentIndex(nextIndex);
     const nextQ = session.questions[nextIndex];
-    // A previously-answered question (e.g. after a resume) shows its locked
-    // state immediately rather than as if unanswered — no refetch needed,
-    // the answer + correct option are already in the loaded session data.
     setSelected(nextQ.answered ? nextQ.selectedOption : null);
     setCorrectOption(nextQ.answered ? nextQ.correctOption : null);
   }
@@ -141,6 +137,13 @@ export default function QuizSessionPage() {
   const q = session.questions[currentIndex];
   const isLastQuestion = currentIndex === session.questions.length - 1;
   const answered = !!selected;
+
+  // Real-time language switch: pick whichever language's content is
+  // available for THIS question, preferring the student's current toggle
+  // state; fall back to whichever language actually exists if the preferred
+  // one hasn't been translated yet (e.g. background translation still running).
+  const preferredLang = lang.toUpperCase() as 'TA' | 'EN';
+  const display = q.content[preferredLang] ?? q.content.TA ?? q.content.EN!;
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -176,20 +179,16 @@ export default function QuizSessionPage() {
       </div>
 
       <div style={{ padding: '16px 20px 8px 20px' }}>
-        <p style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', lineHeight: 1.5, margin: 0 }}>{q.questionText}</p>
+        <p style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', lineHeight: 1.5, margin: 0 }}>{display.questionText}</p>
       </div>
 
       <div style={{ padding: '16px 20px', flex: 1 }}>
         {(['A', 'B', 'C', 'D'] as const).map((letter) => {
-          const text = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }[letter];
+          const text = { A: display.optionA, B: display.optionB, C: display.optionC, D: display.optionD }[letter];
           const isSelected = selected === letter;
           const isCorrectOption = answered && correctOption === letter;
           const isWrongSelected = answered && isSelected && correctOption !== letter;
 
-          // Once answered: the correct option is ALWAYS shown green (whether
-          // the student picked it or not), and if the student's pick was
-          // wrong, that specific option is shown red — both visible at the
-          // same time, no extra click needed (finalized requirement).
           const borderColor = isCorrectOption ? '#16a34a' : isWrongSelected ? '#dc2626' : isSelected ? '#0f172a' : '#e2e8f0';
           const bgColor = isCorrectOption ? '#f0fdf4' : isWrongSelected ? '#fef2f2' : isSelected ? '#f8fafc' : '#fff';
 
