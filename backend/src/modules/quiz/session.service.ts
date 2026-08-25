@@ -2,7 +2,7 @@
 // start (reserve quota + questions), resume, answer, complete, and the
 // scheduled abandonment sweep.
 
-import { PrismaClient, QuizMode, SessionStatus, CorrectOption } from '@prisma/client';
+import { PrismaClient, QuizMode, SessionStatus, CorrectOption, Language } from '@prisma/client';
 import { QuotaService, QuotaExceededError } from '../quota/quota.service';
 import { AllocationService } from '../questions/allocation.service';
 import { RankingService } from '../ranking/ranking.service';
@@ -21,7 +21,7 @@ export class SessionService {
    * (b) the student's remaining quota right now. A Free student with 3
    * questions left today gets a 3-question session, not a rejection.
    */
-  async startSession(userId: string, mode: QuizMode) {
+  async startSession(userId: string, mode: QuizMode, language: Language) {
     const existing = await prisma.quizSession.findFirst({
       where: { userId, status: SessionStatus.IN_PROGRESS },
       include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
@@ -44,7 +44,7 @@ export class SessionService {
     // actually be delivered. Cap the request at a generous ceiling (100) so
     // allocation doesn't need to know about quota at all; the real cap is
     // whichever is smaller of quota and eligible questions.
-    const questionIds = await allocation.buildSessionQuestionIds(userId, mode, Math.min(remainingQuota, 100));
+    const questionIds = await allocation.buildSessionQuestionIds(userId, mode, Math.min(remainingQuota, 100), language);
     const actualSize = questionIds.length;
 
     if (actualSize === 0) {
