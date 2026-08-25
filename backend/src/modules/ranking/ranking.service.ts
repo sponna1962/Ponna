@@ -1,223 +1,130 @@
-// Quiz Session Engine — implements §4.3 (Taking a Quiz) session lifecycle:
-// start (reserve quota + questions), resume, answer, complete, and the
-// scheduled abandonment sweep.
+// Ranking Engine — implements §8.1 (Ranking Formula) plus the two-check Rank
+// gate from the profile-completion requirement:
+//   Rank is shown only if BOTH (1) the student's plan is eligible (paid) AND
+//   (2) their profile (district, city/town/village, preparing-for) is
+//   complete. Free practice and basic score viewing (avg %, answered,
+//   correct) never require either check.
 
-import { PrismaClient, QuizMode, SessionStatus, CorrectOption } from '@prisma/client';
-import { QuotaService, QuotaExceededError } from '../quota/quota.service';
-import { AllocationService } from '../questions/allocation.service';
-import { RankingService } from '../ranking/ranking.service';
+import { PrismaClient, PerformanceBucket, QuizMode } from '@prisma/client';
+import { isProfileComplete } from '../profile/profile.service';
 
 const prisma = new PrismaClient();
-const quota = new QuotaService();
-const allocation = new AllocationService();
-const ranking = new RankingService();
 
-export class SessionService {
-  /**
-   * Starts a new session, or returns the existing in-progress one if present.
-   * Simplified flow (finalized requirement): the student only picks a mode —
-   * there is no session-size selection anymore. The session size is
-   * whatever's smaller of (a) eligible questions available for this mode and
-   * (b) the student's remaining quota right now. A Free student with 3
-   * questions left today gets a 3-question session, not a rejection.
-   */
-  async startSession(userId: string, mode: QuizMode) {
-    const existing = await prisma.quizSession.findFirst({
-      where: { userId, status: SessionStatus.IN_PROGRESS },
-      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
-    });
-    if (existing) {
-      // §4.3: same session resumes exactly where the student left off, no re-deduction
-      const differs = existing.mode !== mode;
-      return { ...existing, resumedWithDifferentSelection: differs };
+export class RankingService {
+  /** Call after each answer submission to keep the summary table current. */
+  async updateSummaryAfterAnswer(userId: string, difficulty: 'MEDIUM' | 'HARD', wasCorrect: boolean) {
+    const buckets: PerformanceBucket[] =
+      difficulty === 'MEDIUM' ? [PerformanceBucket.OVERALL, PerformanceBucket.MEDIUM]
+                               : [PerformanceBucket.OVERALL, PerformanceBucket.HARD];
+
+    for (const bucket of buckets) {
+      const existing = await prisma.userPerformanceSummary.findUnique({
+        where: { userId_bucket: { userId, bucket } },
+      });
+
+      const questionsAnswered = (existing?.questionsAnswered ?? 0) + 1;
+      const correctAnswers = (existing?.correctAnswers ?? 0) + (wasCorrect ? 1 : 0);
+      const averagePercent = (correctAnswers / questionsAnswered) * 100;
+
+      await prisma.userPerformanceSummary.upsert({
+        where: { userId_bucket: { userId, bucket } },
+        create: { userId, bucket, questionsAnswered, correctAnswers, averagePercent },
+        update: { questionsAnswered, correctAnswers, averagePercent },
+      });
     }
-
-    const remainingQuota = await quota.getRemainingQuota(userId);
-    if (remainingQuota <= 0) {
-      throw new QuotaExceededError(
-        'You have used all your questions for today. Upgrade your plan to keep practicing, or come back tomorrow.',
-      );
-    }
-
-    // Build the eligible question list FIRST, before touching quota — same
-    // reasoning as before: never reserve quota for questions that can't
-    // actually be delivered. Cap the request at a generous ceiling (100) so
-    // allocation doesn't need to know about quota at all; the real cap is
-    // whichever is smaller of quota and eligible questions.
-    const questionIds = await allocation.buildSessionQuestionIds(userId, mode, Math.min(remainingQuota, 100));
-    const actualSize = questionIds.length;
-
-    if (actualSize === 0) {
-      throw new Error('No eligible questions are available for this mode right now. Please try a different mode or check back later.');
-    }
-
-    const quotaResult = await quota.reserveQuota(userId, actualSize);
-    if (!quotaResult.allowed) {
-      throw new QuotaExceededError(quotaResult.reason ?? 'Quota exceeded');
-    }
-
-    const session = await prisma.quizSession.create({
-      data: {
-        userId,
-        mode,
-        totalQuestions: actualSize,
-        status: SessionStatus.IN_PROGRESS,
-        questions: {
-          create: questionIds.map((questionId, idx) => ({
-            questionId,
-            sequenceNumber: idx + 1,
-          })),
-        },
-      },
-      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
-    });
-
-    return { ...session, resumedWithDifferentSelection: false };
-  }
-
-  async submitAnswer(
-    sessionId: string,
-    questionId: string,
-    selectedOption: CorrectOption,
-  ) {
-    const session = await prisma.quizSession.findUniqueOrThrow({ where: { id: sessionId } });
-    if (session.status !== SessionStatus.IN_PROGRESS) {
-      throw new Error('Cannot answer into a session that is not in progress');
-    }
-
-    const question = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
-    const isCorrect = question.correctOption === selectedOption;
-
-    await prisma.$transaction([
-      prisma.quizSessionQuestion.update({
-        where: { sessionId_questionId: { sessionId, questionId } },
-        data: { answered: true, selectedOption, isCorrect, answeredAt: new Date() },
-      }),
-      prisma.quizSession.update({
-        where: { id: sessionId },
-        data: { lastActivityAt: new Date() },
-      }),
-      prisma.userQuestionHistory.upsert({
-        where: { userId_questionId: { userId: session.userId, questionId } },
-        create: {
-          userId: session.userId,
-          questionId,
-          difficulty: question.difficulty!,
-          modeTakenIn: session.mode,
-          answeredCorrectly: isCorrect,
-        },
-        update: {
-          answeredCorrectly: isCorrect,
-          answeredAt: new Date(),
-          modeTakenIn: session.mode,
-        },
-      }),
-    ]);
-
-    // Performance summary (Overall + the specific difficulty bucket) is kept
-    // current here so the dashboard/ranking reflect this answer immediately.
-    // Rank itself is NOT recomputed per-answer (that stays a scheduled job,
-    // per §8.1) — only the running average/count that rank is later derived from.
-    if (question.difficulty) {
-      await ranking.updateSummaryAfterAnswer(session.userId, question.difficulty, isCorrect);
-    }
-
-    return { isCorrect };
-  }
-
-  async completeSession(sessionId: string) {
-    return prisma.quizSession.update({
-      where: { id: sessionId },
-      data: { status: SessionStatus.COMPLETED, completedAt: new Date() },
-    });
   }
 
   /**
-   * Fetches a session with its questions for the quiz-taking UI. Deliberately
-   * omits `correctOption` from unanswered questions so the client can't read
-   * the answer out of the network payload before submitting — it's only
-   * revealed (via submitAnswer's response) once the student actually answers.
+   * Recomputes rank for every eligible user in a bucket. Run on a schedule
+   * (e.g. hourly) rather than per-request — ranking doesn't need to be
+   * real-time-exact, per §8.1.
    */
-  async getSessionForStudent(sessionId: string) {
-    const session = await prisma.quizSession.findUniqueOrThrow({
-      where: { id: sessionId },
-      include: {
-        questions: {
-          orderBy: { sequenceNumber: 'asc' },
-          include: { question: true },
-        },
-      },
-    });
-
-    return {
-      id: session.id,
-      mode: session.mode,
-      status: session.status,
-      totalQuestions: session.totalQuestions,
-      questions: session.questions.map((sq) => ({
-        sequenceNumber: sq.sequenceNumber,
-        questionId: sq.questionId,
-        answered: sq.answered,
-        selectedOption: sq.selectedOption,
-        isCorrect: sq.isCorrect,
-        questionText: sq.question.questionText,
-        optionA: sq.question.optionA,
-        optionB: sq.question.optionB,
-        optionC: sq.question.optionC,
-        optionD: sq.question.optionD,
-        difficulty: sq.question.difficulty,
-        category: sq.question.category,
-        // correctOption intentionally omitted until answered=true
-        correctOption: sq.answered ? sq.question.correctOption : null,
-      })),
-    };
-  }
-
-  /** Score summary shown on the results screen after completion. */
-  async getSessionResults(sessionId: string) {
-    const session = await prisma.quizSession.findUniqueOrThrow({
-      where: { id: sessionId },
-      include: { questions: true },
-    });
-
-    const answered = session.questions.filter((q) => q.answered);
-    const correct = answered.filter((q) => q.isCorrect).length;
-
-    return {
-      sessionId: session.id,
-      mode: session.mode,
-      totalQuestions: session.totalQuestions,
-      answeredCount: answered.length,
-      correctCount: correct,
-      accuracyPercent: answered.length > 0 ? (correct / answered.length) * 100 : 0,
-    };
-  }
-
-  /**
-   * Scheduled job (e.g. every 15 min via cron) — marks stale sessions abandoned,
-   * releases their unanswered questions back to the pool (no action needed beyond
-   * status change, since allocation always queries live PUBLISHED questions), and
-   * explicitly does NOT refund quota (§4.3 / §5).
-   */
-  async sweepAbandonedSessions() {
+  async recomputeRanksForBucket(bucket: PerformanceBucket) {
     const settings = await prisma.platformSettings.findUniqueOrThrow({
       where: { id: 'singleton' },
     });
-    const cutoff = new Date();
-    cutoff.setHours(cutoff.getHours() - settings.sessionInactivityHours);
+    const minQuestions = settings.rankingEligibilityMinQuestions;
 
-    const stale = await prisma.quizSession.findMany({
-      where: { status: SessionStatus.IN_PROGRESS, lastActivityAt: { lt: cutoff } },
+    const eligible = await prisma.userPerformanceSummary.findMany({
+      where: {
+        bucket,
+        questionsAnswered: { gte: minQuestions },
+        user: { isTestAccount: false }, // Test Accounts never appear in real student rankings (finalized requirement)
+      },
+      orderBy: [
+        { averagePercent: 'desc' },   // 1. accuracy %
+        { questionsAnswered: 'desc' }, // 2. tie-break: volume
+        { updatedAt: 'asc' },          // 3. tie-break: earliest achievement
+      ],
     });
 
-    for (const s of stale) {
-      await prisma.quizSession.update({
-        where: { id: s.id },
-        data: { status: SessionStatus.ABANDONED },
+    // Ineligible users explicitly get rank = null so the dashboard can show
+    // "Not yet ranked — answer N more questions" per §8.1.
+    await prisma.userPerformanceSummary.updateMany({
+      where: { bucket, questionsAnswered: { lt: minQuestions } },
+      data: { rank: null },
+    });
+
+    // Test Accounts never get a rank number, regardless of how many
+    // questions they've answered — excluded from real student rankings.
+    const testAccountUserIds = (await prisma.user.findMany({ where: { isTestAccount: true }, select: { id: true } })).map((u) => u.id);
+    if (testAccountUserIds.length > 0) {
+      await prisma.userPerformanceSummary.updateMany({
+        where: { bucket, userId: { in: testAccountUserIds } },
+        data: { rank: null },
       });
-      await quota.onSessionAbandoned(s.id); // no-op by design — documents the rule
     }
 
-    return { abandonedCount: stale.length };
+    for (let i = 0; i < eligible.length; i++) {
+      await prisma.userPerformanceSummary.update({
+        where: { id: eligible[i].id },
+        data: { rank: i + 1 },
+      });
+    }
+
+    return { rankedCount: eligible.length };
+  }
+
+  async recomputeAllBuckets() {
+    for (const bucket of [PerformanceBucket.OVERALL, PerformanceBucket.MEDIUM, PerformanceBucket.HARD]) {
+      await this.recomputeRanksForBucket(bucket);
+    }
+  }
+
+  /**
+   * Dashboard read. Rank is only populated in the response when BOTH gates
+   * pass (plan eligible + profile complete) — otherwise it's null, and the
+   * two flags tell the frontend exactly which CTA to show ("Upgrade your
+   * plan" vs "Complete your profile") rather than a generic "locked" state.
+   */
+  async getStudentDashboard(userId: string) {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: {
+        subscriptions: { where: { status: 'ACTIVE' }, include: { plan: true }, take: 1, orderBy: { cycleStart: 'desc' } },
+      },
+    });
+
+    const planEligible = user.subscriptions.some((s) => s.plan.code !== 'FREE');
+    const profileComplete = isProfileComplete(user);
+    const rankUnlocked = planEligible && profileComplete;
+
+    const rows = await prisma.userPerformanceSummary.findMany({ where: { userId } });
+    const buckets = rows.reduce((acc, r) => {
+      acc[r.bucket] = {
+        averagePercent: r.averagePercent,
+        questionsAnswered: r.questionsAnswered,
+        correctAnswers: r.correctAnswers,
+        // rank stays null even for eligible users until they clear the
+        // §8.1 minimum-questions threshold — that's a separate, orthogonal
+        // gate from planEligible/profileComplete and needs no flag of its
+        // own (the frontend already shows "not yet eligible" for null rank
+        // when rankUnlocked is true).
+        rank: rankUnlocked ? r.rank : null,
+      };
+      return acc;
+    }, {} as Record<string, unknown>);
+
+    return { buckets, planEligible, profileComplete, rankUnlocked };
   }
 }
