@@ -391,6 +391,20 @@ app.post('/admin/questions/bulk-delete', requireStaffAuth, requireRole('SUPER_AD
   }
 });
 
+// POST /admin/questions/bulk-force-delete  { ids: string[] } — Super Admin only.
+// QA/launch-prep tool: permanently deletes even questions with answer
+// history. Never expose this to anyone but Super Admin, and never call it
+// once real students are using the platform.
+app.post('/admin/questions/bulk-force-delete', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const result = await questionService.forceBulkDelete(req.body.ids);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message ?? 'Failed to force-delete questions' });
+  }
+});
+
 // POST /admin/questions/bulk-classify  { ids: string[] }
 app.post('/admin/questions/bulk-classify', requireStaffAuth, canEditQuestions, async (req, res) => {
   try {
