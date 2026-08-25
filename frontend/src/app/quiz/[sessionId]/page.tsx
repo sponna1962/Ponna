@@ -17,6 +17,7 @@ type SessionQuestion = {
   answered: boolean;
   selectedOption: string | null;
   isCorrect: boolean | null;
+  correctOption: string | null; // present once answered=true (see getSessionForStudent)
   questionText: string;
   optionA: string;
   optionB: string;
@@ -49,7 +50,7 @@ export default function QuizSessionPage() {
   const [session, setSession] = useState<SessionData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+  const [correctOption, setCorrectOption] = useState<string | null>(null); // revealed the instant an option is picked
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<Results | null>(null);
 
@@ -72,7 +73,15 @@ export default function QuizSessionPage() {
     // Resume at the first unanswered question — this is the disconnect/resume
     // guarantee from §4.3 made visible in the UI.
     const firstUnanswered = data.questions.findIndex((q) => !q.answered);
-    setCurrentIndex(firstUnanswered === -1 ? data.questions.length - 1 : firstUnanswered);
+    const idx = firstUnanswered === -1 ? data.questions.length - 1 : firstUnanswered;
+    setCurrentIndex(idx);
+
+    // If resuming onto an already-answered question, restore its locked state.
+    const q = data.questions[idx];
+    if (q?.answered) {
+      setSelected(q.selectedOption);
+      setCorrectOption(q.correctOption);
+    }
   }
 
   async function loadResults() {
@@ -80,18 +89,23 @@ export default function QuizSessionPage() {
     if (res.ok) setResults(await res.json());
   }
 
-  async function submitAnswer() {
-    if (!session || !selected) return;
-    const question = session.questions[currentIndex];
+  // Selecting an option IS submitting — one action, no separate "submit"
+  // step. The answer locks immediately and both correct/incorrect are shown
+  // at once (finalized requirement: this is a practice platform, feedback
+  // must be instant, not just "you were right/wrong").
+  async function selectOption(letter: string) {
+    if (!session || selected || submitting) return; // already locked — ignore further clicks
+    setSelected(letter);
     setSubmitting(true);
 
+    const question = session.questions[currentIndex];
     const res = await studentFetch(`/quiz/${sessionId}/answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: question.questionId, selectedOption: selected }),
+      body: JSON.stringify({ questionId: question.questionId, selectedOption: letter }),
     });
-    const { isCorrect } = await res.json();
-    setFeedback(isCorrect ? 'correct' : 'incorrect');
+    const { correctOption: correct } = await res.json();
+    setCorrectOption(correct);
     setSubmitting(false);
   }
 
@@ -106,9 +120,14 @@ export default function QuizSessionPage() {
       return;
     }
 
-    setCurrentIndex(currentIndex + 1);
-    setSelected(null);
-    setFeedback(null);
+    const nextIndex = currentIndex + 1;
+    setCurrentIndex(nextIndex);
+    const nextQ = session.questions[nextIndex];
+    // A previously-answered question (e.g. after a resume) shows its locked
+    // state immediately rather than as if unanswered — no refetch needed,
+    // the answer + correct option are already in the loaded session data.
+    setSelected(nextQ.answered ? nextQ.selectedOption : null);
+    setCorrectOption(nextQ.answered ? nextQ.correctOption : null);
   }
 
   if (!session) {
@@ -121,6 +140,7 @@ export default function QuizSessionPage() {
 
   const q = session.questions[currentIndex];
   const isLastQuestion = currentIndex === session.questions.length - 1;
+  const answered = !!selected;
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -163,25 +183,32 @@ export default function QuizSessionPage() {
         {(['A', 'B', 'C', 'D'] as const).map((letter) => {
           const text = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }[letter];
           const isSelected = selected === letter;
-          const isRevealedCorrect = feedback && letter === selected && feedback === 'correct';
-          const isRevealedIncorrect = feedback && letter === selected && feedback === 'incorrect';
+          const isCorrectOption = answered && correctOption === letter;
+          const isWrongSelected = answered && isSelected && correctOption !== letter;
+
+          // Once answered: the correct option is ALWAYS shown green (whether
+          // the student picked it or not), and if the student's pick was
+          // wrong, that specific option is shown red — both visible at the
+          // same time, no extra click needed (finalized requirement).
+          const borderColor = isCorrectOption ? '#16a34a' : isWrongSelected ? '#dc2626' : isSelected ? '#0f172a' : '#e2e8f0';
+          const bgColor = isCorrectOption ? '#f0fdf4' : isWrongSelected ? '#fef2f2' : isSelected ? '#f8fafc' : '#fff';
 
           return (
             <div
               key={letter}
-              onClick={() => !feedback && setSelected(letter)}
+              onClick={() => selectOption(letter)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
                 padding: '14px 16px',
-                border: `1.5px solid ${isRevealedCorrect ? '#16a34a' : isRevealedIncorrect ? '#dc2626' : isSelected ? '#0f172a' : '#e2e8f0'}`,
+                border: `1.5px solid ${borderColor}`,
                 borderRadius: 10,
                 marginBottom: 10,
                 fontSize: 15,
                 color: '#1e293b',
-                cursor: feedback ? 'default' : 'pointer',
-                background: isRevealedCorrect ? '#f0fdf4' : isRevealedIncorrect ? '#fef2f2' : isSelected ? '#f8fafc' : '#fff',
+                cursor: answered ? 'default' : 'pointer',
+                background: bgColor,
               }}
             >
               <span
@@ -189,8 +216,8 @@ export default function QuizSessionPage() {
                   width: 26,
                   height: 26,
                   borderRadius: '50%',
-                  background: isSelected ? '#0f172a' : '#f1f5f9',
-                  color: isSelected ? '#fff' : '#475569',
+                  background: isCorrectOption ? '#16a34a' : isWrongSelected ? '#dc2626' : isSelected ? '#0f172a' : '#f1f5f9',
+                  color: isCorrectOption || isWrongSelected || isSelected ? '#fff' : '#475569',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -199,24 +226,16 @@ export default function QuizSessionPage() {
                   flexShrink: 0,
                 }}
               >
-                {letter}
+                {isCorrectOption ? '✓' : isWrongSelected ? '✕' : letter}
               </span>
-              <span>{text}</span>
+              <span style={{ flex: 1 }}>{text}</span>
             </div>
           );
         })}
       </div>
 
       <div style={{ padding: '8px 20px 24px 20px' }}>
-        {!feedback ? (
-          <button
-            onClick={submitAnswer}
-            disabled={!selected || submitting}
-            style={{ width: '100%', padding: 14, borderRadius: 10, background: selected ? '#0f172a' : '#cbd5e1', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600 }}
-          >
-            {t.quiz.next}
-          </button>
-        ) : (
+        {answered && (
           <button
             onClick={goNext}
             style={{ width: '100%', padding: 14, borderRadius: 10, background: '#0f172a', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600 }}
