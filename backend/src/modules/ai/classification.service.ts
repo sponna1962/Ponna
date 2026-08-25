@@ -65,11 +65,10 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          // thinkingBudget: 0 disables the model's internal reasoning tokens
-          // for this deterministic, short-answer task — without it, newer
-          // Gemini "thinking" models spend the token budget on hidden
-          // reasoning and truncate the actual JSON output before it's complete.
-          generationConfig: { temperature: 0.2, maxOutputTokens: 500, thinkingConfig: { thinkingBudget: 0 } },
+          // A generous token budget — this model spends some of it on hidden
+          // internal reasoning before producing the actual JSON answer, so
+          // a tight limit truncates the response before it completes.
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2000 },
         }),
       },
     );
@@ -79,16 +78,20 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
     }
 
     const data = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
     };
+    const finishReason = data.candidates?.[0]?.finishReason;
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const cleaned = text.replace(/```json|```/g, '').trim();
+    // Extract the {...} block even if the model added stray text or markdown
+    // fences around it — more forgiving than requiring the whole string to be valid JSON.
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
 
     let parsed: { difficulty: string; confidence: number; reasoning: string };
     try {
-      parsed = JSON.parse(cleaned);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
     } catch {
-      throw new Error(`Could not parse AI classification response: ${text}`);
+      const hint = finishReason === 'MAX_TOKENS' ? ' (response was cut off — increase maxOutputTokens)' : '';
+      throw new Error(`Could not parse AI classification response${hint}: ${text.slice(0, 200)}`);
     }
 
     return {
