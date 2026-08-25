@@ -138,6 +138,15 @@ export class SessionService {
    * the answer out of the network payload before submitting — it's only
    * revealed (via submitAnswer's response) once the student actually answers.
    */
+  /**
+   * Includes the linked translation's text (via translationGroupId) for
+   * each session question, so the frontend can switch the DISPLAYED
+   * language instantly on toggle without touching any session/answer state
+   * — see the finalized "Real-Time Language Toggle" requirement. This works
+   * because the correct-option LETTER is guaranteed identical across a
+   * bilingual pair (enforced at creation time), so selected/correctOption
+   * state (stored as a letter, not text) never needs to change on toggle.
+   */
   async getSessionForStudent(sessionId: string) {
     const session = await prisma.quizSession.findUniqueOrThrow({
       where: { id: sessionId },
@@ -149,27 +158,62 @@ export class SessionService {
       },
     });
 
+    // One batched lookup for every linked translation this session touches,
+    // rather than a query per question.
+    const groupIds = session.questions.map((sq) => sq.question.translationGroupId).filter((id): id is string => !!id);
+    const linked = groupIds.length
+      ? await prisma.question.findMany({ where: { translationGroupId: { in: groupIds } } })
+      : [];
+    const byGroup = new Map<string, typeof linked>();
+    for (const q of linked) {
+      if (!q.translationGroupId) continue;
+      byGroup.set(q.translationGroupId, [...(byGroup.get(q.translationGroupId) ?? []), q]);
+    }
+
     return {
       id: session.id,
       mode: session.mode,
       status: session.status,
       totalQuestions: session.totalQuestions,
-      questions: session.questions.map((sq) => ({
-        sequenceNumber: sq.sequenceNumber,
-        questionId: sq.questionId,
-        answered: sq.answered,
-        selectedOption: sq.selectedOption,
-        isCorrect: sq.isCorrect,
-        questionText: sq.question.questionText,
-        optionA: sq.question.optionA,
-        optionB: sq.question.optionB,
-        optionC: sq.question.optionC,
-        optionD: sq.question.optionD,
-        difficulty: sq.question.difficulty,
-        category: sq.question.category,
-        // correctOption intentionally omitted until answered=true
-        correctOption: sq.answered ? sq.question.correctOption : null,
-      })),
+      questions: session.questions.map((sq) => {
+        const group = sq.question.translationGroupId ? byGroup.get(sq.question.translationGroupId) : undefined;
+        const otherLangRow = group?.find((q) => q.language !== sq.question.language);
+
+        return {
+          sequenceNumber: sq.sequenceNumber,
+          questionId: sq.questionId,
+          answered: sq.answered,
+          selectedOption: sq.selectedOption,
+          isCorrect: sq.isCorrect,
+          difficulty: sq.question.difficulty,
+          category: sq.question.category,
+          // correctOption intentionally omitted until answered=true
+          correctOption: sq.answered ? sq.question.correctOption : null,
+          // Per-language display text. `language` names which key this
+          // session question was originally allocated in (TA or EN) — the
+          // OTHER key is only present when a linked translation exists yet.
+          content: {
+            [sq.question.language]: {
+              questionText: sq.question.questionText,
+              optionA: sq.question.optionA,
+              optionB: sq.question.optionB,
+              optionC: sq.question.optionC,
+              optionD: sq.question.optionD,
+            },
+            ...(otherLangRow
+              ? {
+                  [otherLangRow.language]: {
+                    questionText: otherLangRow.questionText,
+                    optionA: otherLangRow.optionA,
+                    optionB: otherLangRow.optionB,
+                    optionC: otherLangRow.optionC,
+                    optionD: otherLangRow.optionD,
+                  },
+                }
+              : {}),
+          },
+        };
+      }),
     };
   }
 
