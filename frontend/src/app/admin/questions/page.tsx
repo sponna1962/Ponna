@@ -185,6 +185,11 @@ export default function AdminQuestionsPage() {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       alert(`Action failed: ${body.error ?? 'Unknown error'}`);
+    } else if (action === 'bulk-delete') {
+      const body = await res.json();
+      if (body.disabledInstead > 0) {
+        alert(`${body.count} question(s) deleted. ${body.disabledInstead} question(s) already have student answer history, so they were disabled instead (can't be deleted without corrupting that student's stats).`);
+      }
     }
     loadQuestions();
   }
