@@ -11,7 +11,7 @@ import { PrismaClient, Difficulty, QuestionStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-1.5-flash'; // fast + cheap, appropriate for a per-question classification call
+const GEMINI_MODEL = 'gemini-2.5-flash'; // fast + cheap, appropriate for a per-question classification call
 
 interface ClassificationResult {
   difficulty: Difficulty;
