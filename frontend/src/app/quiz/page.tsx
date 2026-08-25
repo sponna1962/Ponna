@@ -20,7 +20,7 @@ import { studentFetch } from '../../lib/student-fetch';
 // and that shouldn't happen just because the student opened this page.
 
 export default function QuizStartPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +31,7 @@ export default function QuizStartPage() {
       const res = await studentFetch('/quiz/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify({ mode, language: lang.toUpperCase() }),
       });
       if (!res.ok) {
         const body = await res.json();
