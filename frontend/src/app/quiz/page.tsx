@@ -1,66 +1,54 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
 
-// Mode selection + session start, implementing §4.2 / §4.3, with §4.5 language
-// toggle. On start, calls the backend which reserves quota and builds the
-// session server-side (see allocation.service.ts).
+// Simplified quiz flow (finalized requirement): the student picks ONLY a
+// mode (Mixed/Medium/Hard) — no session-size selection, no "Start" button,
+// no upfront lock/upgrade messaging. Tapping a mode starts the session
+// immediately. The backend automatically sizes the session to whatever the
+// student's remaining quota allows (see session.service.ts) — Free students
+// naturally get fewer questions as they use up today's limit, Test Accounts
+// get unlimited, and the Plan/Upgrade prompt only appears once quota is
+// actually exhausted (via the QuotaExceededError message shown below).
 //
-// Session sizes not included in the student's plan are shown locked (per the
-// agreed change) — a Free-plan student sees 20/50 blurred with an upgrade
-// link rather than clicking them and only finding out via an error.
-
-const SESSION_SIZES_BY_PLAN: Record<string, number[]> = {
-  FREE: [5],
-  PLAN_20: [5, 20],
-  PLAN_50: [5, 20, 50],
-};
+// Deliberately does NOT auto-start on page load, even with a mode visually
+// highlighted as the default — starting a session reserves quota immediately,
+// and that shouldn't happen just because the student opened this page.
 
 export default function QuizStartPage() {
   const { t } = useLanguage();
-  const [mode, setMode] = useState<'MIXED' | 'MEDIUM' | 'HARD'>('MIXED');
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [planCode, setPlanCode] = useState<string>('FREE');
 
-  useEffect(() => {
-    studentFetch('/students/me/profile')
-      .then((r) => r.json())
-      .then((profile) => setPlanCode(profile.planCode ?? 'FREE'))
-      .catch(() => {});
-  }, []);
-
-  const unlockedSizes = SESSION_SIZES_BY_PLAN[planCode] ?? [5];
-
-  async function startQuiz(sessionSize: number) {
+  async function startQuiz(mode: 'MIXED' | 'MEDIUM' | 'HARD') {
     setError(null);
-    const res = await studentFetch('/quiz/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode, sessionSize }),
-    });
-    if (!res.ok) {
-      const body = await res.json();
-      setError(body.error ?? t.quiz.startError);
-      return;
-    }
-    const session = await res.json();
+    setStarting(true);
+    try {
+      const res = await studentFetch('/quiz/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        setError(body.error ?? t.quiz.startError);
+        return;
+      }
+      const session = await res.json();
 
-    if (session.resumedWithDifferentSelection) {
-      // §4.3: an in-progress session always wins — make that visible instead
-      // of silently landing the student on a different mode/size than they
-      // just picked.
-      alert(t.quiz.resumingSession);
-    } else if (session.shortfall > 0) {
-      alert(
-        t.quiz.modes[mode] +
-          `: only ${session.totalQuestions} of ${session.requestedSize} questions were available right now.`,
-      );
+      if (session.resumedWithDifferentSelection) {
+        // §4.3: an in-progress session always wins — make that visible
+        // instead of silently landing the student on a different mode.
+        alert(t.quiz.resumingSession);
+      }
+      window.location.href = `/quiz/${session.id}`;
+    } finally {
+      setStarting(false);
     }
-    window.location.href = `/quiz/${session.id}`;
   }
 
   return (
@@ -73,18 +61,21 @@ export default function QuizStartPage() {
         <LanguageToggle />
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
         {(['MIXED', 'MEDIUM', 'HARD'] as const).map((m) => (
           <button
             key={m}
-            onClick={() => setMode(m)}
+            onClick={() => startQuiz(m)}
+            disabled={starting}
             style={{
               flex: 1,
-              padding: 10,
+              padding: 14,
               borderRadius: 8,
-              border: mode === m ? '2px solid #0f172a' : '1px solid #cbd5e1',
-              background: mode === m ? '#0f172a' : '#fff',
-              color: mode === m ? '#fff' : '#0f172a',
+              border: '1px solid #cbd5e1',
+              background: '#fff',
+              color: '#0f172a',
+              fontSize: 15,
+              opacity: starting ? 0.6 : 1,
             }}
           >
             {t.quiz.modes[m]}
@@ -92,41 +83,18 @@ export default function QuizStartPage() {
         ))}
       </div>
 
-      {[5, 20, 50].map((size) => {
-        const unlocked = unlockedSizes.includes(size);
-        return unlocked ? (
-          <button
-            key={size}
-            onClick={() => startQuiz(size)}
-            style={{ width: '100%', padding: 12, marginBottom: 8, borderRadius: 8 }}
-          >
-            {t.quiz.startN(size)}
-          </button>
-        ) : (
+      {starting && <p style={{ marginTop: 16, color: '#64748b', fontSize: 13 }}>{t.quiz.loading}</p>}
+      {error && (
+        <div style={{ marginTop: 16 }}>
+          <p style={{ color: '#dc2626', marginBottom: 8 }}>{error}</p>
           <a
-            key={size}
             href="/plans"
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              width: '100%',
-              padding: 12,
-              marginBottom: 8,
-              borderRadius: 8,
-              border: '1px solid #e2e8f0',
-              color: '#94a3b8',
-              textDecoration: 'none',
-              fontSize: 14,
-            }}
+            style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', textDecoration: 'none', fontSize: 13 }}
           >
-            <span>{t.quiz.startN(size)}</span>
-            <span style={{ fontSize: 12 }}>🔒 {t.quiz.upgradeToUnlock}</span>
+            {t.dashboard.upgrade}
           </a>
-        );
-      })}
-
-      {error && <p style={{ color: '#dc2626', marginTop: 8 }}>{error}</p>}
+        </div>
+      )}
     </main>
   );
 }
