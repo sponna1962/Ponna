@@ -11,7 +11,7 @@
 // Nothing here is hardcoded — caps, recency window, and strategy all come from
 // PlatformSettings so admins can change behavior without a deploy.
 
-import { PrismaClient, Difficulty, QuizMode, QuestionCategory } from '@prisma/client';
+import { PrismaClient, Difficulty, QuizMode, QuestionCategory, Language } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -20,6 +20,7 @@ export class AllocationService {
     userId: string,
     mode: QuizMode,
     sessionSize: number,
+    language: Language,
   ): Promise<string[]> {
     const settings = await prisma.platformSettings.findUniqueOrThrow({
       where: { id: 'singleton' },
@@ -38,6 +39,7 @@ export class AllocationService {
           status: 'PUBLISHED',
           category: QuestionCategory.CURRENT_AFFAIRS,
           difficulty: { in: difficulties },
+          language, // only the student's chosen UI language (§4.5) — never a mix mid-session
           relevanceDate: { gte: recencyThreshold },
           history: { none: { userId } }, // unseen by this student
         },
@@ -55,6 +57,7 @@ export class AllocationService {
       where: {
         status: 'PUBLISHED',
         difficulty: { in: difficulties },
+        language,
         id: { notIn: selected },
         history: { none: { userId } },
       },
@@ -72,6 +75,7 @@ export class AllocationService {
     const repeatPool = await this.getRepeatPool(
       userId,
       difficulties,
+      language,
       selected,
       stillRemaining,
       settings.repetitionStrategy,
@@ -103,6 +107,7 @@ export class AllocationService {
   private async getRepeatPool(
     userId: string,
     difficulties: Difficulty[],
+    language: Language,
     excludeIds: string[],
     take: number,
     strategy: string,
@@ -111,6 +116,7 @@ export class AllocationService {
     const baseWhere = {
       status: 'PUBLISHED' as const,
       difficulty: { in: difficulties },
+      language,
       id: { notIn: excludeIds },
       history: { some: { userId } },
     };
@@ -126,7 +132,12 @@ export class AllocationService {
 
     // Default: UNSEEN_FIRST_THEN_OLDEST — least-recently-answered first
     const history = await prisma.userQuestionHistory.findMany({
-      where: { userId, difficulty: { in: difficulties }, questionId: { notIn: excludeIds } },
+      where: {
+        userId,
+        difficulty: { in: difficulties },
+        questionId: { notIn: excludeIds },
+        question: { language }, // keep the whole session in one language (§4.5)
+      },
       orderBy: { answeredAt: 'asc' },
       take,
       select: { questionId: true },
