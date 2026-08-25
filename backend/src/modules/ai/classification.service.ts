@@ -111,14 +111,25 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
     const result = await this.classifyQuestion(questionId);
     const autoPublished = result.confidence >= settings.aiConfidenceThreshold;
 
-    await prisma.question.update({
-      where: { id: questionId },
-      data: {
-        aiSuggestedDifficulty: result.difficulty,
-        aiConfidence: result.confidence,
-        ...(autoPublished ? { difficulty: result.difficulty, status: QuestionStatus.PUBLISHED } : {}),
-      },
-    });
+    const original = await prisma.question.findUniqueOrThrow({ where: { id: questionId }, select: { translationGroupId: true } });
+
+    const updateData = {
+      aiSuggestedDifficulty: result.difficulty,
+      aiConfidence: result.confidence,
+      ...(autoPublished ? { difficulty: result.difficulty, status: QuestionStatus.PUBLISHED } : {}),
+    };
+
+    // Finalized requirement: Tamil/English versions of the same question
+    // must share the same Difficulty and PerformanceBucket — classifying
+    // one language applies the result to BOTH linked rows, not just the one
+    // that was actually sent to the AI. Avoids a Tamil/English fairness gap
+    // in ranking, and avoids classifying (and paying for) both languages
+    // separately when they're the same underlying question.
+    if (original.translationGroupId) {
+      await prisma.question.updateMany({ where: { translationGroupId: original.translationGroupId }, data: updateData });
+    } else {
+      await prisma.question.update({ where: { id: questionId }, data: updateData });
+    }
 
     return { ...result, autoPublished };
   }
