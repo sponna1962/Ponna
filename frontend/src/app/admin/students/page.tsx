@@ -14,6 +14,7 @@ type Student = {
   email: string | null;
   activePlan: string;
   createdAt: string;
+  isTestAccount: boolean;
   performance: Record<string, { questionsAnswered: number; averagePercent: number; rank: number | null }>;
 };
 
@@ -40,6 +41,20 @@ export default function StudentsPage() {
   }
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function toggleTestAccount(id: string, current: boolean) {
+    const res = await adminFetch(`/admin/students/${id}/test-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isTestAccount: !current }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed: ${body.error ?? 'Only Super Admin can change this'}`);
+      return;
+    }
+    load();
+  }
 
   return (
     <div>
@@ -74,6 +89,7 @@ export default function StudentsPage() {
             <th style={{ padding: 10 }}>Questions Answered</th>
             <th style={{ padding: 10 }}>Rank</th>
             <th style={{ padding: 10 }}>Joined</th>
+            <th style={{ padding: 10 }}>Test Account</th>
           </tr>
         </thead>
         <tbody>
@@ -85,17 +101,23 @@ export default function StudentsPage() {
                   <a href={`/admin/students/${s.id}`} style={{ color: '#0f172a', fontWeight: 600, textDecoration: 'none' }}>
                     {s.name ?? s.phone ?? s.email ?? s.id.slice(0, 8)}
                   </a>
+                  {s.isTestAccount && <span style={{ marginLeft: 6, fontSize: 11, color: '#d97706' }}>🧪 TEST</span>}
                 </td>
                 <td style={{ padding: 10 }}>{s.activePlan}</td>
                 <td style={{ padding: 10 }}>{overall ? `${overall.averagePercent.toFixed(1)}%` : '—'}</td>
                 <td style={{ padding: 10 }}>{overall?.questionsAnswered ?? 0}</td>
                 <td style={{ padding: 10 }}>{overall?.rank ?? '—'}</td>
                 <td style={{ padding: 10, color: '#94a3b8' }}>{new Date(s.createdAt).toLocaleDateString()}</td>
+                <td style={{ padding: 10 }}>
+                  <button onClick={() => toggleTestAccount(s.id, s.isTestAccount)} style={{ fontSize: 12, padding: '4px 10px' }}>
+                    {s.isTestAccount ? 'Unmark' : 'Mark as Test'}
+                  </button>
+                </td>
               </tr>
             );
           })}
           {students.length === 0 && (
-            <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No students found.</td></tr>
+            <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No students found.</td></tr>
           )}
         </tbody>
       </table>
