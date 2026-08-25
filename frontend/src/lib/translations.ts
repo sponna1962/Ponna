@@ -70,9 +70,9 @@ export const translations = {
       upgradeToUnlock: 'மேம்படுத்த வேண்டும்',
     },
     home: {
-      greeting: 'தினமும் கேள்விகளுக்கு பதிலளியுங்கள்.',
-      subtext: 'உங்கள் திறனை அறியுங்கள்.',
-      startToday: 'இன்று தேர்வு தொடங்கவும்',
+      greeting: 'வெற்றிக்கான முதல் படி.',
+      subtext: 'உங்கள் இலக்கை நோக்கிய பயணத்தைத் தொடங்குங்கள்.',
+      startToday: 'பயிற்சியைத் தொடங்குங்கள்',
       quotaRemaining: (used: number, total: number) => `இன்று ${total}-ல் ${total - used} கேள்விகள் மீதம்`,
     },
     menu: {
@@ -164,9 +164,9 @@ export const translations = {
       upgradeToUnlock: 'Upgrade to unlock',
     },
     home: {
-      greeting: 'Answer questions every day.',
-      subtext: 'Know your ability.',
-      startToday: "Start today's quiz",
+      greeting: 'The first step towards success.',
+      subtext: 'Begin your journey towards your goal.',
+      startToday: 'Start Practising',
       quotaRemaining: (used: number, total: number) => `${total - used} of ${total} questions remaining today`,
     },
     menu: {
