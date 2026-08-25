@@ -173,9 +173,16 @@ export default function AdminQuestionsPage() {
     loadQuestions();
   }
 
-  async function bulkAction(action: 'bulk-publish' | 'bulk-disable' | 'bulk-classify' | 'bulk-delete') {
+  async function bulkAction(action: 'bulk-publish' | 'bulk-disable' | 'bulk-classify' | 'bulk-delete' | 'bulk-force-delete') {
     if (selected.size === 0) return;
     if (action === 'bulk-delete' && !confirm(`Delete ${selected.size} question(s)? This cannot be undone.`)) return;
+    if (
+      action === 'bulk-force-delete' &&
+      !confirm(
+        `⚠️ FORCE DELETE ${selected.size} question(s) PERMANENTLY, including any student answer history?\n\nThis is a QA/testing tool only — never use this once real students have used the platform. Their stats for these questions will be lost.\n\nThis cannot be undone.`,
+      )
+    )
+      return;
 
     const res = await adminFetch(`/admin/questions/${action}`, {
       method: 'POST',
@@ -290,6 +297,9 @@ export default function AdminQuestionsPage() {
           <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
           <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
           <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
+          <button onClick={() => bulkAction('bulk-force-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#fff', background: '#dc2626', border: '1px solid #dc2626', borderRadius: 4 }}>
+            🧪 Force Delete (QA only)
+          </button>
         </div>
       )}
 
