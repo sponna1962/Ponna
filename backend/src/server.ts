@@ -382,8 +382,13 @@ app.post('/admin/questions/bulk-disable', requireStaffAuth, canEditQuestions, as
 
 // POST /admin/questions/bulk-delete  { ids: string[] } — Super Admin only, this is destructive
 app.post('/admin/questions/bulk-delete', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  const result = await questionService.bulkDelete(req.body.ids);
-  res.json(result);
+  try {
+    const result = await questionService.bulkDelete(req.body.ids);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message ?? 'Failed to delete questions' });
+  }
 });
 
 // POST /admin/questions/bulk-classify  { ids: string[] }
