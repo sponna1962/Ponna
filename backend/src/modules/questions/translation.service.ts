@@ -18,7 +18,7 @@ import { computeContentHash } from '../../common/content-hash';
 
 const prisma = new PrismaClient();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 interface TranslatedFields {
   questionText: string;
