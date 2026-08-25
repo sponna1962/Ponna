@@ -122,7 +122,7 @@ export class SessionService {
       await ranking.updateSummaryAfterAnswer(session.userId, question.difficulty, isCorrect);
     }
 
-    return { isCorrect };
+    return { isCorrect, correctOption: question.correctOption };
   }
 
   async completeSession(sessionId: string) {
