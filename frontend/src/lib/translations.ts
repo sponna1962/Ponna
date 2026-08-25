@@ -70,8 +70,8 @@ export const translations = {
       upgradeToUnlock: 'மேம்படுத்த வேண்டும்',
     },
     home: {
-      greeting: 'வெற்றிக்கான முதல் படி.',
-      subtext: 'உங்கள் இலக்கை நோக்கிய பயணத்தைத் தொடங்குங்கள்.',
+      greeting: 'வெற்றியின்\nமுதல் படி.',
+      subtext: 'போட்டித் தேர்வுகளுக்கு தயாராகும் மாணவர்களுக்கான பயிற்சி இணையதளம்.',
       startToday: 'பயிற்சியைத் தொடங்குங்கள்',
       quotaRemaining: (used: number, total: number) => `இன்று ${total}-ல் ${total - used} கேள்விகள் மீதம்`,
     },
@@ -164,8 +164,8 @@ export const translations = {
       upgradeToUnlock: 'Upgrade to unlock',
     },
     home: {
-      greeting: 'The first step towards success.',
-      subtext: 'Begin your journey towards your goal.',
+      greeting: 'The first step\nto success.',
+      subtext: 'A practice platform for competitive exam aspirants.',
       startToday: 'Start Practising',
       quotaRemaining: (used: number, total: number) => `${total - used} of ${total} questions remaining today`,
     },
