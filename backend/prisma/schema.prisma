@@ -200,6 +200,13 @@ model Question {
   optionD          String
   correctOption    CorrectOption
 
+  // Future-ready, optional (finalized requirement) — not required for the
+  // current wave of previous-exam question uploads, so bulk imports never
+  // need to supply these. Add per-question later, or gradually as original
+  // questions are authored.
+  explanationTa    String?
+  explanationEn    String?
+
   language         Language
   // Nullable link so a TA/EN pair can later be treated as one logical question
   // without any schema change (§6.2 Tamil/English translation linking)
