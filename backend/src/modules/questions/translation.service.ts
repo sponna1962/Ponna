@@ -54,7 +54,7 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1000, thinkingConfig: { thinkingBudget: 0 } },
+          generationConfig: { temperature: 0.2, maxOutputTokens: 3000 },
         }),
       },
     );
@@ -64,15 +64,17 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
     }
 
     const data = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
     };
+    const finishReason = data.candidates?.[0]?.finishReason;
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const cleaned = text.replace(/```json|```/g, '').trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
 
     try {
-      return JSON.parse(cleaned) as TranslatedFields;
+      return JSON.parse(jsonMatch ? jsonMatch[0] : text) as TranslatedFields;
     } catch {
-      throw new Error(`Could not parse translation response: ${text}`);
+      const hint = finishReason === 'MAX_TOKENS' ? ' (response was cut off — increase maxOutputTokens)' : '';
+      throw new Error(`Could not parse translation response${hint}: ${text.slice(0, 200)}`);
     }
   }
 
