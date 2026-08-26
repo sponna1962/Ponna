@@ -4,19 +4,15 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useLanguage } from '../../../lib/language-context';
 import { studentFetch } from '../../../lib/student-fetch';
-import { LanguageToggle } from '../../../components/LanguageToggle';
 
 // Quiz-taking screen — implements §4.3 (Taking a Quiz): one question per
 // screen, resumable, ends in a results summary.
 //
-// Real-Time Language Toggle (finalized requirement): switching Tamil/English
-// mid-quiz swaps ONLY the displayed text of the CURRENT question — it never
-// loads a different question, never re-fetches the session, and never
-// touches answer/selection state. This works because `selected` and
-// `correctOption` below are stored as OPTION LETTERS (A/B/C/D), not text —
-// and a bilingual pair is guaranteed to share the same correct-option letter
-// (enforced when the pair is created/classified) — so the letter-based state
-// stays valid no matter which language is currently displayed.
+// No language toggle here (finalized requirement — the earlier real-time
+// toggle was dropped). Practice language is a one-time Setup choice (see
+// /quiz/page.tsx's Practice Preference Setup) and stays fixed for the whole
+// session — every question in this session was allocated in that single
+// language, so `content` below only ever has one key populated.
 
 type LangContent = { questionText: string; optionA: string; optionB: string; optionC: string; optionD: string };
 
@@ -48,7 +44,7 @@ type Results = {
 };
 
 export default function QuizSessionPage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const params = useParams();
   const sessionId = params.sessionId as string;
 
@@ -142,16 +138,16 @@ export default function QuizSessionPage() {
   // available for THIS question, preferring the student's current toggle
   // state; fall back to whichever language actually exists if the preferred
   // one hasn't been translated yet (e.g. background translation still running).
-  const preferredLang = lang.toUpperCase() as 'TA' | 'EN';
-  const display = q.content[preferredLang] ?? q.content.TA ?? q.content.EN!;
+  // Practice language is fixed for the whole session — content only has one
+  // key populated (whichever language the student's saved preference specifies).
+  const display = q.content.TA ?? q.content.EN!;
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px 0 20px' }}>
+      <div style={{ padding: '16px 20px 0 20px' }}>
         <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
           {t.quiz.questionCounter(currentIndex + 1, session.totalQuestions)}
         </span>
-        <LanguageToggle />
       </div>
 
       <div style={{ padding: '12px 20px 0 20px' }}>
