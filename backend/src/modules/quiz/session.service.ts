@@ -158,12 +158,12 @@ export class SessionService {
    */
   /**
    * Includes the linked translation's text (via translationGroupId) for
-   * each session question, so the frontend can switch the DISPLAYED
-   * language instantly on toggle without touching any session/answer state
-   * — see the finalized "Real-Time Language Toggle" requirement. This works
-   * because the correct-option LETTER is guaranteed identical across a
-   * bilingual pair (enforced at creation time), so selected/correctOption
-   * state (stored as a letter, not text) never needs to change on toggle.
+   * each session question. Even though the student-facing real-time toggle
+   * was dropped (Language is now a one-time Practice Setup choice, not an
+   * in-session control — see finalized requirement), keeping both languages
+   * here when a translation exists is harmless and future-proof; the
+   * frontend currently only ever renders the one matching the session's
+   * fixed language.
    */
   async getSessionForStudent(sessionId: string) {
     const session = await prisma.quizSession.findUniqueOrThrow({
