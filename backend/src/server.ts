@@ -1,623 +1,285 @@
-// Minimal API server wiring the core student-facing endpoints to the services
-// built in modules/. This is a working skeleton — student auth here is a
-// placeholder (userId taken directly from the request body) and must be
-// replaced with real OTP-based auth + JWT middleware before production.
-// Staff/admin routes DO use real JWT + role-gate middleware (see staff-auth.service.ts).
+// Quiz Session Engine — implements §4.3 (Taking a Quiz) session lifecycle:
+// start (reserve quota + questions), resume, answer, complete, and the
+// scheduled abandonment sweep.
 
-import express from 'express';
-import cors from 'cors';
-import multer from 'multer';
-import { SessionService } from './modules/quiz/session.service';
-import { RankingService } from './modules/ranking/ranking.service';
-import { QuotaExceededError } from './modules/quota/quota.service';
-import { QuestionService } from './modules/questions/question.service';
-import { BulkUploadService } from './modules/questions/bulk-upload.service';
-import { TranslationService } from './modules/questions/translation.service';
-import { ExamTaxonomyService } from './modules/admin/exam-taxonomy.service';
-import { StaffAuthService, requireStaffAuth, requireRole, AuthedRequest } from './modules/admin/staff-auth.service';
-import { ClassificationService } from './modules/ai/classification.service';
-import { SettingsService } from './modules/admin/settings.service';
-import { StudentManagementService } from './modules/admin/student-management.service';
-import { PlansService } from './modules/admin/plans.service';
-import { startScheduledJobs } from './modules/scheduled-jobs';
-import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
-import { StudentAuthService, requireStudentAuth, StudentAuthedRequest } from './modules/auth/student-auth.service';
-import { ProfileService } from './modules/profile/profile.service';
+import { PrismaClient, QuizMode, SessionStatus, CorrectOption } from '@prisma/client';
+import { QuotaService, QuotaExceededError } from '../quota/quota.service';
+import { AllocationService } from '../questions/allocation.service';
+import { RankingService } from '../ranking/ranking.service';
+import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
 
-const app = express();
-// CORS: in production the frontend (Vercel) and backend (Railway) are on
-// different domains, so this can't be left wide-open without a config knob.
-// Set FRONTEND_URL in the backend's environment to your Vercel URL once
-// deployed; falls back to allowing all origins for local development.
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
-// Captures the raw request body alongside the parsed JSON — needed for
-// verifying the Razorpay webhook signature, which is computed over the raw
-// bytes, not the re-serialized JSON (those can differ in whitespace/key order).
-app.use(
-  express.json({
-    verify: (req, _res, buf) => {
-      (req as any).rawBody = buf;
-    },
-  }),
-);
-const upload = multer({ storage: multer.memoryStorage() });
+const prisma = new PrismaClient();
+const quota = new QuotaService();
+const allocation = new AllocationService();
+const ranking = new RankingService();
+const preferenceService = new PracticePreferenceService();
 
-const sessionService = new SessionService();
-const rankingService = new RankingService();
-const questionService = new QuestionService();
-const bulkUploadService = new BulkUploadService();
-const translationService = new TranslationService();
-const examTaxonomyService = new ExamTaxonomyService();
-const staffAuthService = new StaffAuthService();
-const classificationService = new ClassificationService();
-const settingsService = new SettingsService();
-const studentManagementService = new StudentManagementService();
-const plansService = new PlansService();
-const paymentService = new PaymentService();
-const studentAuthService = new StudentAuthService();
-const profileService = new ProfileService();
-
-// ─────────────────────────────────────────────────────────
-// STUDENT AUTH  (§4.1) — Firebase Phone Auth verification
-// ─────────────────────────────────────────────────────────
-
-// POST /auth/firebase-login  { firebaseIdToken }
-// Called by the frontend after Firebase's client SDK confirms the OTP.
-app.post('/auth/firebase-login', async (req, res) => {
-  try {
-    const { firebaseIdToken } = req.body;
-    const result = await studentAuthService.loginWithFirebaseToken(firebaseIdToken);
-    res.json(result);
-  } catch (err: any) {
-    console.error(err);
-    res.status(401).json({ error: err.message ?? 'Login failed' });
-  }
-});
-
-// ─────────────────────────────────────────────────────────
-// STUDENT ROUTES
-// ─────────────────────────────────────────────────────────
-
-// POST /quiz/start  { mode: 'MIXED'|'MEDIUM'|'HARD', language: 'TA'|'EN' } — userId from the JWT.
-// language decides which language's questions are allocated for the whole
-// session — the student's UI language toggle now actually determines quiz
-// content, not just button labels (this was a real gap, not by design).
-app.post('/quiz/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const { mode, language } = req.body;
-    const session = await sessionService.startSession(req.studentUserId!, mode, language);
-    res.json(session);
-  } catch (err) {
-    if (err instanceof QuotaExceededError) {
-      return res.status(403).json({ error: err.message });
-    }
-    console.error(err);
-    res.status(500).json({ error: 'Failed to start session' });
-  }
-});
-
-// GET /quiz/:sessionId  — session + questions for the quiz-taking UI
-app.get('/quiz/:sessionId', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const session = await sessionService.getSessionForStudent(req.params.sessionId);
-    res.json(session);
-  } catch (err) {
-    console.error(err);
-    res.status(404).json({ error: 'Session not found' });
-  }
-});
-
-// POST /quiz/:sessionId/answer  { questionId, selectedOption }
-app.post('/quiz/:sessionId/answer', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const { questionId, selectedOption } = req.body;
-    const result = await sessionService.submitAnswer(req.params.sessionId, questionId, selectedOption);
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to submit answer' });
-  }
-});
-
-// POST /quiz/:sessionId/complete
-app.post('/quiz/:sessionId/complete', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const session = await sessionService.completeSession(req.params.sessionId);
-    res.json(session);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to complete session' });
-  }
-});
-
-// GET /quiz/:sessionId/results — score summary for the results screen
-app.get('/quiz/:sessionId/results', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const results = await sessionService.getSessionResults(req.params.sessionId);
-    res.json(results);
-  } catch (err) {
-    console.error(err);
-    res.status(404).json({ error: 'Session not found' });
-  }
-});
-
-// GET /students/me/dashboard — userId comes from the JWT
-app.get('/students/me/dashboard', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const dashboard = await rankingService.getStudentDashboard(req.studentUserId!);
-    res.json(dashboard);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to load dashboard' });
-  }
-});
-
-// GET /students/me/profile
-app.get('/students/me/profile', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const profile = await profileService.getProfile(req.studentUserId!);
-    res.json(profile);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to load profile' });
-  }
-});
-
-// PATCH /students/me/profile  { name?, district?, cityTownVillage?, preparingFor? }
-app.patch('/students/me/profile', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const result = await profileService.updateProfile(req.studentUserId!, req.body);
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to update profile' });
-  }
-});
-
-// ─────────────────────────────────────────────────────────
-// PAYMENTS  (§5, §7.6) — Razorpay
-// ─────────────────────────────────────────────────────────
-
-// POST /payments/create-order  { planCode: 'PLAN_20'|'PLAN_50' } — userId comes from the JWT
-app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
-  try {
-    const { planCode } = req.body;
-    const order = await paymentService.createOrder(req.studentUserId!, planCode);
-    res.json(order);
-  } catch (err: any) {
-    console.error(err);
-    if (err instanceof ProfileIncompleteError) {
-      // Distinct error code so the frontend can redirect to /profile rather
-      // than just showing a generic payment-failed message.
-      return res.status(400).json({ error: err.message, code: 'PROFILE_INCOMPLETE' });
-    }
-    res.status(400).json({ error: err.message ?? 'Failed to create payment order' });
-  }
-});
-
-// POST /webhooks/razorpay — called BY Razorpay, not by the frontend.
-// This is the only place a Subscription is actually created; never trust a
-// client-side "payment succeeded" callback for that (it can be spoofed).
-app.post('/webhooks/razorpay', async (req, res) => {
-  try {
-    const signature = req.headers['x-razorpay-signature'] as string;
-    const rawBody = (req as any).rawBody as Buffer;
-
-    if (!signature || !rawBody || !paymentService.verifyWebhookSignature(rawBody.toString(), signature)) {
-      return res.status(400).json({ error: 'Invalid webhook signature' });
-    }
-
-    if (req.body.event === 'payment.captured') {
-      const result = await paymentService.handlePaymentCaptured(req.body);
-      return res.json(result);
-    }
-
-    // Other event types (payment.failed, refund.processed, etc.) are
-    // acknowledged but not acted on yet — extend here as needed.
-    res.json({ status: 'ignored', event: req.body.event });
-  } catch (err: any) {
-    console.error('Webhook processing failed:', err);
-    // Still return 200-range error carefully: Razorpay retries on failure,
-    // which is desirable for transient errors, so a 500 here is intentional.
-    res.status(500).json({ error: err.message ?? 'Webhook processing failed' });
-  }
-});
-
-// ─────────────────────────────────────────────────────────
-// STAFF AUTH  (§7.8)
-// ─────────────────────────────────────────────────────────
-
-// POST /admin/auth/login  { email, password }
-app.post('/admin/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const result = await staffAuthService.login(email, password);
-    res.json(result);
-  } catch {
-    res.status(401).json({ error: 'Invalid credentials' });
-  }
-});
-
-// POST /admin/staff  { email, password, role }  — Super Admin only
-app.post(
-  '/admin/staff',
-  requireStaffAuth,
-  requireRole('SUPER_ADMIN'),
-  async (req, res) => {
-    try {
-      const { email, password, role } = req.body;
-      const staff = await staffAuthService.createStaff(email, password, role, (req as AuthedRequest).staff!.staffId);
-      res.json(staff);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to create staff account' });
-    }
-  },
-);
-
-// GET /admin/staff  — Super Admin only
-app.get('/admin/staff', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
-  res.json(await staffAuthService.listStaff());
-});
-
-// POST /admin/staff/:id/deactivate — Super Admin only
-app.post('/admin/staff/:id/deactivate', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  res.json(await staffAuthService.deactivateStaff(req.params.id));
-});
-
-// ─────────────────────────────────────────────────────────
-// QUESTION MANAGEMENT  (§7.1) — Super Admin + Content Admin
-// ─────────────────────────────────────────────────────────
-
-const canEditQuestions = requireRole('SUPER_ADMIN', 'CONTENT_ADMIN');
-
-// GET /admin/questions?status=DRAFT&difficulty=MEDIUM&page=1&search=piaget&authorityId=...&categoryId=...
-app.get('/admin/questions', requireStaffAuth, async (req, res) => {
-  try {
-    const { status, difficulty, authorityId, categoryId, category, language, search, page, pageSize } = req.query;
-    const result = await questionService.list({
-      status: status as any,
-      difficulty: difficulty as any,
-      authorityId: authorityId as string,
-      categoryId: categoryId as string,
-      category: category as any,
-      language: language as any,
-      search: search as string,
-      page: page ? Number(page) : undefined,
-      pageSize: pageSize ? Number(pageSize) : undefined,
+export class SessionService {
+  /**
+   * Starts a new session, or returns the existing in-progress one if present.
+   * No mode/language parameters anymore (finalized requirement) — every
+   * session uses the student's saved Practice Preference (Language,
+   * Authority/Category/Sub-Category, Difficulty), set up once via
+   * /students/me/practice-preference and reused until they change it.
+   * Throws if no preference has been saved yet — the frontend must not call
+   * this before the student has completed (or already has) a preference.
+   */
+  async startSession(userId: string) {
+    const existing = await prisma.quizSession.findFirst({
+      where: { userId, status: SessionStatus.IN_PROGRESS },
+      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to list questions' });
-  }
-});
-
-// POST /admin/questions  — add a single question
-app.post('/admin/questions', requireStaffAuth, canEditQuestions, async (req, res) => {
-  try {
-    const question = await questionService.create(req.body);
-    res.json(question);
-  } catch (err: any) {
-    res.status(409).json({ error: err.message });
-  }
-});
-
-// PATCH /admin/questions/:id
-app.patch('/admin/questions/:id', requireStaffAuth, canEditQuestions, async (req, res) => {
-  try {
-    const question = await questionService.update(req.params.id, req.body);
-    res.json(question);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to update question' });
-  }
-});
-
-// POST /admin/questions/:id/publish | /disable | /draft
-app.post('/admin/questions/:id/:action(publish|disable|draft)', requireStaffAuth, canEditQuestions, async (req, res) => {
-  const statusMap = { publish: 'PUBLISHED', disable: 'DISABLED', draft: 'DRAFT' } as const;
-  const question = await questionService.setStatus(req.params.id, statusMap[req.params.action as 'publish' | 'disable' | 'draft']);
-  res.json(question);
-});
-
-// POST /admin/questions/:id/difficulty  { difficulty }
-app.post('/admin/questions/:id/difficulty', requireStaffAuth, canEditQuestions, async (req, res) => {
-  const question = await questionService.setDifficulty(req.params.id, req.body.difficulty);
-  res.json(question);
-});
-
-// POST /admin/questions/current-affairs — quick-entry (§7.2)
-app.post('/admin/questions/current-affairs', requireStaffAuth, canEditQuestions, async (req, res) => {
-  try {
-    const question = await questionService.createCurrentAffairs(req.body);
-    res.json(question);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to add current affairs question' });
-  }
-});
-
-// POST /admin/questions/translate-preview  { fields: {questionText, optionA..D}, fromLang }
-// Used by the admin form's live "type in one language, other auto-fills" flow.
-// Does NOT save anything — just returns the translation for the admin to review.
-app.post('/admin/questions/translate-preview', requireStaffAuth, canEditQuestions, async (req, res) => {
-  try {
-    const { fields, fromLang } = req.body;
-    const translated = await translationService.previewTranslation(fields, fromLang);
-    res.json(translated);
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message ?? 'Translation failed' });
-  }
-});
-
-// POST /admin/questions/bilingual  { ta: {...}, en: {...} }
-// Creates both language versions at once, linked by translationGroupId —
-// used when the admin has reviewed both languages in the form and clicks Publish/Save.
-app.post('/admin/questions/bilingual', requireStaffAuth, canEditQuestions, async (req, res) => {
-  try {
-    const { ta, en } = req.body;
-    const result = await questionService.createBilingualPair(ta, en);
-    res.json(result);
-  } catch (err: any) {
-    console.error(err);
-    res.status(409).json({ error: err.message ?? 'Failed to create question pair' });
-  }
-});
-
-// ── Bulk actions (select multiple in the admin list, act once) ──────────
-
-// POST /admin/questions/bulk-publish  { ids: string[] }
-app.post('/admin/questions/bulk-publish', requireStaffAuth, canEditQuestions, async (req, res) => {
-  const result = await questionService.bulkSetStatus(req.body.ids, 'PUBLISHED');
-  res.json(result);
-});
-
-// POST /admin/questions/bulk-disable  { ids: string[] }
-app.post('/admin/questions/bulk-disable', requireStaffAuth, canEditQuestions, async (req, res) => {
-  const result = await questionService.bulkSetStatus(req.body.ids, 'DISABLED');
-  res.json(result);
-});
-
-// POST /admin/questions/bulk-delete  { ids: string[] } — Super Admin only, this is destructive
-app.post('/admin/questions/bulk-delete', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  try {
-    const result = await questionService.bulkDelete(req.body.ids);
-    res.json(result);
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message ?? 'Failed to delete questions' });
-  }
-});
-
-// POST /admin/questions/bulk-force-delete  { ids: string[] } — Super Admin only.
-// QA/launch-prep tool: permanently deletes even questions with answer
-// history. Never expose this to anyone but Super Admin, and never call it
-// once real students are using the platform.
-app.post('/admin/questions/bulk-force-delete', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  try {
-    const result = await questionService.forceBulkDelete(req.body.ids);
-    res.json(result);
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message ?? 'Failed to force-delete questions' });
-  }
-});
-
-// POST /admin/questions/bulk-classify  { ids: string[] }
-app.post('/admin/questions/bulk-classify', requireStaffAuth, canEditQuestions, async (req, res) => {
-  try {
-    const result = await classificationService.classifyQuestionIds(req.body.ids);
-    res.json(result);
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message ?? 'Bulk classification failed' });
-  }
-});
-
-// POST /admin/questions/bulk-upload/preview  (multipart form, field name "file")
-// Phase 1 — parses, validates, exact-duplicate-checks. Writes NOTHING to the
-// database yet; the admin reviews the summary/list before confirming import.
-app.post(
-  '/admin/questions/bulk-upload/preview',
-  requireStaffAuth,
-  canEditQuestions,
-  upload.single('file'),
-  async (req: AuthedRequest, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-      const csvContent = req.file.buffer.toString('utf-8');
-      const result = await bulkUploadService.preview(csvContent);
-      res.json(result);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Preview failed — check the CSV format' });
+    if (existing) {
+      // §4.3: same session resumes exactly where the student left off, no re-deduction
+      return { ...existing, resumedWithDifferentSelection: false };
     }
-  },
-);
 
-// POST /admin/questions/bulk-upload/confirm
-// Phase 2 — { rows: PreviewRow['data'][], batchMeta: {...} }. Only the rows
-// the admin approved (valid, non-duplicate) should be sent here — the
-// frontend filters preview results down to 'valid' before calling this.
-app.post('/admin/questions/bulk-upload/confirm', requireStaffAuth, canEditQuestions, async (req: AuthedRequest, res) => {
-  try {
-    const { rows, batchMeta } = req.body;
-    const { batchId, inserted } = await bulkUploadService.confirmImport(rows, batchMeta, req.staff!.staffId);
+    const preference = await preferenceService.get(userId);
+    if (!preference) {
+      throw new Error('No practice preference saved yet — complete Practice Setup first.');
+    }
+    const mode = preference.mode;
 
-    // Kick off AI classification for this batch in the background — see
-    // note in the previous version of this route for why this is
-    // fire-and-forget rather than awaited.
-    classificationService.classifyPendingQuestions(batchId).catch((err) =>
-      console.error(`Background classification failed for batch ${batchId}:`, err),
+    const remainingQuota = await quota.getRemainingQuota(userId);
+    if (remainingQuota <= 0) {
+      throw new QuotaExceededError(
+        'You have used all your questions for today. Upgrade your plan to keep practicing, or come back tomorrow.',
+      );
+    }
+
+    const taxonomyFilter = await preferenceService.resolveTaxonomyFilter(preference.selections as any);
+
+    // Build the eligible question list FIRST, before touching quota — same
+    // reasoning as before: never reserve quota for questions that can't
+    // actually be delivered. Cap the request at a generous ceiling (100) so
+    // allocation doesn't need to know about quota at all; the real cap is
+    // whichever is smaller of quota and eligible questions.
+    const questionIds = await allocation.buildSessionQuestionIds(
+      userId,
+      mode,
+      Math.min(remainingQuota, 100),
+      preference.language,
+      taxonomyFilter,
     );
+    const actualSize = questionIds.length;
 
-    res.json({ batchId, inserted });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Import failed' });
-  }
-});
+    if (actualSize === 0) {
+      throw new Error(
+        'No eligible questions match your Practice Preferences right now. Try widening your selections in Change Preferences.',
+      );
+    }
 
-// ─────────────────────────────────────────────────────────
-// AI CLASSIFICATION  (§9) — Super Admin + Content Admin
-// ─────────────────────────────────────────────────────────
+    const quotaResult = await quota.reserveQuota(userId, actualSize);
+    if (!quotaResult.allowed) {
+      throw new QuotaExceededError(quotaResult.reason ?? 'Quota exceeded');
+    }
 
-// POST /admin/questions/classify-batch  { batchId? } — classify all pending drafts (optionally scoped to a batch)
-app.post('/admin/questions/classify-batch', requireStaffAuth, canEditQuestions, async (req, res) => {
-  try {
-    const result = await classificationService.classifyPendingQuestions(req.body?.batchId);
-    res.json(result);
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message ?? 'Classification failed' });
-  }
-});
-
-// POST /admin/questions/:id/classify — (re-)classify a single question on demand
-app.post('/admin/questions/:id/classify', requireStaffAuth, canEditQuestions, async (req, res) => {
-  try {
-    const result = await classificationService.classifyAndApply(req.params.id);
-    res.json(result);
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message ?? 'Classification failed' });
-  }
-});
-
-// GET /admin/questions/needs-review — Content Admin review queue (§7.3)
-app.get('/admin/questions/needs-review', requireStaffAuth, async (_req, res) => {
-  try {
-    const queue = await classificationService.getNeedsReviewQueue();
-    res.json(queue);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to load review queue' });
-  }
-});
-
-// GET /admin/ai/accuracy — accuracy dashboard (§7.3)
-app.get('/admin/ai/accuracy', requireStaffAuth, async (_req, res) => {
-  try {
-    res.json(await classificationService.getAccuracyStats());
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to load accuracy stats' });
-  }
-});
-
-// ─────────────────────────────────────────────────────────
-// EXAM TAXONOMY — Authority → Category → Sub-Category (dynamic, Super Admin managed)
-// ─────────────────────────────────────────────────────────
-
-// GET /admin/exam-taxonomy — full tree, for the Taxonomy Management page and cascading dropdowns
-app.get('/admin/exam-taxonomy', requireStaffAuth, async (_req, res) => {
-  res.json(await examTaxonomyService.listFullTree());
-});
-
-// POST /admin/exam-taxonomy/authorities  { name } — Super Admin only
-app.post('/admin/exam-taxonomy/authorities', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  res.json(await examTaxonomyService.createAuthority(req.body.name));
-});
-
-// POST /admin/exam-taxonomy/authorities/:authorityId/categories  { name }
-app.post('/admin/exam-taxonomy/authorities/:authorityId/categories', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  res.json(await examTaxonomyService.createCategory(req.params.authorityId, req.body.name));
-});
-
-// POST /admin/exam-taxonomy/categories/:categoryId/sub-categories  { name }
-app.post('/admin/exam-taxonomy/categories/:categoryId/sub-categories', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  res.json(await examTaxonomyService.createSubCategory(req.params.categoryId, req.body.name));
-});
-
-// ─────────────────────────────────────────────────────────
-// PLATFORM SETTINGS  (§7.7) — Super Admin only (these control platform-wide
-// business rules: repetition policy, Current Affairs ratios/recency, AI
-// threshold, ranking eligibility — nothing here should be editable by Content
-// Admin or Viewer roles)
-// ─────────────────────────────────────────────────────────
-
-app.get('/admin/settings', requireStaffAuth, async (_req, res) => {
-  res.json(await settingsService.get());
-});
-
-app.patch('/admin/settings', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  try {
-    res.json(await settingsService.update(req.body));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to update settings' });
-  }
-});
-
-// ─────────────────────────────────────────────────────────
-// STUDENT & PERFORMANCE MANAGEMENT  (§7.5) — all staff roles can view
-// ─────────────────────────────────────────────────────────
-
-app.get('/admin/students', requireStaffAuth, async (req, res) => {
-  try {
-    const { search, page, pageSize } = req.query;
-    const result = await studentManagementService.listStudents({
-      search: search as string,
-      page: page ? Number(page) : undefined,
-      pageSize: pageSize ? Number(pageSize) : undefined,
+    const session = await prisma.quizSession.create({
+      data: {
+        userId,
+        mode,
+        totalQuestions: actualSize,
+        status: SessionStatus.IN_PROGRESS,
+        questions: {
+          create: questionIds.map((questionId, idx) => ({
+            questionId,
+            sequenceNumber: idx + 1,
+          })),
+        },
+      },
+      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to list students' });
+
+    return { ...session, resumedWithDifferentSelection: false };
   }
-});
 
-app.get('/admin/students/:id', requireStaffAuth, async (req, res) => {
-  try {
-    res.json(await studentManagementService.getStudentDetail(req.params.id));
-  } catch (err) {
-    console.error(err);
-    res.status(404).json({ error: 'Student not found' });
+  async submitAnswer(
+    sessionId: string,
+    questionId: string,
+    selectedOption: CorrectOption,
+  ) {
+    const session = await prisma.quizSession.findUniqueOrThrow({ where: { id: sessionId } });
+    if (session.status !== SessionStatus.IN_PROGRESS) {
+      throw new Error('Cannot answer into a session that is not in progress');
+    }
+
+    const question = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
+    const isCorrect = question.correctOption === selectedOption;
+
+    await prisma.$transaction([
+      prisma.quizSessionQuestion.update({
+        where: { sessionId_questionId: { sessionId, questionId } },
+        data: { answered: true, selectedOption, isCorrect, answeredAt: new Date() },
+      }),
+      prisma.quizSession.update({
+        where: { id: sessionId },
+        data: { lastActivityAt: new Date() },
+      }),
+      prisma.userQuestionHistory.upsert({
+        where: { userId_questionId: { userId: session.userId, questionId } },
+        create: {
+          userId: session.userId,
+          questionId,
+          difficulty: question.difficulty!,
+          modeTakenIn: session.mode,
+          answeredCorrectly: isCorrect,
+        },
+        update: {
+          answeredCorrectly: isCorrect,
+          answeredAt: new Date(),
+          modeTakenIn: session.mode,
+        },
+      }),
+    ]);
+
+    // Performance summary (Overall + the specific difficulty bucket) is kept
+    // current here so the dashboard/ranking reflect this answer immediately.
+    // Rank itself is NOT recomputed per-answer (that stays a scheduled job,
+    // per §8.1) — only the running average/count that rank is later derived from.
+    if (question.difficulty) {
+      await ranking.updateSummaryAfterAnswer(session.userId, question.difficulty, isCorrect);
+    }
+
+    return { isCorrect, correctOption: question.correctOption };
   }
-});
 
-// POST /admin/students/:id/test-account  { isTestAccount: boolean } — Super Admin only (finalized requirement)
-app.post('/admin/students/:id/test-account', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  try {
-    const result = await studentManagementService.setTestAccount(req.params.id, !!req.body.isTestAccount);
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to update test account status' });
+  async completeSession(sessionId: string) {
+    return prisma.quizSession.update({
+      where: { id: sessionId },
+      data: { status: SessionStatus.COMPLETED, completedAt: new Date() },
+    });
   }
-});
 
-app.get('/admin/platform-stats', requireStaffAuth, async (_req, res) => {
-  res.json(await studentManagementService.getPlatformStats());
-});
+  /**
+   * Fetches a session with its questions for the quiz-taking UI. Deliberately
+   * omits `correctOption` from unanswered questions so the client can't read
+   * the answer out of the network payload before submitting — it's only
+   * revealed (via submitAnswer's response) once the student actually answers.
+   */
+  /**
+   * Includes the linked translation's text (via translationGroupId) for
+   * each session question, so the frontend can switch the DISPLAYED
+   * language instantly on toggle without touching any session/answer state
+   * — see the finalized "Real-Time Language Toggle" requirement. This works
+   * because the correct-option LETTER is guaranteed identical across a
+   * bilingual pair (enforced at creation time), so selected/correctOption
+   * state (stored as a letter, not text) never needs to change on toggle.
+   */
+  async getSessionForStudent(sessionId: string) {
+    const session = await prisma.quizSession.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: {
+        questions: {
+          orderBy: { sequenceNumber: 'asc' },
+          include: { question: true },
+        },
+      },
+    });
 
-// ─────────────────────────────────────────────────────────
-// PLANS & SUBSCRIPTIONS  (§7.6) — Super Admin edits, others view
-// ─────────────────────────────────────────────────────────
+    // One batched lookup for every linked translation this session touches,
+    // rather than a query per question.
+    const groupIds = session.questions.map((sq) => sq.question.translationGroupId).filter((id): id is string => !!id);
+    const linked = groupIds.length
+      ? await prisma.question.findMany({ where: { translationGroupId: { in: groupIds } } })
+      : [];
+    const byGroup = new Map<string, typeof linked>();
+    for (const q of linked) {
+      if (!q.translationGroupId) continue;
+      byGroup.set(q.translationGroupId, [...(byGroup.get(q.translationGroupId) ?? []), q]);
+    }
 
-app.get('/admin/plans', requireStaffAuth, async (_req, res) => {
-  res.json(await plansService.listPlans());
-});
+    return {
+      id: session.id,
+      mode: session.mode,
+      status: session.status,
+      totalQuestions: session.totalQuestions,
+      questions: session.questions.map((sq) => {
+        const group = sq.question.translationGroupId ? byGroup.get(sq.question.translationGroupId) : undefined;
+        const otherLangRow = group?.find((q) => q.language !== sq.question.language);
 
-app.patch('/admin/plans/:id/price', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  try {
-    res.json(await plansService.updatePlanPrice(req.params.id, req.body.price));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to update plan price' });
+        return {
+          sequenceNumber: sq.sequenceNumber,
+          questionId: sq.questionId,
+          answered: sq.answered,
+          selectedOption: sq.selectedOption,
+          isCorrect: sq.isCorrect,
+          difficulty: sq.question.difficulty,
+          category: sq.question.category,
+          // correctOption intentionally omitted until answered=true
+          correctOption: sq.answered ? sq.question.correctOption : null,
+          // Per-language display text. `language` names which key this
+          // session question was originally allocated in (TA or EN) — the
+          // OTHER key is only present when a linked translation exists yet.
+          content: {
+            [sq.question.language]: {
+              questionText: sq.question.questionText,
+              optionA: sq.question.optionA,
+              optionB: sq.question.optionB,
+              optionC: sq.question.optionC,
+              optionD: sq.question.optionD,
+            },
+            ...(otherLangRow
+              ? {
+                  [otherLangRow.language]: {
+                    questionText: otherLangRow.questionText,
+                    optionA: otherLangRow.optionA,
+                    optionB: otherLangRow.optionB,
+                    optionC: otherLangRow.optionC,
+                    optionD: otherLangRow.optionD,
+                  },
+                }
+              : {}),
+          },
+        };
+      }),
+    };
   }
-});
 
-app.post('/admin/plans/:id/:action(activate|deactivate)', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  const active = req.params.action === 'activate';
-  res.json(await plansService.setPlanActive(req.params.id, active));
-});
+  /** Score summary shown on the results screen after completion. */
+  async getSessionResults(sessionId: string) {
+    const session = await prisma.quizSession.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: { questions: true },
+    });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`PONNA API listening on :${PORT}`);
-  startScheduledJobs();
-});
+    const answered = session.questions.filter((q) => q.answered);
+    const correct = answered.filter((q) => q.isCorrect).length;
+
+    return {
+      sessionId: session.id,
+      mode: session.mode,
+      totalQuestions: session.totalQuestions,
+      answeredCount: answered.length,
+      correctCount: correct,
+      accuracyPercent: answered.length > 0 ? (correct / answered.length) * 100 : 0,
+    };
+  }
+
+  /**
+   * Scheduled job (e.g. every 15 min via cron) — marks stale sessions abandoned,
+   * releases their unanswered questions back to the pool (no action needed beyond
+   * status change, since allocation always queries live PUBLISHED questions), and
+   * explicitly does NOT refund quota (§4.3 / §5).
+   */
+  async sweepAbandonedSessions() {
+    const settings = await prisma.platformSettings.findUniqueOrThrow({
+      where: { id: 'singleton' },
+    });
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - settings.sessionInactivityHours);
+
+    const stale = await prisma.quizSession.findMany({
+      where: { status: SessionStatus.IN_PROGRESS, lastActivityAt: { lt: cutoff } },
+    });
+
+    for (const s of stale) {
+      await prisma.quizSession.update({
+        where: { id: s.id },
+        data: { status: SessionStatus.ABANDONED },
+      });
+      await quota.onSessionAbandoned(s.id); // no-op by design — documents the rule
+    }
+
+    return { abandonedCount: stale.length };
+  }
+}
