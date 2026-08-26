@@ -3,50 +3,18 @@
 // Home — the post-login landing page. No language selection here at all
 // (finalized requirement): the Homepage itself always shows both Tamil and
 // English together, and language becomes a student choice only inside
-// Practice Preference Setup (Language is a question-content filter there,
-// not a UI-wide toggle).
+// Practice Preference Setup.
 //
-// "Start Practising" behaviour (finalized requirement):
-//   - First-time student / no saved preference yet → go to /quiz, which
-//     opens straight into Practice Preference Setup.
-//   - Returning student with a saved preference → skip Setup entirely,
-//     start a session immediately, and land directly on the first question.
-// This is the ONLY place that decides which of those two happens — the
-// student's saved preference is the single source of truth, checked fresh
-// on every click rather than cached in the UI.
+// "Start Practising" ALWAYS goes to /quiz (finalized requirement — no
+// silent skip-straight-to-questions from here, even for a returning
+// student with a saved preference). /quiz itself decides what to show:
+// the full Setup form for a first-time student, or a Preferences summary
+// + "Start Practice" button for a returning one — so the student always
+// sees and confirms what they're about to practice before it starts.
 
-import { useState } from 'react';
-import { studentFetch } from '../../lib/student-fetch';
 import { StudentMenu } from '../../components/StudentMenu';
 
 export default function HomePage() {
-  const [starting, setStarting] = useState(false);
-
-  async function handleStartPractising() {
-    setStarting(true);
-    try {
-      const prefRes = await studentFetch('/students/me/practice-preference');
-      const preference = prefRes.ok ? await prefRes.json() : null;
-
-      if (!preference) {
-        window.location.href = '/quiz'; // no saved preference yet — Setup happens there
-        return;
-      }
-
-      const sessionRes = await studentFetch('/quiz/start', { method: 'POST' });
-      if (!sessionRes.ok) {
-        // Quota exceeded, no eligible questions, etc. — let /quiz show the
-        // specific error rather than duplicating that handling here.
-        window.location.href = '/quiz';
-        return;
-      }
-      const session = await sessionRes.json();
-      window.location.href = `/quiz/${session.id}`;
-    } finally {
-      setStarting(false);
-    }
-  }
-
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
@@ -69,25 +37,22 @@ export default function HomePage() {
           A practice platform for competitive exam aspirants.
         </p>
 
-        <button
-          onClick={handleStartPractising}
-          disabled={starting}
+        <a
+          href="/quiz"
           style={{
             display: 'block',
-            width: '100%',
             textAlign: 'center',
             padding: 16,
             borderRadius: 12,
             background: '#0f172a',
             color: '#fff',
-            border: 'none',
+            textDecoration: 'none',
             fontWeight: 600,
             fontSize: 16,
-            opacity: starting ? 0.7 : 1,
           }}
         >
-          {starting ? '…' : 'பயிற்சியைத் தொடங்குங்கள் / Start Practising'}
-        </button>
+          பயிற்சியைத் தொடங்குங்கள் / Start Practising
+        </a>
       </div>
     </main>
   );
