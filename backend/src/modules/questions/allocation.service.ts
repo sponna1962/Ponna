@@ -1,5 +1,7 @@
-// Question Allocation Engine — implements §6.4 (Question Allocation & Repetition Engine)
-// and the Current Affairs ratio / recency rules.
+// Question Allocation Engine — implements §6.4 (Question Allocation & Repetition Engine),
+// the Current Affairs ratio/recency rules, and the finalized Practice
+// Preference filtering (Language + Authority/Category/Sub-Category, resolved
+// by practice-preference.service.ts into `taxonomyFilter` below).
 //
 // Priority order per session build:
 //   1. Current Affairs questions (up to the configured cap for this session size,
@@ -8,10 +10,11 @@
 //   3. Only if unseen pool is exhausted: previously answered questions, oldest-first
 //      (or per whatever repetitionStrategy is configured)
 //
-// Nothing here is hardcoded — caps, recency window, and strategy all come from
-// PlatformSettings so admins can change behavior without a deploy.
+// Language is applied as its own independent filter, never combined with or
+// implied by taxonomyFilter — the finalized rule is that Language is a pure
+// content filter, not tied to any specific Authority.
 
-import { PrismaClient, Difficulty, QuizMode, QuestionCategory, Language } from '@prisma/client';
+import { PrismaClient, Difficulty, QuizMode, QuestionCategory, Language, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -21,6 +24,7 @@ export class AllocationService {
     mode: QuizMode,
     sessionSize: number,
     language: Language,
+    taxonomyFilter: Prisma.QuestionWhereInput,
   ): Promise<string[]> {
     const settings = await prisma.platformSettings.findUniqueOrThrow({
       where: { id: 'singleton' },
@@ -39,9 +43,10 @@ export class AllocationService {
           status: 'PUBLISHED',
           category: QuestionCategory.CURRENT_AFFAIRS,
           difficulty: { in: difficulties },
-          language, // only the student's chosen UI language (§4.5) — never a mix mid-session
+          language,
           relevanceDate: { gte: recencyThreshold },
           history: { none: { userId } }, // unseen by this student
+          ...taxonomyFilter,
         },
         take: caCap,
         orderBy: { relevanceDate: 'desc' },
@@ -60,6 +65,7 @@ export class AllocationService {
         language,
         id: { notIn: selected },
         history: { none: { userId } },
+        ...taxonomyFilter,
       },
       take: remaining,
       // Randomized ordering; for large tables swap this for a more scalable
@@ -76,6 +82,7 @@ export class AllocationService {
       userId,
       difficulties,
       language,
+      taxonomyFilter,
       selected,
       stillRemaining,
       settings.repetitionStrategy,
@@ -96,8 +103,6 @@ export class AllocationService {
     sessionSize: number,
     settings: { caMaxFor5Q: number; caMaxFor20Q: number; caMaxFor50Q: number },
   ): number {
-    // Nearest configured bucket; sessions of other sizes scale proportionally
-    // from the 20-question default rather than falling back to a hardcoded number.
     if (sessionSize <= 5) return settings.caMaxFor5Q;
     if (sessionSize <= 20) return settings.caMaxFor20Q;
     if (sessionSize <= 50) return settings.caMaxFor50Q;
@@ -108,17 +113,19 @@ export class AllocationService {
     userId: string,
     difficulties: Difficulty[],
     language: Language,
+    taxonomyFilter: Prisma.QuestionWhereInput,
     excludeIds: string[],
     take: number,
     strategy: string,
     repeatAfterDays: number | null,
   ): Promise<string[]> {
-    const baseWhere = {
-      status: 'PUBLISHED' as const,
+    const baseWhere: Prisma.QuestionWhereInput = {
+      status: 'PUBLISHED',
       difficulty: { in: difficulties },
       language,
       id: { notIn: excludeIds },
       history: { some: { userId } },
+      ...taxonomyFilter,
     };
 
     if (strategy === 'REPEAT_AFTER_DAYS' && repeatAfterDays) {
@@ -130,13 +137,14 @@ export class AllocationService {
       return eligible.map((q) => q.id);
     }
 
-    // Default: UNSEEN_FIRST_THEN_OLDEST — least-recently-answered first
+    // Default: UNSEEN_FIRST_THEN_OLDEST — least-recently-answered first.
+    // Applying taxonomyFilter here means going through the `question` relation.
     const history = await prisma.userQuestionHistory.findMany({
       where: {
         userId,
         difficulty: { in: difficulties },
         questionId: { notIn: excludeIds },
-        question: { language }, // keep the whole session in one language (§4.5)
+        question: { language, ...taxonomyFilter },
       },
       orderBy: { answeredAt: 'asc' },
       take,
