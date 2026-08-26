@@ -326,6 +326,7 @@ model QuizSession {
   userId          String
   user            User          @relation(fields: [userId], references: [id])
   mode            QuizMode
+  practiceLanguage String       @default("TA") // "TA" | "EN" | "BOTH" — chosen once at session start, fixed for the whole session
   totalQuestions  Int
   status          SessionStatus @default(IN_PROGRESS)
 
