@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
-import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
 
@@ -183,12 +182,9 @@ export default function QuizStartPage() {
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <StudentMenu />
-          <h1 style={{ fontSize: 20, margin: 0 }}>{t.quiz.title}</h1>
-        </div>
-        <LanguageToggle />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
+        <StudentMenu />
+        <h1 style={{ fontSize: 20, margin: 0 }}>{t.quiz.title}</h1>
       </div>
 
       <div style={{ padding: '0 20px' }}>
