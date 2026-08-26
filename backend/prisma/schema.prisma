@@ -48,9 +48,53 @@ model User {
   quizSessions       QuizSession[]
   answerHistory       UserQuestionHistory[]
   performanceSummary  UserPerformanceSummary[]
+  practicePreference  StudentPracticePreference?
 
   @@index([phone])
   @@index([email])
+}
+
+// Practice Preference — Language + Exam Authority/Category/Sub-Category
+// selections + Difficulty, set once by the student (mandatory before their
+// first practice session) and reused for every future session until they
+// explicitly change it via "Change Preferences". One row per student.
+//
+// `selections` is a JSON blob rather than relational join tables — the
+// nested, variable-depth, multi-select shape (multiple Authorities, each
+// with its own multiple Categories, each with its own multiple
+// Sub-Categories) doesn't need relational integrity here; it only needs to
+// be interpretable by allocation.service.ts when building a session. IDs
+// referenced inside are stable Authority/Category/Sub-Category ids (never
+// names, so renaming a Category elsewhere never breaks a saved preference).
+//
+// "All" is intentionally NEVER a stored id — it's a boolean flag at each
+// level (allAuthorities / authority.allCategories / category.allSubCategories).
+// This is what makes "All" dynamic: a student who chose "TNPSC → All
+// Categories" automatically gets any Category added to TNPSC in the future,
+// with no preference update needed (see allocation.service.ts).
+//
+// Shape of `selections`:
+// {
+//   allAuthorities: boolean,
+//   authorities: [
+//     {
+//       authorityId: string,
+//       allCategories: boolean,
+//       categories: [
+//         { categoryId: string, allSubCategories: boolean, subCategoryIds: string[] }
+//       ]
+//     }
+//   ]
+// }
+model StudentPracticePreference {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+  language   Language // pure content filter (§ finalized rule) — never tied to a specific Authority
+  mode       QuizMode // Mixed / Medium / Hard — reused enum, no "Easy" option
+  selections Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // Internal staff accounts — separate from students, per §3 (multi-role admin access)
