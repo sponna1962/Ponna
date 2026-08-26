@@ -2,35 +2,43 @@
 // start (reserve quota + questions), resume, answer, complete, and the
 // scheduled abandonment sweep.
 
-import { PrismaClient, QuizMode, SessionStatus, CorrectOption, Language } from '@prisma/client';
+import { PrismaClient, QuizMode, SessionStatus, CorrectOption } from '@prisma/client';
 import { QuotaService, QuotaExceededError } from '../quota/quota.service';
 import { AllocationService } from '../questions/allocation.service';
 import { RankingService } from '../ranking/ranking.service';
+import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
 
 const prisma = new PrismaClient();
 const quota = new QuotaService();
 const allocation = new AllocationService();
 const ranking = new RankingService();
+const preferenceService = new PracticePreferenceService();
 
 export class SessionService {
   /**
    * Starts a new session, or returns the existing in-progress one if present.
-   * Simplified flow (finalized requirement): the student only picks a mode —
-   * there is no session-size selection anymore. The session size is
-   * whatever's smaller of (a) eligible questions available for this mode and
-   * (b) the student's remaining quota right now. A Free student with 3
-   * questions left today gets a 3-question session, not a rejection.
+   * No mode/language parameters anymore (finalized requirement) — every
+   * session uses the student's saved Practice Preference (Language,
+   * Authority/Category/Sub-Category, Difficulty), set up once via
+   * /students/me/practice-preference and reused until they change it.
+   * Throws if no preference has been saved yet — the frontend must not call
+   * this before the student has completed (or already has) a preference.
    */
-  async startSession(userId: string, mode: QuizMode, language: Language) {
+  async startSession(userId: string) {
     const existing = await prisma.quizSession.findFirst({
       where: { userId, status: SessionStatus.IN_PROGRESS },
       include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
     if (existing) {
       // §4.3: same session resumes exactly where the student left off, no re-deduction
-      const differs = existing.mode !== mode;
-      return { ...existing, resumedWithDifferentSelection: differs };
+      return { ...existing, resumedWithDifferentSelection: false };
     }
+
+    const preference = await preferenceService.get(userId);
+    if (!preference) {
+      throw new Error('No practice preference saved yet — complete Practice Setup first.');
+    }
+    const mode = preference.mode;
 
     const remainingQuota = await quota.getRemainingQuota(userId);
     if (remainingQuota <= 0) {
@@ -39,16 +47,26 @@ export class SessionService {
       );
     }
 
+    const taxonomyFilter = await preferenceService.resolveTaxonomyFilter(preference.selections as any);
+
     // Build the eligible question list FIRST, before touching quota — same
     // reasoning as before: never reserve quota for questions that can't
     // actually be delivered. Cap the request at a generous ceiling (100) so
     // allocation doesn't need to know about quota at all; the real cap is
     // whichever is smaller of quota and eligible questions.
-    const questionIds = await allocation.buildSessionQuestionIds(userId, mode, Math.min(remainingQuota, 100), language);
+    const questionIds = await allocation.buildSessionQuestionIds(
+      userId,
+      mode,
+      Math.min(remainingQuota, 100),
+      preference.language,
+      taxonomyFilter,
+    );
     const actualSize = questionIds.length;
 
     if (actualSize === 0) {
-      throw new Error('No eligible questions are available for this mode right now. Please try a different mode or check back later.');
+      throw new Error(
+        'No eligible questions match your Practice Preferences right now. Try widening your selections in Change Preferences.',
+      );
     }
 
     const quotaResult = await quota.reserveQuota(userId, actualSize);
