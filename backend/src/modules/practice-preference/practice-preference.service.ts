@@ -1,9 +1,13 @@
 // Practice Preference Service — implements the finalized Practice Setup
-// requirement: a student sets Language + Exam Authority/Category/
-// Sub-Category (all multi-select) + Difficulty ONCE, it's saved, and every
-// future practice session reuses it until they explicitly "Change
-// Preferences". See schema.prisma's StudentPracticePreference doc-comment
-// for the JSON shape and why "All" is a boolean flag rather than a stored id.
+// structure:
+//   Exam Type/Purpose → Exam Authority (multi) → Category → Sub-Category
+//   → Difficulty → Practice Language (LAST, computed dynamically from what
+//   the prior selections actually have published, never hardcoded).
+//
+// "All" at every level is a dynamic filter state, never a stored id — see
+// resolveTaxonomyFilter. Purposes never mix: an "All" chosen inside one
+// Purpose (e.g. Employment/Recruitment) can only ever expand to Authorities
+// under THAT Purpose.
 
 import { PrismaClient, Language, QuizMode, Prisma } from '@prisma/client';
 
@@ -22,7 +26,8 @@ export interface SelectionAuthority {
 }
 
 export interface Selections {
-  allAuthorities: boolean;
+  purposeId: string; // the single Exam Type/Purpose this preference is scoped to
+  allAuthorities: boolean; // "All" WITHIN this purpose only — never crosses into another purpose
   authorities: SelectionAuthority[];
 }
 
@@ -40,31 +45,22 @@ export class PracticePreferenceService {
   }
 
   /**
-   * Resolves a saved preference into a Prisma `where` fragment for Question
-   * queries — this is where "All" is expanded dynamically, always against
-   * the CURRENT taxonomy (never a snapshot), so newly-added Authorities/
-   * Categories/Sub-Categories automatically flow into an "All"-based
-   * preference with zero action from the student.
-   *
-   * Returns just the authority/category/subCategory portion — callers
-   * combine this with their own status/difficulty/language conditions
-   * (language is deliberately NOT decided here — see the finalized rule
-   * that Language is a pure content filter, independent of Authority).
+   * Resolves a saved (or in-progress, not-yet-saved) selection into a Prisma
+   * `where` fragment for Question queries. Always includes the Purpose scope
+   * first — "All" only ever means "all Authorities under this Purpose".
    */
-  async resolveTaxonomyFilter(selections: Selections): Promise<Prisma.QuestionWhereInput> {
+  resolveTaxonomyFilter(selections: Selections): Prisma.QuestionWhereInput {
+    const purposeScope: Prisma.QuestionWhereInput = { authority: { purposeId: selections.purposeId } };
+
     if (selections.allAuthorities) {
-      return {}; // no restriction at all — any Authority/Category/Sub-Category
+      return purposeScope;
     }
 
     if (selections.authorities.length === 0) {
-      // Nothing selected and not "All" — deliberately matches nothing,
-      // rather than silently falling back to "everything" (a preference in
-      // this state shouldn't be possible via the UI, but fail safe).
-      return { id: 'never-matches' };
+      return { id: 'never-matches' }; // shouldn't be reachable via the UI, but fail safe rather than "everything"
     }
 
     const orConditions: Prisma.QuestionWhereInput[] = [];
-
     for (const authority of selections.authorities) {
       if (authority.allCategories) {
         orConditions.push({ authorityId: authority.authorityId });
@@ -72,13 +68,37 @@ export class PracticePreferenceService {
       }
       for (const category of authority.categories) {
         if (category.allSubCategories || category.subCategoryIds.length === 0) {
-          orConditions.push({ categoryId: category.categoryId });
+          orConditions.push({ authorityId: authority.authorityId, categoryId: category.categoryId });
         } else {
-          orConditions.push({ categoryId: category.categoryId, subCategoryId: { in: category.subCategoryIds } });
+          orConditions.push({
+            authorityId: authority.authorityId,
+            categoryId: category.categoryId,
+            subCategoryId: { in: category.subCategoryIds },
+          });
         }
       }
     }
 
-    return { OR: orConditions };
+    return { AND: [purposeScope, { OR: orConditions }] };
+  }
+
+  /**
+   * The dynamic "which languages are actually available" check that drives
+   * the LAST step of Setup. Never hardcodes "Tamil = TNPSC" or any such
+   * rule — it's a live query against whatever is currently Published for
+   * the student's exact selections (Purpose + Authorities/Categories/
+   * Sub-Categories + Difficulty), so it stays correct as content grows.
+   */
+  async getAvailableLanguages(selections: Selections, mode: QuizMode): Promise<Language[]> {
+    const taxonomyFilter = this.resolveTaxonomyFilter(selections);
+    const difficulties = mode === 'MIXED' ? ['MEDIUM', 'HARD'] : [mode];
+
+    const rows = await prisma.question.findMany({
+      where: { status: 'PUBLISHED', difficulty: { in: difficulties as any }, ...taxonomyFilter },
+      select: { language: true },
+      distinct: ['language'],
+    });
+
+    return rows.map((r) => r.language);
   }
 }
