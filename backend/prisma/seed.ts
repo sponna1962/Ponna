@@ -42,17 +42,39 @@ async function main() {
     console.log('Seeded Super Admin: admin@ponna.in / changeme123 — CHANGE THIS PASSWORD');
   }
 
-  // ── Exam Taxonomy: Authority → Category → Sub-Category ──────────────────
-  // TNPSC gets the full structure since that's where question upload starts;
-  // every other Authority is seeded by name only — their Categories/
-  // Sub-Categories get added from the admin panel once questions for them
-  // start being added (no schema change needed when that happens).
+  // ── Exam Taxonomy: Purpose → Authority → Category → Sub-Category ────────
+  // Purposes keep unrelated exam families apart (finalized requirement) — an
+  // "All" chosen inside one Purpose never pulls in Authorities from another.
+  // TNPSC gets the full Category/Sub-Category structure since that's where
+  // question upload starts; every other Authority is seeded by name only —
+  // their Categories/Sub-Categories get added from the admin panel once
+  // questions for them start being added (no schema change needed then).
 
-  const tnpsc = await prisma.examAuthority.upsert({
-    where: { name: 'TNPSC' },
-    create: { name: 'TNPSC' },
+  const employmentPurpose = await prisma.examPurpose.upsert({
+    where: { name: 'Employment / Recruitment Exams' },
+    create: { name: 'Employment / Recruitment Exams', nameTa: 'வேலைவாய்ப்பு / ஆட்சேர்ப்புத் தேர்வுகள்' },
     update: {},
   });
+  const educationPurpose = await prisma.examPurpose.upsert({
+    where: { name: 'Higher Education / Admission Exams' },
+    create: { name: 'Higher Education / Admission Exams', nameTa: 'உயர்கல்வி / சேர்க்கைத் தேர்வுகள்' },
+    update: {},
+  });
+  const eligibilityPurpose = await prisma.examPurpose.upsert({
+    where: { name: 'Eligibility / Qualification Exams' },
+    create: { name: 'Eligibility / Qualification Exams', nameTa: 'தகுதி / அருகதைத் தேர்வுகள்' },
+    update: {},
+  });
+
+  async function seedAuthority(purposeId: string, name: string) {
+    return prisma.examAuthority.upsert({
+      where: { purposeId_name: { purposeId, name } },
+      create: { purposeId, name },
+      update: {},
+    });
+  }
+
+  const tnpsc = await seedAuthority(employmentPurpose.id, 'TNPSC');
 
   async function seedCategory(authorityId: string, categoryName: string, subCategoryNames: string[]) {
     const category = await prisma.examCategory.upsert({
@@ -77,12 +99,14 @@ async function main() {
   ]);
   await seedCategory(tnpsc.id, 'Other / Special Examinations', []); // Sub-Category optional here — exact exam via examName field instead
 
-  const otherAuthorities = [
-    'UPSC', 'SSC', 'Railway / RRB', 'Banking', 'TNUSRB', 'TRB', 'NEET', 'Teacher Eligibility', 'Other',
-  ];
-  for (const name of otherAuthorities) {
-    await prisma.examAuthority.upsert({ where: { name }, create: { name }, update: {} });
+  // Employment / Recruitment — name-only for now
+  for (const name of ['UPSC', 'SSC', 'Railway / RRB', 'Banking', 'TNUSRB', 'TRB']) {
+    await seedAuthority(employmentPurpose.id, name);
   }
+  // Higher Education / Admission
+  await seedAuthority(educationPurpose.id, 'NEET');
+  // Eligibility / Qualification
+  await seedAuthority(eligibilityPurpose.id, 'Teacher Eligibility');
 
   // Mark the QA/testing phone number as a Test Account — bypasses quota,
   // excluded from rankings. Safe to re-run: no-op if the user hasn't logged
