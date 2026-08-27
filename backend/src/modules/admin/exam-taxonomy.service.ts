@@ -37,8 +37,18 @@ export class ExamTaxonomyService {
     return prisma.examPurpose.create({ data: { name, nameTa } });
   }
 
+  /** Super Admin toggle for whether this Purpose allows multiple Authorities in one saved Preference. */
+  async setPurposeConfig(purposeId: string, config: { allowMultipleAuthorities?: boolean }) {
+    return prisma.examPurpose.update({ where: { id: purposeId }, data: config });
+  }
+
   async createAuthority(purposeId: string, name: string) {
     return prisma.examAuthority.create({ data: { purposeId, name } });
+  }
+
+  /** Super Admin toggles for the two Authority-level UI configuration flags. */
+  async setAuthorityConfig(authorityId: string, config: { allowAllCategories?: boolean; difficultyEnabled?: boolean }) {
+    return prisma.examAuthority.update({ where: { id: authorityId }, data: config });
   }
 
   async createCategory(authorityId: string, name: string) {
