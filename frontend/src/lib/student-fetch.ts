@@ -9,6 +9,11 @@ export async function studentFetch(path: string, options: RequestInit = {}) {
 
   const res = await fetch(apiUrl(path), {
     ...options,
+    // Never let the browser HTTP cache serve a stale GET response — this
+    // data (exam taxonomy config, saved preference) can change from the
+    // admin panel or from a redeploy at any time, and a stale cached
+    // response here silently reintroduces already-fixed bugs.
+    cache: 'no-store',
     headers: {
       ...(options.headers || {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
