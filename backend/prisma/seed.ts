@@ -66,6 +66,21 @@ async function main() {
     update: {},
   });
 
+  // One-time backfill: Authorities created before ExamPurpose existed have
+  // purposeId = null. Assign each to the right Purpose by name so the
+  // upserts below find and update them in place, instead of creating
+  // duplicate rows alongside the old orphaned ones.
+  const purposeForExistingAuthority: Record<string, string> = {
+    NEET: educationPurpose.id,
+    'Teacher Eligibility': eligibilityPurpose.id,
+    // everything else (TNPSC, UPSC, SSC, Railway / RRB, Banking, TNUSRB, TRB, Other) → Employment/Recruitment
+  };
+  const orphanedAuthorities = await prisma.examAuthority.findMany({ where: { purposeId: null } });
+  for (const orphan of orphanedAuthorities) {
+    const targetPurposeId = purposeForExistingAuthority[orphan.name] ?? employmentPurpose.id;
+    await prisma.examAuthority.update({ where: { id: orphan.id }, data: { purposeId: targetPurposeId } });
+  }
+
   async function seedAuthority(purposeId: string, name: string) {
     return prisma.examAuthority.upsert({
       where: { purposeId_name: { purposeId, name } },
