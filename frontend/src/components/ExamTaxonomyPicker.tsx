@@ -6,6 +6,7 @@ import { adminFetch } from '../lib/admin-fetch';
 type SubCategory = { id: string; name: string };
 type Category = { id: string; name: string; subCategories: SubCategory[] };
 type Authority = { id: string; name: string; categories: Category[] };
+type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[] };
 
 export type TaxonomyValue = {
   authorityId: string;
@@ -14,10 +15,11 @@ export type TaxonomyValue = {
 };
 
 /**
- * Cascading Authority → Category → Sub-Category (optional) dropdowns.
- * Fetches the full taxonomy tree once and does the cascading client-side —
- * the tree is small (a handful of Authorities/Categories) so this is
- * simpler and faster than round-tripping per level.
+ * Cascading Authority → Category → Sub-Category (optional) dropdowns, used
+ * on the admin Question form / Bulk Upload metadata step. The Authority
+ * dropdown is grouped by Exam Purpose (optgroup) purely for readability
+ * here — admin picks a specific Authority directly, unlike the student
+ * Practice Setup flow which requires picking a Purpose first.
  */
 export function ExamTaxonomyPicker({
   value,
@@ -26,7 +28,7 @@ export function ExamTaxonomyPicker({
   value: TaxonomyValue;
   onChange: (v: TaxonomyValue) => void;
 }) {
-  const [tree, setTree] = useState<Authority[]>([]);
+  const [tree, setTree] = useState<Purpose[]>([]);
 
   useEffect(() => {
     adminFetch('/admin/exam-taxonomy')
@@ -35,7 +37,8 @@ export function ExamTaxonomyPicker({
       .catch(() => {});
   }, []);
 
-  const selectedAuthority = tree.find((a) => a.id === value.authorityId);
+  const allAuthorities = tree.flatMap((p) => p.authorities);
+  const selectedAuthority = allAuthorities.find((a) => a.id === value.authorityId);
   const selectedCategory = selectedAuthority?.categories.find((c) => c.id === value.categoryId);
 
   return (
@@ -47,8 +50,12 @@ export function ExamTaxonomyPicker({
           onChange={(e) => onChange({ authorityId: e.target.value, categoryId: '', subCategoryId: '' })}
         >
           <option value="">—</option>
-          {tree.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
+          {tree.map((p) => (
+            <optgroup key={p.id} label={p.name}>
+              {p.authorities.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </label>
