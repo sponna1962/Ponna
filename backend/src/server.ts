@@ -8,7 +8,7 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { SessionService } from './modules/quiz/session.service';
-import { PracticePreferenceService } from './modules/practice-preference/practice-preference.service';
+import { PracticePreferenceService, InvalidSelectionError } from './modules/practice-preference/practice-preference.service';
 import { RankingService } from './modules/ranking/ranking.service';
 import { QuotaExceededError } from './modules/quota/quota.service';
 import { QuestionService } from './modules/questions/question.service';
@@ -104,6 +104,13 @@ app.put('/students/me/practice-preference', requireStudentAuth, async (req: Stud
     const pref = await practicePreferenceService.save(req.studentUserId!, language, mode, selections);
     res.json(pref);
   } catch (err) {
+    if (err instanceof InvalidSelectionError) {
+      // Invalid authority combination (e.g. NEET + JEE Main, or two
+      // unrelated entrance exams together) — a client-side bug or a
+      // deliberate bypass of the frontend, not a server error.
+      res.status(400).json({ error: err.message });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: 'Failed to save practice preference' });
   }
@@ -573,7 +580,7 @@ app.patch('/admin/exam-taxonomy/purposes/:purposeId', requireStaffAuth, requireR
 
 // POST /admin/exam-taxonomy/purposes/:purposeId/authorities  { name } — Super Admin only
 app.post('/admin/exam-taxonomy/purposes/:purposeId/authorities', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  res.json(await examTaxonomyService.createAuthority(req.params.purposeId, req.body.name));
+  res.json(await examTaxonomyService.createAuthority(req.params.purposeId, req.body.name, req.body.selectionGroup));
 });
 
 // PATCH /admin/exam-taxonomy/authorities/:authorityId  { allowAllCategories?, difficultyEnabled? } — Super Admin only
