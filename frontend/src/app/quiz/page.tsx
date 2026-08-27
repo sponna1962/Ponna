@@ -17,8 +17,8 @@ import { studentFetch } from '../../lib/student-fetch';
 
 type SubCategory = { id: string; name: string };
 type Category = { id: string; name: string; subCategories: SubCategory[] };
-type Authority = { id: string; name: string; categories: Category[] };
-type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[] };
+type Authority = { id: string; name: string; categories: Category[]; allowAllCategories: boolean; difficultyEnabled: boolean };
+type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[]; allowMultipleAuthorities: boolean };
 
 type CategorySelection = { categoryId: string; allSubCategories: boolean; subCategoryIds: string[] };
 type AuthoritySelection = { authorityId: string; allCategories: boolean; categories: CategorySelection[] };
@@ -69,8 +69,38 @@ export default function QuizStartPage() {
 
   // The exam-selection prerequisite for showing the Language step: a Purpose
   // and either "All authorities" or at least one authority, plus a Difficulty.
+  const selectedPurpose = tree.find((p) => p.id === selections.purposeId);
+
+  // Difficulty step only shows if AT LEAST ONE selected Authority enables it
+  // (finalized requirement §4). If none do, Difficulty is skipped entirely
+  // and "Mixed" is used silently — Mixed is a filter mode, never a stored
+  // Question.difficulty value, so this never touches question data itself.
+  // NOTE: when a mixed-authority selection includes some Authorities WITH
+  // difficulty enabled and some without, applying a chosen Hard/Medium
+  // filter correctly ONLY to the relevant Authorities is allocation-logic
+  // work explicitly deferred to a later phase (§8) — today, if the step is
+  // shown at all, the chosen difficulty is still applied uniformly across
+  // every selected Authority.
+  const relevantAuthorities = !selectedPurpose
+    ? []
+    : selections.allAuthorities
+    ? selectedPurpose.authorities
+    : selections.authorities
+        .map((sel) => selectedPurpose.authorities.find((a) => a.id === sel.authorityId))
+        .filter((a): a is Authority => !!a);
+  const difficultyStepVisible = relevantAuthorities.some((a) => a.difficultyEnabled);
+
   const examSelectionComplete =
-    !!selections.purposeId && (selections.allAuthorities || selections.authorities.length > 0) && !!mode;
+    !!selections.purposeId &&
+    (selections.allAuthorities || selections.authorities.length > 0) &&
+    (difficultyStepVisible ? !!mode : true);
+
+  useEffect(() => {
+    if (relevantAuthorities.length > 0 && !difficultyStepVisible && mode !== 'MIXED') {
+      setMode('MIXED');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficultyStepVisible, relevantAuthorities.length]);
 
   // Re-check available languages every time the exam selection or difficulty
   // changes — this is what makes Language "determined dynamically", not a
@@ -108,12 +138,24 @@ export default function QuizStartPage() {
   function toggleAllAuthorities() {
     setSelections((s) => ({ ...s, allAuthorities: !s.allAuthorities, authorities: [] }));
   }
-  function toggleAuthority(authorityId: string) {
+  function toggleAuthority(authority: Authority, allowMultiple: boolean) {
     setSelections((s) => {
-      const exists = s.authorities.some((a) => a.authorityId === authorityId);
+      const exists = s.authorities.some((a) => a.authorityId === authority.id);
+      const newEntry = { authorityId: authority.id, allCategories: authority.allowAllCategories, categories: [] };
+
+      if (!allowMultiple) {
+        // Single-selection Purpose (finalized requirement) — picking a new
+        // Authority always REPLACES whatever was selected, never adds to it.
+        // Clicking the already-selected one deselects (back to nothing chosen).
+        return { ...s, allAuthorities: false, authorities: exists ? [] : [newEntry] };
+      }
+
       const authorities = exists
-        ? s.authorities.filter((a) => a.authorityId !== authorityId)
-        : [...s.authorities, { authorityId, allCategories: true, categories: [] }];
+        ? s.authorities.filter((a) => a.authorityId !== authority.id)
+        // Default to "All categories" only when this Authority actually allows an
+        // "All" selection (finalized requirement) — otherwise the student must
+        // explicitly pick, since the UI never shows an "All" chip to represent it.
+        : [...s.authorities, newEntry];
       return { ...s, allAuthorities: false, authorities };
     });
   }
@@ -222,8 +264,6 @@ export default function QuizStartPage() {
     return <main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>{t.quiz.loading}</main>;
   }
 
-  const selectedPurpose = tree.find((p) => p.id === selections.purposeId);
-
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
@@ -263,13 +303,15 @@ export default function QuizStartPage() {
               <>
                 <Section title={t.practiceSetup.selectAuthority}>
                   <ChipRow>
-                    <Chip label={t.practiceSetup.all} active={selections.allAuthorities} onClick={toggleAllAuthorities} />
+                    {selectedPurpose.allowMultipleAuthorities && (
+                      <Chip label={t.practiceSetup.all} active={selections.allAuthorities} onClick={toggleAllAuthorities} />
+                    )}
                     {selectedPurpose.authorities.map((a) => (
                       <Chip
                         key={a.id}
                         label={a.name}
                         active={selections.authorities.some((sel) => sel.authorityId === a.id)}
-                        onClick={() => toggleAuthority(a.id)}
+                        onClick={() => toggleAuthority(a, selectedPurpose.allowMultipleAuthorities)}
                       />
                     ))}
                   </ChipRow>
@@ -283,7 +325,13 @@ export default function QuizStartPage() {
                       <div key={authority.id}>
                         <Section title={t.practiceSetup.selectCategoryFor(authority.name)}>
                           <ChipRow>
-                            <Chip label={t.practiceSetup.all} active={authSel.allCategories} onClick={() => toggleAllCategories(authority.id)} />
+                            {authority.allowAllCategories && (
+                              <Chip
+                                label={t.practiceSetup.all}
+                                active={authSel.allCategories}
+                                onClick={() => toggleAllCategories(authority.id)}
+                              />
+                            )}
                             {authority.categories.map((c) => (
                               <Chip
                                 key={c.id}
@@ -324,11 +372,15 @@ export default function QuizStartPage() {
                   })}
 
                 <Section title={t.practiceSetup.difficultyQuestion}>
-                  <ChipRow>
-                    <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
-                    <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
-                    <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
-                  </ChipRow>
+                  {difficultyStepVisible ? (
+                    <ChipRow>
+                      <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
+                      <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
+                      <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
+                    </ChipRow>
+                  ) : (
+                    <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.practiceSetup.difficultyNotApplicable}</p>
+                  )}
                 </Section>
               </>
             )}
