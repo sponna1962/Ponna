@@ -42,13 +42,24 @@ export class ExamTaxonomyService {
     return prisma.examPurpose.update({ where: { id: purposeId }, data: config });
   }
 
-  async createAuthority(purposeId: string, name: string) {
-    return prisma.examAuthority.create({ data: { purposeId, name } });
+  async createAuthority(purposeId: string, name: string, selectionGroup?: string | null) {
+    return prisma.examAuthority.create({ data: { purposeId, name, selectionGroup: selectionGroup || null } });
   }
 
-  /** Super Admin toggles for the two Authority-level UI configuration flags. */
-  async setAuthorityConfig(authorityId: string, config: { allowAllCategories?: boolean; difficultyEnabled?: boolean }) {
-    return prisma.examAuthority.update({ where: { id: authorityId }, data: config });
+  /** Super Admin toggles for the Authority-level UI configuration flags, plus
+   * selectionGroup — the config-driven exception that lets specific
+   * Authorities within an otherwise single-select Purpose be combined (e.g.
+   * JEE Main + JEE Advanced sharing selectionGroup "JEE"). Empty string from
+   * the admin form is normalized to null (standalone). */
+  async setAuthorityConfig(
+    authorityId: string,
+    config: { allowAllCategories?: boolean; difficultyEnabled?: boolean; selectionGroup?: string | null },
+  ) {
+    const data = { ...config };
+    if ('selectionGroup' in data) {
+      data.selectionGroup = data.selectionGroup?.trim() || null;
+    }
+    return prisma.examAuthority.update({ where: { id: authorityId }, data });
   }
 
   async createCategory(authorityId: string, name: string) {
