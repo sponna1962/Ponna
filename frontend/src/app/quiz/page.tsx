@@ -5,20 +5,24 @@ import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
 
-// Practice Setup + Start — implements the finalized Practice Preference
-// requirement: Language + Exam Authority (multi) + Category (multi, per
-// Authority) + Sub-Category (multi, where applicable) + Difficulty, all on
-// ONE page, saved once, and skipped on every future visit (only a "Change"
-// link reopens it). "All" at any level is never a stored id — see
-// practice-preference.service.ts for why, and how it stays dynamic.
+// Practice Setup + Start — implements the finalized structure:
+//   Exam Type/Purpose → Exam Authority (multi) → Category (multi, per
+//   Authority) → Sub-Category (multi, where applicable) → Difficulty →
+//   Practice Language (LAST — computed dynamically from what's actually
+//   Published for everything selected so far, never hardcoded).
+// All on ONE page, saved once, skipped on every future visit (only a
+// "Change" link reopens it). "All" at any level is never a stored id — it's
+// scoped to whatever it's nested under (Purpose for Authority-level "All";
+// Authority for Category-level "All"; etc.) — see practice-preference.service.ts.
 
 type SubCategory = { id: string; name: string };
 type Category = { id: string; name: string; subCategories: SubCategory[] };
 type Authority = { id: string; name: string; categories: Category[] };
+type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[] };
 
 type CategorySelection = { categoryId: string; allSubCategories: boolean; subCategoryIds: string[] };
 type AuthoritySelection = { authorityId: string; allCategories: boolean; categories: CategorySelection[] };
-type Selections = { allAuthorities: boolean; authorities: AuthoritySelection[] };
+type Selections = { purposeId: string; allAuthorities: boolean; authorities: AuthoritySelection[] };
 
 type SavedPreference = {
   language: 'TA' | 'EN';
@@ -26,19 +30,22 @@ type SavedPreference = {
   selections: Selections;
 };
 
-const emptySelections: Selections = { allAuthorities: false, authorities: [] };
+const emptySelections: Selections = { purposeId: '', allAuthorities: false, authorities: [] };
 
 export default function QuizStartPage() {
   const { t } = useLanguage();
 
-  const [tree, setTree] = useState<Authority[]>([]);
+  const [tree, setTree] = useState<Purpose[]>([]);
   const [saved, setSaved] = useState<SavedPreference | null | 'loading'>('loading');
   const [editing, setEditing] = useState(false);
 
-  // Form state — mirrors Selections shape while editing/first-time setup.
-  const [language, setLanguage] = useState<'TA' | 'EN' | ''>('');
   const [mode, setMode] = useState<'MIXED' | 'MEDIUM' | 'HARD' | ''>('');
   const [selections, setSelections] = useState<Selections>(emptySelections);
+
+  // Language is resolved LAST, dynamically — never chosen up front.
+  const [availableLanguages, setAvailableLanguages] = useState<('TA' | 'EN')[] | null>(null);
+  const [checkingLanguages, setCheckingLanguages] = useState(false);
+  const [language, setLanguage] = useState<'TA' | 'EN' | ''>('');
 
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,24 +60,61 @@ export default function QuizStartPage() {
       if (!prefData) {
         setEditing(true); // first-time student — go straight into setup
       } else {
-        setLanguage(prefData.language);
         setMode(prefData.mode);
         setSelections(prefData.selections);
+        setLanguage(prefData.language);
       }
     });
   }, []);
 
-  // ── Authority selection (multi, with "All" mutual exclusivity) ──────────
+  // The exam-selection prerequisite for showing the Language step: a Purpose
+  // and either "All authorities" or at least one authority, plus a Difficulty.
+  const examSelectionComplete =
+    !!selections.purposeId && (selections.allAuthorities || selections.authorities.length > 0) && !!mode;
+
+  // Re-check available languages every time the exam selection or difficulty
+  // changes — this is what makes Language "determined dynamically", not a
+  // fixed list (finalized requirement).
+  useEffect(() => {
+    if (!editing || !examSelectionComplete) {
+      setAvailableLanguages(null);
+      return;
+    }
+    setCheckingLanguages(true);
+    studentFetch('/students/me/practice-preference/available-languages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selections, mode }),
+    })
+      .then((r) => r.json())
+      .then((body: { languages: ('TA' | 'EN')[] }) => {
+        setAvailableLanguages(body.languages);
+        // If the previously chosen language is no longer valid for this
+        // selection, clear it (student must knowingly pick again) — never
+        // silently keep an invalid language selected.
+        setLanguage((prev) => (body.languages.includes(prev as any) ? prev : body.languages.length === 1 ? body.languages[0] : ''));
+      })
+      .finally(() => setCheckingLanguages(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, JSON.stringify(selections), mode]);
+
+  // ── Purpose selection (single) — resets everything downstream ───────────
+  function selectPurpose(purposeId: string) {
+    setSelections({ purposeId, allAuthorities: false, authorities: [] });
+    setLanguage('');
+  }
+
+  // ── Authority selection (multi, with "All" mutual exclusivity, scoped to the chosen Purpose) ──
   function toggleAllAuthorities() {
-    setSelections((s) => ({ allAuthorities: !s.allAuthorities, authorities: [] }));
+    setSelections((s) => ({ ...s, allAuthorities: !s.allAuthorities, authorities: [] }));
   }
   function toggleAuthority(authorityId: string) {
     setSelections((s) => {
       const exists = s.authorities.some((a) => a.authorityId === authorityId);
       const authorities = exists
         ? s.authorities.filter((a) => a.authorityId !== authorityId)
-        : [...s.authorities, { authorityId, allCategories: true, categories: [] }]; // default to "All categories" when an authority is first added
-      return { allAuthorities: false, authorities };
+        : [...s.authorities, { authorityId, allCategories: true, categories: [] }];
+      return { ...s, allAuthorities: false, authorities };
     });
   }
 
@@ -134,8 +178,7 @@ export default function QuizStartPage() {
     }));
   }
 
-  const canStart =
-    !!language && !!mode && (selections.allAuthorities || selections.authorities.length > 0);
+  const canStart = examSelectionComplete && !!language;
 
   async function saveAndStart() {
     if (!canStart) return;
@@ -169,7 +212,6 @@ export default function QuizStartPage() {
         return;
       }
       const session = await res.json();
-      if (session.resumedWithDifferentSelection) alert(t.quiz.resumingSession);
       window.location.href = `/quiz/${session.id}`;
     } finally {
       setStarting(false);
@@ -179,6 +221,8 @@ export default function QuizStartPage() {
   if (saved === 'loading') {
     return <main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>{t.quiz.loading}</main>;
   }
+
+  const selectedPurpose = tree.find((p) => p.id === selections.purposeId);
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
@@ -201,82 +245,111 @@ export default function QuizStartPage() {
 
         {editing && (
           <>
-            <Section title={t.practiceSetup.languageQuestion}>
+            <Section title={t.practiceSetup.selectPurpose}>
               <ChipRow>
-                <Chip label="தமிழ்" active={language === 'TA'} onClick={() => setLanguage('TA')} />
-                <Chip label="English" active={language === 'EN'} onClick={() => setLanguage('EN')} />
-              </ChipRow>
-            </Section>
-
-            <Section title={t.practiceSetup.selectAuthority}>
-              <ChipRow>
-                <Chip label={t.practiceSetup.all} active={selections.allAuthorities} onClick={toggleAllAuthorities} />
-                {tree.map((a) => (
+                {tree.map((p) => (
                   <Chip
-                    key={a.id}
-                    label={a.name}
-                    active={selections.authorities.some((sel) => sel.authorityId === a.id)}
-                    onClick={() => toggleAuthority(a.id)}
+                    key={p.id}
+                    label={p.nameTa || p.name}
+                    active={selections.purposeId === p.id}
+                    onClick={() => selectPurpose(p.id)}
                   />
                 ))}
               </ChipRow>
             </Section>
 
-            {!selections.allAuthorities &&
-              selections.authorities.map((authSel) => {
-                const authority = tree.find((a) => a.id === authSel.authorityId);
-                if (!authority) return null;
-                return (
-                  <div key={authority.id}>
-                    <Section title={t.practiceSetup.selectCategoryFor(authority.name)}>
-                      <ChipRow>
-                        <Chip label={t.practiceSetup.all} active={authSel.allCategories} onClick={() => toggleAllCategories(authority.id)} />
-                        {authority.categories.map((c) => (
-                          <Chip
-                            key={c.id}
-                            label={c.name}
-                            active={authSel.categories.some((cs) => cs.categoryId === c.id)}
-                            onClick={() => toggleCategory(authority.id, c.id)}
-                          />
-                        ))}
-                      </ChipRow>
-                    </Section>
+            {selectedPurpose && (
+              <>
+                <Section title={t.practiceSetup.selectAuthority}>
+                  <ChipRow>
+                    <Chip label={t.practiceSetup.all} active={selections.allAuthorities} onClick={toggleAllAuthorities} />
+                    {selectedPurpose.authorities.map((a) => (
+                      <Chip
+                        key={a.id}
+                        label={a.name}
+                        active={selections.authorities.some((sel) => sel.authorityId === a.id)}
+                        onClick={() => toggleAuthority(a.id)}
+                      />
+                    ))}
+                  </ChipRow>
+                </Section>
 
-                    {!authSel.allCategories &&
-                      authSel.categories.map((catSel) => {
-                        const category = authority.categories.find((c) => c.id === catSel.categoryId);
-                        if (!category || category.subCategories.length === 0) return null;
-                        return (
-                          <Section key={category.id} title={t.practiceSetup.selectSubCategoryFor(category.name)}>
-                            <ChipRow>
+                {!selections.allAuthorities &&
+                  selections.authorities.map((authSel) => {
+                    const authority = selectedPurpose.authorities.find((a) => a.id === authSel.authorityId);
+                    if (!authority) return null;
+                    return (
+                      <div key={authority.id}>
+                        <Section title={t.practiceSetup.selectCategoryFor(authority.name)}>
+                          <ChipRow>
+                            <Chip label={t.practiceSetup.all} active={authSel.allCategories} onClick={() => toggleAllCategories(authority.id)} />
+                            {authority.categories.map((c) => (
                               <Chip
-                                label={t.practiceSetup.all}
-                                active={catSel.allSubCategories}
-                                onClick={() => toggleAllSubCategories(authority.id, category.id)}
+                                key={c.id}
+                                label={c.name}
+                                active={authSel.categories.some((cs) => cs.categoryId === c.id)}
+                                onClick={() => toggleCategory(authority.id, c.id)}
                               />
-                              {category.subCategories.map((sc) => (
-                                <Chip
-                                  key={sc.id}
-                                  label={sc.name}
-                                  active={catSel.subCategoryIds.includes(sc.id)}
-                                  onClick={() => toggleSubCategory(authority.id, category.id, sc.id)}
-                                />
-                              ))}
-                            </ChipRow>
-                          </Section>
-                        );
-                      })}
-                  </div>
-                );
-              })}
+                            ))}
+                          </ChipRow>
+                        </Section>
 
-            <Section title={t.practiceSetup.difficultyQuestion}>
-              <ChipRow>
-                <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
-                <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
-                <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
-              </ChipRow>
-            </Section>
+                        {!authSel.allCategories &&
+                          authSel.categories.map((catSel) => {
+                            const category = authority.categories.find((c) => c.id === catSel.categoryId);
+                            if (!category || category.subCategories.length === 0) return null;
+                            return (
+                              <Section key={category.id} title={t.practiceSetup.selectSubCategoryFor(category.name)}>
+                                <ChipRow>
+                                  <Chip
+                                    label={t.practiceSetup.all}
+                                    active={catSel.allSubCategories}
+                                    onClick={() => toggleAllSubCategories(authority.id, category.id)}
+                                  />
+                                  {category.subCategories.map((sc) => (
+                                    <Chip
+                                      key={sc.id}
+                                      label={sc.name}
+                                      active={catSel.subCategoryIds.includes(sc.id)}
+                                      onClick={() => toggleSubCategory(authority.id, category.id, sc.id)}
+                                    />
+                                  ))}
+                                </ChipRow>
+                              </Section>
+                            );
+                          })}
+                      </div>
+                    );
+                  })}
+
+                <Section title={t.practiceSetup.difficultyQuestion}>
+                  <ChipRow>
+                    <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
+                    <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
+                    <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
+                  </ChipRow>
+                </Section>
+              </>
+            )}
+
+            {examSelectionComplete && (
+              <Section title={t.practiceSetup.languageQuestion}>
+                {checkingLanguages ? (
+                  <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.quiz.loading}</p>
+                ) : availableLanguages && availableLanguages.length > 0 ? (
+                  <ChipRow>
+                    {availableLanguages.includes('TA') && (
+                      <Chip label="தமிழ்" active={language === 'TA'} onClick={() => setLanguage('TA')} />
+                    )}
+                    {availableLanguages.includes('EN') && (
+                      <Chip label="English" active={language === 'EN'} onClick={() => setLanguage('EN')} />
+                    )}
+                  </ChipRow>
+                ) : (
+                  <p style={{ fontSize: 13, color: '#d97706' }}>{t.practiceSetup.noQuestionsForSelection}</p>
+                )}
+              </Section>
+            )}
 
             <button
               onClick={saveAndStart}
@@ -351,7 +424,7 @@ function PreferenceSummary({
   starting,
 }: {
   saved: SavedPreference;
-  tree: Authority[];
+  tree: Purpose[];
   t: any;
   onChange: () => void;
   onStart: () => void;
@@ -384,16 +457,18 @@ function PreferenceSummary({
   );
 }
 
-function describeSelections(saved: SavedPreference, tree: Authority[]): string {
+function describeSelections(saved: SavedPreference, tree: Purpose[]): string {
   const langLabel = saved.language === 'TA' ? 'தமிழ்' : 'English';
   const modeLabel = { MIXED: 'Mixed', MEDIUM: 'Medium', HARD: 'Hard' }[saved.mode];
+  const purpose = tree.find((p) => p.id === saved.selections.purposeId);
+  const purposeLabel = purpose ? purpose.nameTa || purpose.name : '';
 
   if (saved.selections.allAuthorities) {
-    return `${langLabel} · All Authorities · ${modeLabel}`;
+    return `${purposeLabel} · All Authorities · ${modeLabel} · ${langLabel}`;
   }
 
   const parts = saved.selections.authorities.map((authSel) => {
-    const authority = tree.find((a) => a.id === authSel.authorityId);
+    const authority = purpose?.authorities.find((a) => a.id === authSel.authorityId);
     if (!authority) return null;
     if (authSel.allCategories) return authority.name;
     const catNames = authSel.categories
@@ -402,5 +477,5 @@ function describeSelections(saved: SavedPreference, tree: Authority[]): string {
     return `${authority.name} (${catNames.join(', ')})`;
   }).filter(Boolean);
 
-  return `${langLabel} · ${parts.join(', ')} · ${modeLabel}`;
+  return `${purposeLabel} · ${parts.join(', ')} · ${modeLabel} · ${langLabel}`;
 }
