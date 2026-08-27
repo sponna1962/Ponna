@@ -47,7 +47,7 @@ export class SessionService {
       );
     }
 
-    const taxonomyFilter = await preferenceService.resolveTaxonomyFilter(preference.selections as any);
+    const taxonomyFilter = preferenceService.resolveTaxonomyFilter(preference.selections as any);
 
     // Build the eligible question list FIRST, before touching quota — same
     // reasoning as before: never reserve quota for questions that can't
