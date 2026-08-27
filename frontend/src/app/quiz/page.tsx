@@ -322,18 +322,6 @@ export default function QuizStartPage() {
 
             {selectedPurpose && (
               <>
-                {/* TEMPORARY DEBUG — remove once the "All"/selectionGroup
-                    issue is confirmed fixed. Shows the EXACT values this
-                    render received from GET /exam-taxonomy for the
-                    currently-selected Purpose, so a stale-data vs.
-                    code-logic question can be answered from a screenshot
-                    alone. */}
-                <div style={{ fontSize: 11, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: 8, marginBottom: 12, fontFamily: 'monospace' }}>
-                  DEBUG — purpose: {selectedPurpose.name} | allowMultipleAuthorities: {String(selectedPurpose.allowMultipleAuthorities)}
-                  <br />
-                  authorities: {selectedPurpose.authorities.map((a) => `${a.name}(group=${a.selectionGroup ?? 'null'})`).join(', ')}
-                </div>
-
                 <Section title={t.practiceSetup.selectAuthority}>
                   <ChipRow>
                     {selectedPurpose.allowMultipleAuthorities && (
