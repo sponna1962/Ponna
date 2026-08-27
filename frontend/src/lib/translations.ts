@@ -71,6 +71,8 @@ export const translations = {
     },
     practiceSetup: {
       languageQuestion: 'எந்த மொழியில் பயிற்சி?',
+      noQuestionsForSelection: 'இந்தத் தேர்வுக்கு தற்போது கேள்விகள் இல்லை. வேறு தேர்வை முயற்சிக்கவும்.',
+      selectPurpose: 'எந்த வகையான தேர்வு?',
       selectAuthority: 'தேர்வு அமைப்பைத் தேர்ந்தெடுக்கவும்',
       selectCategoryFor: (authority: string) => `${authority} — Category தேர்ந்தெடுக்கவும்`,
       selectSubCategoryFor: (category: string) => `${category} — Sub-Category தேர்ந்தெடுக்கவும்`,
@@ -178,6 +180,8 @@ export const translations = {
     },
     practiceSetup: {
       languageQuestion: 'Which language would you like to practice in?',
+      noQuestionsForSelection: 'No questions are available for this selection right now. Try a different combination.',
+      selectPurpose: 'Which type of exam?',
       selectAuthority: 'Select Exam Authority',
       selectCategoryFor: (authority: string) => `${authority} — Select Category`,
       selectSubCategoryFor: (category: string) => `${category} — Select Sub-Category`,
