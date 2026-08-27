@@ -211,6 +211,16 @@ model ExamAuthority {
   allowAllCategories Boolean  @default(true) // show an "All" chip at the Category-selection step for this Authority?
   difficultyEnabled  Boolean  @default(true) // show the Difficulty step for this Authority? (false = practice is always "Mixed" for it — a filter mode, never stored as a Question.difficulty value)
 
+  // Config-driven exception to a single-select Purpose (finalized
+  // requirement): null = standalone, cannot combine with anything. Two
+  // Authorities with the SAME non-null value may be selected together
+  // within a Purpose that otherwise restricts to one Authority — e.g. JEE
+  // Main + JEE Advanced both get selectionGroup: "JEE". This has no effect
+  // in a Purpose where allowMultipleAuthorities is already true (Competitive
+  // / Employment) — that Purpose already allows any combination. Super
+  // Admin sets this from the admin panel; never hardcoded by exam name.
+  selectionGroup String?
+
   categories ExamCategory[]
   questions  Question[]
 
