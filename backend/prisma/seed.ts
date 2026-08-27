@@ -173,9 +173,20 @@ async function main() {
   // (finalized requirement): Categories/Sub-Categories get added from the
   // admin panel once question content for each actually begins. Difficulty
   // disabled across this Purpose per the finalized spec.
+  // JEE Main + JEE Advanced are the one finalized exception to this
+  // Purpose's single-select rule — same non-null selectionGroup lets a
+  // student pick either or both together; everything else here stays
+  // selectionGroup: null (standalone, the Prisma default).
+  const selectionGroupByName: Record<string, string> = {
+    'JEE Main': 'JEE',
+    'JEE Advanced': 'JEE',
+  };
   for (const name of ['JEE Main', 'JEE Advanced', 'BITSAT', 'CUET UG', 'CLAT', 'IPMAT', 'NIFT Entrance', 'NID DAT', 'GATE']) {
     const authority = await seedAuthority(educationPurpose.id, name);
-    await prisma.examAuthority.update({ where: { id: authority.id }, data: { difficultyEnabled: false } });
+    await prisma.examAuthority.update({
+      where: { id: authority.id },
+      data: { difficultyEnabled: false, selectionGroup: selectionGroupByName[name] ?? null },
+    });
   }
 
   // Eligibility / Qualification — TNTET: no "All Papers" option, Difficulty not applicable (finalized requirement §2, §4)
