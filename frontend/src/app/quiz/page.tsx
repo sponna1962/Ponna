@@ -322,6 +322,18 @@ export default function QuizStartPage() {
 
             {selectedPurpose && (
               <>
+                {/* TEMPORARY DEBUG — remove once the "All"/selectionGroup
+                    issue is confirmed fixed. Shows the EXACT values this
+                    render received from GET /exam-taxonomy for the
+                    currently-selected Purpose, so a stale-data vs.
+                    code-logic question can be answered from a screenshot
+                    alone. */}
+                <div style={{ fontSize: 11, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: 8, marginBottom: 12, fontFamily: 'monospace' }}>
+                  DEBUG — purpose: {selectedPurpose.name} | allowMultipleAuthorities: {String(selectedPurpose.allowMultipleAuthorities)}
+                  <br />
+                  authorities: {selectedPurpose.authorities.map((a) => `${a.name}(group=${a.selectionGroup ?? 'null'})`).join(', ')}
+                </div>
+
                 <Section title={t.practiceSetup.selectAuthority}>
                   <ChipRow>
                     {selectedPurpose.allowMultipleAuthorities && (
@@ -392,17 +404,22 @@ export default function QuizStartPage() {
                     );
                   })}
 
-                <Section title={t.practiceSetup.difficultyQuestion}>
-                  {difficultyStepVisible ? (
-                    <ChipRow>
-                      <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
-                      <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
-                      <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
-                    </ChipRow>
-                  ) : (
-                    <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.practiceSetup.difficultyNotApplicable}</p>
-                  )}
-                </Section>
+                {/* Difficulty only ever shows once at least one Authority has
+                    been selected (finalized requirement) — never immediately
+                    after picking the Purpose. */}
+                {(selections.allAuthorities || selections.authorities.length > 0) && (
+                  <Section title={t.practiceSetup.difficultyQuestion}>
+                    {difficultyStepVisible ? (
+                      <ChipRow>
+                        <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
+                        <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
+                        <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
+                      </ChipRow>
+                    ) : (
+                      <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.practiceSetup.difficultyNotApplicable}</p>
+                    )}
+                  </Section>
+                )}
               </>
             )}
 
