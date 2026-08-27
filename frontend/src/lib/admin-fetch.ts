@@ -8,6 +8,10 @@ export async function adminFetch(path: string, options: RequestInit = {}) {
 
   const res = await fetch(apiUrl(path), {
     ...options,
+    // Same reasoning as student-fetch.ts — admin edits (e.g. toggling
+    // allowMultipleAuthorities, setting selectionGroup) must always be
+    // reflected on the very next load, never served from a stale cache.
+    cache: 'no-store',
     headers: {
       ...(options.headers || {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
