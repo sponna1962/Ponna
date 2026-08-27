@@ -566,9 +566,19 @@ app.post('/admin/exam-taxonomy/purposes', requireStaffAuth, requireRole('SUPER_A
   res.json(await examTaxonomyService.createPurpose(req.body.name, req.body.nameTa));
 });
 
+// PATCH /admin/exam-taxonomy/purposes/:purposeId  { allowMultipleAuthorities } — Super Admin only
+app.patch('/admin/exam-taxonomy/purposes/:purposeId', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await examTaxonomyService.setPurposeConfig(req.params.purposeId, req.body));
+});
+
 // POST /admin/exam-taxonomy/purposes/:purposeId/authorities  { name } — Super Admin only
 app.post('/admin/exam-taxonomy/purposes/:purposeId/authorities', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   res.json(await examTaxonomyService.createAuthority(req.params.purposeId, req.body.name));
+});
+
+// PATCH /admin/exam-taxonomy/authorities/:authorityId  { allowAllCategories?, difficultyEnabled? } — Super Admin only
+app.patch('/admin/exam-taxonomy/authorities/:authorityId', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await examTaxonomyService.setAuthorityConfig(req.params.authorityId, req.body));
 });
 
 // POST /admin/exam-taxonomy/authorities/:authorityId/categories  { name }
