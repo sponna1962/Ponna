@@ -185,8 +185,14 @@ model ExamPurpose {
 
 model ExamAuthority {
   id         String         @id @default(uuid())
-  purposeId  String
-  purpose    ExamPurpose    @relation(fields: [purposeId], references: [id])
+  // Optional at the DB level (not required) — this avoids a "required
+  // column added to a populated table" failure from `prisma db push` when
+  // this field was introduced after Authorities already existed. seed.ts
+  // backfills every pre-existing row on deploy, and every NEW Authority
+  // created via the admin API always supplies one — so in practice this is
+  // never actually null once the backfill has run.
+  purposeId  String?
+  purpose    ExamPurpose?   @relation(fields: [purposeId], references: [id])
   name       String         // TNPSC, UPSC, SSC, Railway / RRB, Banking, TNUSRB, TRB, NEET, Teacher Eligibility, Other
   categories ExamCategory[]
   questions  Question[]
