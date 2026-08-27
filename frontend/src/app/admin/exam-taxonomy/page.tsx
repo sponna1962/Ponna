@@ -10,8 +10,8 @@ import { adminFetch } from '../../../lib/admin-fetch';
 
 type SubCategory = { id: string; name: string; _count: { questions: number } };
 type Category = { id: string; name: string; subCategories: SubCategory[]; _count: { questions: number } };
-type Authority = { id: string; name: string; categories: Category[] };
-type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[] };
+type Authority = { id: string; name: string; categories: Category[]; allowAllCategories: boolean; difficultyEnabled: boolean };
+type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[]; allowMultipleAuthorities: boolean };
 
 export default function ExamTaxonomyPage() {
   const [tree, setTree] = useState<Purpose[]>([]);
@@ -51,6 +51,27 @@ export default function ExamTaxonomyPage() {
       body: JSON.stringify({ name }),
     });
     setNewAuthorityName({ ...newAuthorityName, [purposeId]: '' });
+    load();
+  }
+
+  /** Toggles either flag for one Authority — controls the student-facing
+   * Practice Setup page's "All" chip and Difficulty step, per Authority. */
+  async function toggleAuthorityConfig(authority: Authority, field: 'allowAllCategories' | 'difficultyEnabled') {
+    await adminFetch(`/admin/exam-taxonomy/authorities/${authority.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: !authority[field] }),
+    });
+    load();
+  }
+
+  /** Controls whether a student can select multiple Authorities within this Purpose in one saved Preference. */
+  async function togglePurposeMultiple(purpose: Purpose) {
+    await adminFetch(`/admin/exam-taxonomy/purposes/${purpose.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ allowMultipleAuthorities: !purpose.allowMultipleAuthorities }),
+    });
     load();
   }
 
@@ -108,11 +129,37 @@ export default function ExamTaxonomyPage() {
       {tree.map((purpose) => (
         <div key={purpose.id} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 12, padding: 16, marginBottom: 20 }}>
           <h2 style={{ fontSize: 17, marginBottom: 4 }}>{purpose.name}</h2>
-          {purpose.nameTa && <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>{purpose.nameTa}</p>}
+          {purpose.nameTa && <p style={{ fontSize: 13, color: '#64748b', marginBottom: 8 }}>{purpose.nameTa}</p>}
+          <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
+            <input
+              type="checkbox"
+              checked={purpose.allowMultipleAuthorities}
+              onChange={() => togglePurposeMultiple(purpose)}
+            />
+            Allow selecting multiple Authorities within this Purpose
+          </label>
 
           {purpose.authorities.map((authority) => (
             <div key={authority.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 12, marginLeft: 12 }}>
-              <h3 style={{ fontSize: 15, marginBottom: 10 }}>{authority.name}</h3>
+              <h3 style={{ fontSize: 15, marginBottom: 4 }}>{authority.name}</h3>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
+                <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={authority.allowAllCategories}
+                    onChange={() => toggleAuthorityConfig(authority, 'allowAllCategories')}
+                  />
+                  Show "All" option for categories
+                </label>
+                <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={authority.difficultyEnabled}
+                    onChange={() => toggleAuthorityConfig(authority, 'difficultyEnabled')}
+                  />
+                  Show Difficulty step
+                </label>
+              </div>
 
               {authority.categories.map((cat) => (
                 <div key={cat.id} style={{ marginLeft: 16, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
