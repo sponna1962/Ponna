@@ -178,8 +178,17 @@ enum SubscriptionStatus {
 // Eligibility, which live under different purposes.
 model ExamPurpose {
   id         String          @id @default(uuid())
-  name       String          @unique // e.g. "Employment / Recruitment Exams"
-  nameTa     String?         // Tamil label, e.g. "வேலைவாய்ப்பு / ஆட்சேர்ப்புத் தேர்வுகள்"
+  name       String          @unique // e.g. "Competitive / Employment Exams"
+  nameTa     String?         // Tamil label, e.g. "போட்டி / வேலைவாய்ப்புத் தேர்வுகள்"
+  // Finalized requirement — a saved Practice Preference is scoped to exactly
+  // ONE Purpose, and within it: Competitive/Employment allows multiple
+  // Authorities in one preference (e.g. TNPSC + UPSC together); Higher
+  // Education/Entrance and Eligibility/Qualification allow only ONE
+  // Authority (different entrance exams/eligibility tests have unrelated
+  // syllabi and must never be mixed in a single practice track). When false,
+  // the frontend Authority step becomes true single-selection and the "All
+  // Authorities" option is hidden entirely — mixing would defeat the purpose.
+  allowMultipleAuthorities Boolean @default(true)
   authorities ExamAuthority[]
 }
 
@@ -194,6 +203,14 @@ model ExamAuthority {
   purposeId  String?
   purpose    ExamPurpose?   @relation(fields: [purposeId], references: [id])
   name       String         // TNPSC, UPSC, SSC, Railway / RRB, Banking, TNUSRB, TRB, NEET, Teacher Eligibility, Other
+
+  // Authority-level UI configuration (finalized requirement §3-4) — both
+  // default true so every pre-existing Authority behaves exactly as before
+  // this migration; Super Admin adjusts per-Authority from the admin panel,
+  // no code change or redeploy needed for a new exam's specific behaviour.
+  allowAllCategories Boolean  @default(true) // show an "All" chip at the Category-selection step for this Authority?
+  difficultyEnabled  Boolean  @default(true) // show the Difficulty step for this Authority? (false = practice is always "Mixed" for it — a filter mode, never stored as a Question.difficulty value)
+
   categories ExamCategory[]
   questions  Question[]
 
