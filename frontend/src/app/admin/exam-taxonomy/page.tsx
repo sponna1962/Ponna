@@ -10,7 +10,7 @@ import { adminFetch } from '../../../lib/admin-fetch';
 
 type SubCategory = { id: string; name: string; _count: { questions: number } };
 type Category = { id: string; name: string; subCategories: SubCategory[]; _count: { questions: number } };
-type Authority = { id: string; name: string; categories: Category[]; allowAllCategories: boolean; difficultyEnabled: boolean };
+type Authority = { id: string; name: string; categories: Category[]; allowAllCategories: boolean; difficultyEnabled: boolean; selectionGroup: string | null };
 type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[]; allowMultipleAuthorities: boolean };
 
 export default function ExamTaxonomyPage() {
@@ -61,6 +61,20 @@ export default function ExamTaxonomyPage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [field]: !authority[field] }),
+    });
+    load();
+  }
+
+  /** Sets/clears an Authority's Selection Group — the config-driven exception
+   * that lets specific Authorities inside an otherwise single-select Purpose
+   * be picked together (e.g. JEE Main + JEE Advanced sharing "JEE"). Empty
+   * input = standalone (cannot combine with anything). Has no effect in a
+   * Purpose where "Allow selecting multiple Authorities" is already on. */
+  async function updateSelectionGroup(authority: Authority, value: string) {
+    await adminFetch(`/admin/exam-taxonomy/authorities/${authority.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selectionGroup: value.trim() || null }),
     });
     load();
   }
@@ -159,7 +173,25 @@ export default function ExamTaxonomyPage() {
                   />
                   Show Difficulty step
                 </label>
+                <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  Selection Group:{' '}
+                  <input
+                    key={`${authority.id}-${authority.selectionGroup ?? ''}`}
+                    type="text"
+                    defaultValue={authority.selectionGroup ?? ''}
+                    placeholder="empty = standalone"
+                    style={{ fontSize: 12, width: 130, padding: '2px 6px' }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim();
+                      if (value !== (authority.selectionGroup ?? '')) updateSelectionGroup(authority, value);
+                    }}
+                  />
+                </label>
               </div>
+              <p style={{ fontSize: 11, color: '#94a3b8', marginTop: -6, marginBottom: 10 }}>
+                Authorities sharing the same Selection Group (e.g. both set to &quot;JEE&quot;) can be selected together
+                even when this Purpose otherwise allows only one Authority. Leave empty for standalone.
+              </p>
 
               {authority.categories.map((cat) => (
                 <div key={cat.id} style={{ marginLeft: 16, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
