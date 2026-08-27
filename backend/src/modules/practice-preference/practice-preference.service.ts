@@ -31,12 +31,89 @@ export interface Selections {
   authorities: SelectionAuthority[];
 }
 
+/** Thrown by validateSelections for any rule violation — server.ts maps this
+ * to HTTP 400, distinct from unexpected/server errors (500). */
+export class InvalidSelectionError extends Error {}
+
 export class PracticePreferenceService {
   async get(userId: string) {
     return prisma.studentPracticePreference.findUnique({ where: { userId } });
   }
 
+  /**
+   * The single, shared source of truth for "is this Authority combination
+   * legal" — called from the PUT save route (rejects a bad request outright,
+   * even if the frontend UI was bypassed entirely) and reused by nothing
+   * else duplicating this logic. Never hardcodes an exam name: driven
+   * entirely by Purpose.allowMultipleAuthorities and Authority.selectionGroup,
+   * both DB-editable from the admin panel.
+   *
+   * Rules (finalized requirement):
+   *  - allAuthorities is only legal when the Purpose allows it.
+   *  - A Purpose with allowMultipleAuthorities = true (Competitive/Employment)
+   *    permits any combination of its Authorities — unchanged.
+   *  - A Purpose with allowMultipleAuthorities = false (Higher Education/
+   *    Entrance, Eligibility/Qualification) permits more than one Authority
+   *    ONLY when every selected Authority shares the same non-null
+   *    selectionGroup (e.g. JEE Main + JEE Advanced, both "JEE"). A
+   *    standalone Authority (selectionGroup = null) can never be combined
+   *    with anything, and two different non-null groups can never combine.
+   */
+  async validateSelections(selections: Selections): Promise<void> {
+    const purpose = await prisma.examPurpose.findUnique({
+      where: { id: selections.purposeId },
+      include: { authorities: true },
+    });
+    if (!purpose) {
+      throw new InvalidSelectionError('Unknown purpose');
+    }
+
+    if (selections.allAuthorities) {
+      if (!purpose.allowMultipleAuthorities) {
+        throw new InvalidSelectionError('"All authorities" is not allowed for this purpose');
+      }
+      return;
+    }
+
+    if (purpose.allowMultipleAuthorities) {
+      // Any combination of this purpose's own Authorities is fine — just
+      // confirm each selected id actually belongs to this purpose.
+      for (const sel of selections.authorities) {
+        if (!purpose.authorities.some((a) => a.id === sel.authorityId)) {
+          throw new InvalidSelectionError('Selected authority does not belong to this purpose');
+        }
+      }
+      return;
+    }
+
+    // Single-select purpose: 0 or 1 authority is trivially fine. More than
+    // one is only legal when every selected authority shares the same
+    // non-null selectionGroup.
+    if (selections.authorities.length <= 1) {
+      if (selections.authorities[0] && !purpose.authorities.some((a) => a.id === selections.authorities[0].authorityId)) {
+        throw new InvalidSelectionError('Selected authority does not belong to this purpose');
+      }
+      return;
+    }
+
+    const selectedAuthorities = selections.authorities.map((sel) => {
+      const authority = purpose.authorities.find((a) => a.id === sel.authorityId);
+      if (!authority) {
+        throw new InvalidSelectionError('Selected authority does not belong to this purpose');
+      }
+      return authority;
+    });
+
+    const groups = new Set(selectedAuthorities.map((a) => a.selectionGroup));
+    if (groups.has(null) || groups.size > 1) {
+      throw new InvalidSelectionError(
+        'These authorities cannot be combined — only authorities in the same selection group may be selected together',
+      );
+    }
+  }
+
   async save(userId: string, language: Language, mode: QuizMode, selections: Selections) {
+    await this.validateSelections(selections);
     return prisma.studentPracticePreference.upsert({
       where: { userId },
       create: { userId, language, mode, selections: selections as unknown as Prisma.InputJsonValue },
