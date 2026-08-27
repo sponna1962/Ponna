@@ -83,6 +83,7 @@ app.post('/auth/firebase-login', async (req, res) => {
 // GET /exam-taxonomy — student-facing read of the Authority/Category/Sub-Category
 // tree, used by the Practice Preference Setup form's cascading multi-selects.
 app.get('/exam-taxonomy', requireStudentAuth, async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json(await examTaxonomyService.listFullTree());
 });
 
@@ -565,6 +566,7 @@ app.get('/admin/ai/accuracy', requireStaffAuth, async (_req, res) => {
 
 // GET /admin/exam-taxonomy — full tree, for the Taxonomy Management page and cascading dropdowns
 app.get('/admin/exam-taxonomy', requireStaffAuth, async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json(await examTaxonomyService.listFullTree());
 });
 
