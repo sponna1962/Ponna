@@ -109,6 +109,22 @@ app.put('/students/me/practice-preference', requireStudentAuth, async (req: Stud
   }
 });
 
+// POST /students/me/practice-preference/available-languages  { selections, mode }
+// The LAST step of Setup — given everything selected so far (Purpose,
+// Authorities, Categories, Sub-Categories, Difficulty), returns exactly
+// which languages actually have Published questions for that combination.
+// Never hardcoded — a live query every time, so it stays correct as content grows.
+app.post('/students/me/practice-preference/available-languages', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const { selections, mode } = req.body;
+    const languages = await practicePreferenceService.getAvailableLanguages(selections, mode);
+    res.json({ languages });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to check available languages' });
+  }
+});
+
 // POST /quiz/start — no body needed. Uses the student's saved Practice
 // Preference (Language, Authority/Category/Sub-Category, Difficulty) —
 // finalized requirement: setup happens once, every session just reuses it.
@@ -537,7 +553,7 @@ app.get('/admin/ai/accuracy', requireStaffAuth, async (_req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────
-// EXAM TAXONOMY — Authority → Category → Sub-Category (dynamic, Super Admin managed)
+// EXAM TAXONOMY — Purpose → Authority → Category → Sub-Category (dynamic, Super Admin managed)
 // ─────────────────────────────────────────────────────────
 
 // GET /admin/exam-taxonomy — full tree, for the Taxonomy Management page and cascading dropdowns
@@ -545,9 +561,14 @@ app.get('/admin/exam-taxonomy', requireStaffAuth, async (_req, res) => {
   res.json(await examTaxonomyService.listFullTree());
 });
 
-// POST /admin/exam-taxonomy/authorities  { name } — Super Admin only
-app.post('/admin/exam-taxonomy/authorities', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
-  res.json(await examTaxonomyService.createAuthority(req.body.name));
+// POST /admin/exam-taxonomy/purposes  { name, nameTa? } — Super Admin only
+app.post('/admin/exam-taxonomy/purposes', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await examTaxonomyService.createPurpose(req.body.name, req.body.nameTa));
+});
+
+// POST /admin/exam-taxonomy/purposes/:purposeId/authorities  { name } — Super Admin only
+app.post('/admin/exam-taxonomy/purposes/:purposeId/authorities', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await examTaxonomyService.createAuthority(req.params.purposeId, req.body.name));
 });
 
 // POST /admin/exam-taxonomy/authorities/:authorityId/categories  { name }
