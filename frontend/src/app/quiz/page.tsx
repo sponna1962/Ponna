@@ -33,7 +33,7 @@ type SavedPreference = {
 const emptySelections: Selections = { purposeId: '', allAuthorities: false, authorities: [] };
 
 export default function QuizStartPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [tree, setTree] = useState<Purpose[]>([]);
   const [saved, setSaved] = useState<SavedPreference | null | 'loading'>('loading');
@@ -237,6 +237,7 @@ export default function QuizStartPage() {
             saved={saved}
             tree={tree}
             t={t}
+            lang={lang}
             onChange={() => setEditing(true)}
             onStart={startSession}
             starting={starting}
@@ -250,7 +251,7 @@ export default function QuizStartPage() {
                 {tree.map((p) => (
                   <Chip
                     key={p.id}
-                    label={p.nameTa || p.name}
+                    label={lang === 'ta' ? (p.nameTa || p.name) : p.name}
                     active={selections.purposeId === p.id}
                     onClick={() => selectPurpose(p.id)}
                   />
@@ -419,6 +420,7 @@ function PreferenceSummary({
   saved,
   tree,
   t,
+  lang,
   onChange,
   onStart,
   starting,
@@ -426,11 +428,12 @@ function PreferenceSummary({
   saved: SavedPreference;
   tree: Purpose[];
   t: any;
+  lang: string;
   onChange: () => void;
   onStart: () => void;
   starting: boolean;
 }) {
-  const summary = describeSelections(saved, tree);
+  const summary = describeSelections(saved, tree, lang);
 
   return (
     <div style={{ marginBottom: 20 }}>
@@ -457,11 +460,11 @@ function PreferenceSummary({
   );
 }
 
-function describeSelections(saved: SavedPreference, tree: Purpose[]): string {
+function describeSelections(saved: SavedPreference, tree: Purpose[], lang: string): string {
   const langLabel = saved.language === 'TA' ? 'தமிழ்' : 'English';
   const modeLabel = { MIXED: 'Mixed', MEDIUM: 'Medium', HARD: 'Hard' }[saved.mode];
   const purpose = tree.find((p) => p.id === saved.selections.purposeId);
-  const purposeLabel = purpose ? purpose.nameTa || purpose.name : '';
+  const purposeLabel = purpose ? (lang === 'ta' ? purpose.nameTa || purpose.name : purpose.name) : '';
 
   if (saved.selections.allAuthorities) {
     return `${purposeLabel} · All Authorities · ${modeLabel} · ${langLabel}`;
