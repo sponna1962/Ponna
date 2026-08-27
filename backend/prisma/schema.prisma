@@ -172,11 +172,26 @@ enum SubscriptionStatus {
 // hardcoded at the schema level, only the initial seed data is.
 // ─────────────────────────────────────────────────────────
 
+// Exam Type/Purpose (finalized requirement) — the top grouping level above
+// Authority. Different purposes must never mix: an "All" selected inside
+// "Employment / Recruitment Exams" must never pull in NEET or Teacher
+// Eligibility, which live under different purposes.
+model ExamPurpose {
+  id         String          @id @default(uuid())
+  name       String          @unique // e.g. "Employment / Recruitment Exams"
+  nameTa     String?         // Tamil label, e.g. "வேலைவாய்ப்பு / ஆட்சேர்ப்புத் தேர்வுகள்"
+  authorities ExamAuthority[]
+}
+
 model ExamAuthority {
   id         String         @id @default(uuid())
-  name       String         @unique // TNPSC, UPSC, SSC, Railway / RRB, Banking, TNUSRB, TRB, NEET, Teacher Eligibility, Other
+  purposeId  String
+  purpose    ExamPurpose    @relation(fields: [purposeId], references: [id])
+  name       String         // TNPSC, UPSC, SSC, Railway / RRB, Banking, TNUSRB, TRB, NEET, Teacher Eligibility, Other
   categories ExamCategory[]
   questions  Question[]
+
+  @@unique([purposeId, name])
 }
 
 model ExamCategory {
