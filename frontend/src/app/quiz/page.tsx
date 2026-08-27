@@ -17,7 +17,12 @@ import { studentFetch } from '../../lib/student-fetch';
 
 type SubCategory = { id: string; name: string };
 type Category = { id: string; name: string; subCategories: SubCategory[] };
-type Authority = { id: string; name: string; categories: Category[]; allowAllCategories: boolean; difficultyEnabled: boolean };
+// selectionGroup: null = standalone (this Authority can never combine with
+// any other). Two Authorities sharing the same non-null selectionGroup may
+// be selected together even inside an otherwise single-select Purpose — the
+// finalized JEE Main + JEE Advanced exception, driven entirely by this DB
+// field (admin-editable), never hardcoded by name here.
+type Authority = { id: string; name: string; categories: Category[]; allowAllCategories: boolean; difficultyEnabled: boolean; selectionGroup: string | null };
 type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[]; allowMultipleAuthorities: boolean };
 
 type CategorySelection = { categoryId: string; allSubCategories: boolean; subCategoryIds: string[] };
@@ -138,24 +143,40 @@ export default function QuizStartPage() {
   function toggleAllAuthorities() {
     setSelections((s) => ({ ...s, allAuthorities: !s.allAuthorities, authorities: [] }));
   }
-  function toggleAuthority(authority: Authority, allowMultiple: boolean) {
+  function toggleAuthority(authority: Authority) {
     setSelections((s) => {
       const exists = s.authorities.some((a) => a.authorityId === authority.id);
       const newEntry = { authorityId: authority.id, allCategories: authority.allowAllCategories, categories: [] };
 
-      if (!allowMultiple) {
-        // Single-selection Purpose (finalized requirement) — picking a new
-        // Authority always REPLACES whatever was selected, never adds to it.
-        // Clicking the already-selected one deselects (back to nothing chosen).
-        return { ...s, allAuthorities: false, authorities: exists ? [] : [newEntry] };
+      if (selectedPurpose?.allowMultipleAuthorities) {
+        // Competitive/Employment-style Purpose — any combination is fine,
+        // unchanged from before.
+        const authorities = exists
+          ? s.authorities.filter((a) => a.authorityId !== authority.id)
+          : [...s.authorities, newEntry];
+        return { ...s, allAuthorities: false, authorities };
       }
 
-      const authorities = exists
-        ? s.authorities.filter((a) => a.authorityId !== authority.id)
-        // Default to "All categories" only when this Authority actually allows an
-        // "All" selection (finalized requirement) — otherwise the student must
-        // explicitly pick, since the UI never shows an "All" chip to represent it.
-        : [...s.authorities, newEntry];
+      // Single-select Purpose (Higher Education/Entrance, Eligibility/
+      // Qualification) — but selectionGroup is a config-driven exception:
+      // Authorities sharing the same non-null selectionGroup (e.g. JEE Main
+      // + JEE Advanced, both "JEE") may be selected together. Clicking an
+      // already-selected Authority always just deselects it.
+      if (exists) {
+        return { ...s, allAuthorities: false, authorities: s.authorities.filter((a) => a.authorityId !== authority.id) };
+      }
+
+      const currentlySelected = s.authorities
+        .map((sel) => selectedPurpose?.authorities.find((a) => a.id === sel.authorityId))
+        .filter((a): a is Authority => !!a);
+      const canCombineWithCurrent =
+        authority.selectionGroup != null &&
+        currentlySelected.length > 0 &&
+        currentlySelected.every((a) => a.selectionGroup === authority.selectionGroup);
+
+      // Combine into the group if it matches; otherwise this pick REPLACES
+      // whatever was selected before (standard single-select behaviour).
+      const authorities = canCombineWithCurrent ? [...s.authorities, newEntry] : [newEntry];
       return { ...s, allAuthorities: false, authorities };
     });
   }
@@ -311,7 +332,7 @@ export default function QuizStartPage() {
                         key={a.id}
                         label={a.name}
                         active={selections.authorities.some((sel) => sel.authorityId === a.id)}
-                        onClick={() => toggleAuthority(a, selectedPurpose.allowMultipleAuthorities)}
+                        onClick={() => toggleAuthority(a)}
                       />
                     ))}
                   </ChipRow>
