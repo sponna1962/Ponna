@@ -25,20 +25,29 @@ export class SessionService {
    * this before the student has completed (or already has) a preference.
    */
   async startSession(userId: string) {
-    const existing = await prisma.quizSession.findFirst({
-      where: { userId, status: SessionStatus.IN_PROGRESS },
-      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
-    });
-    if (existing) {
-      // §4.3: same session resumes exactly where the student left off, no re-deduction
-      return { ...existing, resumedWithDifferentSelection: false };
-    }
-
     const preference = await preferenceService.get(userId);
     if (!preference) {
       throw new Error('No practice preference saved yet — complete Practice Setup first.');
     }
     const mode = preference.mode;
+
+    const existing = await prisma.quizSession.findFirst({
+      where: { userId, status: SessionStatus.IN_PROGRESS },
+      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
+    });
+    if (existing) {
+      if (existing.practiceLanguage === preference.language) {
+        // §4.3: same session resumes exactly where the student left off, no re-deduction
+        return { ...existing, resumedWithDifferentSelection: false };
+      }
+      // The student changed their Practice Preference language since this
+      // session was started (e.g. Tamil → English). Resuming it would show
+      // the wrong language regardless of what they just picked — abandon it
+      // (no quota refund, same rule as the inactivity sweep) and fall
+      // through to build a fresh session for the current preference.
+      await prisma.quizSession.update({ where: { id: existing.id }, data: { status: SessionStatus.ABANDONED } });
+      await quota.onSessionAbandoned(existing.id); // no-op by design — documents the rule
+    }
 
     const remainingQuota = await quota.getRemainingQuota(userId);
     if (remainingQuota <= 0) {
@@ -78,6 +87,7 @@ export class SessionService {
       data: {
         userId,
         mode,
+        practiceLanguage: preference.language,
         totalQuestions: actualSize,
         status: SessionStatus.IN_PROGRESS,
         questions: {
