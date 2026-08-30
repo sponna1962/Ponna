@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { SubjectInput } from '../../../components/SubjectInput';
 import { adminFetch } from '../../../lib/admin-fetch';
 import { ExamTaxonomyPicker, TaxonomyValue } from '../../../components/ExamTaxonomyPicker';
 
@@ -57,6 +58,7 @@ export default function AdminQuestionsPage() {
   const [taxonomy, setTaxonomy] = useState<TaxonomyValue>(emptyTaxonomy);
   const [examName, setExamName] = useState('');
   const [examYear, setExamYear] = useState('');
+  const [subjectName, setSubjectName] = useState('');
   const [sourceType, setSourceType] = useState('ORIGINAL');
   const [sourceName, setSourceName] = useState('');
   const [translating, setTranslating] = useState<'ta' | 'en' | null>(null);
@@ -150,6 +152,7 @@ export default function AdminQuestionsPage() {
     setTaxonomy(emptyTaxonomy);
     setExamName('');
     setExamYear('');
+    setSubjectName('');
     setSourceType('ORIGINAL');
     setSourceName('');
     setFormError(null);
@@ -172,6 +175,7 @@ export default function AdminQuestionsPage() {
       subCategoryId: taxonomy.subCategoryId || undefined,
       examName: examName.trim() || undefined,
       examYear: examYear ? Number(examYear) : undefined,
+      subjectName: subjectName.trim() || undefined,
       sourceType,
       sourceName: sourceName.trim() || undefined,
     };
@@ -383,6 +387,7 @@ export default function AdminQuestionsPage() {
               Exam Year (optional):{' '}
               <input type="number" value={examYear} onChange={(e) => setExamYear(e.target.value)} placeholder="2024" style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }} />
             </label>
+            <SubjectInput value={subjectName} onChange={setSubjectName} />
           </div>
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>

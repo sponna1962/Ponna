@@ -33,6 +33,9 @@ export interface BatchMetadata {
   subCategoryId?: string;
   examName?: string;
   examYear?: number;
+  // Typed with autocomplete on the Bulk Upload form; resolved to a Subject
+  // row (find-or-create) at insert time, same as the single Add Question form.
+  subjectName?: string;
   sourceType: SourceType;
   sourceName?: string;
 }
@@ -163,6 +166,11 @@ export class BulkUploadService {
     const idsNeedingTranslation: string[] = [];
     let inserted = 0;
 
+    // Resolved once per batch (not per row) — same find-or-create pattern as
+    // the single Add Question form, just applied to every row up front.
+    const subjectName = batchMeta.subjectName?.trim();
+    const subjectId = subjectName ? (await prisma.subject.upsert({ where: { name: subjectName }, create: { name: subjectName }, update: {} })).id : undefined;
+
     for (const row of rows) {
       if (!row) continue;
       const hasTa = !!row.questionTextTa;
@@ -172,12 +180,12 @@ export class BulkUploadService {
       let groupId: string | null = null;
 
       if (hasTa) {
-        const id = await this.insertLanguageVersion(row, 'TA', batchMeta, batchId, null);
+        const id = await this.insertLanguageVersion(row, 'TA', batchMeta, subjectId, batchId, null);
         firstId = id;
         groupId = id;
       }
       if (hasEn) {
-        const id = await this.insertLanguageVersion(row, 'EN', batchMeta, batchId, groupId);
+        const id = await this.insertLanguageVersion(row, 'EN', batchMeta, subjectId, batchId, groupId);
         if (!firstId) firstId = id;
       }
       if (firstId) {
@@ -199,6 +207,7 @@ export class BulkUploadService {
     row: NonNullable<PreviewRow['data']>,
     lang: 'TA' | 'EN',
     batchMeta: BatchMetadata,
+    subjectId: string | undefined,
     batchId: string,
     groupId: string | null,
   ): Promise<string> {
@@ -217,6 +226,7 @@ export class BulkUploadService {
         subCategoryId: batchMeta.subCategoryId,
         examName: batchMeta.examName,
         examYear: batchMeta.examYear,
+        subjectId,
         sourceType: batchMeta.sourceType,
         sourceName: batchMeta.sourceName,
         category: QuestionCategory.STANDARD,

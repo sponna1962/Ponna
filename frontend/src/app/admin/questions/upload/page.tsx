@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { adminFetch } from '../../../../lib/admin-fetch';
 import { ExamTaxonomyPicker, TaxonomyValue } from '../../../../components/ExamTaxonomyPicker';
+import { SubjectInput } from '../../../../components/SubjectInput';
 
 // Bulk Upload — Step 1: Source Type, Step 2: metadata (applies to the whole
 // file — never repeated per row), Step 3: upload CSV → Validate → Preview →
@@ -29,6 +30,7 @@ export default function BulkUploadPage() {
   const [taxonomy, setTaxonomy] = useState<TaxonomyValue>({ authorityId: '', categoryId: '', subCategoryId: '' });
   const [examName, setExamName] = useState('');
   const [examYear, setExamYear] = useState('');
+  const [subjectName, setSubjectName] = useState('');
   const [sourceName, setSourceName] = useState('');
 
   const [file, setFile] = useState<File | null>(null);
@@ -71,6 +73,7 @@ export default function BulkUploadPage() {
       subCategoryId: taxonomy.subCategoryId || undefined,
       examName: examName.trim() || undefined,
       examYear: examYear ? Number(examYear) : undefined,
+      subjectName: subjectName.trim() || undefined,
       sourceType,
       sourceName: sourceName.trim() || undefined,
     };
@@ -138,6 +141,7 @@ export default function BulkUploadPage() {
             Exam Year (optional):{' '}
             <input type="number" value={examYear} onChange={(e) => setExamYear(e.target.value)} placeholder="2024" style={{ width: 90, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1' }} />
           </label>
+          <SubjectInput value={subjectName} onChange={setSubjectName} />
         </div>
         <label style={{ fontSize: 13, display: 'block' }}>
           Source Name (optional, admin-only):{' '}

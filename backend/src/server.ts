@@ -605,6 +605,15 @@ app.get('/admin/exam-taxonomy', requireStaffAuth, async (_req, res) => {
   res.json(await examTaxonomyService.listFullTree());
 });
 
+// GET /admin/subjects — for the Bulk Upload / Add Question forms'
+// type-with-suggestions Subject field. No POST route: a Subject is
+// created automatically (find-or-create by name) the first time it's
+// used on a question, not through a separate admin step.
+app.get('/admin/subjects', requireStaffAuth, async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(await questionService.listSubjects());
+});
+
 // POST /admin/exam-taxonomy/purposes  { name, nameTa? } — Super Admin only
 app.post('/admin/exam-taxonomy/purposes', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   res.json(await examTaxonomyService.createPurpose(req.body.name, req.body.nameTa));

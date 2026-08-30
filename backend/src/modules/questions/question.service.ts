@@ -30,6 +30,10 @@ export interface QuestionInput {
   subCategoryId?: string;
   examName?: string;
   examYear?: number;
+  // Typed freely on the form with autocomplete suggestions; resolved to a
+  // Subject row (find-or-create by name) inside create()/confirmImport()
+  // rather than requiring a pre-existing subjectId.
+  subjectName?: string;
   sourceType?: SourceType;
   sourceName?: string;
   internalNotes?: string;
@@ -40,6 +44,24 @@ export interface QuestionInput {
 }
 
 export class QuestionService {
+  /**
+   * Finds a Subject by name (case-sensitive exact match, trimmed) or
+   * creates it — this is what lets the Bulk Upload / Add Question forms
+   * offer a free-type-with-suggestions field instead of requiring a
+   * separate "add a Subject" admin step first.
+   */
+  private async resolveSubjectId(subjectName: string | undefined): Promise<string | undefined> {
+    const name = subjectName?.trim();
+    if (!name) return undefined;
+    const subject = await prisma.subject.upsert({ where: { name }, create: { name }, update: {} });
+    return subject.id;
+  }
+
+  /** Full Subject list, for the Bulk Upload / Add Question forms' autocomplete. */
+  async listSubjects() {
+    return prisma.subject.findMany({ orderBy: { name: 'asc' } });
+  }
+
   /**
    * Checks for an existing exact-duplicate (same content hash, same language).
    * Returns the duplicate's id if found, otherwise null. Callers decide
@@ -65,6 +87,8 @@ export class QuestionService {
       }
     }
 
+    const subjectId = await this.resolveSubjectId(input.subjectName);
+
     return prisma.question.create({
       data: {
         questionText: input.questionText,
@@ -79,6 +103,7 @@ export class QuestionService {
         subCategoryId: input.subCategoryId,
         examName: input.examName,
         examYear: input.examYear,
+        subjectId,
         sourceType: input.sourceType ?? SourceType.ORIGINAL,
         sourceName: input.sourceName,
         internalNotes: input.internalNotes,

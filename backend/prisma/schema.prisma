@@ -238,6 +238,18 @@ model ExamCategory {
   @@unique([authorityId, name])
 }
 
+// A topic/subject-matter tag (History, Polity, General Science, Aptitude...) —
+// deliberately flat (no hierarchy) and independent of Authority, since the
+// same Subject applies across many exam authorities. Admin/staff type a
+// Subject name directly on the Bulk Upload / Add Question forms; the
+// backend finds-or-creates by name, so this list grows organically without
+// a separate "manage Subjects" admin step.
+model Subject {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  questions Question[]
+}
+
 model ExamSubCategory {
   id         String       @id @default(uuid())
   categoryId String
@@ -316,6 +328,14 @@ model Question {
   subCategory    ExamSubCategory?  @relation(fields: [subCategoryId], references: [id])
   examName       String?           // free text, only when Category/Sub-Category aren't specific enough (e.g. "Assistant Public Prosecutor, Grade II")
   examYear       Int?              // mainly meaningful for PREVIOUS_EXAM source type
+
+  // Subject (topic/subject-matter, e.g. History, Polity, General Science) —
+  // deliberately separate from the Authority→Category→Sub-Category exam-tier
+  // taxonomy above, since a Subject cuts across multiple exam authorities.
+  // Optional, admin/staff-typed with autocomplete against existing Subjects
+  // (find-or-create — no separate "add a Subject" admin step required).
+  subjectId      String?
+  subject        Subject?          @relation(fields: [subjectId], references: [id])
 
   // Source — admin/backend-only metadata, not shown to students in this version.
   sourceType     SourceType        @default(ORIGINAL)
