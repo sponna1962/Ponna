@@ -131,6 +131,20 @@ export default function QuizSessionPage() {
   }
 
   const q = session.questions[currentIndex];
+
+  // Defensive guard — a session can end up with zero questions if the
+  // student's saved preference (Authority/Category/Language combination)
+  // has no matching Published questions with a Difficulty set. Without
+  // this check, `q` is undefined here and every access below crashes the
+  // whole page instead of showing a clear message.
+  if (!q) {
+    return (
+      <main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
+        <p>{t.practiceSetup.noQuestionsForSelection}</p>
+      </main>
+    );
+  }
+
   const isLastQuestion = currentIndex === session.questions.length - 1;
   const answered = !!selected;
 
