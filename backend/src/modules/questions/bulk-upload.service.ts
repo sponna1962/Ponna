@@ -60,6 +60,10 @@ export class BulkUploadService {
       columns: true,
       skip_empty_lines: true,
       trim: true,
+      bom: true, // strips a leading UTF-8 BOM (common in Excel/tool-exported CSVs) before header
+                 // parsing — without this, a BOM silently prefixes the first column's key
+                 // (e.g. "question_en" becomes "\uFEFFquestion_en"), so raw.question_en reads
+                 // as undefined for every row whenever question_en is the first CSV column.
     });
 
     const rows: PreviewRow[] = [];
