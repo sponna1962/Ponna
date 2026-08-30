@@ -11,7 +11,11 @@ import { PrismaClient, Difficulty, QuestionStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-3.7-flash'; // fast + cheap, appropriate for a per-question classification call
+const GEMINI_MODEL = 'gemini-3.7-flash'; // primary — fast + cheap, appropriate for a per-question classification call
+// If the primary model keeps returning 503 (overloaded — common right
+// after a new model's GA release absorbs a demand spike), fall back to a
+// slightly older but confirmed-stable model rather than failing outright.
+const GEMINI_MODEL_FALLBACK = 'gemini-3.6-flash';
 
 interface ClassificationResult {
   difficulty: Difficulty;
@@ -53,6 +57,40 @@ export class ClassificationService {
   }
 
   /**
+   * Tries the primary model (with its own 503/429 retries above); if it
+   * STILL fails with 503 after those retries — meaning the primary model
+   * itself is under sustained heavy load, not just a momentary blip — falls
+   * back to a different, confirmed-stable model rather than giving up.
+   * Non-503 failures (bad request, invalid key, billing) are NOT retried
+   * with the fallback model either — switching models can't fix those.
+   */
+  private async fetchWithFallback(prompt: string): Promise<Response> {
+    const requestFor = (model: string) => ({
+      url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          // A generous token budget — this model spends some of it on hidden
+          // internal reasoning before producing the actual JSON answer, so
+          // a tight limit truncates the response before it completes.
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2000 },
+        }),
+      } satisfies RequestInit,
+    });
+
+    const primary = requestFor(GEMINI_MODEL);
+    const primaryResponse = await this.fetchWithRetry(primary.url, primary.init);
+    if (primaryResponse.ok || primaryResponse.status !== 503) {
+      return primaryResponse;
+    }
+
+    const fallback = requestFor(GEMINI_MODEL_FALLBACK);
+    return this.fetchWithRetry(fallback.url, fallback.init);
+  }
+
+  /**
    * Classifies a single question via the Gemini API. The prompt includes
    * exam type/sub-type context, since "Medium" for TNPSC Group 4 and "Medium"
    * for UPSC are not the same bar (§9).
@@ -90,20 +128,7 @@ Guidance:
 Respond with ONLY a JSON object, no other text, no markdown fences:
 {"difficulty": "MEDIUM" or "HARD", "confidence": <0-100 integer>, "reasoning": "<one short sentence>"}`;
 
-    const response = await this.fetchWithRetry(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          // A generous token budget — this model spends some of it on hidden
-          // internal reasoning before producing the actual JSON answer, so
-          // a tight limit truncates the response before it completes.
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2000 },
-        }),
-      },
-    );
+    const response = await this.fetchWithFallback(prompt);
 
     if (!response.ok) {
       throw new Error(`Gemini API error: ${response.status} ${await response.text()}`);
