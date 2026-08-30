@@ -334,7 +334,7 @@ const canEditQuestions = requireRole('SUPER_ADMIN', 'CONTENT_ADMIN');
 // GET /admin/questions?status=DRAFT&difficulty=MEDIUM&page=1&search=piaget&authorityId=...&categoryId=...
 app.get('/admin/questions', requireStaffAuth, async (req, res) => {
   try {
-    const { status, difficulty, authorityId, categoryId, subCategoryId, category, language, search, page, pageSize } = req.query;
+    const { status, difficulty, authorityId, categoryId, subCategoryId, category, language, search, page, pageSize, noDifficultyOnly } = req.query;
     const result = await questionService.list({
       status: status as any,
       difficulty: difficulty as any,
@@ -344,6 +344,7 @@ app.get('/admin/questions', requireStaffAuth, async (req, res) => {
       category: category as any,
       language: language as any,
       search: search as string,
+      noDifficultyOnly: noDifficultyOnly === 'true',
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
     });

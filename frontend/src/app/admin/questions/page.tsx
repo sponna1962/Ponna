@@ -44,6 +44,7 @@ export default function AdminQuestionsPage() {
   const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(emptyTaxonomy);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [pendingAiCount, setPendingAiCount] = useState(0);
   const PAGE_SIZE = 20;
 
   const [showForm, setShowForm] = useState(false);
@@ -59,7 +60,12 @@ export default function AdminQuestionsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   async function loadQuestions() {
-    const params = new URLSearchParams({ status: statusFilter, page: String(page), pageSize: String(PAGE_SIZE) });
+    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+    if (statusFilter === 'PENDING_AI') {
+      params.set('noDifficultyOnly', 'true'); // every status included — this is the "Waiting for AI" view
+    } else {
+      params.set('status', statusFilter);
+    }
     if (search.trim()) params.set('search', search.trim());
     if (taxonomyFilter.authorityId) params.set('authorityId', taxonomyFilter.authorityId);
     if (taxonomyFilter.categoryId) params.set('categoryId', taxonomyFilter.categoryId);
@@ -71,8 +77,18 @@ export default function AdminQuestionsPage() {
     setSelected(new Set());
   }
 
+  /** Refreshes the "Waiting for AI (N)" tab's badge count, independent of
+   * whatever status/filter is currently being viewed — so the number stays
+   * accurate even while looking at the Draft or Published tab. */
+  async function loadPendingAiCount() {
+    const res = await adminFetch('/admin/questions?noDifficultyOnly=true&page=1&pageSize=1');
+    const data = await res.json();
+    setPendingAiCount(data.total ?? 0);
+  }
+
   useEffect(() => {
     loadQuestions();
+    loadPendingAiCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, page, taxonomyFilter]);
 
@@ -167,6 +183,7 @@ export default function AdminQuestionsPage() {
     }
     setShowForm(false);
     loadQuestions();
+    loadPendingAiCount();
   }
 
   async function setStatus(id: string, action: 'publish' | 'disable' | 'draft') {
@@ -177,6 +194,7 @@ export default function AdminQuestionsPage() {
       return;
     }
     loadQuestions();
+    loadPendingAiCount();
   }
 
   async function setDifficulty(id: string, difficulty: string) {
@@ -186,6 +204,7 @@ export default function AdminQuestionsPage() {
       body: JSON.stringify({ difficulty }),
     });
     loadQuestions();
+    loadPendingAiCount();
   }
 
   async function classifyNow(id: string) {
@@ -196,6 +215,7 @@ export default function AdminQuestionsPage() {
       return;
     }
     loadQuestions();
+    loadPendingAiCount();
   }
 
   async function bulkAction(action: 'bulk-publish' | 'bulk-disable' | 'bulk-classify' | 'bulk-delete' | 'bulk-force-delete') {
@@ -235,6 +255,7 @@ export default function AdminQuestionsPage() {
       );
     }
     loadQuestions();
+    loadPendingAiCount();
   }
 
   /** Applies the admin's own Medium/Hard decision to every selected
@@ -256,6 +277,7 @@ export default function AdminQuestionsPage() {
       alert(`Set Difficulty = ${difficulty} for ${body.count} question(s). Any that were Draft are now Published.`);
     }
     loadQuestions();
+    loadPendingAiCount();
   }
 
   return (
@@ -342,6 +364,22 @@ export default function AdminQuestionsPage() {
             {s}
           </button>
         ))}
+        {/* "Waiting for AI" — every question (any status) with no Difficulty
+            yet, whether it was never classified or the AI call failed
+            (e.g. Gemini out of credits, as happened before). */}
+        <button
+          onClick={() => updateStatusFilter('PENDING_AI')}
+          style={{
+            padding: '6px 14px',
+            borderRadius: 16,
+            border: '1px solid #f59e0b',
+            background: statusFilter === 'PENDING_AI' ? '#f59e0b' : '#fff',
+            color: statusFilter === 'PENDING_AI' ? '#fff' : '#b45309',
+            fontSize: 13,
+          }}
+        >
+          ⏳ Waiting for AI ({pendingAiCount})
+        </button>
         <input
           placeholder="Search question text..."
           value={search}

@@ -254,6 +254,11 @@ export class QuestionService {
     category?: QuestionCategory;
     language?: Language;
     search?: string; // matches question text, case-insensitive substring
+    // "Waiting for AI" tab — every question with no Difficulty yet,
+    // regardless of status (Draft/Published/Disabled all included, since a
+    // Published-with-no-Difficulty row is the exact broken state the admin
+    // needs to find and fix). Overrides `status` and `difficulty` above.
+    noDifficultyOnly?: boolean;
     page?: number;
     pageSize?: number;
   }) {
@@ -261,8 +266,8 @@ export class QuestionService {
     const pageSize = filters.pageSize ?? 20;
 
     const where = {
-      status: filters.status,
-      difficulty: filters.difficulty,
+      status: filters.noDifficultyOnly ? undefined : filters.status,
+      difficulty: filters.noDifficultyOnly ? null : filters.difficulty,
       authorityId: filters.authorityId,
       categoryId: filters.categoryId,
       subCategoryId: filters.subCategoryId,
