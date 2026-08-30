@@ -21,6 +21,38 @@ interface ClassificationResult {
 
 export class ClassificationService {
   /**
+   * Calls the Gemini API, automatically retrying ONLY on 503 (model
+   * temporarily overloaded — Google's own error message says "usually
+   * temporary, try again later") and 429 (rate limit, not the "prepayment
+   * credits depleted" billing case — that one is also 429 but never
+   * resolves by waiting, so it's excluded by checking the message text).
+   * Everything else (400 bad request, 401/403 invalid key, billing
+   * depleted) fails immediately — retrying those would just waste time and
+   * API calls without ever succeeding.
+   */
+  private async fetchWithRetry(url: string, init: RequestInit, maxAttempts = 3): Promise<Response> {
+    const delaysMs = [2000, 5000, 10000];
+    let lastResponse: Response | undefined;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const response = await fetch(url, init);
+      if (response.ok) return response;
+
+      const bodyText = await response.text();
+      const isRetryable = response.status === 503 || (response.status === 429 && !bodyText.includes('prepayment credits'));
+      if (!isRetryable || attempt === maxAttempts - 1) {
+        // Reconstruct a Response-like object carrying the body we already
+        // consumed, so the caller's `await response.text()` still works.
+        return new Response(bodyText, { status: response.status, statusText: response.statusText });
+      }
+
+      lastResponse = response;
+      await new Promise((r) => setTimeout(r, delaysMs[attempt] ?? 10000));
+    }
+    return lastResponse!;
+  }
+
+  /**
    * Classifies a single question via the Gemini API. The prompt includes
    * exam type/sub-type context, since "Medium" for TNPSC Group 4 and "Medium"
    * for UPSC are not the same bar (§9).
@@ -58,7 +90,7 @@ Guidance:
 Respond with ONLY a JSON object, no other text, no markdown fences:
 {"difficulty": "MEDIUM" or "HARD", "confidence": <0-100 integer>, "reasoning": "<one short sentence>"}`;
 
-    const response = await fetch(
+    const response = await this.fetchWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
