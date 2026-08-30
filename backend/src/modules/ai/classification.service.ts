@@ -11,7 +11,7 @@ import { PrismaClient, Difficulty, QuestionStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-3.6-flash'; // fast + cheap, appropriate for a per-question classification call
+const GEMINI_MODEL = 'gemini-3.7-flash'; // fast + cheap, appropriate for a per-question classification call
 
 interface ClassificationResult {
   difficulty: Difficulty;
@@ -141,7 +141,7 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
    * Runs sequentially with a small delay to stay well under API rate limits —
    * for large batches in production, swap this for a proper queue/worker.
    */
-  async classifyPendingQuestions(sourceBatchId?: string): Promise<{ processed: number; autoPublished: number; needsReview: number }> {
+  async classifyPendingQuestions(sourceBatchId?: string): Promise<{ processed: number; autoPublished: number; needsReview: number; failed: number }> {
     const pending = await prisma.question.findMany({
       where: {
         status: QuestionStatus.DRAFT,
@@ -152,27 +152,35 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
 
     let autoPublished = 0;
     let needsReview = 0;
+    let failed = 0;
 
     for (const q of pending) {
       try {
         const { autoPublished: published } = await this.classifyAndApply(q.id);
         published ? autoPublished++ : needsReview++;
       } catch (err) {
+        // A genuine API/parsing failure — distinct from "classified
+        // successfully but confidence was too low to auto-publish". Nothing
+        // was persisted for this question (aiSuggestedDifficulty stays
+        // null), so it will NOT actually appear in getNeedsReviewQueue()
+        // even though earlier code lumped it into that count and made it
+        // look like a normal review case rather than a broken call.
         console.error(`Classification failed for question ${q.id}:`, err);
-        needsReview++; // failed classification also lands in the review queue, not silently dropped
+        failed++;
       }
 
       // Gentle pacing to avoid rate-limit bursts on large batches.
       await new Promise((r) => setTimeout(r, 200));
     }
 
-    return { processed: pending.length, autoPublished, needsReview };
+    return { processed: pending.length, autoPublished, needsReview, failed };
   }
 
   /** Classifies a specific list of question ids (used by the admin panel's "Classify Selected" bulk action). */
-  async classifyQuestionIds(ids: string[]): Promise<{ processed: number; autoPublished: number; needsReview: number }> {
+  async classifyQuestionIds(ids: string[]): Promise<{ processed: number; autoPublished: number; needsReview: number; failed: number }> {
     let autoPublished = 0;
     let needsReview = 0;
+    let failed = 0;
 
     for (const id of ids) {
       try {
@@ -180,12 +188,12 @@ Respond with ONLY a JSON object, no other text, no markdown fences:
         published ? autoPublished++ : needsReview++;
       } catch (err) {
         console.error(`Classification failed for question ${id}:`, err);
-        needsReview++;
+        failed++;
       }
       await new Promise((r) => setTimeout(r, 200));
     }
 
-    return { processed: ids.length, autoPublished, needsReview };
+    return { processed: ids.length, autoPublished, needsReview, failed };
   }
 
   /** The Needs Review queue: drafts that were classified but fell below threshold, or weren't auto-published. */

@@ -209,7 +209,10 @@ export default function AdminQuestionsPage() {
       }
     } else if (action === 'bulk-classify') {
       const body = await res.json();
-      alert(`Classified ${body.processed} question(s): ${body.autoPublished} auto-published (high confidence), ${body.needsReview} sent to Needs Review (check the console/logs if this seems low — a Gemini API issue would show up here as everything landing in "needs review").`);
+      alert(
+        `Classified ${body.processed} question(s): ${body.autoPublished} auto-published (high confidence), ${body.needsReview} sent to Needs Review.` +
+          (body.failed > 0 ? ` ${body.failed} FAILED to classify (Gemini API error — check Render logs; nothing was changed for these, they still show no Difficulty).` : ''),
+      );
     }
     loadQuestions();
   }
