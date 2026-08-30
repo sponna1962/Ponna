@@ -334,12 +334,13 @@ const canEditQuestions = requireRole('SUPER_ADMIN', 'CONTENT_ADMIN');
 // GET /admin/questions?status=DRAFT&difficulty=MEDIUM&page=1&search=piaget&authorityId=...&categoryId=...
 app.get('/admin/questions', requireStaffAuth, async (req, res) => {
   try {
-    const { status, difficulty, authorityId, categoryId, category, language, search, page, pageSize } = req.query;
+    const { status, difficulty, authorityId, categoryId, subCategoryId, category, language, search, page, pageSize } = req.query;
     const result = await questionService.list({
       status: status as any,
       difficulty: difficulty as any,
       authorityId: authorityId as string,
       categoryId: categoryId as string,
+      subCategoryId: subCategoryId as string,
       category: category as any,
       language: language as any,
       search: search as string,
@@ -350,6 +351,18 @@ app.get('/admin/questions', requireStaffAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to list questions' });
+  }
+});
+
+// GET /admin/questions/stats — Question Bank Stats dashboard: counts per
+// Authority → Category → Sub-Category, broken down by status.
+app.get('/admin/questions/stats', requireStaffAuth, async (_req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(await questionService.getTaxonomyStats());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load question bank stats' });
   }
 });
 
@@ -445,6 +458,12 @@ app.post('/admin/questions/bulk-publish', requireStaffAuth, canEditQuestions, as
 // POST /admin/questions/bulk-disable  { ids: string[] }
 app.post('/admin/questions/bulk-disable', requireStaffAuth, canEditQuestions, async (req, res) => {
   const result = await questionService.bulkSetStatus(req.body.ids, 'DISABLED');
+  res.json(result);
+});
+
+// POST /admin/questions/bulk-set-difficulty  { ids: string[], difficulty: 'MEDIUM' | 'HARD' }
+app.post('/admin/questions/bulk-set-difficulty', requireStaffAuth, canEditQuestions, async (req, res) => {
+  const result = await questionService.bulkSetDifficulty(req.body.ids, req.body.difficulty);
   res.json(result);
 });
 

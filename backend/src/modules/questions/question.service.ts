@@ -141,8 +141,108 @@ export class QuestionService {
     return prisma.question.update({ where: { id }, data: { status } });
   }
 
+  /**
+   * Setting a Difficulty is the admin's actual review decision (unlike AI
+   * classification, which only auto-publishes above a confidence
+   * threshold) — so a Draft question auto-publishes the moment a Difficulty
+   * is set here, no separate "Publish" click needed. Disabled stays
+   * Disabled (that's a deliberate hide, not "not yet reviewed"), and an
+   * already-Published question just gets its Difficulty corrected in place.
+   */
   async setDifficulty(id: string, difficulty: Difficulty) {
-    return prisma.question.update({ where: { id }, data: { difficulty } });
+    const existing = await prisma.question.findUniqueOrThrow({ where: { id }, select: { status: true } });
+    return prisma.question.update({
+      where: { id },
+      data: {
+        difficulty,
+        ...(existing.status === QuestionStatus.DRAFT ? { status: QuestionStatus.PUBLISHED } : {}),
+      },
+    });
+  }
+
+  /** Bulk-assigns one Difficulty to many questions at once — for an admin
+   * who has already read each one and decided, and wants to apply that
+   * decision to the group in one action instead of one dropdown at a time.
+   * Same Draft -> Published auto-publish rule as setDifficulty() above,
+   * applied per-row (Disabled ones are left Disabled). */
+  async bulkSetDifficulty(ids: string[], difficulty: Difficulty) {
+    const [difficultyResult] = await prisma.$transaction([
+      prisma.question.updateMany({ where: { id: { in: ids } }, data: { difficulty } }),
+      prisma.question.updateMany({ where: { id: { in: ids }, status: QuestionStatus.DRAFT }, data: { status: QuestionStatus.PUBLISHED } }),
+    ]);
+    return { count: difficultyResult.count };
+  }
+
+  /**
+   * Question Bank Stats (admin dashboard) — how many questions exist per
+   * Authority → Category → Sub-Category, broken down by status, plus a
+   * grand total row. Uses groupBy (counts computed in the database) rather
+   * than loading every question row, since the bank is expected to grow
+   * into the thousands as more exam papers are digitized.
+   */
+  async getTaxonomyStats() {
+    const grouped = await prisma.question.groupBy({
+      by: ['authorityId', 'categoryId', 'subCategoryId', 'status'],
+      _count: { _all: true },
+    });
+
+    const [authorities, categories, subCategories]: [
+      { id: string; name: string; purpose: { name: string } }[],
+      { id: string; name: string }[],
+      { id: string; name: string }[],
+    ] = await Promise.all([
+      prisma.examAuthority.findMany({ select: { id: true, name: true, purpose: { select: { name: true } } } }),
+      prisma.examCategory.findMany({ select: { id: true, name: true } }),
+      prisma.examSubCategory.findMany({ select: { id: true, name: true } }),
+    ]);
+    const authorityById = new Map(authorities.map((a) => [a.id, a]));
+    const categoryById = new Map(categories.map((c) => [c.id, c.name]));
+    const subCategoryById = new Map(subCategories.map((s) => [s.id, s.name]));
+
+    // One row per unique (authority, category, subCategory) triple, with a
+    // count per status — groupBy gives us one row per (triple, status)
+    // combination, so we fold those together here.
+    const rowsByKey = new Map<
+      string,
+      { authorityName: string; purposeName: string; categoryName: string; subCategoryName: string; published: number; draft: number; disabled: number; total: number }
+    >();
+
+    for (const g of grouped) {
+      const authority = g.authorityId ? authorityById.get(g.authorityId) : undefined;
+      const key = `${g.authorityId ?? ''}|${g.categoryId ?? ''}|${g.subCategoryId ?? ''}`;
+      if (!rowsByKey.has(key)) {
+        rowsByKey.set(key, {
+          authorityName: authority?.name ?? '(no authority)',
+          purposeName: authority?.purpose.name ?? '',
+          categoryName: g.categoryId ? (categoryById.get(g.categoryId) ?? '(unknown)') : '—',
+          subCategoryName: g.subCategoryId ? (subCategoryById.get(g.subCategoryId) ?? '(unknown)') : '—',
+          published: 0,
+          draft: 0,
+          disabled: 0,
+          total: 0,
+        });
+      }
+      const row = rowsByKey.get(key)!;
+      const count = g._count._all;
+      if (g.status === QuestionStatus.PUBLISHED) row.published += count;
+      else if (g.status === QuestionStatus.DRAFT) row.draft += count;
+      else if (g.status === QuestionStatus.DISABLED) row.disabled += count;
+      row.total += count;
+    }
+
+    const rows = [...rowsByKey.values()].sort((a, b) => a.authorityName.localeCompare(b.authorityName) || a.categoryName.localeCompare(b.categoryName) || a.subCategoryName.localeCompare(b.subCategoryName));
+
+    const grandTotal = rows.reduce(
+      (acc, r) => ({ published: acc.published + r.published, draft: acc.draft + r.draft, disabled: acc.disabled + r.disabled, total: acc.total + r.total }),
+      { published: 0, draft: 0, disabled: 0, total: 0 },
+    );
+
+    // Per-authority totals too — this is what the bar chart plots.
+    const byAuthority = new Map<string, number>();
+    for (const r of rows) byAuthority.set(r.authorityName, (byAuthority.get(r.authorityName) ?? 0) + r.total);
+    const authorityTotals = [...byAuthority.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
+
+    return { rows, grandTotal, authorityTotals };
   }
 
   async list(filters: {
@@ -150,6 +250,7 @@ export class QuestionService {
     difficulty?: Difficulty;
     authorityId?: string;
     categoryId?: string;
+    subCategoryId?: string;
     category?: QuestionCategory;
     language?: Language;
     search?: string; // matches question text, case-insensitive substring
@@ -157,13 +258,14 @@ export class QuestionService {
     pageSize?: number;
   }) {
     const page = filters.page ?? 1;
-    const pageSize = filters.pageSize ?? 50;
+    const pageSize = filters.pageSize ?? 20;
 
     const where = {
       status: filters.status,
       difficulty: filters.difficulty,
       authorityId: filters.authorityId,
       categoryId: filters.categoryId,
+      subCategoryId: filters.subCategoryId,
       category: filters.category,
       language: filters.language,
       ...(filters.search ? { questionText: { contains: filters.search, mode: 'insensitive' as const } } : {}),

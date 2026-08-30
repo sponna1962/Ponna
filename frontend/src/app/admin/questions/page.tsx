@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { adminFetch } from '../../../lib/admin-fetch';
 import { ExamTaxonomyPicker, TaxonomyValue } from '../../../components/ExamTaxonomyPicker';
 
@@ -40,6 +41,10 @@ export default function AdminQuestionsPage() {
   const [statusFilter, setStatusFilter] = useState('DRAFT');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(emptyTaxonomy);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 20;
 
   const [showForm, setShowForm] = useState(false);
   const [ta, setTa] = useState(emptyLangFields);
@@ -54,18 +59,33 @@ export default function AdminQuestionsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   async function loadQuestions() {
-    const params = new URLSearchParams({ status: statusFilter });
+    const params = new URLSearchParams({ status: statusFilter, page: String(page), pageSize: String(PAGE_SIZE) });
     if (search.trim()) params.set('search', search.trim());
+    if (taxonomyFilter.authorityId) params.set('authorityId', taxonomyFilter.authorityId);
+    if (taxonomyFilter.categoryId) params.set('categoryId', taxonomyFilter.categoryId);
+    if (taxonomyFilter.subCategoryId) params.set('subCategoryId', taxonomyFilter.subCategoryId);
     const res = await adminFetch(`/admin/questions?${params.toString()}`);
     const data = await res.json();
     setQuestions(data.items ?? []);
+    setTotal(data.total ?? 0);
     setSelected(new Set());
   }
 
   useEffect(() => {
     loadQuestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, page, taxonomyFilter]);
+
+  // Any filter change (status/taxonomy) should snap back to page 1 — staying
+  // on e.g. page 3 of a now-much-smaller filtered result shows an empty list.
+  function updateTaxonomyFilter(v: TaxonomyValue) {
+    setTaxonomyFilter(v);
+    setPage(1);
+  }
+  function updateStatusFilter(s: string) {
+    setStatusFilter(s);
+    setPage(1);
+  }
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -217,16 +237,45 @@ export default function AdminQuestionsPage() {
     loadQuestions();
   }
 
+  /** Applies the admin's own Medium/Hard decision to every selected
+   * question in one action — no AI, no guessing; the choice is theirs. */
+  async function bulkSetDifficulty(difficulty: 'MEDIUM' | 'HARD') {
+    if (selected.size === 0) return;
+    if (!confirm(`Set Difficulty = ${difficulty} for ${selected.size} selected question(s)?`)) return;
+
+    const res = await adminFetch('/admin/questions/bulk-set-difficulty', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(selected), difficulty }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Action failed: ${body.error ?? 'Unknown error'}`);
+    } else {
+      const body = await res.json();
+      alert(`Set Difficulty = ${difficulty} for ${body.count} question(s). Any that were Draft are now Published.`);
+    }
+    loadQuestions();
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={{ fontSize: 20 }}>Questions</h1>
-        <button
-          onClick={() => (showForm ? setShowForm(false) : startAdd())}
-          style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
-        >
-          {showForm ? 'Cancel' : '+ Add Question'}
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Link
+            href="/admin/questions/stats"
+            style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', color: '#0f172a', fontSize: 14, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+          >
+            📊 Question Bank Stats
+          </Link>
+          <button
+            onClick={() => (showForm ? setShowForm(false) : startAdd())}
+            style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
+          >
+            {showForm ? 'Cancel' : '+ Add Question'}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -283,11 +332,11 @@ export default function AdminQuestionsPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         {['DRAFT', 'PUBLISHED', 'DISABLED'].map((s) => (
           <button
             key={s}
-            onClick={() => setStatusFilter(s)}
+            onClick={() => updateStatusFilter(s)}
             style={{ padding: '6px 14px', borderRadius: 16, border: '1px solid #cbd5e1', background: statusFilter === s ? '#0f172a' : '#fff', color: statusFilter === s ? '#fff' : '#334155', fontSize: 13 }}
           >
             {s}
@@ -297,16 +346,24 @@ export default function AdminQuestionsPage() {
           placeholder="Search question text..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && loadQuestions()}
+          onKeyDown={(e) => e.key === 'Enter' && (setPage(1), loadQuestions())}
           style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, minWidth: 220 }}
         />
-        <button onClick={loadQuestions} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 13 }}>Search</button>
+        <button onClick={() => { setPage(1); loadQuestions(); }} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 13 }}>Search</button>
+      </div>
+
+      {/* Authority → Category → Sub-Category filter — narrows the list down
+          to one exam tier instead of scrolling through everything. */}
+      <div style={{ marginBottom: 16 }}>
+        <ExamTaxonomyPicker value={taxonomyFilter} onChange={updateTaxonomyFilter} />
       </div>
 
       {selected.size > 0 && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#f1f5f9', padding: 10, borderRadius: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#f1f5f9', padding: 10, borderRadius: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: '#334155' }}>{selected.size} selected</span>
           <button onClick={() => bulkAction('bulk-classify')} style={{ fontSize: 12, padding: '6px 12px' }}>Classify Selected with AI</button>
+          <button onClick={() => bulkSetDifficulty('MEDIUM')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Medium</button>
+          <button onClick={() => bulkSetDifficulty('HARD')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Hard</button>
           <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
           <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
           <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
@@ -370,6 +427,24 @@ export default function AdminQuestionsPage() {
           )}
         </tbody>
       </table>
+
+      {total > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 16, fontSize: 13 }}>
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #cbd5e1', background: page <= 1 ? '#f1f5f9' : '#fff' }}>
+            ◀ முந்தையது
+          </button>
+          <span style={{ color: '#64748b' }}>
+            Page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))} — {total} question{total === 1 ? '' : 's'} total
+          </span>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page * PAGE_SIZE >= total}
+            style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #cbd5e1', background: page * PAGE_SIZE >= total ? '#f1f5f9' : '#fff' }}
+          >
+            அடுத்தது ▶
+          </button>
+        </div>
+      )}
     </div>
   );
 }
