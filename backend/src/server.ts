@@ -36,6 +36,13 @@ app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 // bytes, not the re-serialized JSON (those can differ in whitespace/key order).
 app.use(
   express.json({
+    // Default (100kb) is far too small for a bulk question-upload Confirm
+    // Import payload — a batch of a few hundred rows, each with Tamil +
+    // English question text and 4 options per language, easily exceeds it.
+    // When that happened, Express rejected the request before it ever
+    // reached the route handler, so the route's own try/catch never ran —
+    // the frontend saw a non-JSON error response and silently did nothing.
+    limit: '15mb',
     verify: (req, _res, buf) => {
       (req as any).rawBody = buf;
     },
@@ -689,4 +696,21 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`PONNA API listening on :${PORT}`);
   startScheduledJobs();
+});
+
+// Last-resort error handler (Express requires exactly 4 params to recognize
+// this as one). Catches anything that failed BEFORE reaching a route's own
+// try/catch — e.g. a request body over the express.json() size limit, or
+// malformed JSON — and always returns JSON, never Express's default HTML
+// error page. Without this, such failures looked like "nothing happens" on
+// the frontend: adminFetch's `await res.json()` would throw on the HTML
+// body, so the UI never displayed any error at all.
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  const status = err.status || err.statusCode || 500;
+  const message =
+    err.type === 'entity.too.large'
+      ? 'This upload is too large — try splitting it into smaller batches.'
+      : 'Something went wrong. Please try again.';
+  res.status(status).json({ error: message });
 });

@@ -82,13 +82,26 @@ export default function BulkUploadPage() {
         body: JSON.stringify({ rows: validRows, batchMeta }),
       });
       if (!res.ok) {
-        const body = await res.json();
-        setError(body.error ?? 'Import failed');
+        // The server may fail before reaching our route's own JSON error
+        // response (e.g. a request-size rejection) — guard the parse itself
+        // so a non-JSON error body still shows something instead of the
+        // click silently appearing to do nothing.
+        let message = `Import failed (HTTP ${res.status})`;
+        try {
+          const body = await res.json();
+          if (body?.error) message = body.error;
+        } catch {
+          // response wasn't JSON — keep the generic HTTP-status message above
+        }
+        setError(message);
         return;
       }
       setImportResult(await res.json());
       setPreview(null);
       setFile(null);
+    } catch (err) {
+      // Network failure, or the request never reached the server at all.
+      setError(err instanceof Error ? err.message : 'Import failed — check your connection and try again.');
     } finally {
       setImporting(false);
     }
