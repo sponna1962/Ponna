@@ -36,17 +36,25 @@ export class SessionService {
       include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
     if (existing) {
-      if (existing.practiceLanguage === preference.language) {
+      if (existing.questions.length === 0) {
+        // A broken/empty session should never be resumed — it can only
+        // ever show the "no questions" screen. Abandon it (no quota
+        // refund — matches the language-mismatch case above) and fall
+        // through to try building a fresh one for the current preference.
+        await prisma.quizSession.update({ where: { id: existing.id }, data: { status: SessionStatus.ABANDONED } });
+        await quota.onSessionAbandoned(existing.id);
+      } else if (existing.practiceLanguage === preference.language) {
         // §4.3: same session resumes exactly where the student left off, no re-deduction
         return { ...existing, resumedWithDifferentSelection: false };
+      } else {
+        // The student changed their Practice Preference language since this
+        // session was started (e.g. Tamil → English). Resuming it would show
+        // the wrong language regardless of what they just picked — abandon it
+        // (no quota refund, same rule as the inactivity sweep) and fall
+        // through to build a fresh session for the current preference.
+        await prisma.quizSession.update({ where: { id: existing.id }, data: { status: SessionStatus.ABANDONED } });
+        await quota.onSessionAbandoned(existing.id); // no-op by design — documents the rule
       }
-      // The student changed their Practice Preference language since this
-      // session was started (e.g. Tamil → English). Resuming it would show
-      // the wrong language regardless of what they just picked — abandon it
-      // (no quota refund, same rule as the inactivity sweep) and fall
-      // through to build a fresh session for the current preference.
-      await prisma.quizSession.update({ where: { id: existing.id }, data: { status: SessionStatus.ABANDONED } });
-      await quota.onSessionAbandoned(existing.id); // no-op by design — documents the rule
     }
 
     const remainingQuota = await quota.getRemainingQuota(userId);

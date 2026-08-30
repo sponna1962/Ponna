@@ -1,4 +1,4 @@
-// Question Allocation Engine — implements §6.4 (Question Allocation & Repetition Engine),
+// Question Allocation Engine — implements §6.4 (Question Allocation Engine),
 // the Current Affairs ratio/recency rules, and the finalized Practice
 // Preference filtering (Language + Authority/Category/Sub-Category, resolved
 // by practice-preference.service.ts into `taxonomyFilter` below).
@@ -6,9 +6,17 @@
 // Priority order per session build:
 //   1. Current Affairs questions (up to the configured cap for this session size,
 //      pulled from within the recency window) — injected first
-//   2. Unseen standard questions matching mode/difficulty
-//   3. Only if unseen pool is exhausted: previously answered questions, oldest-first
-//      (or per whatever repetitionStrategy is configured)
+//   2. Unseen standard questions matching the requested Difficulty (mode)
+//   3. Still short? Unseen standard questions of ANY Difficulty (finalized
+//      requirement: Difficulty is the one dimension allowed to broaden when
+//      the exact match runs out — never Language, never Authority/Category)
+//
+// NEVER repeats a question a student has already answered (finalized
+// requirement — the question bank is large by design specifically so this
+// isn't a practical constraint). If even the broadened unseen pool is
+// exhausted, the session simply comes back with fewer questions than
+// requested (down to zero) rather than repeating anything — the quiz UI
+// shows "no questions available" for that case.
 //
 // Language is applied as its own independent filter, never combined with or
 // implied by taxonomyFilter — the finalized rule is that Language is a pure
@@ -57,7 +65,7 @@ export class AllocationService {
     const remaining = sessionSize - selected.length;
     if (remaining <= 0) return selected;
 
-    // ── Step 2: Unseen standard questions ──────────────────────────────────────
+    // ── Step 2: Unseen standard questions matching the requested Difficulty ────
     const unseen = await prisma.question.findMany({
       where: {
         status: 'PUBLISHED',
@@ -77,18 +85,25 @@ export class AllocationService {
     const stillRemaining = sessionSize - selected.length;
     if (stillRemaining <= 0) return selected;
 
-    // ── Step 3: Unseen pool exhausted → apply repetition policy ────────────────
-    const repeatPool = await this.getRepeatPool(
-      userId,
-      difficulties,
-      language,
-      taxonomyFilter,
-      selected,
-      stillRemaining,
-      settings.repetitionStrategy,
-      settings.repeatAfterDays,
-    );
-    selected.push(...repeatPool);
+    // ── Step 3: still short → broaden to ANY Difficulty (finalized requirement) ─
+    // Only Difficulty relaxes here — Language and the Authority/Category
+    // taxonomyFilter stay exactly as the student chose. This never repeats a
+    // question (`history: { none }` still applies); if the unseen pool is
+    // truly exhausted even at this broadened difficulty, the session just
+    // comes back shorter than `sessionSize` (down to zero) rather than
+    // reaching for a previously-answered question.
+    const broadened = await prisma.question.findMany({
+      where: {
+        status: 'PUBLISHED',
+        language,
+        id: { notIn: selected },
+        history: { none: { userId } },
+        ...taxonomyFilter,
+      },
+      take: stillRemaining,
+      orderBy: { createdAt: 'asc' },
+    });
+    selected.push(...broadened.map((q) => q.id));
 
     return selected;
   }
@@ -109,49 +124,6 @@ export class AllocationService {
     return Math.round((settings.caMaxFor50Q / 50) * sessionSize);
   }
 
-  private async getRepeatPool(
-    userId: string,
-    difficulties: Difficulty[],
-    language: Language,
-    taxonomyFilter: Prisma.QuestionWhereInput,
-    excludeIds: string[],
-    take: number,
-    strategy: string,
-    repeatAfterDays: number | null,
-  ): Promise<string[]> {
-    const baseWhere: Prisma.QuestionWhereInput = {
-      status: 'PUBLISHED',
-      difficulty: { in: difficulties },
-      language,
-      id: { notIn: excludeIds },
-      history: { some: { userId } },
-      ...taxonomyFilter,
-    };
-
-    if (strategy === 'REPEAT_AFTER_DAYS' && repeatAfterDays) {
-      const cutoff = daysAgo(repeatAfterDays);
-      const eligible = await prisma.question.findMany({
-        where: { ...baseWhere, history: { some: { userId, answeredAt: { lt: cutoff } } } },
-        take,
-      });
-      return eligible.map((q) => q.id);
-    }
-
-    // Default: UNSEEN_FIRST_THEN_OLDEST — least-recently-answered first.
-    // Applying taxonomyFilter here means going through the `question` relation.
-    const history = await prisma.userQuestionHistory.findMany({
-      where: {
-        userId,
-        difficulty: { in: difficulties },
-        questionId: { notIn: excludeIds },
-        question: { language, ...taxonomyFilter },
-      },
-      orderBy: { answeredAt: 'asc' },
-      take,
-      select: { questionId: true },
-    });
-    return history.map((h) => h.questionId);
-  }
 }
 
 function daysAgo(n: number): Date {
