@@ -150,7 +150,12 @@ export default function AdminQuestionsPage() {
   }
 
   async function setStatus(id: string, action: 'publish' | 'disable' | 'draft') {
-    await adminFetch(`/admin/questions/${id}/${action}`, { method: 'POST' });
+    const res = await adminFetch(`/admin/questions/${id}/${action}`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(body.error ?? 'Action failed');
+      return;
+    }
     loadQuestions();
   }
 
@@ -192,6 +197,11 @@ export default function AdminQuestionsPage() {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       alert(`Action failed: ${body.error ?? 'Unknown error'}`);
+    } else if (action === 'bulk-publish') {
+      const body = await res.json();
+      if (body.skippedNoDifficulty > 0) {
+        alert(`${body.count} question(s) published. ${body.skippedNoDifficulty} question(s) were skipped — they have no Difficulty set yet, so publishing them would leave them invisible to every student. Set a Difficulty (or run AI Classify) on those first.`);
+      }
     } else if (action === 'bulk-delete') {
       const body = await res.json();
       if (body.disabledInstead > 0) {

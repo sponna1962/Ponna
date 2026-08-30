@@ -11,7 +11,7 @@ import { SessionService } from './modules/quiz/session.service';
 import { PracticePreferenceService, InvalidSelectionError } from './modules/practice-preference/practice-preference.service';
 import { RankingService } from './modules/ranking/ranking.service';
 import { QuotaExceededError } from './modules/quota/quota.service';
-import { QuestionService } from './modules/questions/question.service';
+import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
 import { BulkUploadService } from './modules/questions/bulk-upload.service';
 import { TranslationService } from './modules/questions/translation.service';
 import { ExamTaxonomyService } from './modules/admin/exam-taxonomy.service';
@@ -377,8 +377,16 @@ app.patch('/admin/questions/:id', requireStaffAuth, canEditQuestions, async (req
 // POST /admin/questions/:id/publish | /disable | /draft
 app.post('/admin/questions/:id/:action(publish|disable|draft)', requireStaffAuth, canEditQuestions, async (req, res) => {
   const statusMap = { publish: 'PUBLISHED', disable: 'DISABLED', draft: 'DRAFT' } as const;
-  const question = await questionService.setStatus(req.params.id, statusMap[req.params.action as 'publish' | 'disable' | 'draft']);
-  res.json(question);
+  try {
+    const question = await questionService.setStatus(req.params.id, statusMap[req.params.action as 'publish' | 'disable' | 'draft']);
+    res.json(question);
+  } catch (err) {
+    if (err instanceof NoDifficultySetError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 });
 
 // POST /admin/questions/:id/difficulty  { difficulty }

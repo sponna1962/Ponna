@@ -10,6 +10,13 @@ import { computeContentHash } from '../../common/content-hash';
 
 const prisma = new PrismaClient();
 
+/** Thrown by setStatus() when publishing a question with no Difficulty set — see the comment there. */
+export class NoDifficultySetError extends Error {
+  constructor(questionId: string) {
+    super(`Question ${questionId} has no Difficulty set — set a Difficulty before publishing (it will never appear in a student quiz otherwise).`);
+  }
+}
+
 export interface QuestionInput {
   questionText: string;
   optionA: string;
@@ -120,6 +127,17 @@ export class QuestionService {
   }
 
   async setStatus(id: string, status: QuestionStatus) {
+    if (status === QuestionStatus.PUBLISHED) {
+      // A question with no Difficulty is invisible to every student query
+      // (they're always filtered by difficulty) — publishing one anyway
+      // silently wastes the admin's work: it sits there forever looking
+      // "done" while no student ever sees it. Block it here instead of
+      // only warning about it after the fact in the list UI.
+      const question = await prisma.question.findUniqueOrThrow({ where: { id }, select: { difficulty: true } });
+      if (!question.difficulty) {
+        throw new NoDifficultySetError(id);
+      }
+    }
     return prisma.question.update({ where: { id }, data: { status } });
   }
 
@@ -167,8 +185,22 @@ export class QuestionService {
 
   /** Bulk actions for the admin panel's "select multiple, act once" flow. */
   async bulkSetStatus(ids: string[], status: QuestionStatus) {
+    if (status === QuestionStatus.PUBLISHED) {
+      // Same rule as setStatus() above, applied per-row rather than
+      // rejecting the whole batch — the admin selected a mix of ready and
+      // not-yet-classified questions all the time (e.g. right after a bulk
+      // upload), and losing the valid ones because a few weren't classified
+      // yet would be worse than just reporting which ones were skipped.
+      const eligible = await prisma.question.findMany({
+        where: { id: { in: ids }, difficulty: { not: null } },
+        select: { id: true },
+      });
+      const eligibleIds = eligible.map((q) => q.id);
+      const result = await prisma.question.updateMany({ where: { id: { in: eligibleIds } }, data: { status } });
+      return { count: result.count, skippedNoDifficulty: ids.length - eligibleIds.length };
+    }
     const result = await prisma.question.updateMany({ where: { id: { in: ids } }, data: { status } });
-    return { count: result.count };
+    return { count: result.count, skippedNoDifficulty: 0 };
   }
 
   /**
