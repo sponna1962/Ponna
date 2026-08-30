@@ -173,15 +173,17 @@ export class SessionService {
    * omits `correctOption` from unanswered questions so the client can't read
    * the answer out of the network payload before submitting — it's only
    * revealed (via submitAnswer's response) once the student actually answers.
-   */
-  /**
-   * Includes the linked translation's text (via translationGroupId) for
-   * each session question. Even though the student-facing real-time toggle
-   * was dropped (Language is now a one-time Practice Setup choice, not an
-   * in-session control — see finalized requirement), keeping both languages
-   * here when a translation exists is harmless and future-proof; the
-   * frontend currently only ever renders the one matching the session's
-   * fixed language.
+   *
+   * Sends ONLY the language each question was actually allocated in
+   * (`sq.question.language`) — never a linked translation's text, even when
+   * one exists. Language is a one-time Practice Setup choice, not an
+   * in-session toggle (finalized requirement); a previous version of this
+   * method attached the linked translation "for future-proofing", but the
+   * frontend's language fallback (`content.TA ?? content.EN`) unconditionally
+   * preferred Tamil whenever both were present — so a student who chose
+   * English still saw Tamil questions the moment a Tamil translation existed
+   * for that question. Sending only the allocated language removes the
+   * possibility of that mismatch entirely.
    */
   async getSessionForStudent(sessionId: string) {
     const session = await prisma.quizSession.findUniqueOrThrow({
@@ -194,27 +196,12 @@ export class SessionService {
       },
     });
 
-    // One batched lookup for every linked translation this session touches,
-    // rather than a query per question.
-    const groupIds = session.questions.map((sq) => sq.question.translationGroupId).filter((id): id is string => !!id);
-    const linked = groupIds.length
-      ? await prisma.question.findMany({ where: { translationGroupId: { in: groupIds } } })
-      : [];
-    const byGroup = new Map<string, typeof linked>();
-    for (const q of linked) {
-      if (!q.translationGroupId) continue;
-      byGroup.set(q.translationGroupId, [...(byGroup.get(q.translationGroupId) ?? []), q]);
-    }
-
     return {
       id: session.id,
       mode: session.mode,
       status: session.status,
       totalQuestions: session.totalQuestions,
       questions: session.questions.map((sq) => {
-        const group = sq.question.translationGroupId ? byGroup.get(sq.question.translationGroupId) : undefined;
-        const otherLangRow = group?.find((q) => q.language !== sq.question.language);
-
         return {
           sequenceNumber: sq.sequenceNumber,
           questionId: sq.questionId,
@@ -225,9 +212,9 @@ export class SessionService {
           category: sq.question.category,
           // correctOption intentionally omitted until answered=true
           correctOption: sq.answered ? sq.question.correctOption : null,
-          // Per-language display text. `language` names which key this
-          // session question was originally allocated in (TA or EN) — the
-          // OTHER key is only present when a linked translation exists yet.
+          // Only ever the ONE language this question was allocated in — see
+          // the method docstring for why the linked translation is
+          // deliberately NOT included here.
           content: {
             [sq.question.language]: {
               questionText: sq.question.questionText,
@@ -236,17 +223,6 @@ export class SessionService {
               optionC: sq.question.optionC,
               optionD: sq.question.optionD,
             },
-            ...(otherLangRow
-              ? {
-                  [otherLangRow.language]: {
-                    questionText: otherLangRow.questionText,
-                    optionA: otherLangRow.optionA,
-                    optionB: otherLangRow.optionB,
-                    optionC: otherLangRow.optionC,
-                    optionD: otherLangRow.optionD,
-                  },
-                }
-              : {}),
           },
         };
       }),
