@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { adminFetch } from '../../../lib/admin-fetch';
 import { ExamTaxonomyPicker, TaxonomyValue } from '../../../components/ExamTaxonomyPicker';
@@ -45,6 +45,8 @@ export default function AdminQuestionsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pendingAiCount, setPendingAiCount] = useState(0);
+  const [classifying, setClassifying] = useState<{ done: number; total: number; stopped: boolean } | null>(null);
+  const stopRequestedRef = useRef(false);
   const PAGE_SIZE = 20;
 
   const [showForm, setShowForm] = useState(false);
@@ -218,7 +220,7 @@ export default function AdminQuestionsPage() {
     loadPendingAiCount();
   }
 
-  async function bulkAction(action: 'bulk-publish' | 'bulk-disable' | 'bulk-classify' | 'bulk-delete' | 'bulk-force-delete') {
+  async function bulkAction(action: 'bulk-publish' | 'bulk-disable' | 'bulk-delete' | 'bulk-force-delete') {
     if (selected.size === 0) return;
     if (action === 'bulk-delete' && !confirm(`Delete ${selected.size} question(s)? This cannot be undone.`)) return;
     if (
@@ -247,13 +249,56 @@ export default function AdminQuestionsPage() {
       if (body.disabledInstead > 0) {
         alert(`${body.count} question(s) deleted. ${body.disabledInstead} question(s) already have student answer history, so they were disabled instead (can't be deleted without corrupting that student's stats).`);
       }
-    } else if (action === 'bulk-classify') {
-      const body = await res.json();
-      alert(
-        `Classified ${body.processed} question(s): ${body.autoPublished} auto-published (high confidence), ${body.needsReview} sent to Needs Review.` +
-          (body.failed > 0 ? ` ${body.failed} FAILED to classify (Gemini API error — check Render logs; nothing was changed for these, they still show no Difficulty).` : ''),
-      );
     }
+    loadQuestions();
+    loadPendingAiCount();
+  }
+
+  /**
+   * Classifies the selected questions ONE AT A TIME from the frontend
+   * (instead of one big blocking backend call) so the admin gets: a live
+   * "N of M" progress readout, AND a real Stop button — the loop checks
+   * stopRequestedRef before starting each question, so pressing Stop takes
+   * effect immediately after whichever call is currently in flight
+   * finishes (already-classified questions stay classified; the rest are
+   * simply left untouched, exactly as if they'd never been selected).
+   */
+  async function classifySelected() {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    stopRequestedRef.current = false;
+    setClassifying({ done: 0, total: ids.length, stopped: false });
+
+    let autoPublished = 0;
+    let needsReview = 0;
+    let failed = 0;
+    let stoppedEarly = false;
+
+    for (let i = 0; i < ids.length; i++) {
+      if (stopRequestedRef.current) {
+        stoppedEarly = true;
+        break;
+      }
+      try {
+        const res = await adminFetch(`/admin/questions/${ids[i]}/classify`, { method: 'POST' });
+        if (res.ok) {
+          const body = await res.json();
+          body.autoPublished ? autoPublished++ : needsReview++;
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
+      }
+      setClassifying((c) => (c ? { ...c, done: i + 1 } : c));
+    }
+
+    setClassifying(null);
+    alert(
+      `Classified ${autoPublished + needsReview + failed} of ${ids.length} question(s)${stoppedEarly ? ' (stopped early)' : ''}: ` +
+        `${autoPublished} auto-published (high confidence), ${needsReview} sent to Needs Review.` +
+        (failed > 0 ? ` ${failed} FAILED (Gemini API error — check Render logs; nothing changed for these, they still show no Difficulty).` : ''),
+    );
     loadQuestions();
     loadPendingAiCount();
   }
@@ -399,15 +444,32 @@ export default function AdminQuestionsPage() {
       {selected.size > 0 && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#f1f5f9', padding: 10, borderRadius: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: '#334155' }}>{selected.size} selected</span>
-          <button onClick={() => bulkAction('bulk-classify')} style={{ fontSize: 12, padding: '6px 12px' }}>Classify Selected with AI</button>
-          <button onClick={() => bulkSetDifficulty('MEDIUM')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Medium</button>
-          <button onClick={() => bulkSetDifficulty('HARD')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Hard</button>
-          <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
-          <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
-          <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
-          <button onClick={() => bulkAction('bulk-force-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#fff', background: '#dc2626', border: '1px solid #dc2626', borderRadius: 4 }}>
-            🧪 Force Delete (QA only)
-          </button>
+
+          {classifying ? (
+            <>
+              <span style={{ fontSize: 13, color: '#0f172a', fontWeight: 600 }}>
+                ⏳ Classifying... ({classifying.done} of {classifying.total})
+              </span>
+              <button
+                onClick={() => (stopRequestedRef.current = true)}
+                style={{ fontSize: 12, padding: '6px 12px', color: '#fff', background: '#dc2626', border: '1px solid #dc2626', borderRadius: 4 }}
+              >
+                ⏹ Stop
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={classifySelected} style={{ fontSize: 12, padding: '6px 12px' }}>Classify Selected with AI</button>
+              <button onClick={() => bulkSetDifficulty('MEDIUM')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Medium</button>
+              <button onClick={() => bulkSetDifficulty('HARD')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Hard</button>
+              <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
+              <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
+              <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
+              <button onClick={() => bulkAction('bulk-force-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#fff', background: '#dc2626', border: '1px solid #dc2626', borderRadius: 4 }}>
+                🧪 Force Delete (QA only)
+              </button>
+            </>
+          )}
         </div>
       )}
 
