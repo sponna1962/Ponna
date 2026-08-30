@@ -187,7 +187,7 @@ export class QuestionService {
     });
 
     const [authorities, categories, subCategories]: [
-      { id: string; name: string; purpose: { name: string } }[],
+      { id: string; name: string; purpose: { name: string } | null }[],
       { id: string; name: string }[],
       { id: string; name: string }[],
     ] = await Promise.all([
@@ -213,7 +213,7 @@ export class QuestionService {
       if (!rowsByKey.has(key)) {
         rowsByKey.set(key, {
           authorityName: authority?.name ?? '(no authority)',
-          purposeName: authority?.purpose.name ?? '',
+          purposeName: authority?.purpose?.name ?? '',
           categoryName: g.categoryId ? (categoryById.get(g.categoryId) ?? '(unknown)') : '—',
           subCategoryName: g.subCategoryId ? (subCategoryById.get(g.subCategoryId) ?? '(unknown)') : '—',
           published: 0,
