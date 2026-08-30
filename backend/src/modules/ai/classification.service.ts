@@ -33,9 +33,16 @@ export class ClassificationService {
    * Everything else (400 bad request, 401/403 invalid key, billing
    * depleted) fails immediately — retrying those would just waste time and
    * API calls without ever succeeding.
+   *
+   * Kept deliberately short (1 retry, 2s wait) — a bulk "Classify Selected"
+   * run processes many questions one at a time, so a long per-question
+   * retry ladder here multiplies into a very slow overall run. A quick
+   * single retry catches most momentary blips; sustained overload is
+   * handled by falling back to a different model instead (see below), not
+   * by waiting longer on the same one.
    */
-  private async fetchWithRetry(url: string, init: RequestInit, maxAttempts = 3): Promise<Response> {
-    const delaysMs = [2000, 5000, 10000];
+  private async fetchWithRetry(url: string, init: RequestInit, maxAttempts = 2): Promise<Response> {
+    const delayMs = 2000;
     let lastResponse: Response | undefined;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -51,18 +58,19 @@ export class ClassificationService {
       }
 
       lastResponse = response;
-      await new Promise((r) => setTimeout(r, delaysMs[attempt] ?? 10000));
+      await new Promise((r) => setTimeout(r, delayMs));
     }
     return lastResponse!;
   }
 
   /**
-   * Tries the primary model (with its own 503/429 retries above); if it
-   * STILL fails with 503 after those retries — meaning the primary model
-   * itself is under sustained heavy load, not just a momentary blip — falls
-   * back to a different, confirmed-stable model rather than giving up.
-   * Non-503 failures (bad request, invalid key, billing) are NOT retried
-   * with the fallback model either — switching models can't fix those.
+   * Tries the primary model (with its own quick 503/429 retry above); if it
+   * STILL fails with 503 — meaning the primary model itself is under
+   * sustained heavy load, not just a momentary blip — falls back to a
+   * different, confirmed-stable model with a SINGLE attempt (no further
+   * retry there) to keep a bulk run moving. Non-503 failures (bad request,
+   * invalid key, billing) are NOT retried with the fallback model either —
+   * switching models can't fix those.
    */
   private async fetchWithFallback(prompt: string): Promise<Response> {
     const requestFor = (model: string) => ({
@@ -87,7 +95,7 @@ export class ClassificationService {
     }
 
     const fallback = requestFor(GEMINI_MODEL_FALLBACK);
-    return this.fetchWithRetry(fallback.url, fallback.init);
+    return this.fetchWithRetry(fallback.url, fallback.init, 1);
   }
 
   /**
