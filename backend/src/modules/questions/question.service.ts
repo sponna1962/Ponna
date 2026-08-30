@@ -182,7 +182,7 @@ export class QuestionService {
    */
   async getTaxonomyStats() {
     const grouped = await prisma.question.groupBy({
-      by: ['authorityId', 'categoryId', 'subCategoryId', 'status'],
+      by: ['authorityId', 'categoryId', 'subCategoryId', 'status', 'language'],
       _count: { _all: true },
     });
 
@@ -200,11 +200,25 @@ export class QuestionService {
     const subCategoryById = new Map(subCategories.map((s) => [s.id, s.name]));
 
     // One row per unique (authority, category, subCategory) triple, with a
-    // count per status — groupBy gives us one row per (triple, status)
-    // combination, so we fold those together here.
+    // count per status AND per language — groupBy gives us one row per
+    // (triple, status, language) combination, so we fold those together
+    // here. Status and language are independent breakdowns of the same
+    // `total`, not crossed with each other (a row's `ta`/`en` count is
+    // regardless of status, matching how `total` is regardless of language).
     const rowsByKey = new Map<
       string,
-      { authorityName: string; purposeName: string; categoryName: string; subCategoryName: string; published: number; draft: number; disabled: number; total: number }
+      {
+        authorityName: string;
+        purposeName: string;
+        categoryName: string;
+        subCategoryName: string;
+        published: number;
+        draft: number;
+        disabled: number;
+        ta: number;
+        en: number;
+        total: number;
+      }
     >();
 
     for (const g of grouped) {
@@ -219,6 +233,8 @@ export class QuestionService {
           published: 0,
           draft: 0,
           disabled: 0,
+          ta: 0,
+          en: 0,
           total: 0,
         });
       }
@@ -227,14 +243,23 @@ export class QuestionService {
       if (g.status === QuestionStatus.PUBLISHED) row.published += count;
       else if (g.status === QuestionStatus.DRAFT) row.draft += count;
       else if (g.status === QuestionStatus.DISABLED) row.disabled += count;
+      if (g.language === Language.TA) row.ta += count;
+      else if (g.language === Language.EN) row.en += count;
       row.total += count;
     }
 
     const rows = [...rowsByKey.values()].sort((a, b) => a.authorityName.localeCompare(b.authorityName) || a.categoryName.localeCompare(b.categoryName) || a.subCategoryName.localeCompare(b.subCategoryName));
 
     const grandTotal = rows.reduce(
-      (acc, r) => ({ published: acc.published + r.published, draft: acc.draft + r.draft, disabled: acc.disabled + r.disabled, total: acc.total + r.total }),
-      { published: 0, draft: 0, disabled: 0, total: 0 },
+      (acc, r) => ({
+        published: acc.published + r.published,
+        draft: acc.draft + r.draft,
+        disabled: acc.disabled + r.disabled,
+        ta: acc.ta + r.ta,
+        en: acc.en + r.en,
+        total: acc.total + r.total,
+      }),
+      { published: 0, draft: 0, disabled: 0, ta: 0, en: 0, total: 0 },
     );
 
     // Per-authority totals too — this is what the bar chart plots.

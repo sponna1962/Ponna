@@ -42,6 +42,7 @@ export default function AdminQuestionsPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(emptyTaxonomy);
+  const [languageFilter, setLanguageFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pendingAiCount, setPendingAiCount] = useState(0);
@@ -72,6 +73,7 @@ export default function AdminQuestionsPage() {
     if (taxonomyFilter.authorityId) params.set('authorityId', taxonomyFilter.authorityId);
     if (taxonomyFilter.categoryId) params.set('categoryId', taxonomyFilter.categoryId);
     if (taxonomyFilter.subCategoryId) params.set('subCategoryId', taxonomyFilter.subCategoryId);
+    if (languageFilter) params.set('language', languageFilter);
     const res = await adminFetch(`/admin/questions?${params.toString()}`);
     const data = await res.json();
     setQuestions(data.items ?? []);
@@ -92,7 +94,7 @@ export default function AdminQuestionsPage() {
     loadQuestions();
     loadPendingAiCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, page, taxonomyFilter]);
+  }, [statusFilter, page, taxonomyFilter, languageFilter]);
 
   // Any filter change (status/taxonomy) should snap back to page 1 — staying
   // on e.g. page 3 of a now-much-smaller filtered result shows an empty list.
@@ -102,6 +104,10 @@ export default function AdminQuestionsPage() {
   }
   function updateStatusFilter(s: string) {
     setStatusFilter(s);
+    setPage(1);
+  }
+  function updateLanguageFilter(l: string) {
+    setLanguageFilter(l);
     setPage(1);
   }
 
@@ -437,8 +443,16 @@ export default function AdminQuestionsPage() {
 
       {/* Authority → Category → Sub-Category filter — narrows the list down
           to one exam tier instead of scrolling through everything. */}
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <ExamTaxonomyPicker value={taxonomyFilter} onChange={updateTaxonomyFilter} />
+        <label style={{ fontSize: 13 }}>
+          Language:{' '}
+          <select value={languageFilter} onChange={(e) => updateLanguageFilter(e.target.value)}>
+            <option value="">— (எல்லாம்)</option>
+            <option value="TA">தமிழ்</option>
+            <option value="EN">English</option>
+          </select>
+        </label>
       </div>
 
       {selected.size > 0 && (

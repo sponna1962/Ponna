@@ -18,12 +18,14 @@ type StatsRow = {
   published: number;
   draft: number;
   disabled: number;
+  ta: number;
+  en: number;
   total: number;
 };
 
 type Stats = {
   rows: StatsRow[];
-  grandTotal: { published: number; draft: number; disabled: number; total: number };
+  grandTotal: { published: number; draft: number; disabled: number; ta: number; en: number; total: number };
   authorityTotals: { name: string; total: number }[];
 };
 
@@ -63,6 +65,8 @@ export default function QuestionBankStatsPage() {
             <StatCard label="Published" value={stats.grandTotal.published} color="#16a34a" />
             <StatCard label="Draft" value={stats.grandTotal.draft} color="#64748b" />
             <StatCard label="Disabled" value={stats.grandTotal.disabled} color="#dc2626" />
+            <StatCard label="தமிழ் (Tamil)" value={stats.grandTotal.ta} color="#7c3aed" />
+            <StatCard label="English" value={stats.grandTotal.en} color="#0891b2" />
           </div>
 
           {/* Bar chart — total questions per Exam Authority */}
@@ -103,6 +107,8 @@ export default function QuestionBankStatsPage() {
                 <th style={{ padding: 10, textAlign: 'right' }}>Published</th>
                 <th style={{ padding: 10, textAlign: 'right' }}>Draft</th>
                 <th style={{ padding: 10, textAlign: 'right' }}>Disabled</th>
+                <th style={{ padding: 10, textAlign: 'right' }}>தமிழ்</th>
+                <th style={{ padding: 10, textAlign: 'right' }}>English</th>
                 <th style={{ padding: 10, textAlign: 'right' }}>மொத்தம்</th>
               </tr>
             </thead>
@@ -115,6 +121,8 @@ export default function QuestionBankStatsPage() {
                   <td style={{ padding: 10, textAlign: 'right', color: '#16a34a' }}>{r.published}</td>
                   <td style={{ padding: 10, textAlign: 'right', color: '#64748b' }}>{r.draft}</td>
                   <td style={{ padding: 10, textAlign: 'right', color: '#dc2626' }}>{r.disabled}</td>
+                  <td style={{ padding: 10, textAlign: 'right', color: '#7c3aed' }}>{r.ta}</td>
+                  <td style={{ padding: 10, textAlign: 'right', color: '#0891b2' }}>{r.en}</td>
                   <td style={{ padding: 10, textAlign: 'right', fontWeight: 600 }}>{r.total}</td>
                 </tr>
               ))}
@@ -127,6 +135,8 @@ export default function QuestionBankStatsPage() {
                 <td style={{ padding: 10, textAlign: 'right', color: '#16a34a' }}>{stats.grandTotal.published}</td>
                 <td style={{ padding: 10, textAlign: 'right', color: '#64748b' }}>{stats.grandTotal.draft}</td>
                 <td style={{ padding: 10, textAlign: 'right', color: '#dc2626' }}>{stats.grandTotal.disabled}</td>
+                <td style={{ padding: 10, textAlign: 'right', color: '#7c3aed' }}>{stats.grandTotal.ta}</td>
+                <td style={{ padding: 10, textAlign: 'right', color: '#0891b2' }}>{stats.grandTotal.en}</td>
                 <td style={{ padding: 10, textAlign: 'right' }}>{stats.grandTotal.total}</td>
               </tr>
             </tfoot>
