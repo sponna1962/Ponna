@@ -191,7 +191,15 @@ async function main() {
   await prisma.plan.upsert({
     where: { name: 'Free' },
     create: { name: 'Free', isFree: true, dailyLimit: 5, active: true, sortOrder: 0 },
-    update: { dailyLimit: 5, sortOrder: 0 },
+    // isFree explicitly re-asserted here too (not just in create) — this
+    // row pre-dates the isFree column (from before the Annual Plan
+    // redesign), so the schema migration that added the column defaulted
+    // it to false on the existing row, and every deploy since only patched
+    // dailyLimit/sortOrder without ever correcting it. That silently made
+    // the Free plan look like a "paid" plan everywhere isFree is checked —
+    // e.g. it showed up in "Active Plans" with its internal +100-year
+    // placeholder expiry. Self-heals on the next deploy now.
+    update: { isFree: true, dailyLimit: 5, sortOrder: 0 },
   });
 
   // Legacy Plan 20 / Plan 50 (pre-Annual-Plan model) — finalized requirement

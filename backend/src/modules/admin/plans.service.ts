@@ -49,8 +49,8 @@ export class PlansService {
         sortOrder: true,
         // Included so the frontend can build a "Practice X, Y, Z" description
         // straight from real scope data — never by matching on the Plan's name.
-        purpose: { select: { name: true } },
-        authorityScopes: { select: { authority: { select: { name: true } } } },
+        purpose: { select: { name: true, authorities: { select: { name: true } } } },
+        authorityScopes: { select: { authority: { select: { name: true, categories: { select: { name: true } } } } } },
       },
       orderBy: { sortOrder: 'asc' },
     });

@@ -37,8 +37,8 @@ type Plan = {
   launchPrice: string | null;
   active: boolean;
   isFree: boolean;
-  purpose: { name: string } | null;
-  authorityScopes: { authority: { name: string } }[];
+  purpose: { name: string; authorities: { name: string }[] } | null;
+  authorityScopes: { authority: { name: string; categories: { name: string }[] } }[];
 };
 
 type ActiveSubscription = {
@@ -57,7 +57,7 @@ export default function PlansPage() {
 }
 
 function PlansPageInner() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const searchParams = useSearchParams();
   const highlightPlanId = searchParams.get('highlight');
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -133,9 +133,31 @@ function PlansPageInner() {
   }
 
   function describeScope(p: Plan): string {
-    if (p.purpose) return p.purpose.name;
-    if (p.authorityScopes.length > 0) return p.authorityScopes.map((s) => s.authority.name).join(' + ');
+    // Whole-Purpose plan (Competitive/Employment) — list the real
+    // Authorities under it, straight from data, never hardcoded.
+    if (p.purpose) return p.purpose.authorities.map((a) => a.name).join(', ');
+
+    if (p.authorityScopes.length > 1) {
+      // Multi-authority plan (JEE) — the authorities themselves ARE the
+      // description (JEE Main + JEE Advanced).
+      return p.authorityScopes.map((s) => s.authority.name).join(' + ');
+    }
+    if (p.authorityScopes.length === 1) {
+      const authority = p.authorityScopes[0].authority;
+      // Single-authority plan WITH known Categories (NEET → subjects,
+      // TNTET → papers) — describe by those; otherwise (no categories
+      // seeded yet for this exam) just the exam name itself (CLAT, BITSAT...).
+      if (authority.categories.length > 0) return authority.categories.map((c) => c.name).join(' + ');
+      return authority.name;
+    }
     return '';
+  }
+
+  /** "NEET Annual Plan" -> "Get NEET Plan" / "NEET திட்டம் வாங்கவும்" — built
+   * from the Plan's own name (data), never a hardcoded per-plan mapping. */
+  function buyButtonLabel(p: Plan): string {
+    const shortName = p.name.replace(/ Annual Plan$/i, '').trim();
+    return lang === 'ta' ? `${shortName} திட்டம் வாங்கவும்` : `Get ${shortName} Plan`;
   }
 
   const activePlanIds = new Set(activeSubs.map((s) => s.planId));
@@ -161,7 +183,7 @@ function PlansPageInner() {
           {/* Free — always available, never a Buy button, and never listed
               among "Active Plans" (it isn't a purchase). */}
           {freePlan && (
-            <PlanCard title={freePlan.name} description={t.plans.freeDesc} action={<GhostButton href="/quiz">{t.plans.startPractising}</GhostButton>} />
+            <PlanCard title={freePlan.name} description={t.plans.freeDesc} action={<GhostButton href="/quiz">{t.plans.practiceNow}</GhostButton>} />
           )}
 
           {activeSubs.length > 0 && (
@@ -194,7 +216,7 @@ function PlansPageInner() {
                       disabled={loadingPlan === p.id}
                       style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600 }}
                     >
-                      {loadingPlan === p.id ? '…' : t.plans.buyAnnualPlan}
+                      {loadingPlan === p.id ? '…' : buyButtonLabel(p)}
                     </button>
                   }
                 />
