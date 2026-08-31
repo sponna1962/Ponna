@@ -36,14 +36,19 @@ type Plan = {
 export default function PlansPage() {
   const { t } = useLanguage();
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoaded, setPlansLoaded] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     studentFetch('/plans')
-      .then((r) => r.json())
-      .then(setPlans)
-      .catch(() => {});
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Failed to load plans (HTTP ${r.status})`);
+        return r.json();
+      })
+      .then((data) => setPlans(Array.isArray(data) ? data : []))
+      .catch((err) => setError(err.message ?? 'Failed to load plans'))
+      .finally(() => setPlansLoaded(true));
   }, []);
 
   async function buy(planId: string) {
@@ -103,6 +108,11 @@ export default function PlansPage() {
         </div>
         <LanguageToggle />
       </div>
+
+      {!plansLoaded && <p style={{ color: '#64748b', fontSize: 13 }}>Loading plans…</p>}
+      {plansLoaded && plans.length === 0 && !error && (
+        <p style={{ color: '#94a3b8', fontSize: 13 }}>No plans available right now.</p>
+      )}
 
       {plans.filter((p) => p.isFree).map((p) => (
         <PlanCard key={p.id} title={p.name} description={t.plans.freeDesc} />
