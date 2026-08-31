@@ -29,19 +29,94 @@ type ActiveSubscription = {
 
 export default function HomePage() {
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
+  // Just enough of Profile to decide which login-method icon to show — not
+  // used for anything else here (full Profile lives on its own page).
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   useEffect(() => {
     studentFetch('/students/me/subscriptions')
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setActiveSubs(Array.isArray(data) ? data : []))
       .catch(() => setActiveSubs([]));
+
+    studentFetch('/students/me/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setLoginMethod(data?.phone ? 'phone' : data?.email ? 'google' : null))
+      .catch(() => {});
   }, []);
+
+  function logout() {
+    localStorage.removeItem('ponna_student_token');
+    window.location.href = '/';
+  }
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
-        <StudentMenu />
-        <strong style={{ fontSize: 16 }}>PONNA.in</strong>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <StudentMenu />
+          <strong style={{ fontSize: 16 }}>PONNA.in</strong>
+        </div>
+
+        {/* Small account indicator — shows HOW this student is logged in
+            (Google vs Phone), and doubles as the Logout control right here
+            (in addition to the ☰ menu's Logout, for a one-tap option from
+            the very first screen). Purely a display + logout affordance —
+            never a "click to log in" control, since seeing it at all means
+            the student already IS logged in. */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setAccountMenuOpen((o) => !o)}
+            aria-label="Account"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              border: '1px solid #cbd5e1',
+              background: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: 16,
+            }}
+          >
+            {loginMethod === 'google' ? <GoogleIcon /> : '📱'}
+          </button>
+
+          {accountMenuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 44,
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: 8,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                minWidth: 140,
+                zIndex: 10,
+              }}
+            >
+              <button
+                onClick={logout}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'none',
+                  border: 'none',
+                  textAlign: 'left',
+                  fontSize: 14,
+                  color: '#dc2626',
+                  cursor: 'pointer',
+                }}
+              >
+                🚪 Logout
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
@@ -97,5 +172,16 @@ export default function HomePage() {
         </a>
       </div>
     </main>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.92c1.7-1.57 2.68-3.88 2.68-6.64z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.92-2.27c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.34C2.44 15.98 5.48 18 9 18z" />
+      <path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.28-1.11-.28-1.71s.1-1.17.28-1.71V4.95H.96A8.996 8.996 0 000 9c0 1.45.35 2.83.96 4.05l3.01-2.34z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z" />
+    </svg>
   );
 }
