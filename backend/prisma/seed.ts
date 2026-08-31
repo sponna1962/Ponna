@@ -190,24 +190,35 @@ async function main() {
   // of their active paid Plans. Found by isFree, never by a hardcoded id/name.
   await prisma.plan.upsert({
     where: { name: 'Free' },
-    create: { name: 'Free', isFree: true, dailyLimit: 5, active: true },
-    update: { dailyLimit: 5 },
+    create: { name: 'Free', isFree: true, dailyLimit: 5, active: true, sortOrder: 0 },
+    update: { dailyLimit: 5, sortOrder: 0 },
   });
 
-  async function seedPurposePlan(name: string, purposeId: string, regularPrice: number, launchPrice: number) {
+  // Legacy Plan 20 / Plan 50 (pre-Annual-Plan model) — finalized requirement
+  // is that these are no longer active products, not merely hidden from the
+  // frontend. Deactivated rather than deleted: any historical Subscription
+  // rows referencing them (from before this redesign) must stay intact for
+  // that student's purchase history, but the plan itself must never be
+  // purchasable or shown again.
+  await prisma.plan.updateMany({
+    where: { name: { in: ['Plan 20', 'Plan 50'] } },
+    data: { active: false },
+  });
+
+  async function seedPurposePlan(name: string, purposeId: string, regularPrice: number, launchPrice: number, sortOrder: number) {
     const plan = await prisma.plan.upsert({
       where: { name },
-      create: { name, purposeId, cycleDays: 365, regularPrice, launchPrice, active: true },
-      update: { purposeId, cycleDays: 365, regularPrice, launchPrice },
+      create: { name, purposeId, cycleDays: 365, regularPrice, launchPrice, active: true, sortOrder },
+      update: { purposeId, cycleDays: 365, regularPrice, launchPrice, sortOrder },
     });
     return plan;
   }
 
-  async function seedAuthorityPlan(name: string, authorityIds: string[], regularPrice: number, launchPrice: number) {
+  async function seedAuthorityPlan(name: string, authorityIds: string[], regularPrice: number, launchPrice: number, sortOrder: number) {
     const plan = await prisma.plan.upsert({
       where: { name },
-      create: { name, cycleDays: 365, regularPrice, launchPrice, active: true },
-      update: { cycleDays: 365, regularPrice, launchPrice },
+      create: { name, cycleDays: 365, regularPrice, launchPrice, active: true, sortOrder },
+      update: { cycleDays: 365, regularPrice, launchPrice, sortOrder },
     });
     // Rebuild the scope links every run so removing an authority from the
     // list here correctly removes its access too, not just adding new ones.
@@ -225,26 +236,30 @@ async function main() {
   // Competitive / Employment — ONE plan covers the whole Purpose (TNPSC,
   // UPSC, SSC, Railway/RRB, Banking, TNUSRB, TRB, Other — including any
   // future Authority added under this Purpose, automatically).
-  await seedPurposePlan('Competitive / Employment Annual Plan', employmentPurpose.id, 2999, 999);
+  await seedPurposePlan('Competitive / Employment Annual Plan', employmentPurpose.id, 2999, 999, 1);
 
   // Higher Education / Entrance — exam-specific plans only (finalized
   // requirement: never a single Purpose-wide plan for this group).
-  await seedAuthorityPlan('NEET Annual Plan', [neet.id], 4999, 2999);
+  await seedAuthorityPlan('NEET Annual Plan', [neet.id], 4999, 2999, 2);
   await seedAuthorityPlan(
     'JEE Annual Plan',
     [entranceAuthorityIdByName['JEE Main'], entranceAuthorityIdByName['JEE Advanced']],
     4999,
     2999,
+    3,
   );
-  // "Other Entrance Exams" is a UI grouping only (finalized requirement) —
-  // each of these is its own separate commercial Plan underneath it.
-  for (const name of ['CUET UG', 'CLAT', 'BITSAT', 'IPMAT', 'NIFT Entrance', 'NID DAT', 'GATE']) {
-    await seedAuthorityPlan(`${name} Annual Plan`, [entranceAuthorityIdByName[name]], 3999, 1999);
-  }
-
   // Eligibility / Qualification — TNTET: one plan, Paper I/II stay practice
   // selections inside it, never separate paid products.
-  await seedAuthorityPlan('TNTET Annual Plan', [tntet.id], 2999, 1999);
+  await seedAuthorityPlan('TNTET Annual Plan', [tntet.id], 2999, 1999, 4);
+
+  // "Other Entrance Exams" is a UI grouping only (finalized requirement) —
+  // each of these is its own separate commercial Plan underneath it.
+  const otherEntranceOrder: Record<string, number> = {
+    'CUET UG': 5, CLAT: 6, BITSAT: 7, IPMAT: 8, 'NIFT Entrance': 9, 'NID DAT': 10, GATE: 11,
+  };
+  for (const name of ['CUET UG', 'CLAT', 'BITSAT', 'IPMAT', 'NIFT Entrance', 'NID DAT', 'GATE']) {
+    await seedAuthorityPlan(`${name} Annual Plan`, [entranceAuthorityIdByName[name]], 3999, 1999, otherEntranceOrder[name]);
+  }
 
   // Mark the QA/testing phone number as a Test Account — bypasses quota,
   // excluded from rankings. Safe to re-run: no-op if the user hasn't logged

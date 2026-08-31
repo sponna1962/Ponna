@@ -144,6 +144,11 @@ model Plan {
   cycleDays       Int?     // Paid plans: 365 (12 months from purchase/activation). Null for the FREE plan (no cycle concept, daily-only).
   active          Boolean  @default(true)
   isFree          Boolean  @default(false) // marks THE single global Free-practice fallback plan
+  // Deliberate display order on the student Plans page (finalized
+  // requirement — not database/alphabetical order). Admin/seed-set; the
+  // frontend never hardcodes plan names to decide ordering, only sorts by
+  // this number.
+  sortOrder       Int      @default(0)
 
   purposeId       String?
   purpose         ExamPurpose? @relation(fields: [purposeId], references: [id])

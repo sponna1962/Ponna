@@ -243,7 +243,15 @@ app.patch('/students/me/profile', requireStudentAuth, async (req: StudentAuthedR
 // Plan covers) aren't needed here yet — Phase 3 will expose those for the
 // "Choose Your Exams" flow.
 app.get('/plans', requireStudentAuth, async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json(await plansService.listActivePlansForStudent());
+});
+
+// GET /students/me/subscriptions — this student's currently-active paid
+// Subscriptions, for the "My Plans" page's Active Plans section.
+app.get('/students/me/subscriptions', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(await plansService.listActiveSubscriptionsForStudent(req.studentUserId!));
 });
 
 // POST /payments/create-order  { planId: string } — userId comes from the JWT

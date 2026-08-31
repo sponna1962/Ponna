@@ -38,8 +38,31 @@ export class PlansService {
   async listActivePlansForStudent() {
     return prisma.plan.findMany({
       where: { active: true },
-      select: { id: true, name: true, nameTa: true, regularPrice: true, launchPrice: true, isFree: true, active: true },
-      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        nameTa: true,
+        regularPrice: true,
+        launchPrice: true,
+        isFree: true,
+        active: true,
+        sortOrder: true,
+        // Included so the frontend can build a "Practice X, Y, Z" description
+        // straight from real scope data — never by matching on the Plan's name.
+        purpose: { select: { name: true } },
+        authorityScopes: { select: { authority: { select: { name: true } } } },
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  /** This student's currently-active (unexpired) paid Subscriptions, for
+   * the "My Plans" page's Active Plans section. */
+  async listActiveSubscriptionsForStudent(userId: string) {
+    return prisma.subscription.findMany({
+      where: { userId, status: 'ACTIVE', cycleEnd: { gt: new Date() }, plan: { isFree: false } },
+      include: { plan: { select: { id: true, name: true, nameTa: true } } },
+      orderBy: { cycleEnd: 'asc' },
     });
   }
 }
