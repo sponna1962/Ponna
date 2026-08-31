@@ -39,25 +39,9 @@ export default function HomePage() {
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <StudentMenu />
-          <strong style={{ fontSize: 16 }}>PONNA.in</strong>
-        </div>
-        <a
-          href="/login"
-          style={{
-            padding: '8px 18px',
-            borderRadius: 20,
-            border: '1px solid #cbd5e1',
-            color: '#0f172a',
-            fontSize: 14,
-            fontWeight: 600,
-            textDecoration: 'none',
-          }}
-        >
-          Login
-        </a>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
+        <StudentMenu />
+        <strong style={{ fontSize: 16 }}>PONNA.in</strong>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
