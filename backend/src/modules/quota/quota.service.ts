@@ -91,6 +91,34 @@ export class QuotaService {
    * selection is covered by an active paid Plan (genuinely unlimited, not
    * just "a big number" — never shown to the student as a number, Phase 3).
    */
+  /**
+   * Finds the ONE Plan in the catalog (regardless of whether this student
+   * owns it) whose scope matches this selection — used to point the "Get
+   * Annual Plan" button at the right plan (e.g. selecting NEET links to the
+   * NEET Annual Plan, not a generic Plans list). A whole-Purpose plan
+   * matches first; otherwise a Plan whose Authority scope is a superset of
+   * every selected Authority (covers JEE Main-only, Advanced-only, or both,
+   * all pointing at the same JEE Plan).
+   */
+  async findApplicablePlan(selections: AccessSelections) {
+    const purposePlan = await prisma.plan.findFirst({
+      where: { active: true, isFree: false, purposeId: selections.purposeId },
+    });
+    if (purposePlan) return purposePlan;
+
+    if (selections.allAuthorities || selections.authorities.length === 0) return null;
+
+    const candidates = await prisma.plan.findMany({
+      where: {
+        active: true,
+        isFree: false,
+        authorityScopes: { some: { authorityId: { in: selections.authorities.map((a) => a.authorityId) } } },
+      },
+      include: { authorityScopes: true },
+    });
+    return candidates.find((p) => selections.authorities.every((a) => p.authorityScopes.some((s) => s.authorityId === a.authorityId))) ?? null;
+  }
+
   async getRemainingQuota(userId: string, selections: AccessSelections): Promise<number> {
     if (await this.hasUnlimitedAccess(userId, selections)) {
       return Number.MAX_SAFE_INTEGER;

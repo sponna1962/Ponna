@@ -10,7 +10,7 @@ import multer from 'multer';
 import { SessionService } from './modules/quiz/session.service';
 import { PracticePreferenceService, InvalidSelectionError } from './modules/practice-preference/practice-preference.service';
 import { RankingService } from './modules/ranking/ranking.service';
-import { QuotaExceededError } from './modules/quota/quota.service';
+import { QuotaExceededError, QuotaService } from './modules/quota/quota.service';
 import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
 import { BulkUploadService } from './modules/questions/bulk-upload.service';
 import { TranslationService } from './modules/questions/translation.service';
@@ -52,6 +52,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const sessionService = new SessionService();
 const practicePreferenceService = new PracticePreferenceService();
+const quota = new QuotaService();
 const rankingService = new RankingService();
 const questionService = new QuestionService();
 const bulkUploadService = new BulkUploadService();
@@ -137,6 +138,33 @@ app.post('/students/me/practice-preference/available-languages', requireStudentA
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to check available languages' });
+  }
+});
+
+// GET /quiz/access-status — checks the student's saved Practice Preference
+// against their active paid Plans WITHOUT starting a session or touching
+// quota. Used by Practice Setup to show the Free-fallback upgrade prompt
+// ("Practice Free" / "Get Annual Plan") only when genuinely needed — this
+// prompt must never appear if an active paid Plan already covers the
+// selection (finalized requirement).
+app.get('/quiz/access-status', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const preference = await practicePreferenceService.get(req.studentUserId!);
+    if (!preference) {
+      res.json({ hasPreference: false });
+      return;
+    }
+    const selections = preference.selections as any;
+    const covered = await quota.hasUnlimitedAccess(req.studentUserId!, selections);
+    if (covered) {
+      res.json({ hasPreference: true, covered: true });
+      return;
+    }
+    const applicablePlan = await quota.findApplicablePlan(selections);
+    res.json({ hasPreference: true, covered: false, applicablePlanId: applicablePlan?.id ?? null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to check access status' });
   }
 });
 
