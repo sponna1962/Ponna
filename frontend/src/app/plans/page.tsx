@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
+import { apiUrl } from '../../lib/api-config';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 
@@ -39,12 +40,30 @@ export default function PlansPage() {
   const [plansLoaded, setPlansLoaded] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // TEMPORARY DEBUG — shows exactly what the /plans fetch actually hit and
+  // got back, directly on the page (no DevTools needed). Remove once the
+  // blank-page issue is confirmed fixed.
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   useEffect(() => {
+    const url = apiUrl('/plans');
     studentFetch('/plans')
       .then(async (r) => {
+        const text = await r.text();
+        let parsed: unknown = null;
+        let parseError: string | null = null;
+        try {
+          parsed = JSON.parse(text);
+        } catch (e: any) {
+          parseError = e.message;
+        }
+        setDebugInfo(
+          `URL: ${url}\nStatus: ${r.status}\nContent-Type: ${r.headers.get('content-type')}\n` +
+            (parseError ? `JSON parse FAILED: ${parseError}\nRaw body (first 300 chars): ${text.slice(0, 300)}` : `Parsed OK: ${JSON.stringify(parsed).slice(0, 300)}`),
+        );
         if (!r.ok) throw new Error(`Failed to load plans (HTTP ${r.status})`);
-        return r.json();
+        if (parseError) throw new Error(`Response was not valid JSON: ${parseError}`);
+        return parsed;
       })
       .then((data) => setPlans(Array.isArray(data) ? data : []))
       .catch((err) => setError(err.message ?? 'Failed to load plans'))
@@ -110,6 +129,12 @@ export default function PlansPage() {
       </div>
 
       {!plansLoaded && <p style={{ color: '#64748b', fontSize: 13 }}>Loading plans…</p>}
+
+      {debugInfo && (
+        <pre style={{ fontSize: 11, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: 8, marginBottom: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+          DEBUG — {debugInfo}
+        </pre>
+      )}
       {plansLoaded && plans.length === 0 && !error && (
         <p style={{ color: '#94a3b8', fontSize: 13 }}>No plans available right now.</p>
       )}
