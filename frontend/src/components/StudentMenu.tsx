@@ -18,11 +18,11 @@ export function StudentMenu() {
   }
 
   const items = [
-    { href: '/home', label: t.menu.home, icon: '🏠' },
     { href: '/quiz', label: t.menu.practice, icon: '📝' },
-    { href: '/dashboard', label: t.menu.dashboard, icon: '📊' },
     { href: '/plans', label: t.menu.plans, icon: '💳' },
+    { href: '/dashboard', label: t.menu.dashboard, icon: '📊' },
     { href: '/profile', label: t.menu.profile, icon: '👤' },
+    { href: '/help', label: t.menu.help, icon: '❓' },
   ];
 
   return (
