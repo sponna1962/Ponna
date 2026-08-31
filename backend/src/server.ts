@@ -574,9 +574,12 @@ app.post('/admin/questions/bulk-upload/confirm', requireStaffAuth, canEditQuesti
     );
 
     res.json({ batchId, inserted });
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    res.status(500).json({ error: 'Import failed' });
+    // Surface the real reason directly on the page — a bare "Import
+    // failed" with no detail meant every failure needed a trip to Render
+    // logs just to find out what actually broke.
+    res.status(500).json({ error: err.message ?? 'Import failed' });
   }
 });
 
