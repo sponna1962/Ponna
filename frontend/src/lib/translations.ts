@@ -18,6 +18,11 @@ export const translations = {
     },
     login: {
       title: 'உள்நுழையவும்',
+      continueWithGoogle: 'Google மூலம் தொடரவும்',
+      continueWithPhone: 'மொபைல் எண் மூலம் தொடரவும்',
+      or: 'அல்லது',
+      back: '← பின்செல்',
+      comingSoon: 'இது விரைவில் வரும்',
       phoneLabel: 'மொபைல் எண்',
       otpLabel: 'OTP',
       otpPlaceholder: '6-இலக்க OTP',
@@ -150,6 +155,11 @@ export const translations = {
     },
     login: {
       title: 'Log In',
+      continueWithGoogle: 'Continue with Google',
+      continueWithPhone: 'Continue with Phone',
+      or: 'or',
+      back: '← Back',
+      comingSoon: 'Coming soon',
       phoneLabel: 'Mobile Number',
       otpLabel: 'OTP',
       otpPlaceholder: '6-digit OTP',

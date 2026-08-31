@@ -7,14 +7,25 @@ import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { apiUrl } from '../../lib/api-config';
 
-// Login page implementing §4.1 (Account — mobile OTP-based login) using
-// Firebase Phone Auth. Firebase's client SDK sends/verifies the OTP directly
-// with Google's servers (via an invisible reCAPTCHA) — our backend is only
-// involved AFTER Firebase confirms the phone number, to verify that result
-// and issue our own session JWT (see student-auth.service.ts).
+// Login page — finalized decision: two passwordless methods only, Continue
+// with Google (primary) and Continue with Phone (secondary, existing
+// Firebase Phone OTP flow, unchanged below). No password field, no email
+// OTP/magic-link field anywhere — Email stays Profile information only,
+// never a login credential.
+//
+// DESIGN-ONLY STAGE (finalized instruction: show the Login screen design
+// before any backend authentication changes) — "Continue with Google" is
+// visually complete but not yet wired to Firebase's GoogleAuthProvider.
+// Wiring it for real requires backend account-linking work first (so a
+// student who already has a Phone-OTP account gets THAT account back when
+// they later sign in with the matching Google email, rather than a
+// duplicate) — that's the next phase, after this screen is approved.
+
+type Method = 'choose' | 'phone';
 
 export default function LoginPage() {
   const { t } = useLanguage();
+  const [method, setMethod] = useState<Method>('choose');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -73,46 +84,125 @@ export default function LoginPage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 400, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
         <h1 style={{ fontSize: 20, margin: 0 }}>{t.login.title}</h1>
         <LanguageToggle />
       </div>
 
-      <label style={{ display: 'block', fontSize: 14, marginBottom: 6 }}>{t.login.phoneLabel}</label>
-      <input
-        type="tel"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        disabled={otpSent}
-        placeholder="9876543210"
-        style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12 }}
-      />
+      {method === 'choose' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <button
+            onClick={() => setError(t.login.comingSoon)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              width: '100%',
+              padding: 14,
+              borderRadius: 8,
+              background: '#fff',
+              color: '#1f2937',
+              border: '1px solid #cbd5e1',
+              fontSize: 15,
+              fontWeight: 600,
+            }}
+          >
+            <GoogleIcon />
+            {t.login.continueWithGoogle}
+          </button>
 
-      {otpSent && (
-        <>
-          <label style={{ display: 'block', fontSize: 14, marginBottom: 6 }}>{t.login.otpLabel}</label>
-          <input
-            type="text"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            placeholder={t.login.otpPlaceholder}
-            style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12 }}
-          />
-        </>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', fontSize: 13 }}>
+            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+            {t.login.or}
+            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+          </div>
+
+          <button
+            onClick={() => {
+              setError(null);
+              setMethod('phone');
+            }}
+            style={{
+              width: '100%',
+              padding: 14,
+              borderRadius: 8,
+              background: '#0f172a',
+              color: '#fff',
+              border: 'none',
+              fontSize: 15,
+              fontWeight: 600,
+            }}
+          >
+            📱 {t.login.continueWithPhone}
+          </button>
+
+          {error && <p style={{ color: '#64748b', marginTop: 4, fontSize: 13, textAlign: 'center' }}>{error}</p>}
+        </div>
       )}
 
-      {/* Invisible reCAPTCHA anchor required by Firebase — renders nothing visible */}
-      <div ref={recaptchaContainerRef} />
+      {method === 'phone' && (
+        <>
+          <button
+            onClick={() => {
+              setMethod('choose');
+              setError(null);
+              setOtpSent(false);
+              setOtp('');
+            }}
+            style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 13, padding: 0, marginBottom: 16, cursor: 'pointer' }}
+          >
+            {t.login.back}
+          </button>
 
-      <button
-        onClick={otpSent ? verifyOtp : requestOtp}
-        disabled={loading || !phone}
-        style={{ width: '100%', padding: 14, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none' }}
-      >
-        {loading ? '…' : otpSent ? t.login.verify : t.login.sendOtp}
-      </button>
+          <label style={{ display: 'block', fontSize: 14, marginBottom: 6 }}>{t.login.phoneLabel}</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            disabled={otpSent}
+            placeholder="9876543210"
+            style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12, boxSizing: 'border-box' }}
+          />
 
-      {error && <p style={{ color: '#dc2626', marginTop: 12 }}>{error}</p>}
+          {otpSent && (
+            <>
+              <label style={{ display: 'block', fontSize: 14, marginBottom: 6 }}>{t.login.otpLabel}</label>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder={t.login.otpPlaceholder}
+                style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12, boxSizing: 'border-box' }}
+              />
+            </>
+          )}
+
+          {/* Invisible reCAPTCHA anchor required by Firebase — renders nothing visible */}
+          <div ref={recaptchaContainerRef} />
+
+          <button
+            onClick={otpSent ? verifyOtp : requestOtp}
+            disabled={loading || !phone}
+            style={{ width: '100%', padding: 14, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none' }}
+          >
+            {loading ? '…' : otpSent ? t.login.verify : t.login.sendOtp}
+          </button>
+
+          {error && <p style={{ color: '#dc2626', marginTop: 12 }}>{error}</p>}
+        </>
+      )}
     </main>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.92c1.7-1.57 2.68-3.88 2.68-6.64z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.92-2.27c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.34C2.44 15.98 5.48 18 9 18z" />
+      <path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.28-1.11-.28-1.71s.1-1.17.28-1.71V4.95H.96A8.996 8.996 0 000 9c0 1.45.35 2.83.96 4.05l3.01-2.34z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z" />
+    </svg>
   );
 }
