@@ -150,9 +150,18 @@ export class BulkUploadService {
     }
     for (const h of hashes) {
       const [hash, lang] = h.split(':');
-      const existing = await prisma.question.findFirst({ where: { contentHash: hash, language: lang as Language }, select: { id: true } });
+      // Include status/id in the reason so an admin can immediately tell
+      // WHERE the conflicting row actually is (Draft/Published/Disabled)
+      // instead of having to hunt across tabs — this is exactly the
+      // question that comes up after a bulk delete that only "soft
+      // deleted" (Disabled) some rows due to quiz-session history.
+      const existing = await prisma.question.findFirst({ where: { contentHash: hash, language: lang as Language }, select: { id: true, status: true } });
       if (existing) {
-        return { rowNumber, status: 'duplicate', reason: `Matches an existing question in the bank (${lang})` };
+        return {
+          rowNumber,
+          status: 'duplicate',
+          reason: `Matches an existing ${existing.status} question in the bank (${lang}, id: ${existing.id})`,
+        };
       }
     }
     hashes.forEach((h) => seenHashesInFile.add(h));
