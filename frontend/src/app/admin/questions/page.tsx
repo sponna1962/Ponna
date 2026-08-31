@@ -49,7 +49,7 @@ export default function AdminQuestionsPage() {
   const [pendingAiCount, setPendingAiCount] = useState(0);
   const [classifying, setClassifying] = useState<{ done: number; total: number; stopped: boolean } | null>(null);
   const stopRequestedRef = useRef(false);
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 50;
 
   const [showForm, setShowForm] = useState(false);
   const [ta, setTa] = useState(emptyLangFields);
@@ -64,8 +64,11 @@ export default function AdminQuestionsPage() {
   const [translating, setTranslating] = useState<'ta' | 'en' | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  async function loadQuestions() {
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  /** Builds the current filter as query params — shared by loadQuestions()
+   * (paginated) and selectAllMatchingFilter() (unpaginated ids) so they
+   * always agree on exactly what "matches" right now. */
+  function buildFilterParams(): URLSearchParams {
+    const params = new URLSearchParams();
     if (statusFilter === 'PENDING_AI') {
       params.set('noDifficultyOnly', 'true'); // every status included — this is the "Waiting for AI" view
     } else {
@@ -76,11 +79,29 @@ export default function AdminQuestionsPage() {
     if (taxonomyFilter.categoryId) params.set('categoryId', taxonomyFilter.categoryId);
     if (taxonomyFilter.subCategoryId) params.set('subCategoryId', taxonomyFilter.subCategoryId);
     if (languageFilter) params.set('language', languageFilter);
+    return params;
+  }
+
+  async function loadQuestions() {
+    const params = buildFilterParams();
+    params.set('page', String(page));
+    params.set('pageSize', String(PAGE_SIZE));
     const res = await adminFetch(`/admin/questions?${params.toString()}`);
     const data = await res.json();
     setQuestions(data.items ?? []);
     setTotal(data.total ?? 0);
     setSelected(new Set());
+  }
+
+  /** Selects every question matching the current filter — not just the
+   * ones on this page — so a bulk action (Classify, Set Difficulty,
+   * Publish...) can apply to all 499 "Waiting for AI" in one go instead of
+   * page by page. */
+  async function selectAllMatchingFilter() {
+    const params = buildFilterParams();
+    const res = await adminFetch(`/admin/questions/ids?${params.toString()}`);
+    const data = await res.json();
+    setSelected(new Set(data.ids ?? []));
   }
 
   /** Refreshes the "Waiting for AI (N)" tab's badge count, independent of
@@ -463,6 +484,16 @@ export default function AdminQuestionsPage() {
       {selected.size > 0 && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#f1f5f9', padding: 10, borderRadius: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: '#334155' }}>{selected.size} selected</span>
+
+          {/* Shown only when this page's rows are ALL selected AND more
+              matching rows exist beyond this page — offers to extend the
+              selection to everything matching the current filter, not just
+              what's visible right now. */}
+          {!classifying && selected.size === questions.length && total > questions.length && (
+            <button onClick={selectAllMatchingFilter} style={{ fontSize: 12, padding: '6px 12px', fontWeight: 600, color: '#1d4ed8', background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 4 }}>
+              Select all {total} matching this filter
+            </button>
+          )}
 
           {classifying ? (
             <>

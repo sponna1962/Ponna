@@ -355,6 +355,30 @@ app.get('/admin/questions', requireStaffAuth, async (req, res) => {
   }
 });
 
+// GET /admin/questions/ids — every id matching the current filter,
+// regardless of page, for the "Select All (N) Matching Filter" bulk-select
+// action. Same query params as GET /admin/questions, minus page/pageSize.
+app.get('/admin/questions/ids', requireStaffAuth, async (req, res) => {
+  try {
+    const { status, difficulty, authorityId, categoryId, subCategoryId, category, language, search, noDifficultyOnly } = req.query;
+    const ids = await questionService.listIds({
+      status: status as any,
+      difficulty: difficulty as any,
+      authorityId: authorityId as string,
+      categoryId: categoryId as string,
+      subCategoryId: subCategoryId as string,
+      category: category as any,
+      language: language as any,
+      search: search as string,
+      noDifficultyOnly: noDifficultyOnly === 'true',
+    });
+    res.json({ ids });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to list question ids' });
+  }
+});
+
 // GET /admin/questions/stats — Question Bank Stats dashboard: counts per
 // Authority → Category → Sub-Category, broken down by status.
 app.get('/admin/questions/stats', requireStaffAuth, async (_req, res) => {

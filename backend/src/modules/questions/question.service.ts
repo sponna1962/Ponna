@@ -295,6 +295,31 @@ export class QuestionService {
     return { rows, grandTotal, authorityTotals };
   }
 
+  /** Shared filter → Prisma `where` builder for both list() and listIds(), so
+   * "Select All Matching Filter" always matches exactly what's on screen. */
+  private buildWhere(filters: {
+    status?: QuestionStatus;
+    difficulty?: Difficulty;
+    authorityId?: string;
+    categoryId?: string;
+    subCategoryId?: string;
+    category?: QuestionCategory;
+    language?: Language;
+    search?: string;
+    noDifficultyOnly?: boolean;
+  }) {
+    return {
+      status: filters.noDifficultyOnly ? undefined : filters.status,
+      difficulty: filters.noDifficultyOnly ? null : filters.difficulty,
+      authorityId: filters.authorityId,
+      categoryId: filters.categoryId,
+      subCategoryId: filters.subCategoryId,
+      category: filters.category,
+      language: filters.language,
+      ...(filters.search ? { questionText: { contains: filters.search, mode: 'insensitive' as const } } : {}),
+    };
+  }
+
   async list(filters: {
     status?: QuestionStatus;
     difficulty?: Difficulty;
@@ -314,17 +339,7 @@ export class QuestionService {
   }) {
     const page = filters.page ?? 1;
     const pageSize = filters.pageSize ?? 20;
-
-    const where = {
-      status: filters.noDifficultyOnly ? undefined : filters.status,
-      difficulty: filters.noDifficultyOnly ? null : filters.difficulty,
-      authorityId: filters.authorityId,
-      categoryId: filters.categoryId,
-      subCategoryId: filters.subCategoryId,
-      category: filters.category,
-      language: filters.language,
-      ...(filters.search ? { questionText: { contains: filters.search, mode: 'insensitive' as const } } : {}),
-    };
+    const where = this.buildWhere(filters);
 
     const [items, total] = await Promise.all([
       prisma.question.findMany({
@@ -338,6 +353,25 @@ export class QuestionService {
     ]);
 
     return { items, total, page, pageSize };
+  }
+
+  /** Every question id matching the current filter — regardless of page —
+   * for the "Select All (N) Matching Filter" bulk-select action. IDs only
+   * (not full rows), so this stays cheap even for a large matching set. */
+  async listIds(filters: {
+    status?: QuestionStatus;
+    difficulty?: Difficulty;
+    authorityId?: string;
+    categoryId?: string;
+    subCategoryId?: string;
+    category?: QuestionCategory;
+    language?: Language;
+    search?: string;
+    noDifficultyOnly?: boolean;
+  }) {
+    const where = this.buildWhere(filters);
+    const rows = await prisma.question.findMany({ where, select: { id: true } });
+    return rows.map((r) => r.id);
   }
 
   /** Bulk actions for the admin panel's "select multiple, act once" flow. */
