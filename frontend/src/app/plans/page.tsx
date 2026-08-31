@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
@@ -8,10 +8,15 @@ import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 
 // Plan purchase page — the student-facing half of the payment loop. Calls
-// POST /payments/create-order to get a Razorpay order, then opens Razorpay's
-// checkout widget. The Subscription itself is NOT created here — that only
-// happens when Razorpay's webhook confirms payment (see payment.service.ts) —
-// this page just initiates the payment and shows a "processing" state after.
+// POST /payments/create-order with a planId to get a Razorpay order, then
+// opens Razorpay's checkout widget. The Subscription itself is NOT created
+// here — that only happens when Razorpay's webhook confirms payment (see
+// payment.service.ts) — this page just initiates the payment.
+//
+// Plans are dynamic now (Annual Plan redesign) — fetched from the backend,
+// not hardcoded. This is a functional placeholder pulling live Plan data;
+// the full card-based layout (Competitive/NEET/JEE/... with launch pricing,
+// "Choose Your Exams" flow) is Phase 3+.
 
 declare global {
   interface Window {
@@ -19,32 +24,42 @@ declare global {
   }
 }
 
-const PLANS = [
-  { code: 'PLAN_20', name: 'Plan 20' },
-  { code: 'PLAN_50', name: 'Plan 50' },
-] as const;
+type Plan = {
+  id: string;
+  name: string;
+  regularPrice: string | null;
+  launchPrice: string | null;
+  active: boolean;
+  isFree: boolean;
+};
 
 export default function PlansPage() {
   const { t } = useLanguage();
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function buy(planCode: string) {
+  useEffect(() => {
+    studentFetch('/plans')
+      .then((r) => r.json())
+      .then(setPlans)
+      .catch(() => {});
+  }, []);
+
+  async function buy(planId: string) {
     setError(null);
-    setLoadingPlan(planCode);
+    setLoadingPlan(planId);
 
     try {
       const res = await studentFetch('/payments/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planCode }),
+        body: JSON.stringify({ planId }),
       });
       if (!res.ok) {
         const body = await res.json();
         if (body.code === 'PROFILE_INCOMPLETE') {
           // Server-side gate (not just a UI nicety) — see payment.service.ts.
-          // Redirect to the same Profile page used for the Rank gate, with
-          // the same "?complete=1" flag so it shows the completion banner.
           window.location.href = '/profile?complete=1';
           return;
         }
@@ -89,24 +104,29 @@ export default function PlansPage() {
         <LanguageToggle />
       </div>
 
-      <PlanCard title={t.plans.free} description={t.plans.freeDesc} />
-
-      {PLANS.map((p) => (
-        <PlanCard
-          key={p.code}
-          title={p.name}
-          description={p.code === 'PLAN_20' ? t.plans.plan20Desc : t.plans.plan50Desc}
-          action={
-            <button
-              onClick={() => buy(p.code)}
-              disabled={loadingPlan === p.code}
-              style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600 }}
-            >
-              {loadingPlan === p.code ? '…' : t.plans.buy}
-            </button>
-          }
-        />
+      {plans.filter((p) => p.isFree).map((p) => (
+        <PlanCard key={p.id} title={p.name} description={t.plans.freeDesc} />
       ))}
+
+      {plans.filter((p) => !p.isFree && p.active).map((p) => {
+        const price = p.launchPrice ?? p.regularPrice;
+        return (
+          <PlanCard
+            key={p.id}
+            title={p.name}
+            description={price ? `₹${price} / year` : ''}
+            action={
+              <button
+                onClick={() => buy(p.id)}
+                disabled={loadingPlan === p.id}
+                style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600 }}
+              >
+                {loadingPlan === p.id ? '…' : t.plans.buy}
+              </button>
+            }
+          />
+        );
+      })}
 
       {error && <p style={{ color: '#dc2626', fontSize: 13, marginTop: 12 }}>{error}</p>}
     </main>

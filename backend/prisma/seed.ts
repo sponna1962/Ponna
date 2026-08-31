@@ -6,21 +6,9 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  await prisma.plan.upsert({
-    where: { code: 'FREE' },
-    create: { code: 'FREE', name: 'Free', dailyLimit: 5, cycleLimit: null },
-    update: {},
-  });
-  await prisma.plan.upsert({
-    where: { code: 'PLAN_20' },
-    create: { code: 'PLAN_20', name: 'Plan 20', dailyLimit: null, cycleLimit: 600, cycleDays: 30 },
-    update: {},
-  });
-  await prisma.plan.upsert({
-    where: { code: 'PLAN_50' },
-    create: { code: 'PLAN_50', name: 'Plan 50', dailyLimit: null, cycleLimit: 1500, cycleDays: 30 },
-    update: {},
-  });
+  // Plan seeding moved below — after the Exam Taxonomy is created, since
+  // paid Plans need real Purpose/Authority ids for their scope. See
+  // "Annual Plans" block near the end of this function.
 
   await prisma.platformSettings.upsert({
     where: { id: 'singleton' },
@@ -181,12 +169,14 @@ async function main() {
     'JEE Main': 'JEE',
     'JEE Advanced': 'JEE',
   };
+  const entranceAuthorityIdByName: Record<string, string> = {};
   for (const name of ['JEE Main', 'JEE Advanced', 'BITSAT', 'CUET UG', 'CLAT', 'IPMAT', 'NIFT Entrance', 'NID DAT', 'GATE']) {
     const authority = await seedAuthority(educationPurpose.id, name);
     await prisma.examAuthority.update({
       where: { id: authority.id },
       data: { difficultyEnabled: false, selectionGroup: selectionGroupByName[name] ?? null },
     });
+    entranceAuthorityIdByName[name] = authority.id;
   }
 
   // Eligibility / Qualification — TNTET: no "All Papers" option, Difficulty not applicable (finalized requirement §2, §4)
@@ -194,6 +184,67 @@ async function main() {
   await prisma.examAuthority.update({ where: { id: tntet.id }, data: { allowAllCategories: false, difficultyEnabled: false } });
   await seedCategory(tntet.id, 'Paper I', []);
   await seedCategory(tntet.id, 'Paper II', []);
+
+  // ── Annual Plans (finalized commercial model) ────────────────────────────
+  // Free fallback — used whenever a student's selection isn't covered by any
+  // of their active paid Plans. Found by isFree, never by a hardcoded id/name.
+  await prisma.plan.upsert({
+    where: { name: 'Free' },
+    create: { name: 'Free', isFree: true, dailyLimit: 5, active: true },
+    update: { dailyLimit: 5 },
+  });
+
+  async function seedPurposePlan(name: string, purposeId: string, regularPrice: number, launchPrice: number) {
+    const plan = await prisma.plan.upsert({
+      where: { name },
+      create: { name, purposeId, cycleDays: 365, regularPrice, launchPrice, active: true },
+      update: { purposeId, cycleDays: 365, regularPrice, launchPrice },
+    });
+    return plan;
+  }
+
+  async function seedAuthorityPlan(name: string, authorityIds: string[], regularPrice: number, launchPrice: number) {
+    const plan = await prisma.plan.upsert({
+      where: { name },
+      create: { name, cycleDays: 365, regularPrice, launchPrice, active: true },
+      update: { cycleDays: 365, regularPrice, launchPrice },
+    });
+    // Rebuild the scope links every run so removing an authority from the
+    // list here correctly removes its access too, not just adding new ones.
+    await prisma.planAuthorityScope.deleteMany({ where: { planId: plan.id } });
+    for (const authorityId of authorityIds) {
+      await prisma.planAuthorityScope.upsert({
+        where: { planId_authorityId: { planId: plan.id, authorityId } },
+        create: { planId: plan.id, authorityId },
+        update: {},
+      });
+    }
+    return plan;
+  }
+
+  // Competitive / Employment — ONE plan covers the whole Purpose (TNPSC,
+  // UPSC, SSC, Railway/RRB, Banking, TNUSRB, TRB, Other — including any
+  // future Authority added under this Purpose, automatically).
+  await seedPurposePlan('Competitive / Employment Annual Plan', employmentPurpose.id, 2999, 999);
+
+  // Higher Education / Entrance — exam-specific plans only (finalized
+  // requirement: never a single Purpose-wide plan for this group).
+  await seedAuthorityPlan('NEET Annual Plan', [neet.id], 4999, 2999);
+  await seedAuthorityPlan(
+    'JEE Annual Plan',
+    [entranceAuthorityIdByName['JEE Main'], entranceAuthorityIdByName['JEE Advanced']],
+    4999,
+    2999,
+  );
+  // "Other Entrance Exams" is a UI grouping only (finalized requirement) —
+  // each of these is its own separate commercial Plan underneath it.
+  for (const name of ['CUET UG', 'CLAT', 'BITSAT', 'IPMAT', 'NIFT Entrance', 'NID DAT', 'GATE']) {
+    await seedAuthorityPlan(`${name} Annual Plan`, [entranceAuthorityIdByName[name]], 3999, 1999);
+  }
+
+  // Eligibility / Qualification — TNTET: one plan, Paper I/II stay practice
+  // selections inside it, never separate paid products.
+  await seedAuthorityPlan('TNTET Annual Plan', [tntet.id], 2999, 1999);
 
   // Mark the QA/testing phone number as a Test Account — bypasses quota,
   // excluded from rankings. Safe to re-run: no-op if the user hasn't logged

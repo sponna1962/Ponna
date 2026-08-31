@@ -43,7 +43,6 @@ export class ProfileService {
       preparingFor: user.preparingFor,
       preferredLang: user.preferredLang,
       profileComplete: isProfileComplete(user),
-      planCode: activeSub?.plan.code ?? 'FREE',
       planName: activeSub?.plan.name ?? 'Free',
       planExpiresAt: activeSub?.cycleEnd ?? null,
     };

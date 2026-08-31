@@ -114,28 +114,67 @@ model StaffUser {
 // PLANS & SUBSCRIPTIONS  (§5 Plans & Quota)
 // ─────────────────────────────────────────────────────────
 
-enum PlanCode {
-  FREE
-  PLAN_20
-  PLAN_50
-}
-
+// Plans are now fully dynamic/admin-configurable (finalized requirement) —
+// no hardcoded plan codes. A Plan's SCOPE (which exams it grants access to)
+// is set exactly one of two ways:
+//   - purposeId set  → covers the ENTIRE Purpose (e.g. Competitive /
+//     Employment Plan covers TNPSC, UPSC, SSC, Railway... automatically,
+//     including any new Authority added under that Purpose later — no
+//     per-authority list to maintain)
+//   - authorityScopes set (via PlanAuthorityScope) → covers only the
+//     specific Authority(ies) linked (e.g. NEET Plan → NEET only; JEE Plan
+//     → JEE Main + JEE Advanced, both linked to the same Plan; CLAT Plan →
+//     CLAT only)
+// Never both on the same Plan — enforced in the admin service layer (Prisma
+// has no native XOR constraint). Exactly one Plan should ever be
+// isFree=true — that one has neither scope (it's the fallback for any
+// exam with no active paid Plan covering it) and uses dailyLimit instead
+// of cycleDays.
 model Plan {
-  id            String   @id @default(uuid())
-  code          PlanCode @unique
-  name          String
-  dailyLimit    Int?     // Free = 5/day; null for paid plans (no daily sub-limit, per §5)
-  cycleLimit    Int?     // Plan 20 = 600, Plan 50 = 1500; null for Free
-  cycleDays     Int      @default(30)
-  price         Decimal? @db.Decimal(10, 2) // finalized separately, see §13 Open Items
-  active        Boolean  @default(true)
+  id              String   @id @default(uuid())
+  name            String   @unique
+  nameTa          String?
+  regularPrice    Decimal? @db.Decimal(10, 2)
+  // When set, this is the price actually charged and shown as the current
+  // price (with regularPrice shown struck through alongside it) — a plain
+  // admin-editable field, not a countdown timer. Clearing it (null) reverts
+  // the plan to regularPrice with no other change needed.
+  launchPrice     Decimal? @db.Decimal(10, 2)
+  dailyLimit      Int?     // FREE plan only: 5/day. Null for all paid plans — no question-count quota of any kind (finalized requirement).
+  cycleDays       Int?     // Paid plans: 365 (12 months from purchase/activation). Null for the FREE plan (no cycle concept, daily-only).
+  active          Boolean  @default(true)
+  isFree          Boolean  @default(false) // marks THE single global Free-practice fallback plan
 
-  subscriptions Subscription[]
+  purposeId       String?
+  purpose         ExamPurpose? @relation(fields: [purposeId], references: [id])
+  authorityScopes PlanAuthorityScope[]
+
+  subscriptions   Subscription[]
 }
 
-// One row per purchase cycle. Renewal is manual (§5) — a new row is created on
-// each re-purchase; unused quota does NOT carry forward (enforced at query time:
-// only the current active Subscription's counters are read).
+// Join table: which specific Authority(ies) an exam-specific Plan covers.
+// Many-to-many so a Plan can span more than one Authority (JEE Main +
+// JEE Advanced under one JEE Plan) and, symmetrically, so the same
+// Authority could in principle be included in more than one Plan (kept
+// open for the future Premium Multi-Exam plan — not built yet, per
+// finalized requirement, but this shape doesn't block it later).
+model PlanAuthorityScope {
+  id          String        @id @default(uuid())
+  planId      String
+  plan        Plan          @relation(fields: [planId], references: [id])
+  authorityId String
+  authority   ExamAuthority @relation(fields: [authorityId], references: [id])
+
+  @@unique([planId, authorityId])
+}
+
+// One row per purchase cycle. Renewal is manual — a new row is created on
+// each re-purchase. A student may hold several ACTIVE Subscriptions at once
+// (finalized requirement — e.g. NEET Plan + TNTET Plan simultaneously);
+// access for a given Authority is resolved at query time in Phase 2 by
+// checking ALL of a student's active, unexpired Subscriptions' Plans for
+// one whose scope covers that Authority — not by there being a single
+// "the" active subscription.
 model Subscription {
   id               String    @id @default(uuid())
   userId           String
@@ -144,11 +183,10 @@ model Subscription {
   plan             Plan      @relation(fields: [planId], references: [id])
 
   cycleStart       DateTime  @default(now())
-  cycleEnd         DateTime  // cycleStart + plan.cycleDays
+  cycleEnd         DateTime  // cycleStart + plan.cycleDays (365 for paid; far-future placeholder for the Free plan's single row per user)
 
-  questionsUsedInCycle Int   @default(0) // shared pool across Mixed/Medium/Hard, deducted at session start (§4.3, §5)
-  dailyUsedDate        DateTime? // for FREE plan's daily reset tracking
-  questionsUsedToday   Int   @default(0)
+  dailyUsedDate        DateTime? // Free plan's daily reset tracking only
+  questionsUsedToday   Int   @default(0) // Free plan's 5/day counter only — paid plans never touch this (no quota, finalized requirement)
 
   razorpayPaymentId String? @unique // set on paid plans once payment is confirmed via webhook; used for idempotency on retried webhook deliveries
 
@@ -190,6 +228,7 @@ model ExamPurpose {
   // Authorities" option is hidden entirely — mixing would defeat the purpose.
   allowMultipleAuthorities Boolean @default(true)
   authorities ExamAuthority[]
+  plans       Plan[] // whole-Purpose Annual Plans (e.g. Competitive / Employment Plan) — see Plan.purposeId
 }
 
 model ExamAuthority {
@@ -223,6 +262,7 @@ model ExamAuthority {
 
   categories ExamCategory[]
   questions  Question[]
+  planScopes PlanAuthorityScope[] // exam-specific Annual Plans that cover this Authority (e.g. NEET Plan, JEE Plan)
 
   @@unique([purposeId, name])
 }

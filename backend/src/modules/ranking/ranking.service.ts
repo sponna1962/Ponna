@@ -101,11 +101,15 @@ export class RankingService {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: userId },
       include: {
-        subscriptions: { where: { status: 'ACTIVE' }, include: { plan: true }, take: 1, orderBy: { cycleStart: 'desc' } },
+        // Not `take: 1` — a student may hold several concurrent active
+        // Subscriptions (finalized requirement); rank unlock only needs
+        // ANY of them to be a real paid plan, not specifically the most
+        // recent one.
+        subscriptions: { where: { status: 'ACTIVE', cycleEnd: { gt: new Date() } }, include: { plan: true } },
       },
     });
 
-    const planEligible = user.subscriptions.some((s) => s.plan.code !== 'FREE');
+    const planEligible = user.subscriptions.some((s) => !s.plan.isFree);
     const profileComplete = isProfileComplete(user);
     const rankUnlocked = planEligible && profileComplete;
 

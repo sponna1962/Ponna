@@ -3,26 +3,30 @@
 import { useEffect, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
 
-// Plans & Subscriptions Management — implements §7.6: manage plan
-// definitions. Plan quota structure (5/day, 600 or 1500 per 30 days) is
-// fixed by the requirements doc and not editable here — only price and
-// active/inactive status, since pricing was explicitly left "to be finalized
-// separately" (§13 Open Items).
+// Plans & Subscriptions Management — Plans are now fully dynamic (Annual
+// Plan redesign, Phase 2): each Plan has a scope (a whole Purpose, or one
+// or more specific Authorities) set at creation, unlimited practice within
+// that scope for its 365-day validity, and separate regular/launch prices.
+// This screen currently covers price/active editing; full create-a-new-Plan
+// and scope-editing UI is Phase 3+.
 
 type Plan = {
   id: string;
-  code: string;
   name: string;
+  nameTa: string | null;
   dailyLimit: number | null;
-  cycleLimit: number | null;
-  cycleDays: number;
-  price: string | null;
+  cycleDays: number | null;
+  regularPrice: string | null;
+  launchPrice: string | null;
   active: boolean;
+  isFree: boolean;
+  purpose: { name: string } | null;
+  authorityScopes: { authority: { name: string } }[];
 };
 
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [editingPrice, setEditingPrice] = useState<Record<string, string>>({});
+  const [editingPrice, setEditingPrice] = useState<Record<string, { regular: string; launch: string }>>({});
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('ponna_staff_role') === 'SUPER_ADMIN';
 
   async function load() {
@@ -34,11 +38,14 @@ export default function PlansPage() {
 
   async function savePrice(planId: string) {
     const value = editingPrice[planId];
-    if (value === undefined) return;
+    if (!value) return;
     await adminFetch(`/admin/plans/${planId}/price`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ price: Number(value) }),
+      body: JSON.stringify({
+        regularPrice: value.regular !== '' ? Number(value.regular) : null,
+        launchPrice: value.launch !== '' ? Number(value.launch) : null,
+      }),
     });
     load();
   }
@@ -48,11 +55,18 @@ export default function PlansPage() {
     load();
   }
 
+  function scopeLabel(p: Plan): string {
+    if (p.isFree) return `Free fallback — ${p.dailyLimit ?? 5} questions/day (any exam without an active paid Plan)`;
+    if (p.purpose) return `Covers entire Purpose: ${p.purpose.name}`;
+    if (p.authorityScopes.length > 0) return `Covers: ${p.authorityScopes.map((s) => s.authority.name).join(' + ')}`;
+    return 'No scope set';
+  }
+
   return (
     <div style={{ maxWidth: 640 }}>
       <h1 style={{ fontSize: 20, marginBottom: 8 }}>Plans</h1>
       <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
-        Quota structure (daily/30-day limits) is fixed per the finalized requirements. Price and active status can be changed here.
+        Paid plans give unlimited practice for 12 months within their scope — no question-count quota. Price and active status can be changed here.
         {!isSuperAdmin && ' (Viewing only — Super Admin role required to change these.)'}
       </p>
 
@@ -65,29 +79,38 @@ export default function PlansPage() {
             </span>
           </div>
 
-          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
-            {p.dailyLimit ? `${p.dailyLimit} questions/day` : `${p.cycleLimit} questions per ${p.cycleDays}-day cycle, no daily limit`}
-          </p>
+          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>{scopeLabel(p)}</p>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={{ fontSize: 13, color: '#334155' }}>Price (₹):</label>
-            <input
-              type="number"
-              defaultValue={p.price ?? ''}
-              disabled={!isSuperAdmin}
-              onChange={(e) => setEditingPrice({ ...editingPrice, [p.id]: e.target.value })}
-              placeholder="Not set"
-              style={{ width: 100, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1' }}
-            />
-            {isSuperAdmin && (
-              <>
-                <button onClick={() => savePrice(p.id)} style={{ padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>Save</button>
-                <button onClick={() => toggleActive(p.id, p.active)} style={{ padding: '6px 12px', borderRadius: 6, fontSize: 13, marginLeft: 'auto' }}>
-                  {p.active ? 'Deactivate' : 'Activate'}
-                </button>
-              </>
-            )}
-          </div>
+          {!p.isFree && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label style={{ fontSize: 13, color: '#334155' }}>Regular ₹/year:</label>
+              <input
+                type="number"
+                defaultValue={p.regularPrice ?? ''}
+                disabled={!isSuperAdmin}
+                onChange={(e) => setEditingPrice({ ...editingPrice, [p.id]: { regular: e.target.value, launch: editingPrice[p.id]?.launch ?? p.launchPrice ?? '' } })}
+                placeholder="Not set"
+                style={{ width: 90, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1' }}
+              />
+              <label style={{ fontSize: 13, color: '#334155' }}>Launch ₹/year:</label>
+              <input
+                type="number"
+                defaultValue={p.launchPrice ?? ''}
+                disabled={!isSuperAdmin}
+                onChange={(e) => setEditingPrice({ ...editingPrice, [p.id]: { regular: editingPrice[p.id]?.regular ?? p.regularPrice ?? '', launch: e.target.value } })}
+                placeholder="(optional)"
+                style={{ width: 90, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1' }}
+              />
+              {isSuperAdmin && (
+                <>
+                  <button onClick={() => savePrice(p.id)} style={{ padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>Save</button>
+                  <button onClick={() => toggleActive(p.id, p.active)} style={{ padding: '6px 12px', borderRadius: 6, fontSize: 13, marginLeft: 'auto' }}>
+                    {p.active ? 'Deactivate' : 'Activate'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       ))}
     </div>

@@ -78,7 +78,7 @@ export class StudentManagementService {
   async getPlatformStats() {
     const [totalStudents, activeSubscriptions, totalSessionsCompleted, totalQuestionsAnswered] = await Promise.all([
       prisma.user.count({ where: { isTestAccount: false } }),
-      prisma.subscription.count({ where: { status: 'ACTIVE', plan: { code: { in: ['PLAN_20', 'PLAN_50'] } }, user: { isTestAccount: false } } }),
+      prisma.subscription.count({ where: { status: 'ACTIVE', cycleEnd: { gt: new Date() }, plan: { isFree: false }, user: { isTestAccount: false } } }),
       prisma.quizSession.count({ where: { status: 'COMPLETED', user: { isTestAccount: false } } }),
       prisma.userQuestionHistory.count({ where: { user: { isTestAccount: false } } }),
     ]);

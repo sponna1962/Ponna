@@ -238,11 +238,19 @@ app.patch('/students/me/profile', requireStudentAuth, async (req: StudentAuthedR
 // PAYMENTS  (§5, §7.6) — Razorpay
 // ─────────────────────────────────────────────────────────
 
-// POST /payments/create-order  { planCode: 'PLAN_20'|'PLAN_50' } — userId comes from the JWT
+// GET /plans — student-facing list of active Plans (Annual Plan redesign).
+// Just the fields the purchase page needs; scope details (which exams a
+// Plan covers) aren't needed here yet — Phase 3 will expose those for the
+// "Choose Your Exams" flow.
+app.get('/plans', requireStudentAuth, async (_req, res) => {
+  res.json(await plansService.listActivePlansForStudent());
+});
+
+// POST /payments/create-order  { planId: string } — userId comes from the JWT
 app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    const { planCode } = req.body;
-    const order = await paymentService.createOrder(req.studentUserId!, planCode);
+    const { planId } = req.body;
+    const order = await paymentService.createOrder(req.studentUserId!, planId);
     res.json(order);
   } catch (err: any) {
     console.error(err);
@@ -741,7 +749,7 @@ app.get('/admin/plans', requireStaffAuth, async (_req, res) => {
 
 app.patch('/admin/plans/:id/price', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
-    res.json(await plansService.updatePlanPrice(req.params.id, req.body.price));
+    res.json(await plansService.updatePlanPrice(req.params.id, req.body.regularPrice, req.body.launchPrice));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update plan price' });

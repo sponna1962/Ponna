@@ -18,11 +18,10 @@ type StudentDetail = {
   createdAt: string;
   subscriptions: {
     id: string;
-    plan: { name: string; code: string };
+    plan: { name: string; isFree: boolean };
     status: string;
     cycleStart: string;
     cycleEnd: string;
-    questionsUsedInCycle: number;
     questionsUsedToday: number;
   }[];
   performanceSummary: {
@@ -91,7 +90,7 @@ export default function StudentDetailPage() {
                 <td style={{ padding: 6 }}>
                   {new Date(s.cycleStart).toLocaleDateString()} – {new Date(s.cycleEnd).toLocaleDateString()}
                 </td>
-                <td style={{ padding: 6 }}>{s.questionsUsedInCycle} / {s.questionsUsedToday}</td>
+                <td style={{ padding: 6 }}>{s.plan.isFree ? `${s.questionsUsedToday} today` : 'Unlimited'}</td>
               </tr>
             ))}
           </tbody>

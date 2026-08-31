@@ -57,10 +57,10 @@ export class SessionService {
       }
     }
 
-    const remainingQuota = await quota.getRemainingQuota(userId);
+    const remainingQuota = await quota.getRemainingQuota(userId, preference.selections as any);
     if (remainingQuota <= 0) {
       throw new QuotaExceededError(
-        'You have used all your questions for today. Upgrade your plan to keep practicing, or come back tomorrow.',
+        'You have used all your free questions for today for this exam. Get an Annual Plan for unlimited practice, or come back tomorrow.',
       );
     }
 
@@ -86,7 +86,7 @@ export class SessionService {
       );
     }
 
-    const quotaResult = await quota.reserveQuota(userId, actualSize);
+    const quotaResult = await quota.reserveQuota(userId, actualSize, preference.selections as any);
     if (!quotaResult.allowed) {
       throw new QuotaExceededError(quotaResult.reason ?? 'Quota exceeded');
     }
