@@ -1,25 +1,24 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, GoogleAuthProvider, ConfirmationResult } from 'firebase/auth';
 import { firebaseAuth } from '../../lib/firebase';
 import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { apiUrl } from '../../lib/api-config';
 
-// Login page — finalized decision: two passwordless methods only, Continue
-// with Google (primary) and Continue with Phone (secondary, existing
-// Firebase Phone OTP flow, unchanged below). No password field, no email
-// OTP/magic-link field anywhere — Email stays Profile information only,
-// never a login credential.
+// Login page — finalized: two passwordless methods, Continue with Google
+// (primary) and Continue with Phone (secondary, existing Firebase Phone OTP
+// flow, unchanged below). No password field, no email OTP/magic-link field
+// anywhere — Email stays Profile information only, never a login credential.
 //
-// DESIGN-ONLY STAGE (finalized instruction: show the Login screen design
-// before any backend authentication changes) — "Continue with Google" is
-// visually complete but not yet wired to Firebase's GoogleAuthProvider.
-// Wiring it for real requires backend account-linking work first (so a
-// student who already has a Phone-OTP account gets THAT account back when
-// they later sign in with the matching Google email, rather than a
-// duplicate) — that's the next phase, after this screen is approved.
+// Account linking (finalized requirement): the Firebase uid is the ONE
+// canonical identity key server-side (see student-auth.service.ts) — a
+// Google sign-in whose email matches an existing Phone-only account is
+// NEVER auto-merged; it comes back as a 409 ACCOUNT_LINKING_CONFLICT,
+// handled below by guiding the student to log in with Phone instead and
+// link Google from their Profile (the secure, explicitly-authenticated
+// linking flow, not a same-email guess).
 
 type Method = 'choose' | 'phone';
 
@@ -34,6 +33,46 @@ export default function LoginPage() {
 
   const confirmationRef = useRef<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+
+  async function signInWithGoogle() {
+    setError(null);
+    setLoading(true);
+    try {
+      const credential = await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
+      const firebaseIdToken = await credential.user.getIdToken();
+
+      const res = await fetch(apiUrl('/auth/firebase-login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firebaseIdToken }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (body.code === 'ACCOUNT_LINKING_CONFLICT') {
+          // Deliberately NOT auto-merged server-side (finalized requirement)
+          // — direct the student to the secure, authenticated linking flow
+          // instead of guessing based on a matching email.
+          setError(t.login.linkingConflict);
+          return;
+        }
+        throw new Error(body.error ?? 'Google sign-in failed');
+      }
+
+      const { token } = await res.json();
+      localStorage.setItem('ponna_student_token', token);
+      window.location.href = '/home';
+    } catch (err: any) {
+      // A closed/cancelled popup isn't a real error worth alarming over.
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        setLoading(false);
+        return;
+      }
+      console.error(err);
+      setError(err.message ?? t.login.sendError);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function requestOtp() {
     setError(null);
@@ -92,7 +131,8 @@ export default function LoginPage() {
       {method === 'choose' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <button
-            onClick={() => setError(t.login.comingSoon)}
+            onClick={signInWithGoogle}
+            disabled={loading}
             style={{
               display: 'flex',
               alignItems: 'center',

@@ -22,7 +22,7 @@ import { StudentManagementService } from './modules/admin/student-management.ser
 import { PlansService } from './modules/admin/plans.service';
 import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
-import { StudentAuthService, requireStudentAuth, StudentAuthedRequest } from './modules/auth/student-auth.service';
+import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError } from './modules/auth/student-auth.service';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
@@ -72,7 +72,9 @@ const profileService = new ProfileService();
 // ─────────────────────────────────────────────────────────
 
 // POST /auth/firebase-login  { firebaseIdToken }
-// Called by the frontend after Firebase's client SDK confirms the OTP.
+// Called by the frontend after Firebase's client SDK confirms the OTP
+// (Phone) or completes the Google popup sign-in — both arrive here the
+// same way; see student-auth.service.ts for how each is resolved.
 app.post('/auth/firebase-login', async (req, res) => {
   try {
     const { firebaseIdToken } = req.body;
@@ -80,7 +82,29 @@ app.post('/auth/firebase-login', async (req, res) => {
     res.json(result);
   } catch (err: any) {
     console.error(err);
+    if (err instanceof AccountLinkingConflictError) {
+      // A distinct, structured code — not just a generic 401 — so the
+      // frontend can show the specific "log in with Phone, then link
+      // Google from Profile" guidance instead of a plain error message.
+      res.status(409).json({ error: err.message, code: 'ACCOUNT_LINKING_CONFLICT' });
+      return;
+    }
     res.status(401).json({ error: err.message ?? 'Login failed' });
+  }
+});
+
+// POST /students/me/link-google  { firebaseIdToken } — student must already
+// be logged in. Frontend calls Firebase's linkWithPopup FIRST (client-side,
+// same Firebase uid as their current session), then sends the resulting
+// fresh token here to confirm + capture the Google email into Profile.
+app.post('/students/me/link-google', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const { firebaseIdToken } = req.body;
+    const result = await studentAuthService.linkGoogleAccount(req.studentUserId!, firebaseIdToken);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to link Google account' });
   }
 });
 

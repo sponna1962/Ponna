@@ -14,6 +14,8 @@
 // requirement).
 
 import { useEffect, useState } from 'react';
+import { GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
+import { firebaseAuth } from '../../lib/firebase';
 import { useLanguage } from '../../lib/language-context';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
@@ -65,6 +67,8 @@ export default function ProfilePage() {
   const [highestQualification, setHighestQualification] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [googleLinkMessage, setGoogleLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/profile')
@@ -111,6 +115,49 @@ export default function ProfilePage() {
       const result = await res.json();
       setProfile((p) => (p ? { ...p, profileComplete: result.profileComplete } : p));
       setSaved(true);
+    }
+  }
+
+  /**
+   * Links Google to the currently-logged-in (Phone-OTP) student account.
+   * linkWithPopup operates on the CURRENT Firebase Auth session — same uid
+   * before and after — so this is the secure alternative to guessing based
+   * on matching emails. `auth/credential-already-in-use` means this exact
+   * Google account is already the canonical identity of a DIFFERENT
+   * account (e.g. from a prior fresh "Continue with Google"); surfaced
+   * clearly rather than silently failing.
+   */
+  async function connectGoogle() {
+    setConnectingGoogle(true);
+    setGoogleLinkMessage(null);
+    try {
+      if (!firebaseAuth.currentUser) {
+        setGoogleLinkMessage({ ok: false, text: t.profile.googleLinkNeedsRelogin });
+        return;
+      }
+      const credential = await linkWithPopup(firebaseAuth.currentUser, new GoogleAuthProvider());
+      const firebaseIdToken = await credential.user.getIdToken();
+
+      const res = await studentFetch('/students/me/link-google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firebaseIdToken }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to link Google account');
+      }
+      setGoogleLinkMessage({ ok: true, text: t.profile.googleLinked });
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') return;
+      if (err?.code === 'auth/credential-already-in-use') {
+        setGoogleLinkMessage({ ok: false, text: t.profile.googleAlreadyLinkedElsewhere });
+        return;
+      }
+      console.error(err);
+      setGoogleLinkMessage({ ok: false, text: err.message ?? t.profile.googleLinkFailed });
+    } finally {
+      setConnectingGoogle(false);
     }
   }
 
@@ -197,11 +244,38 @@ export default function ProfilePage() {
             color: '#0f172a',
             textDecoration: 'none',
             fontWeight: 600,
-            marginBottom: 24,
+            marginBottom: 12,
           }}
         >
           {t.profile.viewMyPlans}
         </a>
+
+        {/* Google account linking (finalized requirement) — a Phone-OTP
+            account can link Google here, via Firebase's own authenticated
+            linkWithPopup (same Firebase uid preserved throughout), never
+            by matching emails after the fact. */}
+        <button
+          onClick={connectGoogle}
+          disabled={connectingGoogle}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            width: '100%',
+            padding: 12,
+            borderRadius: 8,
+            border: '1px solid #cbd5e1',
+            background: '#fff',
+            color: '#1f2937',
+            fontWeight: 600,
+            marginBottom: 8,
+          }}
+        >
+          {connectingGoogle ? '…' : `🔵 ${t.profile.connectGoogle}`}
+        </button>
+        {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{googleLinkMessage.text}</p>}
+
         {/* No Change Password — student login is Firebase Phone OTP, not
             password-based, so this option from the spec doesn't apply here. */}
       </div>

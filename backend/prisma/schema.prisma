@@ -23,6 +23,14 @@ enum StaffRole {
 
 model User {
   id             String    @id @default(uuid())
+  // The canonical identity key going forward — one Firebase Auth user (one
+  // uid) may have BOTH a Phone credential and a Google credential attached
+  // via Firebase's own account-linking (linkWithPopup), which keeps the uid
+  // unchanged. Login always resolves by uid first; phone/email below are
+  // kept as convenient lookup fields and Profile display, never as the
+  // primary key for "who is this". Nullable only for rows created before
+  // this field existed — backfilled the next time that student logs in.
+  firebaseUid    String?   @unique
   phone          String?   @unique
   email          String?   @unique
   name           String?
