@@ -28,12 +28,33 @@ model User {
   name           String?
   preferredLang  Language  @default(TA)
 
+  // Finalized Profile redesign — Personal Information section. All nullable
+  // at the DB level (same pattern as district/city below): initial signup
+  // stays minimal (name + phone/OTP only), these become REQUIRED only at
+  // the application layer (isProfileComplete), gated the same way district/
+  // city already were — never forced at signup, only when the student
+  // tries to view Rank or pay for a plan.
+  dateOfBirth    DateTime? // stored as a real date, never free text
+  whatsappNumber String?
+
   // Profile completion fields (§ profile-completion requirement) — nullable
   // because initial signup is intentionally minimal (name + phone/OTP only).
   // Required only when the student tries to view Rank or pay for a plan.
   district           String?
   cityTownVillage    String?
-  preparingFor       String[] @default([]) // multiple exam preferences, e.g. ["TNPSC", "Banking"]
+  preparingFor       String[] @default([]) // superseded by the finalized Profile redesign (Education section below) — column kept, no longer read/written by the Profile page, so no data migration needed
+
+  // Finalized Profile redesign — Education section. Deliberately just
+  // enough to describe "where the student is right now" for FUTURE
+  // personalization (explicitly not used to restrict exam access or drive
+  // any recommendation logic yet — finalized requirement). Exactly one of
+  // the three detail fields is meaningful, matching whichever
+  // educationStatus was chosen; the other two stay null.
+  educationStatus      EducationStatus?
+  currentClass         String? // when educationStatus = SCHOOL_STUDENT
+  courseOrDegree       String? // when educationStatus = COLLEGE_STUDENT
+  yearOfStudy          String? // when educationStatus = COLLEGE_STUDENT
+  highestQualification String? // when educationStatus = COMPLETED_STUDIES
 
   // Test/QA accounts (finalized requirement) — bypasses ALL quota
   // restrictions (free daily limit, paid cycle limit, plan expiry) and is
@@ -52,6 +73,12 @@ model User {
 
   @@index([phone])
   @@index([email])
+}
+
+enum EducationStatus {
+  SCHOOL_STUDENT
+  COLLEGE_STUDENT
+  COMPLETED_STUDIES
 }
 
 // Practice Preference — Language + Exam Authority/Category/Sub-Category

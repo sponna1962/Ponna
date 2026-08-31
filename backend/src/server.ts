@@ -251,7 +251,9 @@ app.get('/students/me/profile', requireStudentAuth, async (req: StudentAuthedReq
   }
 });
 
-// PATCH /students/me/profile  { name?, district?, cityTownVillage?, preparingFor? }
+// PATCH /students/me/profile — finalized Profile redesign: name, dateOfBirth,
+// email, whatsappNumber, district, cityTownVillage, educationStatus +
+// the one relevant education detail field. See profile.service.ts.
 app.patch('/students/me/profile', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
     const result = await profileService.updateProfile(req.studentUserId!, req.body);
