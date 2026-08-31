@@ -39,9 +39,25 @@ export default function HomePage() {
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
-        <StudentMenu />
-        <strong style={{ fontSize: 16 }}>PONNA.in</strong>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <StudentMenu />
+          <strong style={{ fontSize: 16 }}>PONNA.in</strong>
+        </div>
+        <a
+          href="/login"
+          style={{
+            padding: '8px 18px',
+            borderRadius: 20,
+            border: '1px solid #cbd5e1',
+            color: '#0f172a',
+            fontSize: 14,
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          Login
+        </a>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
@@ -53,15 +69,18 @@ export default function HomePage() {
         </h1>
 
         <p style={{ fontSize: 15, color: '#475569', marginBottom: 4, lineHeight: 1.5 }}>
-          போட்டித் தேர்வுகளுக்கு தயாராகும் மாணவர்களுக்கான பயிற்சி இணையதளம்.
+          போட்டித் தேர்வுகள் மற்றும் நுழைவுத் தேர்வுகளுக்கான பயிற்சி இணையதளம்.
         </p>
         <p style={{ fontSize: 14, color: '#64748b', marginBottom: 20, lineHeight: 1.5 }}>
-          A practice platform for competitive exam aspirants.
+          A practice platform for competitive and entrance exam aspirants.
         </p>
 
         {/* Compact plan-status summary — one glance, no clutter. Loading
             state is silent (no spinner/flash) since this is secondary
-            information; the CTA below is never blocked by it. */}
+            information; the CTA below is never blocked by it. No card at
+            all when there are no active plans — the Free 5/day message
+            belongs only after the student has actually used up their free
+            questions and lands on the Annual Plans page, never here. */}
         {activeSubs && activeSubs.length > 0 && (
           <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, marginBottom: 20, background: '#f8fafc' }}>
             <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -73,11 +92,6 @@ export default function HomePage() {
                 <span style={{ color: '#64748b' }}>{new Date(s.cycleEnd).toLocaleDateString()}</span>
               </div>
             ))}
-          </div>
-        )}
-        {activeSubs && activeSubs.length === 0 && (
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, marginBottom: 20, background: '#f8fafc' }}>
-            <p style={{ fontSize: 13, color: '#64748b' }}>Free Practice — 5 Questions / Day</p>
           </div>
         )}
 
