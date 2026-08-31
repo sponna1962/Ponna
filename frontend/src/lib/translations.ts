@@ -90,6 +90,10 @@ export const translations = {
       savingAndStarting: 'சேமிக்கிறது…',
       selectAtLeastOne: 'குறைந்தது ஒன்றையாவது தேர்ந்தெடுக்கவும்',
       yourPreferences: 'உங்கள் பயிற்சி விருப்பங்கள்',
+      noActivePlan: 'இந்தத் தேர்வுக்கு உங்களுக்கு Active Annual Plan இல்லை.',
+      freeFallbackDesc: 'Free Practice — தினமும் 5 கேள்விகள்',
+      practiceFree: 'இலவசமாக பயிற்சி செய்யவும்',
+      getAnnualPlan: 'Annual Plan வாங்கவும்',
     },
     home: {
       greeting: 'வெற்றியின்\nமுதல் படி.',
@@ -207,6 +211,10 @@ export const translations = {
       savingAndStarting: 'Saving…',
       selectAtLeastOne: 'Select at least one',
       yourPreferences: 'Your Practice Preferences',
+      noActivePlan: "You don't have an active Annual Plan for this exam.",
+      freeFallbackDesc: 'Free Practice — 5 Questions / Day',
+      practiceFree: 'Practice Free',
+      getAnnualPlan: 'Get Annual Plan',
     },
     home: {
       greeting: 'The first step\nto success.',

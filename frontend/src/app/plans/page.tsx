@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
@@ -48,7 +49,17 @@ type ActiveSubscription = {
 };
 
 export default function PlansPage() {
+  return (
+    <Suspense fallback={<main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>Loading…</main>}>
+      <PlansPageInner />
+    </Suspense>
+  );
+}
+
+function PlansPageInner() {
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const highlightPlanId = searchParams.get('highlight');
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[]>([]);
   const [plansLoaded, setPlansLoaded] = useState(false);
@@ -176,6 +187,7 @@ export default function PlansPage() {
                   title={p.name}
                   description={describeScope(p)}
                   price={p}
+                  highlighted={p.id === highlightPlanId}
                   action={
                     <button
                       onClick={() => buy(p.id)}
@@ -229,17 +241,33 @@ function PlanCard({
   description,
   price,
   action,
+  highlighted,
 }: {
   title: string;
   description: string;
   price?: { regularPrice: string | null; launchPrice: string | null };
   action?: React.ReactNode;
+  highlighted?: boolean;
 }) {
   const { t } = useLanguage();
   const hasLaunchPrice = price?.launchPrice != null;
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlighted) ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlighted]);
 
   return (
-    <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+    <div
+      ref={ref}
+      style={{
+        border: highlighted ? '2px solid #0f172a' : '1px solid #e2e8f0',
+        boxShadow: highlighted ? '0 0 0 3px #e0e7ff' : 'none',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+      }}
+    >
       <h3 style={{ fontSize: 16, marginBottom: 4 }}>{title}</h3>
 
       {price && (

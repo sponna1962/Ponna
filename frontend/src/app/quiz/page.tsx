@@ -54,6 +54,9 @@ export default function QuizStartPage() {
 
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Free-fallback upgrade prompt (finalized requirement) — set only when
+  // the just-saved selection isn't covered by any active paid Plan.
+  const [accessPrompt, setAccessPrompt] = useState<{ applicablePlanId: string | null } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -258,10 +261,29 @@ export default function QuizStartPage() {
         return;
       }
       setSaved({ language: language as 'TA' | 'EN', mode: mode as any, selections });
-      await startSession();
+      await startWithAccessCheck();
     } finally {
       setStarting(false);
     }
+  }
+
+  /**
+   * Free-fallback upgrade prompt (finalized requirement) — checked BEFORE
+   * every session start, from both entry points (full setup flow and the
+   * "already saved, just start" summary view below). Only shown when
+   * genuinely uncovered; an active paid Plan covering this selection skips
+   * straight to starting, and the prompt must never appear in that case.
+   */
+  async function startWithAccessCheck() {
+    const statusRes = await studentFetch('/quiz/access-status');
+    if (statusRes.ok) {
+      const status = await statusRes.json();
+      if (status.hasPreference && status.covered === false) {
+        setAccessPrompt({ applicablePlanId: status.applicablePlanId ?? null });
+        return;
+      }
+    }
+    await startSession();
   }
 
   async function startSession() {
@@ -300,9 +322,53 @@ export default function QuizStartPage() {
             t={t}
             lang={lang}
             onChange={() => setEditing(true)}
-            onStart={startSession}
+            onStart={startWithAccessCheck}
             starting={starting}
           />
+        )}
+
+        {/* Free-fallback upgrade prompt (finalized requirement) — shown for
+            EITHER "Start Practising" entry point above, never for both/none
+            inconsistently, since it's driven by one shared piece of state. */}
+        {accessPrompt && (
+          <div style={{ marginTop: 16, padding: 16, borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a' }}>
+            <p style={{ fontSize: 14, color: '#92400e', marginBottom: 4, fontWeight: 600 }}>{t.practiceSetup.noActivePlan}</p>
+            <p style={{ fontSize: 13, color: '#92400e', marginBottom: 12 }}>{t.practiceSetup.freeFallbackDesc}</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  setStarting(true);
+                  try {
+                    await startSession();
+                  } finally {
+                    setStarting(false);
+                    setAccessPrompt(null);
+                  }
+                }}
+                disabled={starting}
+                style={{ flex: 1, padding: 12, borderRadius: 8, background: '#fff', color: '#92400e', border: '1px solid #92400e', fontWeight: 600 }}
+              >
+                {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.practiceFree}
+              </button>
+              <a
+                href={accessPrompt.applicablePlanId ? `/plans?highlight=${accessPrompt.applicablePlanId}` : '/plans'}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: '#92400e',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {t.practiceSetup.getAnnualPlan}
+              </a>
+            </div>
+          </div>
         )}
 
         {editing && (
