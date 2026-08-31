@@ -12,9 +12,9 @@ export const translations = {
       langLabel: 'தமிழ்',
     },
     index: {
-      pitch: 'போட்டித் தேர்வுகளுக்கான தினசரி பயிற்சி — TNPSC, UPSC, Banking, Police மற்றும் பல.',
-      cta: 'தொடங்குங்கள் / உள்நுழையவும்',
-      note: 'இலவசமாக தினமும் 5 கேள்விகள் — கணக்கு தேவையில்லாமல் பதிவு செய்யலாம்.',
+      pitch: 'போட்டித் தேர்வுகள் மற்றும் நுழைவுத் தேர்வுகளுக்கான பயிற்சி இணையதளம்.',
+      cta: 'பயிற்சியைத் தொடங்குங்கள் / Start Practising',
+      login: 'உள்நுழைய',
     },
     login: {
       title: 'உள்நுழையவும்',
@@ -144,9 +144,9 @@ export const translations = {
       langLabel: 'EN',
     },
     index: {
-      pitch: 'Daily practice for competitive exams — TNPSC, UPSC, Banking, Police and more.',
-      cta: 'Get Started / Log In',
-      note: '5 free questions every day — sign up in seconds.',
+      pitch: 'A practice platform for competitive and entrance exam aspirants.',
+      cta: 'பயிற்சியைத் தொடங்குங்கள் / Start Practising',
+      login: 'Login',
     },
     login: {
       title: 'Log In',

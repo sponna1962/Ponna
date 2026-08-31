@@ -1,9 +1,12 @@
 'use client';
 
-// Root index page — implements §4.5 language toggle via shared context.
+// Root index page — public landing page (logged-out visitors). No language
+// toggle here (finalized requirement) — the pitch/CTA are shown bilingually
+// instead, same pattern as the authenticated Home page. A single "Login"
+// link sits top-right; deliberately no separate Sign Up button (login flow
+// itself handles both new and returning students).
 
 import { useLanguage } from '../lib/language-context';
-import { LanguageToggle } from '../components/LanguageToggle';
 
 export default function IndexPage() {
   const { t } = useLanguage();
@@ -20,7 +23,20 @@ export default function IndexPage() {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
-        <LanguageToggle />
+        <a
+          href="/login"
+          style={{
+            padding: '8px 18px',
+            borderRadius: 20,
+            border: '1px solid #cbd5e1',
+            color: '#0f172a',
+            fontSize: 14,
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          {t.index.login}
+        </a>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -36,14 +52,12 @@ export default function IndexPage() {
             borderRadius: 8,
             background: '#0f172a',
             color: '#fff',
-            marginBottom: 12,
             textDecoration: 'none',
+            fontWeight: 600,
           }}
         >
           {t.index.cta}
         </a>
-
-        <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center' }}>{t.index.note}</p>
       </div>
     </main>
   );
