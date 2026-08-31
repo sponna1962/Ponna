@@ -78,6 +78,24 @@ export class QuestionService {
   }
 
   async create(input: QuestionInput, opts?: { allowDuplicate?: boolean }) {
+    // Strip stray NUL bytes — Postgres text columns reject them outright
+    // ("invalid byte sequence for encoding UTF8: 0x00"), which otherwise
+    // surfaces as an opaque 500 rather than a clear validation message.
+    // Bulk upload sanitizes at CSV-parse time; this covers the single
+    // Add Question form (pasted text can carry the same stray byte).
+    input = {
+      ...input,
+      questionText: input.questionText.replace(/\u0000/g, ''),
+      optionA: input.optionA.replace(/\u0000/g, ''),
+      optionB: input.optionB.replace(/\u0000/g, ''),
+      optionC: input.optionC.replace(/\u0000/g, ''),
+      optionD: input.optionD.replace(/\u0000/g, ''),
+      examName: input.examName?.replace(/\u0000/g, ''),
+      sourceName: input.sourceName?.replace(/\u0000/g, ''),
+      subjectName: input.subjectName?.replace(/\u0000/g, ''),
+      internalNotes: input.internalNotes?.replace(/\u0000/g, ''),
+    };
+
     const contentHash = computeContentHash(input);
 
     if (!opts?.allowDuplicate) {

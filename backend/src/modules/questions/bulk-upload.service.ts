@@ -59,7 +59,15 @@ export interface PreviewRow {
 export class BulkUploadService {
   /** Phase 1 — parse, validate, exact-duplicate-check. Writes nothing. */
   async preview(csvContent: string): Promise<{ summary: { total: number; valid: number; invalid: number; duplicate: number }; rows: PreviewRow[] }> {
-    const rawRows: Record<string, string>[] = parse(csvContent, {
+    // Strips stray NUL (0x00) bytes that sometimes end up in a CSV cell
+    // after PDF-to-text extraction — Postgres text columns reject any
+    // string containing one outright ("invalid byte sequence for encoding
+    // UTF8: 0x00"), which otherwise surfaces as an opaque failure only at
+    // Confirm Import time, well after the preview looked completely valid.
+    // Stripped once here so preview and confirm always see identical text
+    // (and therefore compute identical content hashes for duplicate checks).
+    const sanitizedCsvContent = csvContent.replace(/\u0000/g, '');
+    const rawRows: Record<string, string>[] = parse(sanitizedCsvContent, {
       columns: true,
       skip_empty_lines: true,
       trim: true,
