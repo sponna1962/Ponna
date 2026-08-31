@@ -49,7 +49,7 @@ export default function AdminQuestionsPage() {
   const [pendingAiCount, setPendingAiCount] = useState(0);
   const [classifying, setClassifying] = useState<{ done: number; total: number; stopped: boolean } | null>(null);
   const stopRequestedRef = useRef(false);
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 100;
 
   const [showForm, setShowForm] = useState(false);
   const [ta, setTa] = useState(emptyLangFields);
