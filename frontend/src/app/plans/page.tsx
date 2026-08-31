@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
-import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 
 // My Plans — the student-facing half of the Annual Plan payment loop.
@@ -168,12 +167,9 @@ function PlansPageInner() {
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 16 }}>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <StudentMenu />
-          <h1 style={{ fontSize: 20, margin: 0 }}>{t.plans.myPlansTitle}</h1>
-        </div>
-        <LanguageToggle />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <StudentMenu />
+        <h1 style={{ fontSize: 20, margin: 0 }}>{t.plans.myPlansTitle}</h1>
       </div>
 
       {!plansLoaded && <p style={{ color: '#64748b', fontSize: 13 }}>Loading…</p>}

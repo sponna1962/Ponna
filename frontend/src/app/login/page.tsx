@@ -4,7 +4,6 @@ import { useState, useRef } from 'react';
 import { RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, GoogleAuthProvider, ConfirmationResult } from 'firebase/auth';
 import { firebaseAuth } from '../../lib/firebase';
 import { useLanguage } from '../../lib/language-context';
-import { LanguageToggle } from '../../components/LanguageToggle';
 import { apiUrl } from '../../lib/api-config';
 
 // Login page — finalized: two passwordless methods, Continue with Google
@@ -123,10 +122,7 @@ export default function LoginPage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 400, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-        <h1 style={{ fontSize: 20, margin: 0 }}>{t.login.title}</h1>
-        <LanguageToggle />
-      </div>
+      <h1 style={{ fontSize: 20, margin: '0 0 32px' }}>{t.login.title}</h1>
 
       {method === 'choose' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

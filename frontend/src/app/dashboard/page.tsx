@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
-import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
 
@@ -37,12 +36,9 @@ export default function DashboardPage() {
 
   return (
     <main style={{ padding: 16, maxWidth: 480, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <StudentMenu />
-          <h1 style={{ fontSize: 20, margin: 0 }}>{t.dashboard.title}</h1>
-        </div>
-        <LanguageToggle />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <StudentMenu />
+        <h1 style={{ fontSize: 20, margin: 0 }}>{t.dashboard.title}</h1>
       </div>
 
       {(['OVERALL', 'MEDIUM', 'HARD'] as const).map((bucketKey) => {

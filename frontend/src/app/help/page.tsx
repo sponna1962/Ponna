@@ -6,7 +6,6 @@
 // affecting anything else in the app.
 
 import { useLanguage } from '../../lib/language-context';
-import { LanguageToggle } from '../../components/LanguageToggle';
 import { StudentMenu } from '../../components/StudentMenu';
 
 export default function HelpPage() {
@@ -15,12 +14,9 @@ export default function HelpPage() {
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <StudentMenu />
-          <h1 style={{ fontSize: 20, margin: 0 }}>{t.menu.help}</h1>
-        </div>
-        <LanguageToggle />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <StudentMenu />
+        <h1 style={{ fontSize: 20, margin: 0 }}>{t.menu.help}</h1>
       </div>
 
       <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 12 }}>
