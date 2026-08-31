@@ -38,7 +38,7 @@ export class PlansService {
   async listActivePlansForStudent() {
     return prisma.plan.findMany({
       where: { active: true },
-      select: { id: true, name: true, nameTa: true, regularPrice: true, launchPrice: true, isFree: true },
+      select: { id: true, name: true, nameTa: true, regularPrice: true, launchPrice: true, isFree: true, active: true },
       orderBy: { name: 'asc' },
     });
   }
