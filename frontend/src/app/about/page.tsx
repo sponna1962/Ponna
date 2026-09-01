@@ -173,7 +173,7 @@ export default function AboutPage() {
       <Section>
         <H2>Who Can Use PONNA?</H2>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          {['Competitive & Employment Examinations', 'Higher Education & Entrance Examinations', 'Teacher Eligibility Examinations'].map((label) => (
+          {['Competitive & Employment Examinations', 'Higher Education & Entrance Examinations', 'Eligibility Examinations'].map((label) => (
             <span
               key={label}
               style={{
