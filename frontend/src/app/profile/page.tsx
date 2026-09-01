@@ -25,6 +25,7 @@ type EducationStatus = 'SCHOOL_STUDENT' | 'COLLEGE_STUDENT' | 'COMPLETED_STUDIES
 type ProfileData = {
   name: string | null;
   phone: string | null;
+  photoUrl: string | null;
   dateOfBirth: string | null;
   email: string | null;
   whatsappNumber: string | null;
@@ -176,6 +177,38 @@ export default function ProfilePage() {
             <span style={{ fontSize: 13, color: '#78350f' }}>{t.profile.completeProfileNote}</span>
           </div>
         )}
+
+        {/* Profile photo — auto-filled from the Google account photo on
+            Google sign-in (Part A); a Phone-only student without one sees
+            just their initial. Read-only for now — manual upload (Part B)
+            comes once Cloudinary is configured. */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          {profile.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.photoUrl}
+              alt=""
+              style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 88,
+                height: 88,
+                borderRadius: '50%',
+                background: '#e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 32,
+                fontWeight: 700,
+                color: '#64748b',
+              }}
+            >
+              {(profile.name || '?').trim().charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
 
         <SectionHeading>{t.profile.personalInfo}</SectionHeading>
 

@@ -50,6 +50,7 @@ export class ProfileService {
     return {
       name: user.name,
       phone: user.phone,
+      photoUrl: user.photoUrl,
       dateOfBirth: user.dateOfBirth,
       email: user.email,
       whatsappNumber: user.whatsappNumber,

@@ -62,11 +62,19 @@ export class StudentAuthService {
     const uid = decoded.uid;
     const phone = decoded.phone_number ?? null;
     const email = decoded.email ?? null;
+    // Google's account photo (OIDC "picture" claim) — auto-captured on
+    // first Google sign-in only, see the photoUrl backfill below and on
+    // create. A student's own later upload (Part B) always takes
+    // precedence once set; this never overwrites a non-null photoUrl.
+    const googlePicture = decoded.picture ?? null;
 
     // 1. Already-known Firebase identity (whichever provider they used to
     // sign in this time — Phone and Google both resolve here once linked).
     let user = await prisma.user.findUnique({ where: { firebaseUid: uid } });
     if (user) {
+      if (!user.photoUrl && googlePicture) {
+        user = await prisma.user.update({ where: { id: user.id }, data: { photoUrl: googlePicture } });
+      }
       return this.issueSession(user.id);
     }
 
@@ -96,7 +104,7 @@ export class StudentAuthService {
         throw new AccountLinkingConflictError();
       }
       // No conflicting account — genuinely new Google-only signup.
-      user = await prisma.user.create({ data: { firebaseUid: uid, email } });
+      user = await prisma.user.create({ data: { firebaseUid: uid, email, photoUrl: googlePicture } });
       return this.issueSession(user.id);
     }
 
@@ -147,6 +155,9 @@ export class StudentAuthService {
         // Only fills Profile's email if it was empty — linking never
         // overwrites something the student already typed themselves.
         email: self.email ?? email,
+        // Same rule as first-time Google sign-in — only captured if no
+        // photo is set yet, never overwrites a manual upload.
+        photoUrl: self.photoUrl ?? decoded.picture ?? undefined,
       },
     });
     return { linked: true };

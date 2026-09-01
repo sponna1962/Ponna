@@ -35,6 +35,11 @@ model User {
   email          String?   @unique
   name           String?
   preferredLang  Language  @default(TA)
+  // Profile photo — auto-captured from the Google account's photo on first
+  // Google sign-in (never overwritten by a later Google login once set, so
+  // a manual upload here always wins going forward). Null for Phone-only
+  // students until they upload one themselves.
+  photoUrl       String?
 
   // Finalized Profile redesign — Personal Information section. All nullable
   // at the DB level (same pattern as district/city below): initial signup
