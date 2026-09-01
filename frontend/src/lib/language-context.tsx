@@ -1,41 +1,31 @@
 'use client';
 
-// LanguageProvider — implements §4.5 (UI toggle between Tamil and English).
-// Wraps the whole app (see layout.tsx) so every page reads the same language
-// state via useLanguage(). Selection persists in localStorage so it's
-// remembered across visits without needing a logged-in user.
+// LanguageProvider — the app's UI language is fixed to English everywhere
+// (finalized requirement). This is a SEPARATE thing from Practice Setup's
+// own "Language" step, which chooses which language the QUESTION CONTENT
+// is shown in (Tamil or English) — that stays a real per-student choice,
+// stored in their Practice Preference, completely untouched by this file.
+//
+// useLanguage()/t still exists site-wide so every page keeps using the
+// same `t.xxx` calls without a large rewrite — it just always resolves to
+// the English translations now. setLang is kept as a no-op (rather than
+// removed) so nothing that still calls it breaks; there is no UI control
+// left anywhere that calls it.
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { Lang, translations } from './translations';
-
-const STORAGE_KEY = 'ponna_lang';
 
 type LanguageContextValue = {
   lang: Lang;
   setLang: (lang: Lang) => void;
-t: (typeof translations)[Lang];
+  t: (typeof translations)[Lang];
 };
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>('ta'); // Tamil is the default per requirements ("launch mainly with Tamil")
-
-  useEffect(() => {
-    const saved = typeof window !== 'undefined' ? (localStorage.getItem(STORAGE_KEY) as Lang | null) : null;
-    if (saved === 'ta' || saved === 'en') setLangState(saved);
-  }, []);
-
-  function setLang(next: Lang) {
-    setLangState(next);
-    if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, next);
-  }
-
-  return (
-    <LanguageContext.Provider value={{ lang, setLang, t: translations[lang] }}>
-      {children}
-    </LanguageContext.Provider>
-  );
+  const value: LanguageContextValue = { lang: 'en', setLang: () => {}, t: translations.en };
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {

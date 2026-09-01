@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 // language state, persisted in localStorage — see lib/language-context.tsx.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ta">
+    <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         {/* Noto Sans Tamil — the browser's default system font renders Tamil
