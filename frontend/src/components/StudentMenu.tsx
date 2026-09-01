@@ -38,10 +38,12 @@ export function StudentMenu() {
         { href: '/plans', label: t.menu.plans, icon: '💳' },
         { href: '/dashboard', label: t.menu.dashboard, icon: '📊' },
         { href: '/profile', label: t.menu.profile, icon: '👤' },
+        { href: '/about', label: t.menu.about, icon: 'ℹ️' },
         { href: '/help', label: t.menu.help, icon: '❓' },
       ]
     : [
         { href: '/', label: t.menu.home, icon: '🏠' },
+        { href: '/about', label: t.menu.about, icon: 'ℹ️' },
         { href: '/help', label: t.menu.help, icon: '❓' },
       ];
 
