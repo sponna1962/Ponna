@@ -258,9 +258,12 @@ export class QuestionService {
     const rowsByKey = new Map<
       string,
       {
+        authorityId?: string;
         authorityName: string;
         purposeName: string;
+        categoryId?: string;
         categoryName: string;
+        subCategoryId?: string;
         subCategoryName: string;
         published: number;
         draft: number;
@@ -276,9 +279,12 @@ export class QuestionService {
       const key = `${g.authorityId ?? ''}|${g.categoryId ?? ''}|${g.subCategoryId ?? ''}`;
       if (!rowsByKey.has(key)) {
         rowsByKey.set(key, {
+          authorityId: g.authorityId ?? undefined,
           authorityName: authority?.name ?? '(no authority)',
           purposeName: authority?.purpose?.name ?? '',
+          categoryId: g.categoryId ?? undefined,
           categoryName: g.categoryId ? (categoryById.get(g.categoryId) ?? '(unknown)') : '—',
+          subCategoryId: g.subCategoryId ?? undefined,
           subCategoryName: g.subCategoryId ? (subCategoryById.get(g.subCategoryId) ?? '(unknown)') : '—',
           published: 0,
           draft: 0,
@@ -313,9 +319,16 @@ export class QuestionService {
     );
 
     // Per-authority totals too — this is what the bar chart plots.
-    const byAuthority = new Map<string, number>();
-    for (const r of rows) byAuthority.set(r.authorityName, (byAuthority.get(r.authorityName) ?? 0) + r.total);
-    const authorityTotals = [...byAuthority.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
+    const byAuthority = new Map<string, { id?: string; name: string; total: number }>();
+    for (const r of rows) {
+      const existing = byAuthority.get(r.authorityName);
+      if (existing) {
+        existing.total += r.total;
+      } else {
+        byAuthority.set(r.authorityName, { id: r.authorityId, name: r.authorityName, total: r.total });
+      }
+    }
+    const authorityTotals = [...byAuthority.values()].sort((a, b) => b.total - a.total);
 
     return { rows, grandTotal, authorityTotals };
   }
