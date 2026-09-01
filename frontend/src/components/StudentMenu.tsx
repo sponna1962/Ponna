@@ -5,26 +5,43 @@
 // "Practice" here and the "Start today's quiz" button on Home both lead to
 // the same /quiz page — no duplicate flow.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '../lib/language-context';
 
 export function StudentMenu() {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
+  // Checked client-side only (localStorage) — starts false so a
+  // server-rendered/first-paint menu never briefly shows account-only
+  // items before this resolves.
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem('ponna_student_token'));
+  }, []);
 
   function logout() {
     localStorage.removeItem('ponna_student_token');
-    window.location.href = '/login';
+    window.location.href = '/';
   }
 
-  const items = [
-    { href: '/home', label: t.menu.home, icon: '🏠' },
-    { href: '/quiz', label: t.menu.practice, icon: '📝' },
-    { href: '/plans', label: t.menu.plans, icon: '💳' },
-    { href: '/dashboard', label: t.menu.dashboard, icon: '📊' },
-    { href: '/profile', label: t.menu.profile, icon: '👤' },
-    { href: '/help', label: t.menu.help, icon: '❓' },
-  ];
+  // Logged-out visitors only see PUBLIC items — My Plans/My Progress/Profile
+  // all require a session (they'd otherwise just bounce back here on a 401),
+  // and there is nothing to Logout of. Logging in itself happens from the
+  // page's own header "Login" button, not from this menu.
+  const items = isLoggedIn
+    ? [
+        { href: '/', label: t.menu.home, icon: '🏠' },
+        { href: '/quiz', label: t.menu.practice, icon: '📝' },
+        { href: '/plans', label: t.menu.plans, icon: '💳' },
+        { href: '/dashboard', label: t.menu.dashboard, icon: '📊' },
+        { href: '/profile', label: t.menu.profile, icon: '👤' },
+        { href: '/help', label: t.menu.help, icon: '❓' },
+      ]
+    : [
+        { href: '/', label: t.menu.home, icon: '🏠' },
+        { href: '/help', label: t.menu.help, icon: '❓' },
+      ];
 
   return (
     <>
@@ -81,26 +98,28 @@ export function StudentMenu() {
               </a>
             ))}
 
-            <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 12 }}>
-              <button
-                onClick={logout}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '12px 4px',
-                  background: 'none',
-                  border: 'none',
-                  color: '#dc2626',
-                  fontSize: 15,
-                  cursor: 'pointer',
-                  width: '100%',
-                  textAlign: 'left',
-                }}
-              >
-                🚪 {t.menu.logout}
-              </button>
-            </div>
+            {isLoggedIn && (
+              <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 12 }}>
+                <button
+                  onClick={logout}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '12px 4px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#dc2626',
+                    fontSize: 15,
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                  }}
+                >
+                  🚪 {t.menu.logout}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
