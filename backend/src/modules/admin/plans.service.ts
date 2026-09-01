@@ -61,7 +61,20 @@ export class PlansService {
   async listActiveSubscriptionsForStudent(userId: string) {
     return prisma.subscription.findMany({
       where: { userId, status: 'ACTIVE', cycleEnd: { gt: new Date() }, plan: { isFree: false } },
-      include: { plan: { select: { id: true, name: true, nameTa: true } } },
+      include: {
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            nameTa: true,
+            // Included so the "My Plans" bottom-sheet can show the same
+            // scope tags for an Active plan as it does for a purchasable
+            // one — same describeScope() logic on the frontend either way.
+            purpose: { select: { name: true, authorities: { select: { name: true } } } },
+            authorityScopes: { select: { authority: { select: { name: true, categories: { select: { name: true } } } } } },
+          },
+        },
+      },
       orderBy: { cycleEnd: 'asc' },
     });
   }
