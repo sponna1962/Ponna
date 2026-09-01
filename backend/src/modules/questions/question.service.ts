@@ -493,4 +493,48 @@ export class QuestionService {
       },
     });
   }
+
+  /**
+   * One-time heuristic Difficulty assignment (agreed rule) — a stopgap for
+   * a large no-Difficulty backlog when AI classification is too slow/
+   * rate-limited to keep up. NOT a replacement for real classification:
+   * a question with a calculation signal (numbers+units, "calculate",
+   * "கணக்கிடுக", a LaTeX-style formula) is HARD regardless of length;
+   * otherwise length alone decides (>120 chars = HARD, else MEDIUM).
+   * Never touches a question that already has a Difficulty set, and never
+   * changes status — publishing stays a separate, deliberate admin action.
+   */
+  private heuristicDifficulty(text: string): Difficulty {
+    const calcSignal =
+      /\d+(\.\d+)?\s*(m\/s|°c|kg|km|cm|mm|m\^?2|m³|pa|n\/m|mol|g\/mol)|\$[^$]+\$|\\times|\\frac|calculate|compute|கணக்கிடு|find the value|determine the/i;
+    if (calcSignal.test(text)) return Difficulty.HARD;
+    return text.length > 120 ? Difficulty.HARD : Difficulty.MEDIUM;
+  }
+
+  /** Dry run — counts what WOULD happen, writes nothing. */
+  async previewHeuristicClassification() {
+    const rows = await prisma.question.findMany({ where: { difficulty: null }, select: { questionText: true } });
+    let medium = 0;
+    let hard = 0;
+    for (const r of rows) {
+      if (this.heuristicDifficulty(r.questionText) === Difficulty.HARD) hard++;
+      else medium++;
+    }
+    return { total: rows.length, medium, hard };
+  }
+
+  /** Actually applies the rule — Difficulty only, status untouched. */
+  async applyHeuristicClassification() {
+    const rows = await prisma.question.findMany({ where: { difficulty: null }, select: { id: true, questionText: true } });
+    const mediumIds: string[] = [];
+    const hardIds: string[] = [];
+    for (const r of rows) {
+      (this.heuristicDifficulty(r.questionText) === Difficulty.HARD ? hardIds : mediumIds).push(r.id);
+    }
+    const [mediumResult, hardResult] = await Promise.all([
+      mediumIds.length ? prisma.question.updateMany({ where: { id: { in: mediumIds } }, data: { difficulty: Difficulty.MEDIUM } }) : Promise.resolve({ count: 0 }),
+      hardIds.length ? prisma.question.updateMany({ where: { id: { in: hardIds } }, data: { difficulty: Difficulty.HARD } }) : Promise.resolve({ count: 0 }),
+    ]);
+    return { medium: mediumResult.count, hard: hardResult.count };
+  }
 }

@@ -451,6 +451,29 @@ app.get('/admin/questions/ids', requireStaffAuth, async (req, res) => {
 
 // GET /admin/questions/stats — Question Bank Stats dashboard: counts per
 // Authority → Category → Sub-Category, broken down by status.
+// GET /admin/questions/heuristic-classify/preview — dry run of the
+// agreed one-time heuristic Difficulty rule (calculation signal, else
+// length > 120 chars), writes nothing.
+app.get('/admin/questions/heuristic-classify/preview', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await questionService.previewHeuristicClassification());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to preview heuristic classification' });
+  }
+});
+
+// POST /admin/questions/heuristic-classify/apply — actually applies it.
+// Only affects questions with no Difficulty set; never changes status.
+app.post('/admin/questions/heuristic-classify/apply', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try {
+    res.json(await questionService.applyHeuristicClassification());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to apply heuristic classification' });
+  }
+});
+
 app.get('/admin/questions/stats', requireStaffAuth, async (_req, res) => {
   try {
     res.set('Cache-Control', 'no-store');

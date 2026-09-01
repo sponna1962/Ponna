@@ -199,6 +199,40 @@ export default function AdminQuestionsPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
+  // ── Heuristic auto-classify (one-time, agreed rule) ──────────────────
+  const [heuristicPreview, setHeuristicPreview] = useState<{ total: number; medium: number; hard: number } | null>(null);
+  const [heuristicApplying, setHeuristicApplying] = useState(false);
+  const [heuristicResult, setHeuristicResult] = useState<{ medium: number; hard: number } | null>(null);
+  const [heuristicError, setHeuristicError] = useState<string | null>(null);
+
+  async function openHeuristicPreview() {
+    setHeuristicError(null);
+    setHeuristicResult(null);
+    setHeuristicPreview(null);
+    const res = await adminFetch('/admin/questions/heuristic-classify/preview');
+    if (!res.ok) {
+      setHeuristicError('Failed to load preview');
+      setHeuristicPreview({ total: -1, medium: 0, hard: 0 }); // sentinel to still open the modal with the error
+      return;
+    }
+    setHeuristicPreview(await res.json());
+  }
+
+  async function applyHeuristicClassification() {
+    setHeuristicApplying(true);
+    setHeuristicError(null);
+    const res = await adminFetch('/admin/questions/heuristic-classify/apply', { method: 'POST' });
+    setHeuristicApplying(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setHeuristicError(body.error ?? 'Failed to apply');
+      return;
+    }
+    setHeuristicResult(await res.json());
+    loadQuestions();
+    loadPendingAiCount();
+  }
+
   function startEdit(q: Question) {
     setEditing(q);
     setEditFields({ questionText: q.questionText, optionA: q.optionA, optionB: q.optionB, optionC: q.optionC, optionD: q.optionD });
@@ -427,6 +461,12 @@ export default function AdminQuestionsPage() {
           >
             📊 Question Bank Stats
           </Link>
+          <button
+            onClick={openHeuristicPreview}
+            style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', fontSize: 14 }}
+          >
+            🧮 Auto-Classify (heuristic)
+          </button>
           <button
             onClick={() => (showForm ? setShowForm(false) : startAdd())}
             style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
@@ -736,6 +776,59 @@ export default function AdminQuestionsPage() {
                 {editSaving ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {heuristicPreview && (
+        <div
+          onClick={() => setHeuristicPreview(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 10, padding: 20, maxWidth: 420, width: '100%' }}>
+            <h2 style={{ fontSize: 16, marginBottom: 4 }}>🧮 Auto-Classify (heuristic)</h2>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
+              One-time rule: a calculation signal (numbers+units, "calculate"/"கணக்கிடுக", a formula) → Hard. Otherwise, question text
+              over 120 characters → Hard, else Medium. Only affects questions with no Difficulty set — status is never changed.
+            </p>
+
+            {heuristicError && <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 12 }}>{heuristicError}</p>}
+
+            {!heuristicResult && heuristicPreview.total >= 0 && (
+              <>
+                <div style={{ display: 'flex', gap: 16, marginBottom: 16, fontSize: 14 }}>
+                  <span><b>{heuristicPreview.total}</b> total</span>
+                  <span style={{ color: '#0284c7' }}><b>{heuristicPreview.medium}</b> → Medium</span>
+                  <span style={{ color: '#c2410c' }}><b>{heuristicPreview.hard}</b> → Hard</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setHeuristicPreview(null)} style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={applyHeuristicClassification}
+                    disabled={heuristicApplying || heuristicPreview.total === 0}
+                    style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                  >
+                    {heuristicApplying ? 'Applying…' : `Apply to ${heuristicPreview.total} questions`}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {heuristicResult && (
+              <>
+                <p style={{ fontSize: 14, marginBottom: 16 }}>
+                  ✅ Done — {heuristicResult.medium} set to Medium, {heuristicResult.hard} set to Hard. Still in their current status (Draft
+                  etc.) — review and publish as usual.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setHeuristicPreview(null)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff' }}>
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
