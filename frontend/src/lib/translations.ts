@@ -41,6 +41,7 @@ export const translations = {
       correct: 'சரியான பதில்கள்',
       incorrect: 'தவறான பதில்கள்',
       byDifficulty: 'கடினத்தன்மை வாரியான செயல்திறன்',
+      insightLabel: 'செயல்திறன் நுண்ணறிவு',
       insightEmpty: 'உங்கள் செயல்திறனை இங்கே பார்க்க பயிற்சியைத் தொடங்குங்கள்.',
       insightSome: (answered: number, correct: number) =>
         `நீங்கள் ${answered} கேள்விகளுக்கு பதிலளித்தீர்கள், ${correct} சரியாக இருந்தன. துல்லியத்தை மேம்படுத்த தொடர்ந்து பயிற்சி செய்யுங்கள்.`,
@@ -199,6 +200,7 @@ export const translations = {
       correct: 'Correct',
       incorrect: 'Incorrect',
       byDifficulty: 'Performance by Difficulty',
+      insightLabel: 'Performance Insight',
       insightEmpty: 'Start practising to see your performance here.',
       insightSome: (answered: number, correct: number) =>
         `You answered ${answered} question${answered === 1 ? '' : 's'} and got ${correct} correct. Keep practising to improve your accuracy.`,
