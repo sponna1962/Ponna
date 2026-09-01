@@ -1,17 +1,18 @@
 'use client';
 
 // Root index page — the ONE "front page" of the app (finalized requirement:
-// no separate /login or /home route — everything lives at "/"). Renders
-// one of three states, all in place, with no page navigation between them:
+// no separate /login or /home route, and the SAME rich layout — ☰ menu,
+// PONNA.in brand, "வெற்றியின் முதல் படி" headline, pitch, Start Practising —
+// is the very first thing shown whether or not the visitor is logged in.
+// Only two things vary by login state:
+//   - top-right: "Login" button (logged out) vs account icon + Logout
+//     dropdown (logged in)
+//   - the Active Plans summary block (logged-in only)
 //
-//   1. 'landing'  — logged-out visitor: pitch + Start Practising, top-right
-//                   Login button
-//   2. 'chooseMethod'/'phone' — Google/Phone choice (and the Phone OTP
-//                   sub-flow) shown inline right here, never a separate page
-//   3. logged-in  — the former /home dashboard content: account icon +
-//                   Logout, compact Active Plans summary, Start Practising
-//                   (which now goes straight to /quiz, since there's no
-//                   intermediate page anymore)
+// Tapping "Login" or "Start Practising" while logged out swaps the BODY
+// (header stays put) to the Google/Phone choice, and then the Phone OTP
+// sub-flow — all still on this one page, no navigation. Logged in,
+// "Start Practising" goes straight to /quiz.
 //
 // No language toggle anywhere on this page (finalized requirement) — pitch
 // and CTAs are shown bilingually instead. Language becomes a student
@@ -33,7 +34,7 @@ import { apiUrl } from '../lib/api-config';
 import { studentFetch } from '../lib/student-fetch';
 import { StudentMenu } from '../components/StudentMenu';
 
-type View = 'landing' | 'chooseMethod' | 'phone';
+type View = 'main' | 'chooseMethod' | 'phone';
 type ActiveSubscription = { id: string; cycleEnd: string; plan: { name: string; nameTa: string | null } };
 
 export default function IndexPage() {
@@ -41,9 +42,9 @@ export default function IndexPage() {
 
   const [checkedAuth, setCheckedAuth] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [view, setView] = useState<View>('landing');
+  const [view, setView] = useState<View>('main');
 
-  // Login-flow state (was /login's)
+  // Login-flow state
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -52,7 +53,7 @@ export default function IndexPage() {
   const confirmationRef = useRef<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
-  // Logged-in dashboard state (was /home's)
+  // Logged-in extras
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -78,7 +79,7 @@ export default function IndexPage() {
   function completeLogin(token: string) {
     localStorage.setItem('ponna_student_token', token);
     setIsLoggedIn(true);
-    setView('landing');
+    setView('main');
   }
 
   function logout() {
@@ -87,6 +88,20 @@ export default function IndexPage() {
     setActiveSubs(null);
     setLoginMethod(null);
     setAccountMenuOpen(false);
+    setView('main');
+  }
+
+  function openLogin() {
+    setError(null);
+    setView('chooseMethod');
+  }
+
+  function handleStartPractising() {
+    if (isLoggedIn) {
+      window.location.href = '/quiz';
+    } else {
+      openLogin();
+    }
   }
 
   async function signInWithGoogle() {
@@ -167,16 +182,17 @@ export default function IndexPage() {
 
   if (!checkedAuth) return null;
 
-  // ── Logged-in dashboard (was /home) ─────────────────────────────────────
-  if (isLoggedIn) {
-    return (
-      <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <StudentMenu />
-            <strong style={{ fontSize: 16 }}>PONNA.in</strong>
-          </div>
+  return (
+    <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header — identical whether logged in or not; only the top-right
+          element changes. Always present, on every view of this page. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <StudentMenu />
+          <strong style={{ fontSize: 16 }}>PONNA.in</strong>
+        </div>
 
+        {isLoggedIn ? (
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setAccountMenuOpen((o) => !o)}
@@ -220,8 +236,21 @@ export default function IndexPage() {
               </div>
             )}
           </div>
-        </div>
+        ) : (
+          view === 'main' && (
+            <button
+              onClick={openLogin}
+              style={{ padding: '8px 18px', borderRadius: 20, border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            >
+              {t.index.login}
+            </button>
+          )
+        )}
+      </div>
 
+      {/* Body — one of three views. 'main' looks identical logged-in or
+          logged-out except for the Active Plans block. */}
+      {view === 'main' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.3, marginBottom: 4, whiteSpace: 'pre-line' }}>
             வெற்றியின்{'\n'}முதல் படி.
@@ -237,7 +266,7 @@ export default function IndexPage() {
             A practice platform for competitive and entrance exam aspirants.
           </p>
 
-          {activeSubs && activeSubs.length > 0 && (
+          {isLoggedIn && activeSubs && activeSubs.length > 0 && (
             <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, marginBottom: 20, background: '#f8fafc' }}>
               <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 செயலில் உள்ள திட்டங்கள் / Active Plans
@@ -251,53 +280,17 @@ export default function IndexPage() {
             </div>
           )}
 
-          <a
-            href="/quiz"
-            style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: '#0f172a', color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 16 }}
+          <button
+            onClick={handleStartPractising}
+            style={{ display: 'block', width: '100%', textAlign: 'center', padding: 16, borderRadius: 12, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
           >
             பயிற்சியைத் தொடங்குங்கள் / Start Practising
-          </a>
-        </div>
-      </main>
-    );
-  }
-
-  // ── Logged-out: landing / login (inline, same page) ─────────────────────
-  return (
-    <main style={{ padding: 24, maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
-        {view === 'landing' && (
-          <button
-            onClick={() => {
-              setError(null);
-              setView('chooseMethod');
-            }}
-            style={{ padding: '8px 18px', borderRadius: 20, border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-          >
-            {t.index.login}
-          </button>
-        )}
-      </div>
-
-      {view === 'landing' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>{t.common.appName}</h1>
-          <p style={{ fontSize: 16, color: '#475569', marginBottom: 32 }}>{t.index.pitch}</p>
-
-          <button
-            onClick={() => {
-              setError(null);
-              setView('chooseMethod');
-            }}
-            style={{ display: 'block', width: '100%', textAlign: 'center', padding: 14, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}
-          >
-            {t.index.cta}
           </button>
         </div>
       )}
 
       {view === 'chooseMethod' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
           <h1 style={{ fontSize: 20, margin: '0 0 32px' }}>{t.login.title}</h1>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -345,7 +338,7 @@ export default function IndexPage() {
       )}
 
       {view === 'phone' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
           <button
             onClick={() => {
               setView('chooseMethod');
