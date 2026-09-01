@@ -5,20 +5,22 @@
 // "Practice" here and the "Start today's quiz" button on Home both lead to
 // the same /quiz page — no duplicate flow.
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../lib/language-context';
 
 export function StudentMenu() {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
-  // Checked client-side only (localStorage) — starts false so a
-  // server-rendered/first-paint menu never briefly shows account-only
-  // items before this resolves.
+  // Re-checked fresh every time the menu opens (not once on mount) — this
+  // component stays mounted across a login that happens without a full
+  // page reload (the unified "/" page just flips its own React state), so
+  // a mount-only check would keep showing "logged out" forever afterward.
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem('ponna_student_token'));
-  }, []);
+  function openMenu() {
+    setIsLoggedIn(typeof window !== 'undefined' && !!localStorage.getItem('ponna_student_token'));
+    setOpen(true);
+  }
 
   function logout() {
     localStorage.removeItem('ponna_student_token');
@@ -46,7 +48,7 @@ export function StudentMenu() {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={openMenu}
         aria-label="Menu"
         style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', padding: 4, lineHeight: 1 }}
       >
