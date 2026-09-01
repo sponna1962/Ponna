@@ -366,7 +366,7 @@ function PlanCard({
         <div style={{ marginBottom: 10, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
           {hasLaunchPrice ? (
             <>
-              <span style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 800, color: COLORS.ink }}>
+              <span style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 800, color: COLORS.gold }}>
                 ₹{price.launchPrice}
               </span>
               <span style={{ fontSize: 13, color: COLORS.inkMuted }}>{t.plans.perYear}</span>
