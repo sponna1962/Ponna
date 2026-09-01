@@ -90,6 +90,7 @@ type SheetContent = {
   activeUntil?: string;
   action: 'buy' | 'practice';
   planId?: string;
+  freeNote?: string;
 };
 
 function PlansPageInner() {
@@ -198,11 +199,13 @@ function PlansPageInner() {
 
       {plansLoaded && (
         <>
-          {/* Active Plans — compact chip strip right under the title, not a
-              full section further down the page. Tap opens the same sheet
-              as a purchasable plan, with Practice Now as the action. */}
-          {activeSubs.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 18, paddingBottom: 2 }}>
+          {/* Active Plans + Free — one compact chip strip right under the
+              title. Active chips (gold, more prominent) come first; Free
+              (quiet grey) comes last — it's always available, but never
+              the focus once a student has paid plans. Both tap open the
+              same sheet as a purchasable plan. */}
+          {(activeSubs.length > 0 || freePlan) && (
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingBottom: 2 }}>
               {activeSubs.map((s) => (
                 <button
                   key={s.id}
@@ -233,31 +236,26 @@ function PlansPageInner() {
                   ✓ {shortName(s.plan.name)} · {new Date(s.cycleEnd).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
                 </button>
               ))}
-            </div>
-          )}
 
-          {/* Free — always available, never a Buy button. Quiet card, not
-              part of the grid, since it isn't a purchase to compare. */}
-          {freePlan && (
-            <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 20 }}>
-              <h3 style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: 700, marginBottom: 2, color: COLORS.ink }}>{freePlan.name}</h3>
-              <p style={{ fontSize: 12, color: COLORS.inkMuted, marginBottom: 10 }}>{t.plans.freeDesc}</p>
-              <a
-                href="/quiz"
-                style={{
-                  display: 'inline-block',
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  background: COLORS.paperAlt,
-                  color: COLORS.ink,
-                  border: `1px solid ${COLORS.line}`,
-                  fontWeight: 600,
-                  fontSize: 13,
-                  textDecoration: 'none',
-                }}
-              >
-                {t.plans.practiceNow}
-              </a>
+              {freePlan && (
+                <button
+                  onClick={() => setSheet({ title: freePlan.name, scopeTags: [], action: 'practice', freeNote: t.plans.freeDesc })}
+                  style={{
+                    flex: '0 0 auto',
+                    background: COLORS.paperAlt,
+                    border: `1px solid ${COLORS.line}`,
+                    borderRadius: 20,
+                    padding: '7px 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: COLORS.inkMuted,
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {freePlan.name}
+                </button>
+              )}
             </div>
           )}
 
@@ -371,6 +369,8 @@ function PlanSheet({
             {t.plans.activeUntil}: {new Date(content.activeUntil).toLocaleDateString()}
           </p>
         )}
+
+        {content.freeNote && <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 12 }}>{content.freeNote}</p>}
 
         {content.price && (
           <div style={{ marginBottom: 12, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
