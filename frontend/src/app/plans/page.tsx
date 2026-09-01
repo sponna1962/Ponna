@@ -190,21 +190,48 @@ function PlansPageInner() {
       <BitterFontLinks />
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <StudentMenu />
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.plans.myPlansTitle}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: activeSubs.length > 0 ? 16 : 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <StudentMenu />
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.plans.myPlansTitle}</h1>
+        </div>
+
+        {/* Free chip lives right next to the title when there's nothing
+            else competing for that row (no Active plans yet) — saves a
+            whole row of vertical space. Once Active plans exist, it moves
+            down into the chip strip below instead, since the title row
+            would otherwise get cramped or wrap. Direct navigation to
+            /quiz — no sheet, there's nothing more to say about Free
+            beyond "5 questions/day", already on the chip itself. */}
+        {freePlan && activeSubs.length === 0 && (
+          <a
+            href="/quiz"
+            style={{
+              flex: '0 0 auto',
+              background: COLORS.paperAlt,
+              border: `1px solid ${COLORS.line}`,
+              borderRadius: 20,
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 600,
+              color: COLORS.inkMuted,
+              whiteSpace: 'nowrap',
+              textDecoration: 'none',
+            }}
+          >
+            {t.plans.freeChipLabel}
+          </a>
+        )}
       </div>
 
       {!plansLoaded && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>Loading…</p>}
 
       {plansLoaded && (
         <>
-          {/* Active Plans + Free — one compact chip strip right under the
-              title. Active chips (gold, more prominent) come first; Free
-              (quiet grey) comes last — it's always available, but never
-              the focus once a student has paid plans. Both tap open the
-              same sheet as a purchasable plan. */}
-          {(activeSubs.length > 0 || freePlan) && (
+          {/* Active Plans + Free — shown together in their own row only
+              once there's an Active plan to share it with (see the
+              title-row placement above for the Free-only case). */}
+          {activeSubs.length > 0 && (
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingBottom: 2 }}>
               {activeSubs.map((s) => (
                 <button
@@ -238,8 +265,8 @@ function PlansPageInner() {
               ))}
 
               {freePlan && (
-                <button
-                  onClick={() => setSheet({ title: freePlan.name, scopeTags: [], action: 'practice', freeNote: t.plans.freeDesc })}
+                <a
+                  href="/quiz"
                   style={{
                     flex: '0 0 auto',
                     background: COLORS.paperAlt,
@@ -250,11 +277,11 @@ function PlansPageInner() {
                     fontWeight: 600,
                     color: COLORS.inkMuted,
                     whiteSpace: 'nowrap',
-                    cursor: 'pointer',
+                    textDecoration: 'none',
                   }}
                 >
-                  {freePlan.name}
-                </button>
+                  {t.plans.freeChipLabel}
+                </a>
               )}
             </div>
           )}
