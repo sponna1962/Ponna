@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { SubjectInput } from '../../../components/SubjectInput';
 import { adminFetch } from '../../../lib/admin-fetch';
 import { ExamTaxonomyPicker, TaxonomyValue } from '../../../components/ExamTaxonomyPicker';
@@ -45,12 +46,30 @@ const SOURCE_TYPES = [
 ];
 
 export default function AdminQuestionsPage() {
+  return (
+    <Suspense fallback={<p style={{ color: '#64748b' }}>Loading...</p>}>
+      <QuestionsContent />
+    </Suspense>
+  );
+}
+
+function QuestionsContent() {
+  const searchParams = useSearchParams();
+
+  const initialStatus = searchParams.get('status') || (searchParams.get('noDifficultyOnly') === 'true' ? 'PENDING_AI' : 'DRAFT');
+  const initialLanguage = searchParams.get('language') || '';
+  const initialTaxonomy: TaxonomyValue = {
+    authorityId: searchParams.get('authorityId') || '',
+    categoryId: searchParams.get('categoryId') || '',
+    subCategoryId: searchParams.get('subCategoryId') || '',
+  };
+
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [statusFilter, setStatusFilter] = useState('DRAFT');
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(emptyTaxonomy);
-  const [languageFilter, setLanguageFilter] = useState('');
+  const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(initialTaxonomy);
+  const [languageFilter, setLanguageFilter] = useState(initialLanguage);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pendingAiCount, setPendingAiCount] = useState(0);
