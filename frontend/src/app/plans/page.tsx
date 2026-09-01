@@ -6,6 +6,7 @@ import Script from 'next/script';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
 import { StudentMenu } from '../../components/StudentMenu';
+import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
 // My Plans — the student-facing half of the Annual Plan payment loop.
 // Shows the student's currently-Active Plans (with expiry + Practice Now)
@@ -131,25 +132,25 @@ function PlansPageInner() {
     }
   }
 
-  function describeScope(p: Plan): string {
+  function scopeTags(p: Plan): string[] {
     // Whole-Purpose plan (Competitive/Employment) — list the real
     // Authorities under it, straight from data, never hardcoded.
-    if (p.purpose) return p.purpose.authorities.map((a) => a.name).join(', ');
+    if (p.purpose) return p.purpose.authorities.map((a) => a.name);
 
     if (p.authorityScopes.length > 1) {
       // Multi-authority plan (JEE) — the authorities themselves ARE the
       // description (JEE Main + JEE Advanced).
-      return p.authorityScopes.map((s) => s.authority.name).join(' + ');
+      return p.authorityScopes.map((s) => s.authority.name);
     }
     if (p.authorityScopes.length === 1) {
       const authority = p.authorityScopes[0].authority;
       // Single-authority plan WITH known Categories (NEET → subjects,
       // TNTET → papers) — describe by those; otherwise (no categories
       // seeded yet for this exam) just the exam name itself (CLAT, BITSAT...).
-      if (authority.categories.length > 0) return authority.categories.map((c) => c.name).join(' + ');
-      return authority.name;
+      if (authority.categories.length > 0) return authority.categories.map((c) => c.name);
+      return [authority.name];
     }
-    return '';
+    return [];
   }
 
   /** "NEET Annual Plan" -> "Get NEET Plan" / "NEET திட்டம் வாங்கவும்" — built
@@ -164,22 +165,29 @@ function PlansPageInner() {
   const otherAvailablePlans = plans.filter((p) => !p.isFree && p.active && !activePlanIds.has(p.id));
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16 }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
+      <BitterFontLinks />
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <StudentMenu />
-        <h1 style={{ fontSize: 20, margin: 0 }}>{t.plans.myPlansTitle}</h1>
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.plans.myPlansTitle}</h1>
       </div>
 
-      {!plansLoaded && <p style={{ color: '#64748b', fontSize: 13 }}>Loading…</p>}
+      {!plansLoaded && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>Loading…</p>}
 
       {plansLoaded && (
         <>
           {/* Free — always available, never a Buy button, and never listed
-              among "Active Plans" (it isn't a purchase). */}
+              among "Active Plans" (it isn't a purchase). Quiet treatment —
+              paper-toned, no badge, since there's nothing to celebrate or sell. */}
           {freePlan && (
-            <PlanCard title={freePlan.name} description={t.plans.freeDesc} action={<GhostButton href="/quiz">{t.plans.practiceNow}</GhostButton>} />
+            <PlanCard
+              title={freePlan.name}
+              description={t.plans.freeDesc}
+              tone="quiet"
+              action={<GhostButton href="/quiz">{t.plans.practiceNow}</GhostButton>}
+            />
           )}
 
           {activeSubs.length > 0 && (
@@ -190,6 +198,7 @@ function PlansPageInner() {
                   key={s.id}
                   title={s.plan.name}
                   description={`${t.plans.activeUntil}: ${new Date(s.cycleEnd).toLocaleDateString()}`}
+                  tone="active"
                   action={<GhostButton href="/quiz">{t.plans.practiceNow}</GhostButton>}
                 />
               ))}
@@ -203,14 +212,15 @@ function PlansPageInner() {
                 <PlanCard
                   key={p.id}
                   title={p.name}
-                  description={describeScope(p)}
+                  scopeTags={scopeTags(p)}
                   price={p}
+                  tone="available"
                   highlighted={p.id === highlightPlanId}
                   action={
                     <button
                       onClick={() => buy(p.id)}
                       disabled={loadingPlan === p.id}
-                      style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600 }}
+                      style={{ width: '100%', padding: 13, borderRadius: 8, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
                     >
                       {loadingPlan === p.id ? '…' : buyButtonLabel(p)}
                     </button>
@@ -222,13 +232,17 @@ function PlansPageInner() {
         </>
       )}
 
-      {error && <p style={{ color: '#dc2626', fontSize: 13, marginTop: 12 }}>{error}</p>}
+      {error && <p style={{ color: '#b91c1c', fontSize: 13, marginTop: 12 }}>{error}</p>}
     </main>
   );
 }
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
-  return <h2 style={{ fontSize: 14, color: '#475569', margin: '20px 0 8px' }}>{children}</h2>;
+  return (
+    <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: 700, color: COLORS.ink, margin: '28px 0 12px', paddingBottom: 6, borderBottom: `2px solid ${COLORS.goldLight}` }}>
+      {children}
+    </h2>
+  );
 }
 
 function GhostButton({ href, children }: { href: string; children: React.ReactNode }) {
@@ -241,10 +255,11 @@ function GhostButton({ href, children }: { href: string; children: React.ReactNo
         boxSizing: 'border-box',
         padding: 12,
         borderRadius: 8,
-        background: '#f1f5f9',
-        color: '#0f172a',
-        border: '1px solid #cbd5e1',
+        background: COLORS.paperAlt,
+        color: COLORS.ink,
+        border: `1px solid ${COLORS.line}`,
         fontWeight: 600,
+        fontSize: 14,
         textAlign: 'center',
         textDecoration: 'none',
       }}
@@ -254,18 +269,46 @@ function GhostButton({ href, children }: { href: string; children: React.ReactNo
   );
 }
 
+function ScopeTags({ tags }: { tags: string[] }) {
+  if (tags.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: COLORS.inkMuted,
+            background: COLORS.paperAlt,
+            border: `1px solid ${COLORS.line}`,
+            borderRadius: 20,
+            padding: '3px 10px',
+          }}
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function PlanCard({
   title,
   description,
+  scopeTags: tags,
   price,
   action,
   highlighted,
+  tone,
 }: {
   title: string;
-  description: string;
+  description?: string;
+  scopeTags?: string[];
   price?: { regularPrice: string | null; launchPrice: string | null };
   action?: React.ReactNode;
   highlighted?: boolean;
+  tone: 'quiet' | 'active' | 'available';
 }) {
   const { t } = useLanguage();
   const hasLaunchPrice = price?.launchPrice != null;
@@ -275,42 +318,72 @@ function PlanCard({
     if (highlighted) ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [highlighted]);
 
+  // Active Plans get the gold treatment — this is the one place the
+  // brand's signature color says "this belongs to you". Available (buy)
+  // cards stay quiet by default and only pick up gold when deep-linked
+  // here (Get Annual Plan from the Free-fallback prompt).
+  const isGold = tone === 'active' || highlighted;
+
   return (
     <div
       ref={ref}
       style={{
-        border: highlighted ? '2px solid #0f172a' : '1px solid #e2e8f0',
-        boxShadow: highlighted ? '0 0 0 3px #e0e7ff' : 'none',
+        position: 'relative',
+        border: isGold ? `1.5px solid ${COLORS.gold}` : `1px solid ${COLORS.line}`,
+        boxShadow: highlighted ? `0 0 0 3px ${COLORS.goldLight}` : 'none',
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
+        background: tone === 'active' ? COLORS.goldLight : tone === 'quiet' ? 'transparent' : COLORS.paper,
       }}
     >
-      <h3 style={{ fontSize: 16, marginBottom: 4 }}>{title}</h3>
+      {tone === 'active' && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 14,
+            right: 16,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: 0.4,
+            color: COLORS.paper,
+            background: COLORS.gold,
+            borderRadius: 20,
+            padding: '3px 9px',
+          }}
+        >
+          ACTIVE
+        </span>
+      )}
+
+      <h3 style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 700, marginBottom: tags?.length ? 8 : 4, color: COLORS.ink, paddingRight: tone === 'active' ? 60 : 0 }}>
+        {title}
+      </h3>
+
+      {tags && <ScopeTags tags={tags} />}
 
       {price && (
-        <div style={{ marginBottom: 8 }}>
+        <div style={{ marginBottom: 10, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
           {hasLaunchPrice ? (
             <>
-              <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through', marginRight: 8 }}>
-                ₹{price.regularPrice} {t.plans.perYear}
+              <span style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 800, color: COLORS.ink }}>
+                ₹{price.launchPrice}
               </span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: '#16a34a' }}>
-                ₹{price.launchPrice} {t.plans.perYear}
-              </span>
-              <span style={{ fontSize: 11, color: '#16a34a', marginLeft: 6, background: '#dcfce7', padding: '2px 6px', borderRadius: 4 }}>
+              <span style={{ fontSize: 13, color: COLORS.inkMuted }}>{t.plans.perYear}</span>
+              <span style={{ fontSize: 13, color: COLORS.inkMuted, textDecoration: 'line-through' }}>₹{price.regularPrice}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#7A5A14', background: COLORS.goldLight, padding: '2px 8px', borderRadius: 4 }}>
                 {t.plans.launchPrice}
               </span>
             </>
           ) : (
-            <span style={{ fontSize: 18, fontWeight: 700 }}>
-              ₹{price.regularPrice ?? '—'} {t.plans.perYear}
+            <span style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 800 }}>
+              ₹{price.regularPrice ?? '—'} <span style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: 400 }}>{t.plans.perYear}</span>
             </span>
           )}
         </div>
       )}
 
-      <p style={{ fontSize: 13, color: '#64748b', marginBottom: action ? 12 : 0 }}>{description}</p>
+      {description && <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: action ? 12 : 0 }}>{description}</p>}
       {action}
     </div>
   );

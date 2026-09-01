@@ -14,17 +14,7 @@
 // of the app. The one signature visual moment is a ruled-notebook-paper
 // motif behind the hero; elsewhere, quiet hairline rules divide sections.
 
-const FONT_FAMILY = "'Bitter', 'Noto Sans Tamil', 'Noto Sans', serif";
-
-const COLORS = {
-  paper: '#FAFAF7',
-  paperAlt: '#F4F0E6',
-  ink: '#1A2238',
-  inkMuted: '#535A72',
-  gold: '#A8791F',
-  goldLight: '#EFE0BC',
-  line: '#E4DFD0',
-};
+import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
 function H2({ children }: { children: React.ReactNode }) {
   return (
@@ -45,9 +35,7 @@ function Section({ children, style }: { children: React.ReactNode; style?: React
 export default function AboutPage() {
   return (
     <>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+      <BitterFontLinks />
       <main style={{ background: COLORS.paper, color: COLORS.ink, paddingBottom: 80 }}>
         {/* Simple top bar — no menu chrome needed, just a way back */}
         <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 24px 0' }}>
