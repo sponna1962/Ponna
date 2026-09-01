@@ -13,18 +13,25 @@ import { ExamTaxonomyPicker, TaxonomyValue } from '../../../components/ExamTaxon
 type Question = {
   id: string;
   questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
   correctOption: string;
   status: 'DRAFT' | 'PUBLISHED' | 'DISABLED';
   difficulty: 'MEDIUM' | 'HARD' | null;
   aiSuggestedDifficulty: 'MEDIUM' | 'HARD' | null;
   aiConfidence: number | null;
   language: 'TA' | 'EN';
+  examName: string | null;
   examYear: number | null;
   translationGroupId: string | null;
   authority: { name: string } | null;
   examCategory: { name: string } | null;
   subCategory: { name: string } | null;
+  subject: { name: string } | null;
   sourceType: 'PREVIOUS_EXAM' | 'BOOK' | 'ORIGINAL' | 'OTHER';
+  sourceName: string | null;
 };
 
 const emptyLangFields = { questionText: '', optionA: '', optionB: '', optionC: '', optionD: '' };
@@ -178,6 +185,59 @@ export default function AdminQuestionsPage() {
     setSourceName('');
     setFormError(null);
     setShowForm(true);
+  }
+
+  // ── Edit (single row, in place — a Question row is one language, unlike
+  // the bilingual Add form above) ────────────────────────────────────────
+  const [editing, setEditing] = useState<Question | null>(null);
+  const [editFields, setEditFields] = useState(emptyLangFields);
+  const [editExamName, setEditExamName] = useState('');
+  const [editExamYear, setEditExamYear] = useState('');
+  const [editSubjectName, setEditSubjectName] = useState('');
+  const [editSourceName, setEditSourceName] = useState('');
+  const [editCorrectOption, setEditCorrectOption] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+
+  function startEdit(q: Question) {
+    setEditing(q);
+    setEditFields({ questionText: q.questionText, optionA: q.optionA, optionB: q.optionB, optionC: q.optionC, optionD: q.optionD });
+    setEditExamName(q.examName ?? '');
+    setEditExamYear(q.examYear ? String(q.examYear) : '');
+    setEditSubjectName(q.subject?.name ?? '');
+    setEditSourceName(q.sourceName ?? '');
+    setEditCorrectOption(q.correctOption as 'A' | 'B' | 'C' | 'D');
+    setEditError(null);
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    if (!editFields.questionText.trim() || !editFields.optionA.trim() || !editFields.optionB.trim() || !editFields.optionC.trim() || !editFields.optionD.trim()) {
+      setEditError('Question text and all four options are required.');
+      return;
+    }
+    setEditSaving(true);
+    setEditError(null);
+    const res = await adminFetch(`/admin/questions/${editing.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...editFields,
+        correctOption: editCorrectOption,
+        examName: editExamName.trim() || null,
+        examYear: editExamYear ? Number(editExamYear) : null,
+        subjectName: editSubjectName.trim() || undefined,
+        sourceName: editSourceName.trim() || null,
+      }),
+    });
+    setEditSaving(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setEditError(body.error ?? 'Failed to save changes');
+      return;
+    }
+    setEditing(null);
+    loadQuestions();
   }
 
   async function submitBilingual() {
@@ -566,6 +626,7 @@ export default function AdminQuestionsPage() {
                 {q.aiSuggestedDifficulty ? `${q.aiSuggestedDifficulty} (${q.aiConfidence?.toFixed(0)}%)` : '—'}
               </td>
               <td style={{ padding: 10 }}>
+                <button onClick={() => startEdit(q)} style={{ marginRight: 8, fontSize: 12 }}>Edit</button>
                 {q.status !== 'PUBLISHED' && <button onClick={() => setStatus(q.id, 'publish')} style={{ marginRight: 8, fontSize: 12 }}>Publish</button>}
                 {q.status !== 'DISABLED' && <button onClick={() => setStatus(q.id, 'disable')} style={{ marginRight: 8, fontSize: 12 }}>Disable</button>}
                 {q.status === 'DRAFT' && !q.aiSuggestedDifficulty && <button onClick={() => classifyNow(q.id)} style={{ fontSize: 12 }}>Classify with AI</button>}
@@ -593,6 +654,89 @@ export default function AdminQuestionsPage() {
           >
             அடுத்தது ▶
           </button>
+        </div>
+      )}
+
+      {editing && (
+        <div
+          onClick={() => setEditing(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 10, padding: 20, maxWidth: 560, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
+          >
+            <h2 style={{ fontSize: 16, marginBottom: 4 }}>Edit Question ({editing.language})</h2>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 12 }}>
+              Editing only this row — its {editing.translationGroupId ? 'linked translation is unaffected' : 'own language version'}.
+              Authority/Category/Sub-Category aren't editable here yet.
+            </p>
+
+            <textarea
+              placeholder="Question text"
+              value={editFields.questionText}
+              onChange={(e) => setEditFields({ ...editFields, questionText: e.target.value })}
+              style={{ width: '100%', padding: 8, marginBottom: 8, borderRadius: 6, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+              rows={3}
+            />
+
+            {(['optionA', 'optionB', 'optionC', 'optionD'] as const).map((opt, i) => {
+              const letter = String.fromCharCode(65 + i) as 'A' | 'B' | 'C' | 'D';
+              return (
+                <div key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <input
+                    type="radio"
+                    name="editCorrectOption"
+                    checked={editCorrectOption === letter}
+                    onChange={() => setEditCorrectOption(letter)}
+                    title="Correct answer"
+                  />
+                  <input
+                    placeholder={`Option ${letter}`}
+                    value={editFields[opt]}
+                    onChange={(e) => setEditFields({ ...editFields, [opt]: e.target.value })}
+                    style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, boxSizing: 'border-box' }}
+                  />
+                </div>
+              );
+            })}
+            <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 12 }}>● Select the radio button next to the correct answer.</p>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+              <label style={{ fontSize: 13 }}>
+                Exam Name:{' '}
+                <input value={editExamName} onChange={(e) => setEditExamName(e.target.value)} style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 200 }} />
+              </label>
+              <label style={{ fontSize: 13 }}>
+                Exam Year:{' '}
+                <input type="number" value={editExamYear} onChange={(e) => setEditExamYear(e.target.value)} style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }} />
+              </label>
+              <SubjectInput value={editSubjectName} onChange={setEditSubjectName} />
+            </div>
+            <label style={{ fontSize: 13, display: 'block', marginBottom: 16 }}>
+              Source Name:{' '}
+              <input
+                value={editSourceName}
+                onChange={(e) => setEditSourceName(e.target.value)}
+                style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 240 }}
+              />
+            </label>
+
+            {editError && <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 12 }}>{editError}</p>}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setEditing(null)} style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}>
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={editSaving}
+                style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+              >
+                {editSaving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

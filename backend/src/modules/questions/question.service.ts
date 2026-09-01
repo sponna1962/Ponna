@@ -163,9 +163,16 @@ export class QuestionService {
     const merged = { ...existing, ...input } as QuestionInput;
     const contentHash = computeContentHash(merged);
 
+    // subjectName isn't a real column (subjectId is) — resolve it the same
+    // find-or-create way create() does. Left unresolved, Prisma would
+    // reject the whole update with an unknown-field error the moment an
+    // edit form includes a Subject field.
+    const { subjectName, ...rest } = input;
+    const subjectId = subjectName !== undefined ? await this.resolveSubjectId(subjectName) : undefined;
+
     return prisma.question.update({
       where: { id },
-      data: { ...input, contentHash, updatedAt: new Date() },
+      data: { ...rest, ...(subjectId !== undefined ? { subjectId } : {}), contentHash, updatedAt: new Date() },
     });
   }
 
@@ -365,7 +372,7 @@ export class QuestionService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
-        include: { authority: true, examCategory: true, subCategory: true },
+        include: { authority: true, examCategory: true, subCategory: true, subject: { select: { name: true } } },
       }),
       prisma.question.count({ where }),
     ]);
