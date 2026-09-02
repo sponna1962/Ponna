@@ -34,9 +34,14 @@ type Stats = {
 
 function questionsLink(status: 'PUBLISHED' | 'DRAFT' | 'DISABLED', r: StatsRow): string {
   const params = new URLSearchParams({ status });
-  if (r.authorityId) params.set('authorityId', r.authorityId);
-  if (r.categoryId) params.set('categoryId', r.categoryId);
-  if (r.subCategoryId) params.set('subCategoryId', r.subCategoryId);
+  // Always set — either the real id, or the sentinel '__none__' when this
+  // row is specifically the "(no category)"/"(no sub-category)" bucket, so
+  // the Questions page filters for exactly NULL rather than not filtering
+  // on that field at all (which would show every category, not just this
+  // row's count).
+  params.set('authorityId', r.authorityId ?? '__none__');
+  params.set('categoryId', r.categoryId ?? '__none__');
+  params.set('subCategoryId', r.subCategoryId ?? '__none__');
   return `/admin/questions?${params.toString()}`;
 }
 

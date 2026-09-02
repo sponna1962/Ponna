@@ -344,6 +344,18 @@ export class QuestionService {
 
   /** Shared filter → Prisma `where` builder for both list() and listIds(), so
    * "Select All Matching Filter" always matches exactly what's on screen. */
+  // A stats-table row can represent "(no category)" / "(no authority)" —
+  // categoryId/authorityId genuinely NULL in the database, not merely
+  // unfiltered. The Stats page's links send the sentinel '__none__' for
+  // exactly that case (see stats/page.tsx) — distinct from the field being
+  // absent entirely, which means "don't filter on this at all" (the normal
+  // admin dropdown behavior, unchanged).
+  private static readonly NONE = '__none__';
+  private resolveFilterId(value?: string): string | null | undefined {
+    if (value === undefined) return undefined;
+    return value === QuestionService.NONE ? null : value;
+  }
+
   private buildWhere(filters: {
     status?: QuestionStatus;
     difficulty?: Difficulty;
@@ -358,9 +370,9 @@ export class QuestionService {
     return {
       status: filters.noDifficultyOnly ? undefined : filters.status,
       difficulty: filters.noDifficultyOnly ? null : filters.difficulty,
-      authorityId: filters.authorityId,
-      categoryId: filters.categoryId,
-      subCategoryId: filters.subCategoryId,
+      authorityId: this.resolveFilterId(filters.authorityId),
+      categoryId: this.resolveFilterId(filters.categoryId),
+      subCategoryId: this.resolveFilterId(filters.subCategoryId),
       category: filters.category,
       language: filters.language,
       ...(filters.search ? { questionText: { contains: filters.search, mode: 'insensitive' as const } } : {}),
