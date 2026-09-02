@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { SubjectInput } from '../../../components/SubjectInput';
 import { adminFetch } from '../../../lib/admin-fetch';
 import { ExamTaxonomyPicker, TaxonomyValue } from '../../../components/ExamTaxonomyPicker';
+import { MultiTaxonomyTagPicker, TaxonomyTag } from '../../../components/MultiTaxonomyTagPicker';
 
 // Question Management — bilingual add form with the new Authority → Category
 // → Sub-Category classification, Source Type metadata, bulk select actions,
@@ -292,6 +293,7 @@ function AdminQuestionsPageInner() {
   // each field left blank is untouched on every selected question. ──────
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkTaxonomy, setBulkTaxonomy] = useState<TaxonomyValue>(emptyTaxonomy);
+  const [bulkAdditionalTags, setBulkAdditionalTags] = useState<TaxonomyTag[]>([]);
   const [bulkSourceType, setBulkSourceType] = useState('');
   const [bulkExamName, setBulkExamName] = useState('');
   const [bulkSubjectName, setBulkSubjectName] = useState('');
@@ -302,6 +304,7 @@ function AdminQuestionsPageInner() {
 
   function openBulkEdit() {
     setBulkTaxonomy(emptyTaxonomy);
+    setBulkAdditionalTags([]);
     setBulkSourceType('');
     setBulkExamName('');
     setBulkSubjectName('');
@@ -320,7 +323,7 @@ function AdminQuestionsPageInner() {
     if (bulkSubjectName.trim()) fields.subjectName = bulkSubjectName.trim();
     if (bulkSourceName.trim()) fields.sourceName = bulkSourceName.trim();
 
-    if (Object.keys(fields).length === 0) {
+    if (Object.keys(fields).length === 0 && bulkAdditionalTags.length === 0) {
       setBulkError('Fill in at least one field to change.');
       return;
     }
@@ -330,7 +333,7 @@ function AdminQuestionsPageInner() {
     const res = await adminFetch('/admin/questions/bulk-update-metadata', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: Array.from(selected), ...fields }),
+      body: JSON.stringify({ ids: Array.from(selected), ...fields, additionalTags: bulkAdditionalTags.length > 0 ? bulkAdditionalTags : undefined }),
     });
     setBulkSaving(false);
     if (!res.ok) {
@@ -983,6 +986,13 @@ function AdminQuestionsPageInner() {
                   <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
                     Pick an Authority here only to browse its Category/Sub-Category — only Category and Sub-Category are applied; Authority itself is left unchanged.
                   </p>
+                </div>
+
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
+                    Also applies to (optional) — adds these tags to every selected question, on top of any it already has:
+                  </label>
+                  <MultiTaxonomyTagPicker value={bulkAdditionalTags} onChange={setBulkAdditionalTags} />
                 </div>
 
                 <label style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>

@@ -244,6 +244,11 @@ export class QuestionService {
       examName?: string;
       subjectName?: string;
       sourceName?: string;
+      // Additive — "also applies to" Authority/Category/Sub-Category tags
+      // added to EVERY selected question, on top of whatever tags they
+      // already have (never removes an existing tag). See
+      // Question.authorityTags for the full rationale.
+      additionalTags?: { authorityId: string; categoryId?: string; subCategoryId?: string }[];
     },
   ) {
     const subjectId = fields.subjectName !== undefined ? await this.resolveSubjectId(fields.subjectName) : undefined;
@@ -255,13 +260,28 @@ export class QuestionService {
     if (subjectId !== undefined) data.subjectId = subjectId;
     if (fields.sourceName !== undefined) data.sourceName = fields.sourceName || null;
 
-    if (Object.keys(data).length === 0) return { count: 0 };
-
     let count = 0;
-    for (const batch of this.chunkIds(ids)) {
-      const result = await prisma.question.updateMany({ where: { id: { in: batch } }, data });
-      count += result.count;
+    if (Object.keys(data).length > 0) {
+      for (const batch of this.chunkIds(ids)) {
+        const result = await prisma.question.updateMany({ where: { id: { in: batch } }, data });
+        count += result.count;
+      }
     }
+
+    if (fields.additionalTags && fields.additionalTags.length > 0) {
+      await prisma.questionTaxonomyTag.createMany({
+        data: ids.flatMap((questionId) =>
+          fields.additionalTags!.map((tag) => ({
+            questionId,
+            authorityId: tag.authorityId,
+            categoryId: tag.categoryId ?? null,
+            subCategoryId: tag.subCategoryId ?? null,
+          })),
+        ),
+      });
+      count = Math.max(count, ids.length);
+    }
+
     return { count };
   }
 
