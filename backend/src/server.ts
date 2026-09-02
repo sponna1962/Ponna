@@ -116,7 +116,7 @@ app.post('/students/me/link-google', requireStudentAuth, async (req: StudentAuth
 // tree, used by the Practice Preference Setup form's cascading multi-selects.
 app.get('/exam-taxonomy', requireStudentAuth, async (_req, res) => {
   res.set('Cache-Control', 'no-store');
-  res.json(await examTaxonomyService.listFullTree());
+  res.json(await examTaxonomyService.listStudentVisibleTree());
 });
 
 // GET /students/me/practice-preference — null if not saved yet (first-time student)

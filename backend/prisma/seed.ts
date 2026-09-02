@@ -185,6 +185,30 @@ async function main() {
   await seedCategory(tntet.id, 'Paper I', []);
   await seedCategory(tntet.id, 'Paper II', []);
 
+  // ── September 15 launch — student-facing visibility (finalized
+  // requirement, one-time only — see PlatformSettings.launchVisibilityApplied) ──
+  // Only TNPSC (Competitive/Employment) and TNTET (Eligibility) are visible
+  // to students at launch; every other Authority in those two Purposes is
+  // hidden, and Higher Education/Entrance is hidden entirely. Purely a
+  // display/selection gate — no data is touched, and an admin can flip any
+  // of this back on later from the Exam Taxonomy page without a deploy.
+  const platformSettings = await prisma.platformSettings.findUniqueOrThrow({ where: { id: 'singleton' } });
+  if (!platformSettings.launchVisibilityApplied) {
+    await prisma.examAuthority.updateMany({
+      where: { purposeId: employmentPurpose.id, name: { not: 'TNPSC' } },
+      data: { studentVisible: false },
+    });
+    await prisma.examAuthority.updateMany({
+      where: { purposeId: eligibilityPurpose.id, name: { not: 'TNTET' } },
+      data: { studentVisible: false },
+    });
+    await prisma.examPurpose.update({
+      where: { id: educationPurpose.id },
+      data: { studentVisible: false },
+    });
+    await prisma.platformSettings.update({ where: { id: 'singleton' }, data: { launchVisibilityApplied: true } });
+  }
+
   // ── Annual Plans (finalized commercial model) ────────────────────────────
   // Free fallback — used whenever a student's selection isn't covered by any
   // of their active paid Plans. Found by isFree, never by a hardcoded id/name.

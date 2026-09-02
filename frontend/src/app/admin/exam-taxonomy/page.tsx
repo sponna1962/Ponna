@@ -10,8 +10,16 @@ import { adminFetch } from '../../../lib/admin-fetch';
 
 type SubCategory = { id: string; name: string; _count: { questions: number } };
 type Category = { id: string; name: string; subCategories: SubCategory[]; _count: { questions: number } };
-type Authority = { id: string; name: string; categories: Category[]; allowAllCategories: boolean; difficultyEnabled: boolean; selectionGroup: string | null };
-type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[]; allowMultipleAuthorities: boolean };
+type Authority = {
+  id: string;
+  name: string;
+  categories: Category[];
+  allowAllCategories: boolean;
+  difficultyEnabled: boolean;
+  selectionGroup: string | null;
+  studentVisible: boolean;
+};
+type Purpose = { id: string; name: string; nameTa: string | null; authorities: Authority[]; allowMultipleAuthorities: boolean; studentVisible: boolean };
 
 export default function ExamTaxonomyPage() {
   const [tree, setTree] = useState<Purpose[]>([]);
@@ -56,7 +64,7 @@ export default function ExamTaxonomyPage() {
 
   /** Toggles either flag for one Authority — controls the student-facing
    * Practice Setup page's "All" chip and Difficulty step, per Authority. */
-  async function toggleAuthorityConfig(authority: Authority, field: 'allowAllCategories' | 'difficultyEnabled') {
+  async function toggleAuthorityConfig(authority: Authority, field: 'allowAllCategories' | 'difficultyEnabled' | 'studentVisible') {
     await adminFetch(`/admin/exam-taxonomy/authorities/${authority.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -85,6 +93,17 @@ export default function ExamTaxonomyPage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ allowMultipleAuthorities: !purpose.allowMultipleAuthorities }),
+    });
+    load();
+  }
+
+  /** Hides/shows this ENTIRE Purpose (and everything under it) from the
+   * student-facing Practice Setup — never touches any underlying data. */
+  async function togglePurposeVisible(purpose: Purpose) {
+    await adminFetch(`/admin/exam-taxonomy/purposes/${purpose.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentVisible: !purpose.studentVisible }),
     });
     load();
   }
@@ -142,8 +161,30 @@ export default function ExamTaxonomyPage() {
 
       {tree.map((purpose) => (
         <div key={purpose.id} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <h2 style={{ fontSize: 17, marginBottom: 4 }}>{purpose.name}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <h2 style={{ fontSize: 17, margin: 0 }}>{purpose.name}</h2>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: '2px 8px',
+                borderRadius: 10,
+                background: purpose.studentVisible ? '#dcfce7' : '#fee2e2',
+                color: purpose.studentVisible ? '#166534' : '#991b1b',
+              }}
+            >
+              {purpose.studentVisible ? 'Visible to students' : 'Hidden from students'}
+            </span>
+          </div>
           {purpose.nameTa && <p style={{ fontSize: 13, color: '#64748b', marginBottom: 8 }}>{purpose.nameTa}</p>}
+          <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+            <input
+              type="checkbox"
+              checked={purpose.studentVisible}
+              onChange={() => togglePurposeVisible(purpose)}
+            />
+            Visible to students (hides this whole Purpose, and every Authority under it, from Practice Setup when off — admin panel unaffected)
+          </label>
           <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
             <input
               type="checkbox"
@@ -155,8 +196,30 @@ export default function ExamTaxonomyPage() {
 
           {purpose.authorities.map((authority) => (
             <div key={authority.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 12, marginLeft: 12 }}>
-              <h3 style={{ fontSize: 15, marginBottom: 4 }}>{authority.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <h3 style={{ fontSize: 15, margin: 0 }}>{authority.name}</h3>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: '1px 7px',
+                    borderRadius: 10,
+                    background: authority.studentVisible ? '#dcfce7' : '#fee2e2',
+                    color: authority.studentVisible ? '#166534' : '#991b1b',
+                  }}
+                >
+                  {authority.studentVisible ? 'Visible' : 'Hidden'}
+                </span>
+              </div>
               <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
+                <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={authority.studentVisible}
+                    onChange={() => toggleAuthorityConfig(authority, 'studentVisible')}
+                  />
+                  Visible to students
+                </label>
                 <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <input
                     type="checkbox"

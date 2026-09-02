@@ -12,8 +12,12 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export class ExamTaxonomyService {
-  /** Full tree (Purpose → Authority → Category → Sub-Category) — used by the
-   * admin Taxonomy Management page and by the student Practice Setup flow. */
+  /** Full tree (Purpose → Authority → Category → Sub-Category) — admin-only,
+   * used by the admin Taxonomy Management page and every other admin
+   * screen that needs the complete structure regardless of student-facing
+   * visibility (Bulk Upload, Add Question, Bulk Edit Metadata tag pickers,
+   * etc.). Never filters by studentVisible — see listStudentVisibleTree()
+   * for the version the student-facing routes use. */
   async listFullTree() {
     return prisma.examPurpose.findMany({
       include: {
@@ -33,12 +37,43 @@ export class ExamTaxonomyService {
     });
   }
 
+  /** Same tree, but only what's currently student-facing-visible — used by
+   * the STUDENT Practice Setup route only (GET /exam-taxonomy). A hidden
+   * Purpose (studentVisible: false) drops the whole Purpose and everything
+   * under it; a hidden Authority drops just that one Authority, even
+   * inside an otherwise-visible Purpose (finalized requirement, Sept 15
+   * launch). Never touches the underlying data — an admin can always see
+   * and manage everything via listFullTree() above regardless of this. */
+  async listStudentVisibleTree() {
+    return prisma.examPurpose.findMany({
+      where: { studentVisible: true },
+      include: {
+        authorities: {
+          where: { studentVisible: true },
+          include: {
+            categories: {
+              include: {
+                subCategories: { include: { _count: { select: { questions: true } } } },
+                _count: { select: { questions: true } },
+              },
+            },
+          },
+          orderBy: { name: 'asc' },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async createPurpose(name: string, nameTa?: string) {
     return prisma.examPurpose.create({ data: { name, nameTa } });
   }
 
-  /** Super Admin toggle for whether this Purpose allows multiple Authorities in one saved Preference. */
-  async setPurposeConfig(purposeId: string, config: { allowMultipleAuthorities?: boolean }) {
+  /** Super Admin toggle for whether this Purpose allows multiple Authorities
+   * in one saved Preference, plus studentVisible — hides/shows this whole
+   * Purpose from the student-facing taxonomy (Sept 15 launch requirement),
+   * without affecting the admin panel or any underlying data. */
+  async setPurposeConfig(purposeId: string, config: { allowMultipleAuthorities?: boolean; studentVisible?: boolean }) {
     return prisma.examPurpose.update({ where: { id: purposeId }, data: config });
   }
 
@@ -50,10 +85,12 @@ export class ExamTaxonomyService {
    * selectionGroup — the config-driven exception that lets specific
    * Authorities within an otherwise single-select Purpose be combined (e.g.
    * JEE Main + JEE Advanced sharing selectionGroup "JEE"). Empty string from
-   * the admin form is normalized to null (standalone). */
+   * the admin form is normalized to null (standalone). studentVisible
+   * hides/shows just this one Authority from the student-facing taxonomy
+   * (Sept 15 launch requirement), even when its Purpose stays visible. */
   async setAuthorityConfig(
     authorityId: string,
-    config: { allowAllCategories?: boolean; difficultyEnabled?: boolean; selectionGroup?: string | null },
+    config: { allowAllCategories?: boolean; difficultyEnabled?: boolean; selectionGroup?: string | null; studentVisible?: boolean },
   ) {
     const data = { ...config };
     if ('selectionGroup' in data) {

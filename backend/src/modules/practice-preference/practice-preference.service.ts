@@ -67,6 +67,20 @@ export class PracticePreferenceService {
     if (!purpose) {
       throw new InvalidSelectionError('Unknown purpose');
     }
+    // Sept 15 launch requirement — a direct API request must not be able to
+    // select a Purpose or Authority that's hidden from students, even
+    // though the picker itself never shows it. Purely an access check —
+    // doesn't touch the underlying data, an admin toggling studentVisible
+    // back on immediately makes the same selection valid again.
+    if (!purpose.studentVisible) {
+      throw new InvalidSelectionError('This exam type is not currently available');
+    }
+    for (const sel of selections.authorities) {
+      const authority = purpose.authorities.find((a) => a.id === sel.authorityId);
+      if (authority && !authority.studentVisible) {
+        throw new InvalidSelectionError('This exam is not currently available');
+      }
+    }
 
     if (selections.allAuthorities) {
       if (!purpose.allowMultipleAuthorities) {
@@ -138,10 +152,16 @@ export class PracticePreferenceService {
    */
   resolveTaxonomyFilter(selections: Selections): Prisma.QuestionWhereInput {
     if (selections.allAuthorities) {
+      // Sept 15 launch requirement: "All Authorities" for a Purpose means
+      // all CURRENTLY VISIBLE ones — same dynamism as "All" everywhere else
+      // in this system (a student who saved "All" automatically picks up
+      // any Authority added, or re-enabled, later with no preference
+      // update needed; the reverse also holds — one hidden later drops out
+      // automatically too).
       return {
         OR: [
-          { authority: { purposeId: selections.purposeId } },
-          { authorityTags: { some: { authority: { purposeId: selections.purposeId } } } },
+          { authority: { purposeId: selections.purposeId, studentVisible: true } },
+          { authorityTags: { some: { authority: { purposeId: selections.purposeId, studentVisible: true } } } },
         ],
       };
     }

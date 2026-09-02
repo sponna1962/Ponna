@@ -301,6 +301,15 @@ model ExamPurpose {
   // the frontend Authority step becomes true single-selection and the "All
   // Authorities" option is hidden entirely — mixing would defeat the purpose.
   allowMultipleAuthorities Boolean @default(true)
+  // Student-facing launch visibility (finalized requirement, Sept 15 launch)
+  // — false hides this ENTIRE Purpose (and everything under it) from the
+  // student-facing taxonomy/Practice Setup, while the Admin panel continues
+  // to show and manage it normally. Default true so every pre-existing
+  // Purpose stays visible unless explicitly hidden. This is purely a
+  // display/selection gate, not a deletion — questions, Authorities,
+  // Categories, and Sub-Categories underneath are entirely untouched and
+  // can keep being prepared from the admin side regardless of this flag.
+  studentVisible Boolean @default(true)
   authorities ExamAuthority[]
   plans       Plan[] // whole-Purpose Annual Plans (e.g. Competitive / Employment Plan) — see Plan.purposeId
 }
@@ -333,6 +342,15 @@ model ExamAuthority {
   // / Employment) — that Purpose already allows any combination. Super
   // Admin sets this from the admin panel; never hardcoded by exam name.
   selectionGroup String?
+  // Student-facing launch visibility (finalized requirement, Sept 15
+  // launch) — false hides just this ONE Authority from the student-facing
+  // taxonomy/Practice Setup, even when its Purpose IS visible (e.g. TNPSC
+  // visible, UPSC hidden, both under the same visible Competitive/
+  // Employment Purpose). Same display/selection-only semantics as
+  // ExamPurpose.studentVisible above — never touches this Authority's
+  // Categories, Sub-Categories, or Questions, all of which remain fully
+  // manageable from the admin side.
+  studentVisible Boolean @default(true)
 
   categories ExamCategory[]
   questions  Question[]
@@ -623,6 +641,15 @@ model PlatformSettings {
   rankingEligibilityMinQuestions Int   @default(50)   // §8.1
 
   sessionInactivityHours      Int      @default(48)   // abandonment window, §4.3 / §13
+
+  // One-time marker (finalized requirement, Sept 15 launch) — guards the
+  // seed script's launch-visibility defaults (hide every Authority except
+  // TNPSC/TNTET, hide Higher Education/Entrance entirely) so they apply
+  // exactly ONCE. Without this, a future admin re-enabling an exam via the
+  // Admin Taxonomy page's "Visible to students" toggle would get silently
+  // reverted back to hidden on the next deploy, since seed.ts runs on
+  // every deploy.
+  launchVisibilityApplied    Boolean  @default(false)
 
   updatedAt                   DateTime @updatedAt
 }
