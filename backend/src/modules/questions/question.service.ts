@@ -227,6 +227,44 @@ export class QuestionService {
     return chunks;
   }
 
+  /**
+   * Bulk metadata edit — Source Type, Category/Sub-Category, Exam Name,
+   * Subject, Source Name across a whole selection at once (the single-row
+   * Edit modal only ever covers one question). Every field is OPTIONAL:
+   * a field left out of `fields` is untouched on every selected question —
+   * this is a "change only what I filled in" edit, never a blanket
+   * overwrite-with-blanks. Batched the same way as the other bulk methods.
+   */
+  async bulkUpdateMetadata(
+    ids: string[],
+    fields: {
+      sourceType?: SourceType;
+      categoryId?: string;
+      subCategoryId?: string;
+      examName?: string;
+      subjectName?: string;
+      sourceName?: string;
+    },
+  ) {
+    const subjectId = fields.subjectName !== undefined ? await this.resolveSubjectId(fields.subjectName) : undefined;
+    const data: Record<string, unknown> = {};
+    if (fields.sourceType !== undefined) data.sourceType = fields.sourceType;
+    if (fields.categoryId !== undefined) data.categoryId = fields.categoryId || null;
+    if (fields.subCategoryId !== undefined) data.subCategoryId = fields.subCategoryId || null;
+    if (fields.examName !== undefined) data.examName = fields.examName || null;
+    if (subjectId !== undefined) data.subjectId = subjectId;
+    if (fields.sourceName !== undefined) data.sourceName = fields.sourceName || null;
+
+    if (Object.keys(data).length === 0) return { count: 0 };
+
+    let count = 0;
+    for (const batch of this.chunkIds(ids)) {
+      const result = await prisma.question.updateMany({ where: { id: { in: batch } }, data });
+      count += result.count;
+    }
+    return { count };
+  }
+
   async bulkSetDifficulty(ids: string[], difficulty: Difficulty) {
     let count = 0;
     for (const batch of this.chunkIds(ids)) {

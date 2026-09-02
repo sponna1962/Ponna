@@ -585,6 +585,19 @@ app.post('/admin/questions/bulk-set-difficulty', requireStaffAuth, canEditQuesti
   res.json(result);
 });
 
+// POST /admin/questions/bulk-update-metadata  { ids: string[], sourceType?, categoryId?, subCategoryId?, examName?, subjectName?, sourceName? }
+// Every field is optional — a field left out is untouched on every selected question.
+app.post('/admin/questions/bulk-update-metadata', requireStaffAuth, canEditQuestions, async (req, res) => {
+  try {
+    const { ids, ...fields } = req.body;
+    const result = await questionService.bulkUpdateMetadata(ids, fields);
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to bulk-update metadata' });
+  }
+});
+
 // POST /admin/questions/bulk-delete  { ids: string[] } — Super Admin only, this is destructive
 app.post('/admin/questions/bulk-delete', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   try {

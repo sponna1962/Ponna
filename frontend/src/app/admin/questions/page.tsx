@@ -280,6 +280,61 @@ function AdminQuestionsPageInner() {
     loadPendingAiCount();
   }
 
+  // ── Bulk Edit Metadata (Source Type, Category/Sub-Category, Exam Name,
+  // Subject, Source Name) across the whole current selection at once —
+  // each field left blank is untouched on every selected question. ──────
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkTaxonomy, setBulkTaxonomy] = useState<TaxonomyValue>(emptyTaxonomy);
+  const [bulkSourceType, setBulkSourceType] = useState('');
+  const [bulkExamName, setBulkExamName] = useState('');
+  const [bulkSubjectName, setBulkSubjectName] = useState('');
+  const [bulkSourceName, setBulkSourceName] = useState('');
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ count: number } | null>(null);
+
+  function openBulkEdit() {
+    setBulkTaxonomy(emptyTaxonomy);
+    setBulkSourceType('');
+    setBulkExamName('');
+    setBulkSubjectName('');
+    setBulkSourceName('');
+    setBulkError(null);
+    setBulkResult(null);
+    setBulkEditOpen(true);
+  }
+
+  async function applyBulkEdit() {
+    const fields: Record<string, string> = {};
+    if (bulkSourceType) fields.sourceType = bulkSourceType;
+    if (bulkTaxonomy.categoryId) fields.categoryId = bulkTaxonomy.categoryId;
+    if (bulkTaxonomy.subCategoryId) fields.subCategoryId = bulkTaxonomy.subCategoryId;
+    if (bulkExamName.trim()) fields.examName = bulkExamName.trim();
+    if (bulkSubjectName.trim()) fields.subjectName = bulkSubjectName.trim();
+    if (bulkSourceName.trim()) fields.sourceName = bulkSourceName.trim();
+
+    if (Object.keys(fields).length === 0) {
+      setBulkError('Fill in at least one field to change.');
+      return;
+    }
+
+    setBulkSaving(true);
+    setBulkError(null);
+    const res = await adminFetch('/admin/questions/bulk-update-metadata', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(selected), ...fields }),
+    });
+    setBulkSaving(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setBulkError(body.error ?? 'Failed to save');
+      return;
+    }
+    setBulkResult(await res.json());
+    loadQuestions();
+  }
+
   function startEdit(q: Question) {
     setEditing(q);
     setEditFields({ questionText: q.questionText, optionA: q.optionA, optionB: q.optionB, optionC: q.optionC, optionD: q.optionD });
@@ -659,6 +714,7 @@ function AdminQuestionsPageInner() {
               <button onClick={classifySelected} style={{ fontSize: 12, padding: '6px 12px' }}>Classify Selected with AI</button>
               <button onClick={() => bulkSetDifficulty('MEDIUM')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Medium</button>
               <button onClick={() => bulkSetDifficulty('HARD')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Hard</button>
+              <button onClick={openBulkEdit} style={{ fontSize: 12, padding: '6px 12px' }}>✏️ Bulk Edit Metadata</button>
               <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
               <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
               <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
@@ -871,6 +927,80 @@ function AdminQuestionsPageInner() {
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button onClick={() => setHeuristicPreview(null)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff' }}>
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {bulkEditOpen && (
+        <div
+          onClick={() => setBulkEditOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 10, padding: 20, maxWidth: 480, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: 16, marginBottom: 4 }}>✏️ Bulk Edit Metadata</h2>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
+              Applies to all {selected.size} selected questions. Leave a field blank to leave it unchanged — this only edits the fields
+              you actually fill in. Authority itself and question content/options aren't editable here.
+            </p>
+
+            {bulkError && <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 12 }}>{bulkError}</p>}
+
+            {!bulkResult && (
+              <>
+                <label style={{ fontSize: 13, display: 'block', marginBottom: 10 }}>
+                  Source Type:{' '}
+                  <select value={bulkSourceType} onChange={(e) => setBulkSourceType(e.target.value)} style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }}>
+                    <option value="">— (leave unchanged)</option>
+                    {SOURCE_TYPES.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <div style={{ marginBottom: 10 }}>
+                  <ExamTaxonomyPicker value={bulkTaxonomy} onChange={setBulkTaxonomy} />
+                  <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                    Pick an Authority here only to browse its Category/Sub-Category — only Category and Sub-Category are applied; Authority itself is left unchanged.
+                  </p>
+                </div>
+
+                <label style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
+                  Exam Name:{' '}
+                  <input value={bulkExamName} onChange={(e) => setBulkExamName(e.target.value)} placeholder="(leave unchanged)" style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 220 }} />
+                </label>
+                <div style={{ marginBottom: 8 }}>
+                  <SubjectInput value={bulkSubjectName} onChange={setBulkSubjectName} />
+                </div>
+                <label style={{ fontSize: 13, display: 'block', marginBottom: 16 }}>
+                  Source Name:{' '}
+                  <input value={bulkSourceName} onChange={(e) => setBulkSourceName(e.target.value)} placeholder="(leave unchanged)" style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 240 }} />
+                </label>
+
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setBulkEditOpen(false)} style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={applyBulkEdit}
+                    disabled={bulkSaving}
+                    style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                  >
+                    {bulkSaving ? 'Saving…' : `Apply to ${selected.size} questions`}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {bulkResult && (
+              <>
+                <p style={{ fontSize: 14, marginBottom: 16 }}>✅ Updated {bulkResult.count} questions.</p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setBulkEditOpen(false)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff' }}>
                     Close
                   </button>
                 </div>
