@@ -402,6 +402,7 @@ export class QuestionService {
     subCategoryId?: string;
     category?: QuestionCategory;
     language?: Language;
+    sourceType?: SourceType;
     search?: string;
     noDifficultyOnly?: boolean;
   }) {
@@ -413,6 +414,7 @@ export class QuestionService {
       subCategoryId: this.resolveFilterId(filters.subCategoryId),
       category: filters.category,
       language: filters.language,
+      sourceType: filters.sourceType,
       ...(filters.search ? { questionText: { contains: filters.search, mode: 'insensitive' as const } } : {}),
     };
   }
@@ -425,6 +427,7 @@ export class QuestionService {
     subCategoryId?: string;
     category?: QuestionCategory;
     language?: Language;
+    sourceType?: SourceType;
     search?: string; // matches question text, case-insensitive substring
     // "Waiting for AI" tab — every question with no Difficulty yet,
     // regardless of status (Draft/Published/Disabled all included, since a
@@ -463,6 +466,7 @@ export class QuestionService {
     subCategoryId?: string;
     category?: QuestionCategory;
     language?: Language;
+    sourceType?: SourceType;
     search?: string;
     noDifficultyOnly?: boolean;
   }) {

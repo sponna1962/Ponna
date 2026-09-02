@@ -76,6 +76,7 @@ function AdminQuestionsPageInner() {
       : emptyTaxonomy;
   });
   const [languageFilter, setLanguageFilter] = useState('');
+  const [sourceTypeFilter, setSourceTypeFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pendingAiCount, setPendingAiCount] = useState(0);
@@ -126,6 +127,7 @@ function AdminQuestionsPageInner() {
     if (taxonomyFilter.categoryId) params.set('categoryId', taxonomyFilter.categoryId);
     if (taxonomyFilter.subCategoryId) params.set('subCategoryId', taxonomyFilter.subCategoryId);
     if (languageFilter) params.set('language', languageFilter);
+    if (sourceTypeFilter) params.set('sourceType', sourceTypeFilter);
     return params;
   }
 
@@ -171,7 +173,7 @@ function AdminQuestionsPageInner() {
     loadQuestions();
     loadPendingAiCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, page, taxonomyFilter, languageFilter]);
+  }, [statusFilter, page, taxonomyFilter, languageFilter, sourceTypeFilter]);
 
   // Any filter change (status/taxonomy) should snap back to page 1 — staying
   // on e.g. page 3 of a now-much-smaller filtered result shows an empty list.
@@ -185,6 +187,11 @@ function AdminQuestionsPageInner() {
   }
   function updateLanguageFilter(l: string) {
     setLanguageFilter(l);
+    setPage(1);
+  }
+
+  function updateSourceTypeFilter(s: string) {
+    setSourceTypeFilter(s);
     setPage(1);
   }
 
@@ -679,6 +686,15 @@ function AdminQuestionsPageInner() {
             <option value="">— (எல்லாம்)</option>
             <option value="TA">தமிழ்</option>
             <option value="EN">English</option>
+          </select>
+        </label>
+        <label style={{ fontSize: 13 }}>
+          Source Type:{' '}
+          <select value={sourceTypeFilter} onChange={(e) => updateSourceTypeFilter(e.target.value)}>
+            <option value="">— (all)</option>
+            {SOURCE_TYPES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
           </select>
         </label>
       </div>
