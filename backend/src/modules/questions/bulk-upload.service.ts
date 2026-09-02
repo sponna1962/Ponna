@@ -38,6 +38,12 @@ export interface BatchMetadata {
   subjectName?: string;
   sourceType: SourceType;
   sourceName?: string;
+  // Original/Book/Other only (finalized requirement) — additional
+  // Authorities this WHOLE batch also applies to, beyond the primary
+  // authorityId above. Creates a QuestionAuthorityTag row per question per
+  // additional Authority. Never used for PREVIOUS_EXAM (that source type
+  // stays tied to its one paper's Authority).
+  additionalAuthorityIds?: string[];
 }
 
 export interface PreviewRow {
@@ -181,6 +187,7 @@ export class BulkUploadService {
   async confirmImport(rows: PreviewRow['data'][], batchMeta: BatchMetadata, uploadedBy: string): Promise<{ batchId: string; inserted: number }> {
     const batchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const idsNeedingTranslation: string[] = [];
+    const allInsertedIds: string[] = []; // both TA and EN rows — tags apply regardless of which language a student gets
     let inserted = 0;
 
     // Resolved once per batch (not per row) — same find-or-create pattern as
@@ -200,15 +207,32 @@ export class BulkUploadService {
         const id = await this.insertLanguageVersion(row, 'TA', batchMeta, subjectId, batchId, null);
         firstId = id;
         groupId = id;
+        allInsertedIds.push(id);
       }
       if (hasEn) {
         const id = await this.insertLanguageVersion(row, 'EN', batchMeta, subjectId, batchId, groupId);
         if (!firstId) firstId = id;
+        allInsertedIds.push(id);
       }
       if (firstId) {
         inserted++;
         if (!hasTa || !hasEn) idsNeedingTranslation.push(firstId); // only one language provided — queue the other
       }
+    }
+
+    // Original/Book/Other only (finalized requirement) — tags every
+    // inserted question with the additional Authorities this whole batch
+    // ALSO applies to, beyond its primary authorityId. One insert per
+    // (question, authority) pair — createMany with skipDuplicates since
+    // the @@unique constraint would otherwise reject a re-run of the same
+    // batch metadata.
+    if (batchMeta.additionalAuthorityIds && batchMeta.additionalAuthorityIds.length > 0 && allInsertedIds.length > 0) {
+      await prisma.questionAuthorityTag.createMany({
+        data: allInsertedIds.flatMap((questionId) =>
+          batchMeta.additionalAuthorityIds!.map((authorityId) => ({ questionId, authorityId })),
+        ),
+        skipDuplicates: true,
+      });
     }
 
     if (idsNeedingTranslation.length > 0) {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { adminFetch } from '../../../../lib/admin-fetch';
 import { ExamTaxonomyPicker, TaxonomyValue } from '../../../../components/ExamTaxonomyPicker';
 import { SubjectInput } from '../../../../components/SubjectInput';
+import { AdditionalAuthoritiesPicker } from '../../../../components/AdditionalAuthoritiesPicker';
 
 // Bulk Upload — Step 1: Source Type, Step 2: metadata (applies to the whole
 // file — never repeated per row), Step 3: upload CSV → Validate → Preview →
@@ -32,6 +33,7 @@ export default function BulkUploadPage() {
   const [examYear, setExamYear] = useState('');
   const [subjectName, setSubjectName] = useState('');
   const [sourceName, setSourceName] = useState('');
+  const [additionalAuthorityIds, setAdditionalAuthorityIds] = useState<string[]>([]);
 
   const [file, setFile] = useState<File | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -76,6 +78,7 @@ export default function BulkUploadPage() {
       subjectName: subjectName.trim() || undefined,
       sourceType,
       sourceName: sourceName.trim() || undefined,
+      additionalAuthorityIds: sourceType !== 'PREVIOUS_EXAM' && additionalAuthorityIds.length > 0 ? additionalAuthorityIds : undefined,
     };
 
     try {
@@ -132,6 +135,18 @@ export default function BulkUploadPage() {
         <div style={{ marginBottom: 10 }}>
           <ExamTaxonomyPicker value={taxonomy} onChange={setTaxonomy} />
         </div>
+
+        {/* Original/Book/Other only (finalized requirement) — Previous
+            Exam questions stay tied to the one paper's Authority above,
+            no additional tagging needed. */}
+        {sourceType !== 'PREVIOUS_EXAM' && (
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
+              Also applies to (optional) — this content is also relevant for these exams:
+            </label>
+            <AdditionalAuthoritiesPicker value={additionalAuthorityIds} onChange={setAdditionalAuthorityIds} excludeAuthorityId={taxonomy.authorityId || undefined} />
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
           <label style={{ fontSize: 13 }}>
             Exam Name (optional):{' '}

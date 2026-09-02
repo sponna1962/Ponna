@@ -213,6 +213,21 @@ model PlanAuthorityScope {
   @@unique([planId, authorityId])
 }
 
+// Additional-Authority tags for Original/Book/Other questions — see
+// Question.authorityTags for the full rationale. Many-to-many: one
+// question can tag several Authorities, and (symmetrically, though not
+// currently exercised any other way) one Authority can be tagged onto many
+// questions.
+model QuestionAuthorityTag {
+  id          String        @id @default(uuid())
+  questionId  String
+  question    Question      @relation(fields: [questionId], references: [id])
+  authorityId String
+  authority   ExamAuthority @relation(fields: [authorityId], references: [id])
+
+  @@unique([questionId, authorityId])
+}
+
 // One row per purchase cycle. Renewal is manual — a new row is created on
 // each re-purchase. A student may hold several ACTIVE Subscriptions at once
 // (finalized requirement — e.g. NEET Plan + TNTET Plan simultaneously);
@@ -308,6 +323,7 @@ model ExamAuthority {
   categories ExamCategory[]
   questions  Question[]
   planScopes PlanAuthorityScope[] // exam-specific Annual Plans that cover this Authority (e.g. NEET Plan, JEE Plan)
+  questionTags QuestionAuthorityTag[] // Original/Book/Other questions ALSO tagged as relevant here, beyond their primary Authority
 
   @@unique([purposeId, name])
 }
@@ -413,6 +429,19 @@ model Question {
   subCategory    ExamSubCategory?  @relation(fields: [subCategoryId], references: [id])
   examName       String?           // free text, only when Category/Sub-Category aren't specific enough (e.g. "Assistant Public Prosecutor, Grade II")
   examYear       Int?              // mainly meaningful for PREVIOUS_EXAM source type
+
+  // Additional Authorities this question ALSO applies to, beyond the
+  // primary authorityId above — for Original/Book/Other source-type
+  // questions (General Knowledge, Aptitude, English...) that genuinely
+  // benefit students preparing for SEVERAL exams at once, not just one
+  // (finalized requirement). Previous Exam questions never use this — they
+  // stay tied to the one authorityId their source paper belongs to.
+  // Deliberately additive: authorityId/categoryId/subCategoryId above
+  // remain the question's PRIMARY classification (used everywhere for
+  // admin display/stats); this only WIDENS which practice sessions can
+  // also surface it, via the allocation engine's OR match — see
+  // practice-preference.service.ts's resolveTaxonomyFilter.
+  authorityTags  QuestionAuthorityTag[]
 
   // Subject (topic/subject-matter, e.g. History, Polity, General Science) —
   // deliberately separate from the Authority→Category→Sub-Category exam-tier

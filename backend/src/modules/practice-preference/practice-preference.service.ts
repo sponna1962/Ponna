@@ -125,12 +125,24 @@ export class PracticePreferenceService {
    * Resolves a saved (or in-progress, not-yet-saved) selection into a Prisma
    * `where` fragment for Question queries. Always includes the Purpose scope
    * first — "All" only ever means "all Authorities under this Purpose".
+   *
+   * Also matches questions TAGGED to a selected Authority (Original/Book/
+   * Other questions that genuinely apply to several exams — finalized
+   * requirement), not just questions whose PRIMARY authorityId is that
+   * Authority. Tag matching only applies for "All Categories" selections:
+   * a tagged question's own categoryId belongs to its primary Authority's
+   * taxonomy tree, so it can never genuinely satisfy "this Authority, this
+   * SPECIFIC Category" — narrowing to one Category always means only
+   * questions actually classified there, tag or no tag.
    */
   resolveTaxonomyFilter(selections: Selections): Prisma.QuestionWhereInput {
-    const purposeScope: Prisma.QuestionWhereInput = { authority: { purposeId: selections.purposeId } };
-
     if (selections.allAuthorities) {
-      return purposeScope;
+      return {
+        OR: [
+          { authority: { purposeId: selections.purposeId } },
+          { authorityTags: { some: { authority: { purposeId: selections.purposeId } } } },
+        ],
+      };
     }
 
     if (selections.authorities.length === 0) {
@@ -140,7 +152,9 @@ export class PracticePreferenceService {
     const orConditions: Prisma.QuestionWhereInput[] = [];
     for (const authority of selections.authorities) {
       if (authority.allCategories) {
-        orConditions.push({ authorityId: authority.authorityId });
+        orConditions.push({
+          OR: [{ authorityId: authority.authorityId }, { authorityTags: { some: { authorityId: authority.authorityId } } }],
+        });
         continue;
       }
       for (const category of authority.categories) {
@@ -156,7 +170,7 @@ export class PracticePreferenceService {
       }
     }
 
-    return { AND: [purposeScope, { OR: orConditions }] };
+    return { OR: orConditions };
   }
 
   /**
