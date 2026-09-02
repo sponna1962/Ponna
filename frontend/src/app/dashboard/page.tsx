@@ -28,11 +28,16 @@ const CARD = { border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '1
 export default function DashboardPage() {
   const { t } = useLanguage();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
       .then((r) => r.json())
       .then(setData)
+      .catch(() => {});
+    studentFetch('/students/me/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => setPhotoUrl(p?.photoUrl ?? null))
       .catch(() => {});
   }, []);
 
@@ -51,6 +56,10 @@ export default function DashboardPage() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <StudentMenu />
+        {photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photoUrl} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${COLORS.line}` }} />
+        ) : null}
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.dashboard.title}</h1>
       </div>
 

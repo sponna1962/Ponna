@@ -64,6 +64,7 @@ export default function IndexPage() {
   // Logged-in extras
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
+  const [headerPhotoUrl, setHeaderPhotoUrl] = useState<string | null>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [loggedOutElsewhere, setLoggedOutElsewhere] = useState(false);
 
@@ -89,7 +90,10 @@ export default function IndexPage() {
       .catch(() => setActiveSubs([]));
     studentFetch('/students/me/profile')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setLoginMethod(data?.phone ? 'phone' : data?.email ? 'google' : null))
+      .then((data) => {
+        setLoginMethod(data?.phone ? 'phone' : data?.email ? 'google' : null);
+        setHeaderPhotoUrl(data?.photoUrl ?? null);
+      })
       .catch(() => {});
   }, [isLoggedIn]);
 
@@ -253,9 +257,18 @@ export default function IndexPage() {
                 justifyContent: 'center',
                 cursor: 'pointer',
                 fontSize: 16,
+                overflow: 'hidden',
+                padding: 0,
               }}
             >
-              {loginMethod === 'google' ? <GoogleIcon /> : '📱'}
+              {headerPhotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={headerPhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : loginMethod === 'google' ? (
+                <GoogleIcon />
+              ) : (
+                '📱'
+              )}
             </button>
 
             {accountMenuOpen && (
