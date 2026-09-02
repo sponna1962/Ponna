@@ -12,19 +12,23 @@ type Purpose = { id: string; name: string; authorities: Authority[] };
 
 /**
  * "Also applies to" tag picker — one Authority checklist, then (for every
- * CHECKED Authority) its Categories appear as their own checklist right
- * below, then (for every CHECKED Category) its Sub-Categories appear below
- * that — all on one page, no repeated "add another" step.
+ * EXPANDED Authority) its Categories appear as their own checklist right
+ * below, then (for every EXPANDED Category) its Sub-Categories appear
+ * below that — all on one page, no repeated "add another" step.
  *
- * Checking just an Authority (nothing under it) tags the whole Authority.
- * Checking a Category under it narrows that ONE Authority down to just that
- * Category (the whole-Authority tag is replaced, not kept alongside it) —
- * and likewise checking a Sub-Category narrows a Category down further.
- * This lets one batch be tagged, for example, to TNPSC's Group II, Group
- * III, and Group IV specifically, without also tagging the whole of TNPSC.
+ * Ticking an Authority/Category only REVEALS the next level — it does NOT
+ * by itself create a tag. The admin must explicitly tick "All Categories"
+ * (or specific Categories) under a revealed Authority, and likewise "All
+ * Sub-Categories" (or specific Sub-Categories) under a revealed Category,
+ * to actually produce a tag. This keeps "All" a deliberate choice, never
+ * an accidental default from just ticking the Authority checkbox.
  */
 export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag[]; onChange: (tags: TaxonomyTag[]) => void }) {
   const [tree, setTree] = useState<Purpose[]>([]);
+  // UI-only — which rows are expanded to show the next level down. Never
+  // saved/sent anywhere; only `value` (the actual tags) is.
+  const [expandedAuthorities, setExpandedAuthorities] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set()); // keyed "authorityId:categoryId"
 
   useEffect(() => {
     adminFetch('/admin/exam-taxonomy')
@@ -33,7 +37,6 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
       .catch(() => {});
   }, []);
 
-  const authorityChecked = (authorityId: string) => value.some((t) => t.authorityId === authorityId);
   const allCategoriesChecked = (authorityId: string) => value.some((t) => t.authorityId === authorityId && !t.categoryId);
   const categoryChecked = (authorityId: string, categoryId: string) =>
     value.some((t) => t.authorityId === authorityId && t.categoryId === categoryId);
@@ -42,12 +45,17 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
   const subCategoryChecked = (authorityId: string, categoryId: string, subCategoryId: string) =>
     value.some((t) => t.authorityId === authorityId && t.categoryId === categoryId && t.subCategoryId === subCategoryId);
 
-  function toggleAuthority(authorityId: string) {
-    if (authorityChecked(authorityId)) {
+  function toggleAuthorityExpanded(authorityId: string) {
+    const next = new Set(expandedAuthorities);
+    if (next.has(authorityId)) {
+      next.delete(authorityId);
+      // Collapsing an Authority also clears any tags made under it —
+      // nothing left on screen to represent them.
       onChange(value.filter((t) => t.authorityId !== authorityId));
     } else {
-      onChange([...value, { authorityId }]); // starts as "All Categories" for this Authority
+      next.add(authorityId);
     }
+    setExpandedAuthorities(next);
   }
 
   function toggleAllCategories(authorityId: string) {
@@ -61,18 +69,22 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
     }
   }
 
-  function toggleCategory(authorityId: string, categoryId: string) {
-    const hasThisCategory = value.some((t) => t.authorityId === authorityId && t.categoryId === categoryId && !t.subCategoryId);
-    const withoutThis = value.filter((t) => !(t.authorityId === authorityId && (!t.categoryId || t.categoryId === categoryId)));
-    onChange(hasThisCategory ? withoutThis : [...withoutThis, { authorityId, categoryId }]);
+  function toggleCategoryExpanded(authorityId: string, categoryId: string) {
+    const key = `${authorityId}:${categoryId}`;
+    const next = new Set(expandedCategories);
+    if (next.has(key)) {
+      next.delete(key);
+      onChange(value.filter((t) => !(t.authorityId === authorityId && t.categoryId === categoryId)));
+    } else {
+      next.add(key);
+    }
+    setExpandedCategories(next);
   }
 
   function toggleAllSubCategories(authorityId: string, categoryId: string) {
     if (allSubCategoriesChecked(authorityId, categoryId)) {
       onChange(value.filter((t) => !(t.authorityId === authorityId && t.categoryId === categoryId && !t.subCategoryId)));
     } else {
-      // Explicit "All Sub-Categories" replaces any individual Sub-Category
-      // selections already made for this Category.
       onChange([...value.filter((t) => !(t.authorityId === authorityId && t.categoryId === categoryId)), { authorityId, categoryId }]);
     }
   }
@@ -80,27 +92,28 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
   function toggleSubCategory(authorityId: string, categoryId: string, subCategoryId: string) {
     const hasThis = subCategoryChecked(authorityId, categoryId, subCategoryId);
     const withoutThis = value.filter(
-      (t) => !(t.authorityId === authorityId && (!t.categoryId || (t.categoryId === categoryId && (!t.subCategoryId || t.subCategoryId === subCategoryId)))),
+      (t) => !(t.authorityId === authorityId && t.categoryId === categoryId && t.subCategoryId === subCategoryId),
     );
     onChange(hasThis ? withoutThis : [...withoutThis, { authorityId, categoryId, subCategoryId }]);
   }
 
-  const checkedAuthorityRows: { purpose: Purpose; authority: Authority }[] = [];
+  const expandedAuthorityRows: { purpose: Purpose; authority: Authority }[] = [];
   for (const purpose of tree) {
     for (const authority of purpose.authorities) {
-      if (authorityChecked(authority.id)) checkedAuthorityRows.push({ purpose, authority });
+      if (expandedAuthorities.has(authority.id)) expandedAuthorityRows.push({ purpose, authority });
     }
   }
-  const checkedCategoryRows: { authority: Authority; category: Category }[] = [];
-  for (const { authority } of checkedAuthorityRows) {
+  const expandedCategoryRows: { authority: Authority; category: Category }[] = [];
+  for (const { authority } of expandedAuthorityRows) {
     for (const category of authority.categories) {
-      if (categoryChecked(authority.id, category.id)) checkedCategoryRows.push({ authority, category });
+      if (expandedCategories.has(`${authority.id}:${category.id}`)) expandedCategoryRows.push({ authority, category });
     }
   }
 
   return (
     <div>
-      {/* Authority — grouped by Purpose */}
+      {/* Authority — grouped by Purpose. Ticking one only reveals its
+          Category checklist below; it does not tag anything by itself. */}
       <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, marginBottom: 10 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', margin: '0 0 6px', textTransform: 'uppercase' }}>Authority</p>
         {tree.map((purpose) => (
@@ -109,7 +122,7 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {purpose.authorities.map((a) => (
                 <label key={a.id} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <input type="checkbox" checked={authorityChecked(a.id)} onChange={() => toggleAuthority(a.id)} />
+                  <input type="checkbox" checked={expandedAuthorities.has(a.id)} onChange={() => toggleAuthorityExpanded(a.id)} />
                   {a.name}
                 </label>
               ))}
@@ -118,11 +131,14 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
         ))}
       </div>
 
-      {/* Category — only for checked Authorities */}
-      {checkedAuthorityRows.length > 0 && (
+      {/* Category — only for Authorities ticked above. Ticking a specific
+          Category here reveals its Sub-Category checklist below; ticking
+          "All Categories" tags the whole Authority and does NOT reveal
+          Sub-Categories (there's nothing narrower left to pick). */}
+      {expandedAuthorityRows.length > 0 && (
         <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, marginBottom: 10 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', margin: '0 0 6px', textTransform: 'uppercase' }}>Category</p>
-          {checkedAuthorityRows.map(({ authority }) =>
+          {expandedAuthorityRows.map(({ authority }) =>
             authority.categories.length === 0 ? null : (
               <div key={authority.id} style={{ marginBottom: 6 }}>
                 <div style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 2 }}>{authority.name}</div>
@@ -138,9 +154,9 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
                     >
                       <input
                         type="checkbox"
-                        checked={allCategoriesChecked(authority.id) || categoryChecked(authority.id, c.id)}
+                        checked={expandedCategories.has(`${authority.id}:${c.id}`)}
                         disabled={allCategoriesChecked(authority.id)}
-                        onChange={() => toggleCategory(authority.id, c.id)}
+                        onChange={() => toggleCategoryExpanded(authority.id, c.id)}
                       />
                       {c.name}
                     </label>
@@ -152,11 +168,11 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
         </div>
       )}
 
-      {/* Sub-Category — only for checked Categories (not "All Categories") */}
-      {checkedCategoryRows.length > 0 && (
+      {/* Sub-Category — only for Categories ticked above. */}
+      {expandedCategoryRows.length > 0 && (
         <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', margin: '0 0 6px', textTransform: 'uppercase' }}>Sub-Category</p>
-          {checkedCategoryRows.map(({ authority, category }) =>
+          {expandedCategoryRows.map(({ authority, category }) =>
             category.subCategories.length === 0 ? null : (
               <div key={category.id} style={{ marginBottom: 6 }}>
                 <div style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 2 }}>
@@ -178,7 +194,7 @@ export function MultiTaxonomyTagPicker({ value, onChange }: { value: TaxonomyTag
                     >
                       <input
                         type="checkbox"
-                        checked={allSubCategoriesChecked(authority.id, category.id) || subCategoryChecked(authority.id, category.id, s.id)}
+                        checked={subCategoryChecked(authority.id, category.id, s.id)}
                         disabled={allSubCategoriesChecked(authority.id, category.id)}
                         onChange={() => toggleSubCategory(authority.id, category.id, s.id)}
                       />
