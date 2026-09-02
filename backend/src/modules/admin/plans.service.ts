@@ -49,7 +49,13 @@ export class PlansService {
         sortOrder: true,
         // Included so the frontend can build a "Practice X, Y, Z" description
         // straight from real scope data — never by matching on the Plan's name.
-        purpose: { select: { name: true, authorities: { select: { name: true } } } },
+        // Only studentVisible Authorities are listed here (Sept 15 launch
+        // requirement) — a whole-Purpose Plan's scope tags on the student
+        // Plans page must match what's actually available at Practice Setup,
+        // not the full admin-side authority list. Authority-scoped Plans
+        // (authorityScopes below) are unaffected — a Plan scoped directly to
+        // a specific Authority is only ever active/shown for one anyway.
+        purpose: { select: { name: true, authorities: { where: { studentVisible: true }, select: { name: true } } } },
         authorityScopes: { select: { authority: { select: { name: true, categories: { select: { name: true } } } } } },
       },
       orderBy: { sortOrder: 'asc' },
@@ -70,7 +76,9 @@ export class PlansService {
             // Included so the "My Plans" bottom-sheet can show the same
             // scope tags for an Active plan as it does for a purchasable
             // one — same describeScope() logic on the frontend either way.
-            purpose: { select: { name: true, authorities: { select: { name: true } } } },
+            // studentVisible-filtered — same reasoning as
+            // listActivePlansForStudent() above.
+            purpose: { select: { name: true, authorities: { where: { studentVisible: true }, select: { name: true } } } },
             authorityScopes: { select: { authority: { select: { name: true, categories: { select: { name: true } } } } } },
           },
         },
