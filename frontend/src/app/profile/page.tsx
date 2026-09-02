@@ -13,8 +13,8 @@
 // never used here or anywhere else to restrict exam access (finalized
 // requirement).
 
-import { useEffect, useState } from 'react';
-import { GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
+import { useEffect, useState, useRef } from 'react';
+import { GoogleAuthProvider, linkWithPopup, RecaptchaVerifier, linkWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { firebaseAuth } from '../../lib/firebase';
 import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
@@ -69,6 +69,17 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
   const [googleLinkMessage, setGoogleLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // Verify Phone Number (finalized requirement — Free Preview needs a
+  // verified phone; a Google-only account has none by default). Same
+  // Firebase phone-OTP pattern as the login page's flow, but linking onto
+  // the ALREADY-authenticated current user instead of a fresh sign-in.
+  const [phoneLinkStep, setPhoneLinkStep] = useState<'idle' | 'enterPhone' | 'enterOtp'>('idle');
+  const [phoneToVerify, setPhoneToVerify] = useState('');
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [verifyingPhone, setVerifyingPhone] = useState(false);
+  const [phoneLinkMessage, setPhoneLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const phoneConfirmationRef = useRef<ConfirmationResult | null>(null);
+  const phoneRecaptchaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     studentFetch('/students/me/profile')
@@ -158,6 +169,59 @@ export default function ProfilePage() {
       setGoogleLinkMessage({ ok: false, text: err.message ?? t.profile.googleLinkFailed });
     } finally {
       setConnectingGoogle(false);
+    }
+  }
+
+  /**
+   * Sends an OTP to verify+link a phone number onto the currently-logged-in
+   * (Google) student account — mirrors connectGoogle above, using Firebase's
+   * linkWithPhoneNumber on the CURRENT session instead of a fresh sign-in.
+   */
+  async function sendPhoneVerification() {
+    setVerifyingPhone(true);
+    setPhoneLinkMessage(null);
+    try {
+      if (!firebaseAuth.currentUser) {
+        setPhoneLinkMessage({ ok: false, text: t.profile.googleLinkNeedsRelogin });
+        return;
+      }
+      const verifier = new RecaptchaVerifier(firebaseAuth, phoneRecaptchaRef.current!, { size: 'invisible' });
+      const fullPhone = phoneToVerify.startsWith('+') ? phoneToVerify : `+91${phoneToVerify}`;
+      phoneConfirmationRef.current = await linkWithPhoneNumber(firebaseAuth.currentUser, fullPhone, verifier);
+      setPhoneLinkStep('enterOtp');
+    } catch (err: any) {
+      console.error(err);
+      setPhoneLinkMessage({ ok: false, text: err.message ?? t.login.sendError });
+    } finally {
+      setVerifyingPhone(false);
+    }
+  }
+
+  async function confirmPhoneVerification() {
+    setVerifyingPhone(true);
+    setPhoneLinkMessage(null);
+    try {
+      if (!phoneConfirmationRef.current) throw new Error('No OTP request in progress');
+      const credential = await phoneConfirmationRef.current.confirm(phoneOtp);
+      const firebaseIdToken = await credential.user.getIdToken();
+
+      const res = await studentFetch('/students/me/link-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firebaseIdToken }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to link phone number');
+      }
+      setPhoneLinkMessage({ ok: true, text: t.profile.phoneVerified });
+      setPhoneLinkStep('idle');
+      setProfile((p) => (p ? { ...p, phone: phoneToVerify } : p));
+    } catch (err: any) {
+      console.error(err);
+      setPhoneLinkMessage({ ok: false, text: err.message ?? t.login.verifyError });
+    } finally {
+      setVerifyingPhone(false);
     }
   }
 
@@ -304,6 +368,101 @@ export default function ProfilePage() {
           {connectingGoogle ? '…' : `🔵 ${t.profile.connectGoogle}`}
         </button>
         {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{googleLinkMessage.text}</p>}
+
+        {/* Verify Phone Number (finalized requirement — Free Preview
+            requires a verified phone; a Google-only account has none by
+            default). Only shown when there's no phone on the account yet —
+            once verified, Profile's own Phone field (read-only) picks it
+            up on next load. */}
+        {!profile.phone && (
+          <>
+            {phoneLinkStep === 'idle' && (
+              <button
+                onClick={() => {
+                  setPhoneLinkMessage(null);
+                  setPhoneLinkStep('enterPhone');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  width: '100%',
+                  padding: 12,
+                  borderRadius: 8,
+                  border: '1px solid #cbd5e1',
+                  background: '#fff',
+                  color: '#1f2937',
+                  fontWeight: 600,
+                  marginBottom: 8,
+                }}
+              >
+                📱 {t.profile.verifyPhone}
+              </button>
+            )}
+
+            {phoneLinkStep === 'enterPhone' && (
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginBottom: 12 }}>
+                <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.phoneLabel}</label>
+                <input
+                  type="tel"
+                  value={phoneToVerify}
+                  onChange={(e) => setPhoneToVerify(e.target.value)}
+                  placeholder="9876543210"
+                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box' }}
+                />
+                <div ref={phoneRecaptchaRef} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setPhoneLinkStep('idle')}
+                    style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
+                  >
+                    {t.login.cancel}
+                  </button>
+                  <button
+                    onClick={sendPhoneVerification}
+                    disabled={verifyingPhone || !phoneToVerify}
+                    style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                  >
+                    {verifyingPhone ? '…' : t.login.sendOtp}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {phoneLinkStep === 'enterOtp' && (
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginBottom: 12 }}>
+                <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.otpLabel}</label>
+                <input
+                  type="text"
+                  value={phoneOtp}
+                  onChange={(e) => setPhoneOtp(e.target.value)}
+                  placeholder={t.login.otpPlaceholder}
+                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box' }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setPhoneLinkStep('idle')}
+                    style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
+                  >
+                    {t.login.cancel}
+                  </button>
+                  <button
+                    onClick={confirmPhoneVerification}
+                    disabled={verifyingPhone || !phoneOtp}
+                    style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                  >
+                    {verifyingPhone ? '…' : t.login.verify}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {phoneLinkMessage && (
+              <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{phoneLinkMessage.text}</p>
+            )}
+          </>
+        )}
 
         {/* No Change Password — student login is Firebase Phone OTP, not
             password-based, so this option from the spec doesn't apply here. */}

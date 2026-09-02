@@ -110,6 +110,35 @@ model User {
   totalDeviceRegistrations Int @default(0)
   nearCapStreak            Int @default(0)
 
+  // ── Free Preview: one-time-per-verified-phone (finalized requirement) ──
+  // freePreviewGateApplies is false for every account that existed BEFORE
+  // this feature shipped (one-time seed backfill, see
+  // PlatformSettings.freePreviewGateBackfilled) — those keep the OLD
+  // daily-5 Free rule unchanged (grandfathered, per explicit instruction
+  // not to affect existing users). New accounts default true, meaning:
+  // Free Preview requires BOTH a verified phone (User.phone, which can
+  // only ever be set via an actual Firebase Phone-OTP verification —
+  // never manually typed, Profile shows it read-only) and an email, then
+  // grants exactly 5 questions ONE TIME EVER — freePreviewQuestionsUsed
+  // kept directly on User rather than a separate phone-keyed table:
+  // `phone` is already @unique here, and Firebase itself resolves a
+  // repeat verification of the same phone number back to this SAME User
+  // row (see student-auth.service.ts's phone backfill branch) rather than
+  // creating a second usable account — so "one phone = one User row,
+  // ever" already holds structurally, and this counter is exactly
+  // equivalent to a phone-keyed one without needing extra plumbing.
+  freePreviewGateApplies   Boolean @default(true)
+  freePreviewQuestionsUsed Int     @default(0)
+
+  // IP capture for the multi-signal abuse check (finalized requirement —
+  // see anti-abuse.service.ts's checkNewSignupAbuse) — NEVER used alone to
+  // block anything, only ever combined with device/account-creation-
+  // pattern signals, and only ever flags for admin review. signupIp is
+  // set once, at account creation; lastLoginIp updates on every login,
+  // kept for admin visibility only (not itself a signal input).
+  signupIp    String?
+  lastLoginIp String?
+
   createdAt      DateTime  @default(now())
 
   subscriptions      Subscription[]
@@ -706,6 +735,13 @@ model PlatformSettings {
   // reverted back to hidden on the next deploy, since seed.ts runs on
   // every deploy.
   launchVisibilityApplied    Boolean  @default(false)
+
+  // One-time marker (finalized requirement, Free Preview one-time-per-
+  // phone) — same pattern as launchVisibilityApplied above: guards the
+  // seed script's backfill of freePreviewGateApplies=false onto every
+  // pre-existing User row, so it only ever runs ONCE and never re-fires
+  // on a future deploy to accidentally un-grandfather anyone.
+  freePreviewGateBackfilled  Boolean  @default(false)
 
   updatedAt                   DateTime @updatedAt
 }

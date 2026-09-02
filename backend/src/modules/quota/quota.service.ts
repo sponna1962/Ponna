@@ -38,10 +38,17 @@ const prisma = new PrismaClient();
 // not per-exam (finalized requirement).
 const PAID_DAILY_LIMIT = 75;
 
+// One-time lifetime Free Preview cap for gated (post-launch) accounts —
+// finalized requirement. Never resets by calendar day, unlike the
+// grandfathered path's dailyLimit (Free Plan.dailyLimit, still 5).
+const FREE_PREVIEW_LIFETIME_LIMIT = 5;
+
 export class QuotaExceededError extends Error {
-  constructor(message: string) {
+  code?: 'FREE_PREVIEW_PROFILE_INCOMPLETE' | 'FREE_PREVIEW_ALREADY_USED';
+  constructor(message: string, code?: 'FREE_PREVIEW_PROFILE_INCOMPLETE' | 'FREE_PREVIEW_ALREADY_USED') {
     super(message);
     this.name = 'QuotaExceededError';
+    this.code = code;
   }
 }
 
@@ -49,6 +56,11 @@ export interface QuotaCheckResult {
   allowed: boolean;
   remaining: number; // Number.MAX_SAFE_INTEGER for unlimited (paid, covered) access
   reason?: string;
+  // Structured codes for the gated (new-account) Free Preview path, so the
+  // frontend can show the right specific guidance rather than a generic
+  // "quota exceeded" message. Undefined for every other quota path
+  // (grandfathered Free, paid) — those keep behaving exactly as before.
+  code?: 'FREE_PREVIEW_PROFILE_INCOMPLETE' | 'FREE_PREVIEW_ALREADY_USED';
 }
 
 /** The shape of a saved Practice Preference's `selections` JSON that access
@@ -140,6 +152,36 @@ export class QuotaService {
   }
 
   /**
+   * When getRemainingQuota is already 0, this returns WHY — the specific,
+   * correct message/code (profile-incomplete vs already-used vs daily-
+   * limit vs paid-cap) instead of a generic one-size-fits-all string.
+   * Read-only, reserves nothing. Used by session.service.ts's early
+   * "nothing to even try building a session for" exit, so that exit
+   * doesn't show stale/wrong copy (e.g. "today" wording) for the new
+   * one-time Free Preview path.
+   */
+  async getBlockedReason(userId: string, selections: AccessSelections): Promise<{ reason: string; code?: string }> {
+    if (await this.hasUnlimitedAccess(userId, selections)) {
+      return { reason: `You've reached today's practice limit (${PAID_DAILY_LIMIT} questions/day). This resets tomorrow.` };
+    }
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { freePreviewGateApplies: true, freePreviewQuestionsUsed: true, email: true, phone: true },
+    });
+    if (user.freePreviewGateApplies) {
+      if (!user.email || !user.phone) {
+        return { reason: 'Please add your email and verify your phone number to start your Free Preview.', code: 'FREE_PREVIEW_PROFILE_INCOMPLETE' };
+      }
+      return {
+        reason: 'You have already used your one-time Free Preview (5 questions). Get an Annual Plan to keep practising.',
+        code: 'FREE_PREVIEW_ALREADY_USED',
+      };
+    }
+    const freePlan = await this.getFreePlan();
+    return { reason: `Free practice allows ${freePlan.dailyLimit} questions/day for exams without an active Annual Plan. Come back tomorrow.` };
+  }
+
+  /**
    * Checks whether a user can start a session of `requestedSize` questions
    * for this selection, and if so, reserves it. A covered (paid) selection
    * always succeeds and reserves nothing (there is nothing to track — no
@@ -214,6 +256,19 @@ export class QuotaService {
   }
 
   private async getRemainingFreeQuota(userId: string): Promise<number> {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { freePreviewGateApplies: true, freePreviewQuestionsUsed: true, email: true, phone: true },
+    });
+
+    // Finalized requirement — one-time-per-phone Free Preview for every
+    // account created after this feature shipped (grandfathered accounts
+    // keep the old daily-reset behavior below, untouched).
+    if (user.freePreviewGateApplies) {
+      if (!user.email || !user.phone) return 0; // profile incomplete — nothing usable until both are present
+      return Math.max(FREE_PREVIEW_LIFETIME_LIMIT - user.freePreviewQuestionsUsed, 0);
+    }
+
     const freePlan = await this.getFreePlan();
     const today = startOfDay(new Date());
     const sub = await prisma.subscription.findFirst({
@@ -223,7 +278,57 @@ export class QuotaService {
     return Math.max((freePlan.dailyLimit ?? 5) - usedToday, 0);
   }
 
+  /**
+   * Atomically checks-and-reserves against the ONE-TIME 5-question
+   * lifetime Free Preview cap (finalized requirement) — row-locked exactly
+   * like reservePaidDailyQuota, for the same concurrent-request-safety
+   * reason. Requires both email and phone present (phone is inherently
+   * OTP-verified in this system — it's only ever set via a Firebase
+   * phone-auth login or a Google account explicitly linking one, never
+   * free text) before any question is granted; never resets by calendar
+   * day, unlike the grandfathered path below.
+   */
+  private async reserveFreePreviewOnce(userId: string, requestedSize: number): Promise<QuotaCheckResult> {
+    return prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ freePreviewQuestionsUsed: number; email: string | null; phone: string | null }[]>`
+        SELECT "freePreviewQuestionsUsed", "email", "phone" FROM "User" WHERE id = ${userId} FOR UPDATE
+      `;
+      const row = rows[0];
+
+      if (!row?.email || !row?.phone) {
+        return {
+          allowed: false,
+          remaining: 0,
+          code: 'FREE_PREVIEW_PROFILE_INCOMPLETE' as const,
+          reason: 'Please add your email and verify your phone number to start your Free Preview.',
+        };
+      }
+
+      const remaining = FREE_PREVIEW_LIFETIME_LIMIT - row.freePreviewQuestionsUsed;
+      if (requestedSize > remaining) {
+        return {
+          allowed: false,
+          remaining: Math.max(remaining, 0),
+          code: 'FREE_PREVIEW_ALREADY_USED' as const,
+          reason: 'You have already used your one-time Free Preview (5 questions). Get an Annual Plan to keep practising.',
+        };
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { freePreviewQuestionsUsed: { increment: requestedSize } },
+      });
+
+      return { allowed: true, remaining: remaining - requestedSize };
+    });
+  }
+
   private async reserveFreeQuota(userId: string, requestedSize: number): Promise<QuotaCheckResult> {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { freePreviewGateApplies: true } });
+    if (user.freePreviewGateApplies) {
+      return this.reserveFreePreviewOnce(userId, requestedSize);
+    }
+
     const freePlan = await this.getFreePlan();
     const today = startOfDay(new Date());
 

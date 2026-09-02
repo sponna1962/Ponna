@@ -293,6 +293,18 @@ export default function QuizStartPage() {
       const res = await studentFetch('/quiz/start', { method: 'POST' });
       if (!res.ok) {
         const body = await res.json();
+        // Free Preview one-time-per-phone (finalized requirement) — these
+        // two are actionable, not just informational, so send the
+        // student straight to where they fix it instead of just showing
+        // text they'd have to act on manually.
+        if (body.code === 'FREE_PREVIEW_PROFILE_INCOMPLETE') {
+          window.location.href = '/profile?complete=1';
+          return;
+        }
+        if (body.code === 'FREE_PREVIEW_ALREADY_USED') {
+          window.location.href = '/plans';
+          return;
+        }
         setError(body.error ?? t.quiz.startError);
         return;
       }

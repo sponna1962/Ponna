@@ -26,6 +26,12 @@ import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLi
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
+// Render sits behind a reverse proxy — without this, req.ip would always
+// be the proxy's own internal address (the same for every request),
+// making the suspicious-usage sweep's signup-IP-clustering signal useless
+// (finalized requirement). `true` trusts the immediate proxy's
+// X-Forwarded-For header, which is what Render's edge sets.
+app.set('trust proxy', true);
 // CORS: in production the frontend (Vercel) and backend (Railway) are on
 // different domains, so this can't be left wide-open without a config knob.
 // Set FRONTEND_URL in the backend's environment to your Vercel URL once
@@ -82,7 +88,7 @@ app.post('/auth/firebase-login', async (req, res) => {
       res.status(400).json({ error: 'deviceId is required' });
       return;
     }
-    const result = await studentAuthService.loginWithFirebaseToken(firebaseIdToken, deviceId, deviceLabel);
+    const result = await studentAuthService.loginWithFirebaseToken(firebaseIdToken, deviceId, deviceLabel, req.ip);
     res.json(result);
   } catch (err: any) {
     console.error(err);
@@ -155,6 +161,22 @@ app.post('/students/me/link-google', requireStudentAuth, async (req: StudentAuth
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to link Google account' });
+  }
+});
+
+// POST /students/me/link-phone  { firebaseIdToken } — student must already
+// be logged in. Frontend runs Firebase's linkWithPhoneNumber FIRST
+// (client-side, same Firebase uid as their current session), then sends
+// the resulting token here (finalized requirement — Free Preview requires
+// a verified phone, which a Google-only account doesn't have by default).
+app.post('/students/me/link-phone', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const { firebaseIdToken } = req.body;
+    const result = await studentAuthService.linkPhoneNumber(req.studentUserId!, firebaseIdToken);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to link phone number' });
   }
 });
 
@@ -251,7 +273,7 @@ app.post('/quiz/start', requireStudentAuth, async (req: StudentAuthedRequest, re
     res.json(session);
   } catch (err: any) {
     if (err instanceof QuotaExceededError) {
-      return res.status(403).json({ error: err.message });
+      return res.status(403).json({ error: err.message, code: err.code });
     }
     console.error(err);
     res.status(500).json({ error: err.message ?? 'Failed to start session' });

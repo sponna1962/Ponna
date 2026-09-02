@@ -74,7 +74,7 @@ export class StudentAuthService {
    * login. Throws DeviceLimitReachedError instead of issuing a session
    * when this is a genuinely new (3rd+) device.
    */
-  async loginWithFirebaseToken(firebaseIdToken: string, deviceId: string, deviceLabel?: string) {
+  async loginWithFirebaseToken(firebaseIdToken: string, deviceId: string, deviceLabel?: string, ip?: string) {
     ensureFirebaseInitialized();
 
     const decoded = await admin.auth().verifyIdToken(firebaseIdToken);
@@ -94,6 +94,7 @@ export class StudentAuthService {
       if (!user.photoUrl && googlePicture) {
         user = await prisma.user.update({ where: { id: user.id }, data: { photoUrl: googlePicture } });
       }
+      if (ip) await prisma.user.update({ where: { id: user.id }, data: { lastLoginIp: ip } });
       await this.registerDevice(user.id, deviceId, deviceLabel);
       return this.issueSession(user.id);
     }
@@ -105,12 +106,14 @@ export class StudentAuthService {
       // (phone numbers are inherently unique per Firebase project already).
       const existingByPhone = await prisma.user.findUnique({ where: { phone } });
       if (existingByPhone) {
-        user = await prisma.user.update({ where: { id: existingByPhone.id }, data: { firebaseUid: uid } });
+        user = await prisma.user.update({ where: { id: existingByPhone.id }, data: { firebaseUid: uid, ...(ip ? { lastLoginIp: ip } : {}) } });
         await this.registerDevice(user.id, deviceId, deviceLabel);
         return this.issueSession(user.id);
       }
-      // Brand-new phone — normal signup.
-      user = await prisma.user.create({ data: { firebaseUid: uid, phone } });
+      // Brand-new phone — normal signup. signupIp captured once, here,
+      // never overwritten again (see the suspicious-usage sweep's
+      // account-clustering signal, anti-abuse.service.ts).
+      user = await prisma.user.create({ data: { firebaseUid: uid, phone, signupIp: ip, lastLoginIp: ip } });
       await this.registerDevice(user.id, deviceId, deviceLabel);
       return this.issueSession(user.id);
     }
@@ -126,7 +129,7 @@ export class StudentAuthService {
         throw new AccountLinkingConflictError();
       }
       // No conflicting account — genuinely new Google-only signup.
-      user = await prisma.user.create({ data: { firebaseUid: uid, email, photoUrl: googlePicture } });
+      user = await prisma.user.create({ data: { firebaseUid: uid, email, photoUrl: googlePicture, signupIp: ip, lastLoginIp: ip } });
       await this.registerDevice(user.id, deviceId, deviceLabel);
       return this.issueSession(user.id);
     }
@@ -233,6 +236,49 @@ export class StudentAuthService {
         // photo is set yet, never overwrites a manual upload.
         photoUrl: self.photoUrl ?? decoded.picture ?? undefined,
       },
+    });
+    return { linked: true };
+  }
+
+  /**
+   * Links a verified phone number to the CURRENTLY authenticated student's
+   * account (finalized requirement — Free Preview requires a verified
+   * phone, and a Google-only account has none by default). Mirrors
+   * linkGoogleAccount: the frontend runs Firebase's own
+   * `linkWithPhoneNumber(auth.currentUser, ...)` client-side first (same
+   * uid, now with a phone_number claim), then this re-verifies the
+   * resulting token server-side and syncs it onto the User row — never
+   * trusts a client-reported "it worked" alone.
+   */
+  async linkPhoneNumber(studentUserId: string, firebaseIdToken: string) {
+    ensureFirebaseInitialized();
+
+    const decoded = await admin.auth().verifyIdToken(firebaseIdToken);
+    const uid = decoded.uid;
+    const phone = decoded.phone_number;
+    if (!phone) {
+      throw new Error('This Firebase token has no verified phone number — nothing to link.');
+    }
+
+    const self = await prisma.user.findUniqueOrThrow({ where: { id: studentUserId } });
+
+    if (self.firebaseUid && self.firebaseUid !== uid) {
+      throw new Error('This phone number is linked to a different PONNA account than the one you are logged in as. Please contact support to resolve this.');
+    }
+    // The phone-uniqueness constraint itself is what makes "one phone = one
+    // Free Preview" hold — if this exact number is already SOME other
+    // account's phone, that's a genuine conflict, not a re-link (Firebase
+    // would normally resolve a repeat OTP verification back to that OTHER
+    // account's uid instead, so this case is rare, but never silently
+    // overwritten either way).
+    const other = await prisma.user.findUnique({ where: { phone } });
+    if (other && other.id !== self.id) {
+      throw new Error('This phone number is already linked to a different PONNA account.');
+    }
+
+    await prisma.user.update({
+      where: { id: self.id },
+      data: { firebaseUid: uid, phone: self.phone ?? phone },
     });
     return { linked: true };
   }
