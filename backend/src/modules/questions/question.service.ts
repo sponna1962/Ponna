@@ -215,12 +215,28 @@ export class QuestionService {
    * decision to the group in one action instead of one dropdown at a time.
    * Same Draft -> Published auto-publish rule as setDifficulty() above,
    * applied per-row (Disabled ones are left Disabled). */
+  /** Splits a large id list into Postgres-safe-sized batches — a single
+   * query has a hard limit of 32767 bind variables, and any bulk admin
+   * action on a large "Select all N matching this filter" selection (seen
+   * in production with 50k+ ids) can exceed that in one shot. Used by
+   * every bulk method below instead of a single `id: { in: ids } }` query
+   * over the whole selection. */
+  private chunkIds(ids: string[], size = 5000): string[][] {
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += size) chunks.push(ids.slice(i, i + size));
+    return chunks;
+  }
+
   async bulkSetDifficulty(ids: string[], difficulty: Difficulty) {
-    const [difficultyResult] = await prisma.$transaction([
-      prisma.question.updateMany({ where: { id: { in: ids } }, data: { difficulty } }),
-      prisma.question.updateMany({ where: { id: { in: ids }, status: QuestionStatus.DRAFT }, data: { status: QuestionStatus.PUBLISHED } }),
-    ]);
-    return { count: difficultyResult.count };
+    let count = 0;
+    for (const batch of this.chunkIds(ids)) {
+      const [difficultyResult] = await prisma.$transaction([
+        prisma.question.updateMany({ where: { id: { in: batch } }, data: { difficulty } }),
+        prisma.question.updateMany({ where: { id: { in: batch }, status: QuestionStatus.DRAFT }, data: { status: QuestionStatus.PUBLISHED } }),
+      ]);
+      count += difficultyResult.count;
+    }
+    return { count };
   }
 
   /**
@@ -413,16 +429,27 @@ export class QuestionService {
       // not-yet-classified questions all the time (e.g. right after a bulk
       // upload), and losing the valid ones because a few weren't classified
       // yet would be worse than just reporting which ones were skipped.
-      const eligible = await prisma.question.findMany({
-        where: { id: { in: ids }, difficulty: { not: null } },
-        select: { id: true },
-      });
-      const eligibleIds = eligible.map((q) => q.id);
-      const result = await prisma.question.updateMany({ where: { id: { in: eligibleIds } }, data: { status } });
-      return { count: result.count, skippedNoDifficulty: ids.length - eligibleIds.length };
+      let eligibleIds: string[] = [];
+      for (const batch of this.chunkIds(ids)) {
+        const eligible = await prisma.question.findMany({
+          where: { id: { in: batch }, difficulty: { not: null } },
+          select: { id: true },
+        });
+        eligibleIds = eligibleIds.concat(eligible.map((q) => q.id));
+      }
+      let count = 0;
+      for (const batch of this.chunkIds(eligibleIds)) {
+        const result = await prisma.question.updateMany({ where: { id: { in: batch } }, data: { status } });
+        count += result.count;
+      }
+      return { count, skippedNoDifficulty: ids.length - eligibleIds.length };
     }
-    const result = await prisma.question.updateMany({ where: { id: { in: ids } }, data: { status } });
-    return { count: result.count, skippedNoDifficulty: 0 };
+    let count = 0;
+    for (const batch of this.chunkIds(ids)) {
+      const result = await prisma.question.updateMany({ where: { id: { in: batch } }, data: { status } });
+      count += result.count;
+    }
+    return { count, skippedNoDifficulty: 0 };
   }
 
   /**
@@ -434,29 +461,29 @@ export class QuestionService {
    * touching already-recorded history.
    */
   async bulkDelete(ids: string[]) {
-    const withHistory = await prisma.userQuestionHistory.findMany({
-      where: { questionId: { in: ids } },
-      select: { questionId: true },
-      distinct: ['questionId'],
-    });
-    const withSessionRefs = await prisma.quizSessionQuestion.findMany({
-      where: { questionId: { in: ids } },
-      select: { questionId: true },
-      distinct: ['questionId'],
-    });
-    const referencedIds = new Set([...withHistory.map((h) => h.questionId), ...withSessionRefs.map((s) => s.questionId)]);
+    let referencedIds = new Set<string>();
+    for (const batch of this.chunkIds(ids)) {
+      const [withHistory, withSessionRefs] = await Promise.all([
+        prisma.userQuestionHistory.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.quizSessionQuestion.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+      ]);
+      for (const h of withHistory) referencedIds.add(h.questionId);
+      for (const s of withSessionRefs) referencedIds.add(s.questionId);
+    }
 
     const safeToDelete = ids.filter((id) => !referencedIds.has(id));
     const mustDisableInstead = ids.filter((id) => referencedIds.has(id));
 
-    const [deleted] = await Promise.all([
-      safeToDelete.length > 0 ? prisma.question.deleteMany({ where: { id: { in: safeToDelete } } }) : { count: 0 },
-      mustDisableInstead.length > 0
-        ? prisma.question.updateMany({ where: { id: { in: mustDisableInstead } }, data: { status: QuestionStatus.DISABLED } })
-        : Promise.resolve(),
-    ]);
+    let deletedCount = 0;
+    for (const batch of this.chunkIds(safeToDelete)) {
+      const result = await prisma.question.deleteMany({ where: { id: { in: batch } } });
+      deletedCount += result.count;
+    }
+    for (const batch of this.chunkIds(mustDisableInstead)) {
+      await prisma.question.updateMany({ where: { id: { in: batch } }, data: { status: QuestionStatus.DISABLED } });
+    }
 
-    return { count: deleted.count, disabledInstead: mustDisableInstead.length };
+    return { count: deletedCount, disabledInstead: mustDisableInstead.length };
   }
 
   /**
@@ -467,11 +494,13 @@ export class QuestionService {
    * Never call this from any student-facing or automated path.
    */
   async forceBulkDelete(ids: string[]) {
-    await prisma.$transaction([
-      prisma.userQuestionHistory.deleteMany({ where: { questionId: { in: ids } } }),
-      prisma.quizSessionQuestion.deleteMany({ where: { questionId: { in: ids } } }),
-      prisma.question.deleteMany({ where: { id: { in: ids } } }),
-    ]);
+    for (const batch of this.chunkIds(ids)) {
+      await prisma.$transaction([
+        prisma.userQuestionHistory.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.quizSessionQuestion.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.question.deleteMany({ where: { id: { in: batch } } }),
+      ]);
+    }
     return { count: ids.length };
   }
 
