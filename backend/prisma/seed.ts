@@ -210,17 +210,6 @@ async function main() {
     await prisma.platformSettings.update({ where: { id: 'singleton' }, data: { launchVisibilityApplied: true } });
   }
 
-  // ── Free Preview one-time-per-phone (finalized requirement) — one-time
-  // grandfather backfill: every account that existed BEFORE this feature
-  // keeps working under the old daily-reset Free rule forever (never
-  // touched again after this runs once). Only accounts created AFTER this
-  // point get the new one-time-5-lifetime + email/phone-required gate
-  // (freePreviewGateApplies defaults true on new User rows already).
-  if (!platformSettings.freePreviewGateBackfilled) {
-    await prisma.user.updateMany({ data: { freePreviewGateApplies: false } });
-    await prisma.platformSettings.update({ where: { id: 'singleton' }, data: { freePreviewGateBackfilled: true } });
-  }
-
   // ── Annual Plans (finalized commercial model) ────────────────────────────
   // Free fallback — used whenever a student's selection isn't covered by any
   // of their active paid Plans. Found by isFree, never by a hardcoded id/name.

@@ -15,11 +15,14 @@
 //    each is checked independently — NEET being covered has no bearing on
 //    whether JEE is covered.
 //  - Whenever the student's current Practice Preference selection is NOT
-//    covered by any active paid Plan, they fall back to the existing FREE
-//    plan: a single shared 5-questions/day counter (unchanged from before
-//    this redesign) — not a new per-exam free allowance.
-//  - Quota is deducted (for the FREE fallback only) in full at SESSION
-//    START, not per answered question. Abandoned sessions do NOT refund it.
+//    covered by any active paid Plan, they fall back to Free Preview — a
+//    ONE-TIME, lifetime 5-question allowance tied to a verified phone
+//    number, not a daily-resetting counter and not a new per-exam
+//    allowance (finalized requirement — see the Free Preview section
+//    below for the full rule).
+//  - Quota is deducted (for the FREE Preview fallback only) in full at
+//    SESSION START, not per answered question. Abandoned sessions do NOT
+//    refund it.
 //
 //  - Anti-abuse update (finalized requirement): "unlimited" above now means
 //    unlimited WITHIN a 75-questions-per-day cap, global across every
@@ -29,6 +32,19 @@
 //    transaction (reservePaidDailyQuota below) so two devices racing to
 //    start a session on the same account can't both slip through. Test
 //    Accounts (isTestAccount) are exempt, same as every other quota rule.
+//
+//  - Free Preview — one-time-per-verified-phone (finalized requirement,
+//    the standard rule for every account from launch): 5 questions total,
+//    ever, never resets by calendar day. Requires BOTH a verified phone
+//    (User.phone — can only ever be set via a real Firebase Phone-OTP
+//    verification, never manually typed) and an email before any
+//    question is granted. Reserved atomically (reserveFreePreviewOnce
+//    below), same row-locking approach as the paid daily cap. The
+//    phone-uniqueness constraint is most of the actual enforcement:
+//    re-verifying an already-used phone number on a different account
+//    resolves back to the SAME existing User row (see
+//    student-auth.service.ts's phone backfill branch) rather than
+//    creating a usable second one.
 
 import { PrismaClient, SubscriptionStatus } from '@prisma/client';
 
@@ -166,19 +182,15 @@ export class QuotaService {
     }
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { freePreviewGateApplies: true, freePreviewQuestionsUsed: true, email: true, phone: true },
+      select: { freePreviewQuestionsUsed: true, email: true, phone: true },
     });
-    if (user.freePreviewGateApplies) {
-      if (!user.email || !user.phone) {
-        return { reason: 'Please add your email and verify your phone number to start your Free Preview.', code: 'FREE_PREVIEW_PROFILE_INCOMPLETE' };
-      }
-      return {
-        reason: 'You have already used your one-time Free Preview (5 questions). Get an Annual Plan to keep practising.',
-        code: 'FREE_PREVIEW_ALREADY_USED',
-      };
+    if (!user.email || !user.phone) {
+      return { reason: 'Please add your email and verify your phone number to start your Free Preview.', code: 'FREE_PREVIEW_PROFILE_INCOMPLETE' };
     }
-    const freePlan = await this.getFreePlan();
-    return { reason: `Free practice allows ${freePlan.dailyLimit} questions/day for exams without an active Annual Plan. Come back tomorrow.` };
+    return {
+      reason: 'You have already used your one-time Free Preview (5 questions). Get an Annual Plan to keep practising.',
+      code: 'FREE_PREVIEW_ALREADY_USED',
+    };
   }
 
   /**
@@ -198,7 +210,7 @@ export class QuotaService {
       return this.reservePaidDailyQuota(userId, requestedSize);
     }
 
-    return this.reserveFreeQuota(userId, requestedSize);
+    return this.reserveFreePreviewOnce(userId, requestedSize);
   }
 
   /** Read-only — how many of the 75-per-day paid cap remain right now,
@@ -249,33 +261,15 @@ export class QuotaService {
     });
   }
 
-  private async getFreePlan() {
-    const freePlan = await prisma.plan.findFirst({ where: { isFree: true } });
-    if (!freePlan) throw new Error('No Plan has isFree=true — the Free fallback plan must be seeded.');
-    return freePlan;
-  }
-
   private async getRemainingFreeQuota(userId: string): Promise<number> {
+    // Finalized requirement — one-time-per-phone Free Preview is the
+    // standard rule for every account from launch.
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { freePreviewGateApplies: true, freePreviewQuestionsUsed: true, email: true, phone: true },
+      select: { freePreviewQuestionsUsed: true, email: true, phone: true },
     });
-
-    // Finalized requirement — one-time-per-phone Free Preview for every
-    // account created after this feature shipped (grandfathered accounts
-    // keep the old daily-reset behavior below, untouched).
-    if (user.freePreviewGateApplies) {
-      if (!user.email || !user.phone) return 0; // profile incomplete — nothing usable until both are present
-      return Math.max(FREE_PREVIEW_LIFETIME_LIMIT - user.freePreviewQuestionsUsed, 0);
-    }
-
-    const freePlan = await this.getFreePlan();
-    const today = startOfDay(new Date());
-    const sub = await prisma.subscription.findFirst({
-      where: { userId, planId: freePlan.id, status: SubscriptionStatus.ACTIVE },
-    });
-    const usedToday = sub?.dailyUsedDate && isSameDay(sub.dailyUsedDate, today) ? sub.questionsUsedToday : 0;
-    return Math.max((freePlan.dailyLimit ?? 5) - usedToday, 0);
+    if (!user.email || !user.phone) return 0; // profile incomplete — nothing usable until both are present
+    return Math.max(FREE_PREVIEW_LIFETIME_LIMIT - user.freePreviewQuestionsUsed, 0);
   }
 
   /**
@@ -286,7 +280,7 @@ export class QuotaService {
    * OTP-verified in this system — it's only ever set via a Firebase
    * phone-auth login or a Google account explicitly linking one, never
    * free text) before any question is granted; never resets by calendar
-   * day, unlike the grandfathered path below.
+   * day.
    */
   private async reserveFreePreviewOnce(userId: string, requestedSize: number): Promise<QuotaCheckResult> {
     return prisma.$transaction(async (tx) => {
@@ -323,50 +317,6 @@ export class QuotaService {
     });
   }
 
-  private async reserveFreeQuota(userId: string, requestedSize: number): Promise<QuotaCheckResult> {
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { freePreviewGateApplies: true } });
-    if (user.freePreviewGateApplies) {
-      return this.reserveFreePreviewOnce(userId, requestedSize);
-    }
-
-    const freePlan = await this.getFreePlan();
-    const today = startOfDay(new Date());
-
-    let sub = await prisma.subscription.findFirst({
-      where: { userId, planId: freePlan.id, status: SubscriptionStatus.ACTIVE },
-    });
-
-    if (!sub) {
-      sub = await prisma.subscription.create({
-        data: {
-          userId,
-          planId: freePlan.id,
-          cycleEnd: farFuture(), // FREE has no cycle concept; only the daily reset matters
-          dailyUsedDate: today,
-          questionsUsedToday: 0,
-        },
-      });
-    }
-
-    const usedToday = sub.dailyUsedDate && isSameDay(sub.dailyUsedDate, today) ? sub.questionsUsedToday : 0;
-    const remainingToday = (freePlan.dailyLimit ?? 5) - usedToday;
-
-    if (requestedSize > remainingToday) {
-      return {
-        allowed: false,
-        remaining: Math.max(remainingToday, 0),
-        reason: `Free practice allows ${freePlan.dailyLimit} questions/day for exams without an active Annual Plan. ${remainingToday} remain today.`,
-      };
-    }
-
-    await prisma.subscription.update({
-      where: { id: sub.id },
-      data: { dailyUsedDate: today, questionsUsedToday: usedToday + requestedSize },
-    });
-
-    return { allowed: true, remaining: remainingToday - requestedSize };
-  }
-
   /**
    * Called when a session expires unresumed. Deliberately does NOT touch
    * questionsUsedToday — quota already spent (Free plan only; paid access
@@ -384,9 +334,4 @@ function startOfDay(d: Date): Date {
 }
 function isSameDay(a: Date, b: Date): boolean {
   return startOfDay(a).getTime() === startOfDay(b).getTime();
-}
-function farFuture(): Date {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + 100);
-  return d;
 }
