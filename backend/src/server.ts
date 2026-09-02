@@ -23,6 +23,7 @@ import { PlansService } from './modules/admin/plans.service';
 import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
+import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
@@ -71,6 +72,7 @@ const studentManagementService = new StudentManagementService();
 const plansService = new PlansService();
 const paymentService = new PaymentService();
 const studentAuthService = new StudentAuthService();
+const profilePhotoService = new ProfilePhotoService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -177,6 +179,21 @@ app.post('/students/me/link-phone', requireStudentAuth, async (req: StudentAuthe
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to link phone number' });
+  }
+});
+
+// POST /students/me/profile-photo  { imageDataUrl: string } — Part B
+// (finalized requirement): lets every student upload their own photo, not
+// just Google sign-ins. A student's own upload always takes precedence
+// over the Google-auto-captured one (see student-auth.service.ts).
+app.post('/students/me/profile-photo', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const { imageDataUrl } = req.body;
+    const photoUrl = await profilePhotoService.uploadProfilePhoto(req.studentUserId!, imageDataUrl);
+    res.json({ photoUrl });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to upload photo' });
   }
 });
 

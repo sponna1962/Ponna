@@ -68,6 +68,9 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [googleLinkMessage, setGoogleLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
   // Verify Phone Number (finalized requirement — Free Preview needs a
   // verified phone; a Google-only account has none by default). Same
@@ -138,6 +141,51 @@ export default function ProfilePage() {
    * account (e.g. from a prior fresh "Continue with Google"); surfaced
    * clearly rather than silently failing.
    */
+  /** Reads the picked file as a base64 data URL and uploads it — Part B
+   * (finalized requirement): every student, not just Google sign-ins. */
+  async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // lets picking the same file again re-trigger onChange
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Please choose an image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Image is too large — please choose one under 5MB.');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    setPhotoError(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read the selected file.'));
+        reader.readAsDataURL(file);
+      });
+
+      const res = await studentFetch('/students/me/profile-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageDataUrl: dataUrl }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to upload photo.');
+      }
+      const { photoUrl } = await res.json();
+      setProfile((p) => (p ? { ...p, photoUrl } : p));
+    } catch (err: any) {
+      console.error(err);
+      setPhotoError(err.message ?? 'Failed to upload photo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
   async function connectGoogle() {
     setConnectingGoogle(true);
     setGoogleLinkMessage(null);
@@ -243,35 +291,65 @@ export default function ProfilePage() {
         )}
 
         {/* Profile photo — auto-filled from the Google account photo on
-            Google sign-in (Part A); a Phone-only student without one sees
-            just their initial. Read-only for now — manual upload (Part B)
-            comes once Cloudinary is configured. */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-          {profile.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.photoUrl}
-              alt=""
-              style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0' }}
-            />
-          ) : (
-            <div
+            Google sign-in (Part A); every student can also upload their
+            own (Part B) — tapping the circle opens the file picker. A
+            student's own upload always takes precedence over the
+            Google-auto-captured one (student-auth.service.ts only backfills
+            when photoUrl is still null). */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            style={{ position: 'relative', border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            {profile.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.photoUrl}
+                alt=""
+                style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0', opacity: uploadingPhoto ? 0.5 : 1 }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: '50%',
+                  background: '#e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 32,
+                  fontWeight: 700,
+                  color: '#64748b',
+                  opacity: uploadingPhoto ? 0.5 : 1,
+                }}
+              >
+                {(profile.name || '?').trim().charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span
               style={{
-                width: 88,
-                height: 88,
+                position: 'absolute',
+                right: -2,
+                bottom: -2,
+                width: 28,
+                height: 28,
                 borderRadius: '50%',
-                background: '#e2e8f0',
+                background: '#0f172a',
+                color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 32,
-                fontWeight: 700,
-                color: '#64748b',
+                fontSize: 13,
+                border: '2px solid #fff',
               }}
             >
-              {(profile.name || '?').trim().charAt(0).toUpperCase()}
-            </div>
-          )}
+              {uploadingPhoto ? '…' : '📷'}
+            </span>
+          </button>
+          <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoSelected} style={{ display: 'none' }} />
+          {photoError && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>{photoError}</p>}
         </div>
 
         <SectionHeading>{t.profile.personalInfo}</SectionHeading>
