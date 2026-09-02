@@ -218,14 +218,28 @@ model PlanAuthorityScope {
 // question can tag several Authorities, and (symmetrically, though not
 // currently exercised any other way) one Authority can be tagged onto many
 // questions.
-model QuestionAuthorityTag {
-  id          String        @id @default(uuid())
-  questionId  String
-  question    Question      @relation(fields: [questionId], references: [id])
-  authorityId String
-  authority   ExamAuthority @relation(fields: [authorityId], references: [id])
-
-  @@unique([questionId, authorityId])
+// Additional taxonomy tags for Original/Book/Other questions — see
+// Question.authorityTags for the full rationale. Each row is a full
+// Authority [+ Category [+ Sub-Category]] triple this question ALSO
+// belongs to, beyond its primary classification — matching the exact same
+// granularity as the primary metadata step (e.g. a TNPSC General Studies
+// question tagged once per Group: TNPSC/Group Examinations/Group I,
+// TNPSC/Group Examinations/Group II, ... one row per Group). categoryId/
+// subCategoryId are nullable: a tag with only authorityId matches "All
+// Categories" selections for that Authority; one with categoryId set
+// (subCategoryId null) matches any Sub-Category selection under that
+// Category — same superset semantics as the primary authorityId/
+// categoryId/subCategoryId fields on Question itself.
+model QuestionTaxonomyTag {
+  id            String            @id @default(uuid())
+  questionId    String
+  question      Question          @relation(fields: [questionId], references: [id])
+  authorityId   String
+  authority     ExamAuthority     @relation(fields: [authorityId], references: [id])
+  categoryId    String?
+  category      ExamCategory?     @relation(fields: [categoryId], references: [id])
+  subCategoryId String?
+  subCategory   ExamSubCategory?  @relation(fields: [subCategoryId], references: [id])
 }
 
 // One row per purchase cycle. Renewal is manual — a new row is created on
@@ -323,7 +337,7 @@ model ExamAuthority {
   categories ExamCategory[]
   questions  Question[]
   planScopes PlanAuthorityScope[] // exam-specific Annual Plans that cover this Authority (e.g. NEET Plan, JEE Plan)
-  questionTags QuestionAuthorityTag[] // Original/Book/Other questions ALSO tagged as relevant here, beyond their primary Authority
+  questionTags QuestionTaxonomyTag[] // Original/Book/Other questions ALSO tagged as relevant here, beyond their primary Authority
 
   @@unique([purposeId, name])
 }
@@ -335,6 +349,7 @@ model ExamCategory {
   name          String            // e.g. "Group Examinations", "Technical Services", "Civil Services"
   subCategories ExamSubCategory[]
   questions     Question[]
+  taxonomyTags  QuestionTaxonomyTag[]
 
   @@unique([authorityId, name])
 }
@@ -357,6 +372,7 @@ model ExamSubCategory {
   category   ExamCategory @relation(fields: [categoryId], references: [id])
   name       String       // e.g. "Group I", "Group IV", "Preliminary"
   questions  Question[]
+  taxonomyTags QuestionTaxonomyTag[]
 
   @@unique([categoryId, name])
 }
@@ -441,7 +457,7 @@ model Question {
   // admin display/stats); this only WIDENS which practice sessions can
   // also surface it, via the allocation engine's OR match — see
   // practice-preference.service.ts's resolveTaxonomyFilter.
-  authorityTags  QuestionAuthorityTag[]
+  authorityTags  QuestionTaxonomyTag[]
 
   // Subject (topic/subject-matter, e.g. History, Polity, General Science) —
   // deliberately separate from the Authority→Category→Sub-Category exam-tier

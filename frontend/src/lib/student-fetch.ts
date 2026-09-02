@@ -22,7 +22,7 @@ export async function studentFetch(path: string, options: RequestInit = {}) {
 
   if (res.status === 401) {
     localStorage.removeItem('ponna_student_token');
-    window.location.href = '/login';
+    window.location.href = '/';
     throw new Error('Session expired');
   }
 

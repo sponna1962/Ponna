@@ -39,11 +39,12 @@ export interface BatchMetadata {
   sourceType: SourceType;
   sourceName?: string;
   // Original/Book/Other only (finalized requirement) — additional
-  // Authorities this WHOLE batch also applies to, beyond the primary
-  // authorityId above. Creates a QuestionAuthorityTag row per question per
-  // additional Authority. Never used for PREVIOUS_EXAM (that source type
-  // stays tied to its one paper's Authority).
-  additionalAuthorityIds?: string[];
+  // Authority [+ Category [+ Sub-Category]] triples this WHOLE batch also
+  // applies to, beyond the primary authorityId/categoryId/subCategoryId
+  // above (e.g. one TNPSC General Studies batch tagged once per Group:
+  // Group I, Group II, Group III...). Creates one QuestionTaxonomyTag row
+  // per question per triple. Never used for PREVIOUS_EXAM.
+  additionalTags?: { authorityId: string; categoryId?: string; subCategoryId?: string }[];
 }
 
 export interface PreviewRow {
@@ -221,17 +222,19 @@ export class BulkUploadService {
     }
 
     // Original/Book/Other only (finalized requirement) — tags every
-    // inserted question with the additional Authorities this whole batch
-    // ALSO applies to, beyond its primary authorityId. One insert per
-    // (question, authority) pair — createMany with skipDuplicates since
-    // the @@unique constraint would otherwise reject a re-run of the same
-    // batch metadata.
-    if (batchMeta.additionalAuthorityIds && batchMeta.additionalAuthorityIds.length > 0 && allInsertedIds.length > 0) {
-      await prisma.questionAuthorityTag.createMany({
+    // inserted question with the additional Authority/Category/Sub-
+    // Category triples this whole batch ALSO applies to, beyond its
+    // primary classification. One insert per (question, tag) pair.
+    if (batchMeta.additionalTags && batchMeta.additionalTags.length > 0 && allInsertedIds.length > 0) {
+      await prisma.questionTaxonomyTag.createMany({
         data: allInsertedIds.flatMap((questionId) =>
-          batchMeta.additionalAuthorityIds!.map((authorityId) => ({ questionId, authorityId })),
+          batchMeta.additionalTags!.map((tag) => ({
+            questionId,
+            authorityId: tag.authorityId,
+            categoryId: tag.categoryId ?? null,
+            subCategoryId: tag.subCategoryId ?? null,
+          })),
         ),
-        skipDuplicates: true,
       });
     }
 

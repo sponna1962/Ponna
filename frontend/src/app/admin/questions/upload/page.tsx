@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { adminFetch } from '../../../../lib/admin-fetch';
 import { ExamTaxonomyPicker, TaxonomyValue } from '../../../../components/ExamTaxonomyPicker';
 import { SubjectInput } from '../../../../components/SubjectInput';
-import { AdditionalAuthoritiesPicker } from '../../../../components/AdditionalAuthoritiesPicker';
 
 // Bulk Upload — Step 1: Source Type, Step 2: metadata (applies to the whole
 // file — never repeated per row), Step 3: upload CSV → Validate → Preview →
@@ -33,7 +32,11 @@ export default function BulkUploadPage() {
   const [examYear, setExamYear] = useState('');
   const [subjectName, setSubjectName] = useState('');
   const [sourceName, setSourceName] = useState('');
-  const [additionalAuthorityIds, setAdditionalAuthorityIds] = useState<string[]>([]);
+  // Original/Book/Other only — repeatable full Authority→Category→
+  // Sub-Category picker rows, so one General Studies batch can be tagged
+  // once per TNPSC Group (Group I, Group II, Group III...), not just
+  // once per whole Authority.
+  const [additionalTags, setAdditionalTags] = useState<TaxonomyValue[]>([]);
 
   const [file, setFile] = useState<File | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -78,7 +81,12 @@ export default function BulkUploadPage() {
       subjectName: subjectName.trim() || undefined,
       sourceType,
       sourceName: sourceName.trim() || undefined,
-      additionalAuthorityIds: sourceType !== 'PREVIOUS_EXAM' && additionalAuthorityIds.length > 0 ? additionalAuthorityIds : undefined,
+      additionalTags:
+        sourceType !== 'PREVIOUS_EXAM' && additionalTags.length > 0
+          ? additionalTags
+              .filter((t) => t.authorityId)
+              .map((t) => ({ authorityId: t.authorityId, categoryId: t.categoryId || undefined, subCategoryId: t.subCategoryId || undefined }))
+          : undefined,
     };
 
     try {
@@ -138,13 +146,35 @@ export default function BulkUploadPage() {
 
         {/* Original/Book/Other only (finalized requirement) — Previous
             Exam questions stay tied to the one paper's Authority above,
-            no additional tagging needed. */}
+            no additional tagging needed. Repeatable rows so one batch can
+            be tagged once per Group/Category, not just once per Authority
+            (e.g. TNPSC General Studies tagged separately to Group I,
+            Group II, Group III...). */}
         {sourceType !== 'PREVIOUS_EXAM' && (
           <div style={{ marginBottom: 10 }}>
             <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
-              Also applies to (optional) — this content is also relevant for these exams:
+              Also applies to (optional) — this content is also relevant for these exams/groups:
             </label>
-            <AdditionalAuthoritiesPicker value={additionalAuthorityIds} onChange={setAdditionalAuthorityIds} excludeAuthorityId={taxonomy.authorityId || undefined} />
+            {additionalTags.map((tag, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <ExamTaxonomyPicker
+                  value={tag}
+                  onChange={(v) => setAdditionalTags(additionalTags.map((t, j) => (j === i ? v : t)))}
+                />
+                <button
+                  onClick={() => setAdditionalTags(additionalTags.filter((_, j) => j !== i))}
+                  style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 4, background: '#fff' }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => setAdditionalTags([...additionalTags, { authorityId: '', categoryId: '', subCategoryId: '' }])}
+              style={{ fontSize: 12, padding: '6px 12px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff' }}
+            >
+              + Add another exam/group
+            </button>
           </div>
         )}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>

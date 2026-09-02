@@ -126,14 +126,15 @@ export class PracticePreferenceService {
    * `where` fragment for Question queries. Always includes the Purpose scope
    * first — "All" only ever means "all Authorities under this Purpose".
    *
-   * Also matches questions TAGGED to a selected Authority (Original/Book/
-   * Other questions that genuinely apply to several exams — finalized
-   * requirement), not just questions whose PRIMARY authorityId is that
-   * Authority. Tag matching only applies for "All Categories" selections:
-   * a tagged question's own categoryId belongs to its primary Authority's
-   * taxonomy tree, so it can never genuinely satisfy "this Authority, this
-   * SPECIFIC Category" — narrowing to one Category always means only
-   * questions actually classified there, tag or no tag.
+   * Also matches questions TAGGED to a selected Authority/Category/Sub-
+   * Category (Original/Book/Other questions that genuinely apply to
+   * several exams/groups at once — finalized requirement — e.g. one TNPSC
+   * General Studies question tagged once per Group: Group I, Group II,
+   * Group III...), not just questions whose PRIMARY classification matches
+   * directly. Tag matching mirrors the exact same superset semantics as
+   * the primary fields: a tag with only an Authority matches "All
+   * Categories" selections for it; one with a Category (no Sub-Category)
+   * matches any Sub-Category selection under that Category.
    */
   resolveTaxonomyFilter(selections: Selections): Prisma.QuestionWhereInput {
     if (selections.allAuthorities) {
@@ -159,12 +160,22 @@ export class PracticePreferenceService {
       }
       for (const category of authority.categories) {
         if (category.allSubCategories || category.subCategoryIds.length === 0) {
-          orConditions.push({ authorityId: authority.authorityId, categoryId: category.categoryId });
+          orConditions.push({
+            OR: [
+              { authorityId: authority.authorityId, categoryId: category.categoryId },
+              { authorityTags: { some: { authorityId: authority.authorityId, categoryId: category.categoryId } } },
+            ],
+          });
         } else {
           orConditions.push({
-            authorityId: authority.authorityId,
-            categoryId: category.categoryId,
-            subCategoryId: { in: category.subCategoryIds },
+            OR: [
+              { authorityId: authority.authorityId, categoryId: category.categoryId, subCategoryId: { in: category.subCategoryIds } },
+              {
+                authorityTags: {
+                  some: { authorityId: authority.authorityId, categoryId: category.categoryId, subCategoryId: { in: category.subCategoryIds } },
+                },
+              },
+            ],
           });
         }
       }
