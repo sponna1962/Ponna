@@ -126,6 +126,7 @@ async function main() {
 
   await seedCategory(tnpsc.id, 'Group Examinations', [
     'Group I', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group IV',
+    'Group V', 'Group VI', 'Group VII', 'Group VIII',
   ]);
   await seedCategory(tnpsc.id, 'Technical Services', [
     'Interview Posts', 'Non-Interview Posts', 'Diploma / ITI Level',
