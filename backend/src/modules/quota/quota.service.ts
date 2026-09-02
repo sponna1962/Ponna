@@ -20,10 +20,23 @@
 //    this redesign) — not a new per-exam free allowance.
 //  - Quota is deducted (for the FREE fallback only) in full at SESSION
 //    START, not per answered question. Abandoned sessions do NOT refund it.
+//
+//  - Anti-abuse update (finalized requirement): "unlimited" above now means
+//    unlimited WITHIN a 75-questions-per-day cap, global across every
+//    covered exam (not per-exam) — a deliberate exception carved out of the
+//    "no question-count quota of any kind" rule above, to deter account
+//    sharing. Deducted atomically at session start via a row-locked
+//    transaction (reservePaidDailyQuota below) so two devices racing to
+//    start a session on the same account can't both slip through. Test
+//    Accounts (isTestAccount) are exempt, same as every other quota rule.
 
 import { PrismaClient, SubscriptionStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Anti-abuse daily cap for PAID/covered access — global across all exams,
+// not per-exam (finalized requirement).
+const PAID_DAILY_LIMIT = 75;
 
 export class QuotaExceededError extends Error {
   constructor(message: string) {
@@ -121,7 +134,7 @@ export class QuotaService {
 
   async getRemainingQuota(userId: string, selections: AccessSelections): Promise<number> {
     if (await this.hasUnlimitedAccess(userId, selections)) {
-      return Number.MAX_SAFE_INTEGER;
+      return this.getRemainingPaidDailyQuota(userId);
     }
     return this.getRemainingFreeQuota(userId);
   }
@@ -140,10 +153,58 @@ export class QuotaService {
     }
 
     if (await this.hasUnlimitedAccess(userId, selections)) {
-      return { allowed: true, remaining: Number.MAX_SAFE_INTEGER };
+      return this.reservePaidDailyQuota(userId, requestedSize);
     }
 
     return this.reserveFreeQuota(userId, requestedSize);
+  }
+
+  /** Read-only — how many of the 75-per-day paid cap remain right now,
+   * without reserving anything. */
+  private async getRemainingPaidDailyQuota(userId: string): Promise<number> {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { dailyPaidQuestionsUsed: true, dailyPaidQuestionsDate: true },
+    });
+    const today = startOfDay(new Date());
+    const usedToday = user.dailyPaidQuestionsDate && isSameDay(user.dailyPaidQuestionsDate, today) ? user.dailyPaidQuestionsUsed : 0;
+    return Math.max(PAID_DAILY_LIMIT - usedToday, 0);
+  }
+
+  /**
+   * Atomically checks-and-reserves against the 75-per-day paid cap
+   * (finalized requirement — anti account-sharing). Row-locks the User
+   * row for the duration of the transaction (`FOR UPDATE`) so two
+   * concurrent session-start requests for the SAME account — e.g. from two
+   * different devices — can't both read the same "not yet used" count and
+   * both succeed past the limit; the second one waits for the first to
+   * commit, then sees the updated count.
+   */
+  private async reservePaidDailyQuota(userId: string, requestedSize: number): Promise<QuotaCheckResult> {
+    return prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ dailyPaidQuestionsUsed: number; dailyPaidQuestionsDate: Date | null }[]>`
+        SELECT "dailyPaidQuestionsUsed", "dailyPaidQuestionsDate" FROM "User" WHERE id = ${userId} FOR UPDATE
+      `;
+      const row = rows[0];
+      const today = startOfDay(new Date());
+      const usedToday = row?.dailyPaidQuestionsDate && isSameDay(row.dailyPaidQuestionsDate, today) ? row.dailyPaidQuestionsUsed : 0;
+      const remainingToday = PAID_DAILY_LIMIT - usedToday;
+
+      if (requestedSize > remainingToday) {
+        return {
+          allowed: false,
+          remaining: Math.max(remainingToday, 0),
+          reason: `You've reached today's practice limit (${PAID_DAILY_LIMIT} questions/day). This resets tomorrow.`,
+        };
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { dailyPaidQuestionsDate: today, dailyPaidQuestionsUsed: usedToday + requestedSize },
+      });
+
+      return { allowed: true, remaining: remainingToday - requestedSize };
+    });
   }
 
   private async getFreePlan() {

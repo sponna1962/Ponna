@@ -76,6 +76,40 @@ model User {
   // Admin can flip this from the admin panel (Students section).
   isTestAccount      Boolean  @default(false)
 
+  // ── Anti-abuse controls for Paid Annual Plans (finalized requirement) ──
+  // Daily cap on ACTUAL question attempts (not per-exam) for a paid/
+  // covered selection — mirrors the Free plan's own daily-counter pattern,
+  // just scoped to the User directly rather than a Subscription, since a
+  // paid student may hold several Subscriptions across exams and this cap
+  // is global across all of them. Deducted atomically at session start
+  // (see quota.service.ts) so concurrent requests can't bypass it.
+  dailyPaidQuestionsUsed Int       @default(0)
+  dailyPaidQuestionsDate DateTime?
+
+  // Single-active-session enforcement — embedded in every issued JWT;
+  // requireStudentAuth rejects any token whose embedded version doesn't
+  // match this CURRENT value. Incremented on every successful login,
+  // which is exactly what invalidates whatever token was issued to any
+  // other device.
+  sessionVersion Int @default(0)
+
+  // Suspicious-usage flag (finalized requirement) — flag-only, never an
+  // automatic block/suspend. Set by the scheduled suspicious-usage sweep;
+  // cleared only by a Super Admin from the Students admin page.
+  flaggedSuspicious Boolean  @default(false)
+  flaggedReason     String?
+  flaggedAt         DateTime?
+
+  // Simple heuristic inputs for the suspicious-usage sweep (see
+  // anti-abuse.service.ts) — deliberately lightweight rather than a full
+  // device/usage history log. totalDeviceRegistrations is a lifetime
+  // counter (never decremented, even when a device is later removed) —
+  // a normal student cycles through 1-2 phones a year; a much higher
+  // count suggests active device churn/sharing. nearCapStreak counts
+  // CONSECUTIVE days the 75/day paid cap was nearly/fully used.
+  totalDeviceRegistrations Int @default(0)
+  nearCapStreak            Int @default(0)
+
   createdAt      DateTime  @default(now())
 
   subscriptions      Subscription[]
@@ -83,9 +117,31 @@ model User {
   answerHistory       UserQuestionHistory[]
   performanceSummary  UserPerformanceSummary[]
   practicePreference  StudentPracticePreference?
+  devices             Device[]
 
   @@index([phone])
   @@index([email])
+}
+
+// One row per device a student has logged in from — enforces the 2-device
+// cap (finalized requirement). `deviceId` is a random id the CLIENT
+// generates once and persists (browser localStorage) — the same value is
+// sent on every login from that browser, so it's how we recognize "this is
+// the same device again" versus "this is a new one." Not a hardware
+// fingerprint (deliberately — those are unreliable and privacy-invasive);
+// a student clearing their browser storage will look like a new device on
+// next login, same as most consumer apps' device lists behave.
+model Device {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  deviceId   String   // client-generated, persisted in localStorage
+  label      String?  // e.g. a short user-agent summary, for the "My Devices" list
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@unique([userId, deviceId])
+  @@index([userId])
 }
 
 enum EducationStatus {

@@ -22,7 +22,7 @@ import { StudentManagementService } from './modules/admin/student-management.ser
 import { PlansService } from './modules/admin/plans.service';
 import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
-import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError } from './modules/auth/student-auth.service';
+import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
@@ -77,8 +77,12 @@ const profileService = new ProfileService();
 // same way; see student-auth.service.ts for how each is resolved.
 app.post('/auth/firebase-login', async (req, res) => {
   try {
-    const { firebaseIdToken } = req.body;
-    const result = await studentAuthService.loginWithFirebaseToken(firebaseIdToken);
+    const { firebaseIdToken, deviceId, deviceLabel } = req.body;
+    if (!deviceId) {
+      res.status(400).json({ error: 'deviceId is required' });
+      return;
+    }
+    const result = await studentAuthService.loginWithFirebaseToken(firebaseIdToken, deviceId, deviceLabel);
     res.json(result);
   } catch (err: any) {
     console.error(err);
@@ -89,7 +93,53 @@ app.post('/auth/firebase-login', async (req, res) => {
       res.status(409).json({ error: err.message, code: 'ACCOUNT_LINKING_CONFLICT' });
       return;
     }
+    if (err instanceof DeviceLimitReachedError) {
+      // Also a structured code — carries the existing devices so the
+      // frontend can offer "remove one to continue" without a session
+      // token (the student isn't logged in yet at this point).
+      res.status(403).json({ error: err.message, code: 'DEVICE_LIMIT_REACHED', devices: err.devices });
+      return;
+    }
     res.status(401).json({ error: err.message ?? 'Login failed' });
+  }
+});
+
+// POST /auth/remove-device  { firebaseIdToken, deviceId } — re-verifies the
+// SAME Firebase ID token the student just tried to log in with (proving
+// it's really them) and removes one registered device, freeing a slot so
+// they can retry POST /auth/firebase-login with the same deviceId as
+// before. No student session token required/used here — there isn't one
+// yet when this is called from the device-limit-reached screen.
+app.post('/auth/remove-device', async (req, res) => {
+  try {
+    const { firebaseIdToken, deviceId } = req.body;
+    await studentAuthService.removeDeviceViaFirebaseToken(firebaseIdToken, deviceId);
+    res.json({ removed: true });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to remove device' });
+  }
+});
+
+// GET /students/me/devices — "My Devices" settings list (logged-in only).
+app.get('/students/me/devices', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await studentAuthService.listDevices(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load devices' });
+  }
+});
+
+// DELETE /students/me/devices/:deviceId — remove a device from the
+// logged-in "My Devices" page (as opposed to the login-time flow above).
+app.delete('/students/me/devices/:deviceId', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await studentAuthService.removeDevice(req.studentUserId!, req.params.deviceId);
+    res.json({ removed: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to remove device' });
   }
 });
 
@@ -835,6 +885,17 @@ app.post('/admin/students/:id/test-account', requireStaffAuth, requireRole('SUPE
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update test account status' });
+  }
+});
+
+// POST /admin/students/:id/clear-suspicious-flag — Super Admin only (finalized requirement, flag-only anti-abuse)
+app.post('/admin/students/:id/clear-suspicious-flag', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const result = await studentManagementService.clearSuspiciousFlag(req.params.id);
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to clear suspicious flag' });
   }
 });
 

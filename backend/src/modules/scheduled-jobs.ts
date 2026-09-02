@@ -5,9 +5,11 @@
 import cron from 'node-cron';
 import { SessionService } from './quiz/session.service';
 import { RankingService } from './ranking/ranking.service';
+import { AntiAbuseService } from './anti-abuse/anti-abuse.service';
 
 const sessionService = new SessionService();
 const rankingService = new RankingService();
+const antiAbuseService = new AntiAbuseService();
 
 export function startScheduledJobs() {
   // Every 15 minutes: mark stale in-progress sessions as Abandoned, release
@@ -34,5 +36,17 @@ export function startScheduledJobs() {
     }
   });
 
-  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly)');
+  // Daily at 23:50 IST-adjacent-ish (server timezone — deliberately just
+  // before typical calendar-day rollover) — suspicious-usage sweep
+  // (finalized requirement, flag-only, never auto-blocks).
+  cron.schedule('50 23 * * *', async () => {
+    try {
+      const result = await antiAbuseService.runDailySweep();
+      console.log(`[cron] Suspicious-usage sweep: checked ${result.checked}, flagged ${result.flaggedCount}`);
+    } catch (err) {
+      console.error('[cron] Suspicious-usage sweep failed:', err);
+    }
+  });
+
+  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily)');
 }

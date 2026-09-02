@@ -49,13 +49,32 @@ export class AccountLinkingConflictError extends Error {
   }
 }
 
+/** Thrown when this login is from a genuinely new device and the account
+ * already has 2 registered devices (finalized requirement) — carries the
+ * existing devices so the frontend can offer "remove one to continue"
+ * without needing a real session token yet. */
+export class DeviceLimitReachedError extends Error {
+  devices: { deviceId: string; label: string | null; lastSeenAt: Date }[];
+  constructor(devices: { deviceId: string; label: string | null; lastSeenAt: Date }[]) {
+    super('This account is already signed in on 2 devices. Remove one to continue on this device.');
+    this.name = 'DeviceLimitReachedError';
+    this.devices = devices;
+  }
+}
+
+const MAX_DEVICES_PER_ACCOUNT = 2;
+
 export class StudentAuthService {
   /**
    * Verifies a Firebase ID token (Phone OTP or Google — both arrive the
    * same shape) and finds or creates the matching User, resolving by
-   * Firebase uid first (the canonical key).
+   * Firebase uid first (the canonical key). `deviceId` is the CLIENT's
+   * persisted device identifier (see Device model) — required so the
+   * 2-device cap and single-active-session enforcement can register this
+   * login. Throws DeviceLimitReachedError instead of issuing a session
+   * when this is a genuinely new (3rd+) device.
    */
-  async loginWithFirebaseToken(firebaseIdToken: string) {
+  async loginWithFirebaseToken(firebaseIdToken: string, deviceId: string, deviceLabel?: string) {
     ensureFirebaseInitialized();
 
     const decoded = await admin.auth().verifyIdToken(firebaseIdToken);
@@ -75,6 +94,7 @@ export class StudentAuthService {
       if (!user.photoUrl && googlePicture) {
         user = await prisma.user.update({ where: { id: user.id }, data: { photoUrl: googlePicture } });
       }
+      await this.registerDevice(user.id, deviceId, deviceLabel);
       return this.issueSession(user.id);
     }
 
@@ -86,10 +106,12 @@ export class StudentAuthService {
       const existingByPhone = await prisma.user.findUnique({ where: { phone } });
       if (existingByPhone) {
         user = await prisma.user.update({ where: { id: existingByPhone.id }, data: { firebaseUid: uid } });
+        await this.registerDevice(user.id, deviceId, deviceLabel);
         return this.issueSession(user.id);
       }
       // Brand-new phone — normal signup.
       user = await prisma.user.create({ data: { firebaseUid: uid, phone } });
+      await this.registerDevice(user.id, deviceId, deviceLabel);
       return this.issueSession(user.id);
     }
 
@@ -105,10 +127,62 @@ export class StudentAuthService {
       }
       // No conflicting account — genuinely new Google-only signup.
       user = await prisma.user.create({ data: { firebaseUid: uid, email, photoUrl: googlePicture } });
+      await this.registerDevice(user.id, deviceId, deviceLabel);
       return this.issueSession(user.id);
     }
 
     throw new Error('Firebase token included neither a phone number nor an email — cannot identify the student.');
+  }
+
+  /**
+   * Registers this login's device (or updates lastSeenAt if it's already
+   * known) — throws DeviceLimitReachedError before touching anything if
+   * this is a genuinely new device and the account is already at the cap.
+   * Called on every successful login, before issueSession.
+   */
+  private async registerDevice(userId: string, deviceId: string, label?: string) {
+    const existing = await prisma.device.findUnique({ where: { userId_deviceId: { userId, deviceId } } });
+    if (existing) {
+      await prisma.device.update({ where: { id: existing.id }, data: { lastSeenAt: new Date(), ...(label ? { label } : {}) } });
+      return;
+    }
+
+    const count = await prisma.device.count({ where: { userId } });
+    if (count >= MAX_DEVICES_PER_ACCOUNT) {
+      const devices = await prisma.device.findMany({
+        where: { userId },
+        select: { deviceId: true, label: true, lastSeenAt: true },
+        orderBy: { lastSeenAt: 'asc' },
+      });
+      throw new DeviceLimitReachedError(devices);
+    }
+
+    await prisma.device.create({ data: { userId, deviceId, label } });
+    await prisma.user.update({ where: { id: userId }, data: { totalDeviceRegistrations: { increment: 1 } } });
+  }
+
+  /** Lists a student's registered devices — "My Devices" settings page. */
+  async listDevices(userId: string) {
+    return prisma.device.findMany({ where: { userId }, orderBy: { lastSeenAt: 'desc' } });
+  }
+
+  /**
+   * Removes one device — used both from the logged-in "My Devices" page
+   * (studentUserId already known) and from the login-time "device limit
+   * reached" flow (student isn't logged in yet, so re-verifies the SAME
+   * Firebase ID token they just tried to log in with, rather than trusting
+   * a client-supplied userId).
+   */
+  async removeDevice(userId: string, deviceId: string) {
+    await prisma.device.deleteMany({ where: { userId, deviceId } });
+  }
+
+  async removeDeviceViaFirebaseToken(firebaseIdToken: string, deviceIdToRemove: string) {
+    ensureFirebaseInitialized();
+    const decoded = await admin.auth().verifyIdToken(firebaseIdToken);
+    const user = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });
+    if (!user) throw new Error('No account found for this Firebase identity.');
+    await this.removeDevice(user.id, deviceIdToRemove);
   }
 
   /**
@@ -163,8 +237,13 @@ export class StudentAuthService {
     return { linked: true };
   }
 
-  private issueSession(userId: string) {
-    const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '30d' });
+  private async issueSession(userId: string) {
+    // Single-active-session enforcement (finalized requirement) —
+    // incrementing sessionVersion here invalidates whatever token was
+    // issued to any OTHER device, since requireStudentAuth below rejects
+    // any token whose embedded version doesn't match the CURRENT value.
+    const user = await prisma.user.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } });
+    const token = jwt.sign({ userId, sessionVersion: user.sessionVersion }, JWT_SECRET, { expiresIn: '30d' });
     return { token, userId };
   }
 }
@@ -175,12 +254,20 @@ export interface StudentAuthedRequest extends Request {
   studentUserId?: string;
 }
 
-export function requireStudentAuth(req: StudentAuthedRequest, res: Response, next: NextFunction) {
+export async function requireStudentAuth(req: StudentAuthedRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing auth token' });
 
   try {
-    const payload = jwt.verify(header.slice(7), JWT_SECRET) as { userId: string };
+    const payload = jwt.verify(header.slice(7), JWT_SECRET) as { userId: string; sessionVersion: number };
+    // Single-active-session check (finalized requirement) — a token from a
+    // device that has since been superseded by a newer login elsewhere
+    // fails here with a specific code the frontend recognizes, rather than
+    // a generic "invalid token" — see studentFetch.ts on the frontend.
+    const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { sessionVersion: true } });
+    if (!user || user.sessionVersion !== payload.sessionVersion) {
+      return res.status(401).json({ error: 'This account was logged in on another device.', code: 'SESSION_INVALIDATED' });
+    }
     req.studentUserId = payload.userId;
     next();
   } catch {

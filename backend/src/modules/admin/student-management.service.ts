@@ -44,6 +44,8 @@ export class StudentManagementService {
         preferredLang: u.preferredLang,
         createdAt: u.createdAt,
         isTestAccount: u.isTestAccount,
+        flaggedSuspicious: u.flaggedSuspicious,
+        flaggedReason: u.flaggedReason,
         activePlan: u.subscriptions[0]?.plan.name ?? 'Free',
         performance: u.performanceSummary.reduce((acc, p) => {
           acc[p.bucket] = { questionsAnswered: p.questionsAnswered, averagePercent: p.averagePercent, rank: p.rank };
@@ -59,6 +61,19 @@ export class StudentManagementService {
   /** Super Admin only (enforced at the route level) — toggle Test Account status. */
   async setTestAccount(userId: string, isTestAccount: boolean) {
     return prisma.user.update({ where: { id: userId }, data: { isTestAccount }, select: { id: true, isTestAccount: true } });
+  }
+
+  /** Super Admin only — clears a suspicious-usage flag after review
+   * (finalized requirement: only a human review clears it, the sweep
+   * itself never auto-clears). Also resets nearCapStreak so a genuinely
+   * resolved case doesn't immediately re-trigger tomorrow purely from
+   * yesterday's already-reviewed streak. */
+  async clearSuspiciousFlag(userId: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { flaggedSuspicious: false, flaggedReason: null, flaggedAt: null, nearCapStreak: 0 },
+      select: { id: true, flaggedSuspicious: true },
+    });
   }
 
   async getStudentDetail(userId: string) {

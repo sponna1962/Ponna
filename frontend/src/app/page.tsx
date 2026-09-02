@@ -32,10 +32,12 @@ import { firebaseAuth } from '../lib/firebase';
 import { useLanguage } from '../lib/language-context';
 import { apiUrl } from '../lib/api-config';
 import { studentFetch } from '../lib/student-fetch';
+import { getDeviceId, getDeviceLabel } from '../lib/device-id';
 import { StudentMenu } from '../components/StudentMenu';
 
-type View = 'main' | 'chooseMethod' | 'phone';
+type View = 'main' | 'chooseMethod' | 'phone' | 'deviceLimit';
 type ActiveSubscription = { id: string; cycleEnd: string; plan: { name: string; nameTa: string | null } };
+type DeviceInfo = { deviceId: string; label: string | null; lastSeenAt: string };
 
 export default function IndexPage() {
   const { t } = useLanguage();
@@ -50,6 +52,12 @@ export default function IndexPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Device-limit-reached flow — the pending Firebase token (so we can
+  // retry the exact same login after a device is removed) and the
+  // existing devices to offer for removal.
+  const [pendingFirebaseToken, setPendingFirebaseToken] = useState<string | null>(null);
+  const [existingDevices, setExistingDevices] = useState<DeviceInfo[]>([]);
+  const [removingDeviceId, setRemovingDeviceId] = useState<string | null>(null);
   const confirmationRef = useRef<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
@@ -57,11 +65,20 @@ export default function IndexPage() {
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [loggedOutElsewhere, setLoggedOutElsewhere] = useState(false);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('ponna_student_token') : null;
     setIsLoggedIn(!!token);
     setCheckedAuth(true);
+    // Single-active-session enforcement (finalized requirement) —
+    // student-fetch.ts stashes this right before redirecting here when a
+    // request came back 401/SESSION_INVALIDATED, since nothing in memory
+    // survives that full-page redirect.
+    if (typeof window !== 'undefined' && sessionStorage.getItem('ponna_logout_reason') === 'SESSION_INVALIDATED') {
+      setLoggedOutElsewhere(true);
+      sessionStorage.removeItem('ponna_logout_reason');
+    }
   }, []);
 
   useEffect(() => {
@@ -80,6 +97,61 @@ export default function IndexPage() {
     localStorage.setItem('ponna_student_token', token);
     setIsLoggedIn(true);
     setView('main');
+  }
+
+  /** Shared by both Google and Phone sign-in — sends the persisted device
+   * id along with the Firebase token (finalized requirement: 2-device cap
+   * + single-active-session). Handles the DEVICE_LIMIT_REACHED response by
+   * switching to a small inline "remove a device to continue" view,
+   * keeping the Firebase token so the same login can be retried right
+   * after a device is removed — no need to sign in with Google/OTP again. */
+  async function attemptLogin(firebaseIdToken: string) {
+    const res = await fetch(apiUrl('/auth/firebase-login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firebaseIdToken, deviceId: getDeviceId(), deviceLabel: getDeviceLabel() }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      if (body.code === 'ACCOUNT_LINKING_CONFLICT') {
+        setError(t.login.linkingConflict);
+        setLoading(false);
+        return;
+      }
+      if (body.code === 'DEVICE_LIMIT_REACHED') {
+        setPendingFirebaseToken(firebaseIdToken);
+        setExistingDevices(body.devices ?? []);
+        setView('deviceLimit');
+        setLoading(false);
+        return;
+      }
+      setError(body.error ?? t.login.sendError);
+      setLoading(false);
+      return;
+    }
+    const { token } = await res.json();
+    completeLogin(token);
+    setLoading(false);
+  }
+
+  async function removeDeviceAndRetry(deviceId: string) {
+    if (!pendingFirebaseToken) return;
+    setRemovingDeviceId(deviceId);
+    setError(null);
+    try {
+      await fetch(apiUrl('/auth/remove-device'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firebaseIdToken: pendingFirebaseToken, deviceId }),
+      });
+      setLoading(true);
+      await attemptLogin(pendingFirebaseToken);
+    } catch (err) {
+      console.error(err);
+      setError(t.login.sendError);
+    } finally {
+      setRemovingDeviceId(null);
+    }
   }
 
   function logout() {
@@ -110,23 +182,7 @@ export default function IndexPage() {
     try {
       const credential = await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
       const firebaseIdToken = await credential.user.getIdToken();
-
-      const res = await fetch(apiUrl('/auth/firebase-login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firebaseIdToken }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        if (body.code === 'ACCOUNT_LINKING_CONFLICT') {
-          setError(t.login.linkingConflict);
-          return;
-        }
-        throw new Error(body.error ?? 'Google sign-in failed');
-      }
-
-      const { token } = await res.json();
-      completeLogin(token);
+      await attemptLogin(firebaseIdToken);
     } catch (err: any) {
       if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
         setLoading(false);
@@ -134,7 +190,6 @@ export default function IndexPage() {
       }
       console.error(err);
       setError(err.message ?? t.login.sendError);
-    } finally {
       setLoading(false);
     }
   }
@@ -162,20 +217,10 @@ export default function IndexPage() {
       if (!confirmationRef.current) throw new Error('No OTP request in progress');
       const credential = await confirmationRef.current.confirm(otp);
       const firebaseIdToken = await credential.user.getIdToken();
-
-      const res = await fetch(apiUrl('/auth/firebase-login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firebaseIdToken }),
-      });
-      if (!res.ok) throw new Error('Backend login failed');
-
-      const { token } = await res.json();
-      completeLogin(token);
+      await attemptLogin(firebaseIdToken);
     } catch (err) {
       console.error(err);
       setError(t.login.verifyError);
-    } finally {
       setLoading(false);
     }
   }
@@ -252,6 +297,11 @@ export default function IndexPage() {
           logged-out except for the Active Plans block. */}
       {view === 'main' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
+          {loggedOutElsewhere && (
+            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 13, color: '#78350f' }}>
+              {t.login.sessionInvalidated}
+            </div>
+          )}
           <h1 style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.3, marginBottom: 4, whiteSpace: 'pre-line' }}>
             வெற்றியின்{'\n'}முதல் படி.
           </h1>
@@ -385,6 +435,46 @@ export default function IndexPage() {
           </button>
 
           {error && <p style={{ color: '#dc2626', marginTop: 12 }}>{error}</p>}
+        </div>
+      )}
+
+      {view === 'deviceLimit' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
+          <h1 style={{ fontSize: 18, margin: '0 0 8px' }}>{t.login.deviceLimitTitle}</h1>
+          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, lineHeight: 1.5 }}>{t.login.deviceLimitBody}</p>
+
+          {existingDevices.map((d) => (
+            <div
+              key={d.deviceId}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 10 }}
+            >
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{d.label ?? t.login.unknownDevice}</p>
+                <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+                  {t.login.lastUsed}: {new Date(d.lastSeenAt).toLocaleDateString()}
+                </p>
+              </div>
+              <button
+                onClick={() => removeDeviceAndRetry(d.deviceId)}
+                disabled={removingDeviceId === d.deviceId}
+                style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #dc2626', color: '#dc2626', background: '#fff', fontSize: 13 }}
+              >
+                {removingDeviceId === d.deviceId ? '…' : t.login.removeDevice}
+              </button>
+            </div>
+          ))}
+
+          {error && <p style={{ color: '#dc2626', marginTop: 8 }}>{error}</p>}
+
+          <button
+            onClick={() => {
+              setView('main');
+              setPendingFirebaseToken(null);
+            }}
+            style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 13, marginTop: 12, cursor: 'pointer' }}
+          >
+            {t.login.cancel}
+          </button>
         </div>
       )}
     </main>

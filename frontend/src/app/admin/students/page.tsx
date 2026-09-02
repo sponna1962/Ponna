@@ -15,6 +15,8 @@ type Student = {
   activePlan: string;
   createdAt: string;
   isTestAccount: boolean;
+  flaggedSuspicious: boolean;
+  flaggedReason: string | null;
   performance: Record<string, { questionsAnswered: number; averagePercent: number; rank: number | null }>;
 };
 
@@ -56,6 +58,16 @@ export default function StudentsPage() {
     load();
   }
 
+  async function clearSuspiciousFlag(id: string) {
+    const res = await adminFetch(`/admin/students/${id}/clear-suspicious-flag`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed: ${body.error ?? 'Only Super Admin can change this'}`);
+      return;
+    }
+    load();
+  }
+
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 16 }}>Students</h1>
@@ -66,6 +78,7 @@ export default function StudentsPage() {
           <Stat label="Active Paid Subscriptions" value={stats.activeSubscriptions} />
           <Stat label="Sessions Completed" value={stats.totalSessionsCompleted} />
           <Stat label="Questions Answered (all-time)" value={stats.totalQuestionsAnswered} />
+          <Stat label="Flagged for Review" value={students.filter((s) => s.flaggedSuspicious).length} highlight />
         </div>
       )}
 
@@ -90,13 +103,14 @@ export default function StudentsPage() {
             <th style={{ padding: 10 }}>Rank</th>
             <th style={{ padding: 10 }}>Joined</th>
             <th style={{ padding: 10 }}>Test Account</th>
+            <th style={{ padding: 10 }}>Suspicious</th>
           </tr>
         </thead>
         <tbody>
           {students.map((s) => {
             const overall = s.performance['OVERALL'];
             return (
-              <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9', background: s.flaggedSuspicious ? '#fef2f2' : undefined }}>
                 <td style={{ padding: 10 }}>
                   <a href={`/admin/students/${s.id}`} style={{ color: '#0f172a', fontWeight: 600, textDecoration: 'none' }}>
                     {s.name ?? s.phone ?? s.email ?? s.id.slice(0, 8)}
@@ -113,11 +127,23 @@ export default function StudentsPage() {
                     {s.isTestAccount ? 'Unmark' : 'Mark as Test'}
                   </button>
                 </td>
+                <td style={{ padding: 10 }}>
+                  {s.flaggedSuspicious ? (
+                    <div>
+                      <div style={{ fontSize: 11, color: '#991b1b', marginBottom: 4, maxWidth: 220 }}>🚩 {s.flaggedReason}</div>
+                      <button onClick={() => clearSuspiciousFlag(s.id)} style={{ fontSize: 12, padding: '4px 10px' }}>
+                        Clear Flag
+                      </button>
+                    </div>
+                  ) : (
+                    <span style={{ color: '#cbd5e1', fontSize: 12 }}>—</span>
+                  )}
+                </td>
               </tr>
             );
           })}
           {students.length === 0 && (
-            <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No students found.</td></tr>
+            <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No students found.</td></tr>
           )}
         </tbody>
       </table>
@@ -125,10 +151,10 @@ export default function StudentsPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 18px' }}>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#0f172a' }}>{value}</div>
+    <div style={{ background: '#fff', border: `1px solid ${highlight && value > 0 ? '#fecaca' : '#e2e8f0'}`, borderRadius: 8, padding: '10px 18px' }}>
+      <div style={{ fontSize: 20, fontWeight: 700, color: highlight && value > 0 ? '#991b1b' : '#0f172a' }}>{value}</div>
       <div style={{ fontSize: 12, color: '#64748b' }}>{label}</div>
     </div>
   );

@@ -21,6 +21,16 @@ export async function studentFetch(path: string, options: RequestInit = {}) {
   });
 
   if (res.status === 401) {
+    // Distinguish "logged in on another device" (finalized requirement —
+    // single-active-session enforcement) from a plain expired/invalid
+    // token, so the landing page can show the specific reason instead of
+    // silently dropping the student back to a bare login screen. Stashed
+    // in sessionStorage (not state) since this redirect is a full page
+    // navigation — nothing in memory survives it.
+    const body = await res.clone().json().catch(() => ({}));
+    if (body.code === 'SESSION_INVALIDATED' && typeof window !== 'undefined') {
+      sessionStorage.setItem('ponna_logout_reason', 'SESSION_INVALIDATED');
+    }
     localStorage.removeItem('ponna_student_token');
     window.location.href = '/';
     throw new Error('Session expired');
