@@ -10,9 +10,8 @@
 // never the raw image bytes in our own database.
 
 import { v2 as cloudinary } from 'cloudinary';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
-const prisma = new PrismaClient();
 
 let configured = false;
 function ensureCloudinaryConfigured() {

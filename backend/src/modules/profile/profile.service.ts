@@ -10,8 +10,8 @@
 // personalization only — explicitly NOT used anywhere to restrict exam
 // access or drive a recommendation system (finalized requirement).
 
-import { PrismaClient, EducationStatus } from '@prisma/client';
-const prisma = new PrismaClient();
+import { EducationStatus } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
 export function isProfileComplete(user: {
   name: string | null;

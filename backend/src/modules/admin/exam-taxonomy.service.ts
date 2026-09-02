@@ -8,8 +8,7 @@
 // Purposes, Authorities, Categories, and Sub-Categories can always be added
 // later without any schema change.
 
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 export class ExamTaxonomyService {
   /** Full tree (Purpose → Authority → Category → Sub-Category) — admin-only,

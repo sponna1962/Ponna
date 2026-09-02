@@ -3,8 +3,7 @@
 // plan, and how they're performing — not edit student data directly (a
 // student's own account changes go through their own flow, not admin edits).
 
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 export class StudentManagementService {
   async listStudents(opts: { search?: string; page?: number; pageSize?: number }) {

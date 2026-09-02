@@ -22,9 +22,9 @@
 // implied by taxonomyFilter — the finalized rule is that Language is a pure
 // content filter, not tied to any specific Authority.
 
-import { PrismaClient, Difficulty, QuizMode, QuestionCategory, Language, Prisma } from '@prisma/client';
+import { Difficulty, QuizMode, QuestionCategory, Language, Prisma } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
-const prisma = new PrismaClient();
 
 export class AllocationService {
   async buildSessionQuestionIds(

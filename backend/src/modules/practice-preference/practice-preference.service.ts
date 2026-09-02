@@ -9,9 +9,9 @@
 // Purpose (e.g. Employment/Recruitment) can only ever expand to Authorities
 // under THAT Purpose.
 
-import { PrismaClient, Language, QuizMode, Prisma } from '@prisma/client';
+import { Language, QuizMode, Prisma } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
-const prisma = new PrismaClient();
 
 export interface SelectionCategory {
   categoryId: string;

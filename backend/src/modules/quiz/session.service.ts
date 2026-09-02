@@ -2,13 +2,13 @@
 // start (reserve quota + questions), resume, answer, complete, and the
 // scheduled abandonment sweep.
 
-import { PrismaClient, QuizMode, SessionStatus, CorrectOption } from '@prisma/client';
+import { QuizMode, SessionStatus, CorrectOption } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import { QuotaService, QuotaExceededError } from '../quota/quota.service';
 import { AllocationService } from '../questions/allocation.service';
 import { RankingService } from '../ranking/ranking.service';
 import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
 
-const prisma = new PrismaClient();
 const quota = new QuotaService();
 const allocation = new AllocationService();
 const ranking = new RankingService();

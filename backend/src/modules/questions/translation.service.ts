@@ -13,10 +13,10 @@
 // live, since a subtly wrong translation of the correct-answer option would
 // otherwise silently corrupt what a student is tested on.
 
-import { PrismaClient, Language, CorrectOption, QuestionStatus, QuestionCategory } from '@prisma/client';
+import { Language, CorrectOption, QuestionStatus, QuestionCategory } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import { computeContentHash } from '../../common/content-hash';
 
-const prisma = new PrismaClient();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.6-flash';
 

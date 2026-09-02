@@ -28,9 +28,8 @@
 //      same home IP never triggers this; five accounts created within
 //      an hour from one IP does.
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
-const prisma = new PrismaClient();
 
 const DEVICE_CHURN_THRESHOLD = 5; // lifetime device registrations
 const NEAR_CAP_FRACTION = 0.9; // 90% of the 75/day cap counts as "near"

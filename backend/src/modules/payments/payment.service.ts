@@ -10,11 +10,10 @@
 // in the environment (see .env.example) — these come from your Razorpay
 // business account, which is a real account/decision only you can set up.
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import crypto from 'crypto';
 import { isProfileComplete } from '../profile/profile.service';
 
-const prisma = new PrismaClient();
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;

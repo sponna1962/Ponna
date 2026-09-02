@@ -5,10 +5,10 @@
 // taxonomy (see exam-taxonomy.service.ts) plus Source Type metadata — see
 // the schema comments for why each field is optional.
 
-import { PrismaClient, QuestionStatus, Difficulty, Language, QuestionCategory, CorrectOption, SourceType } from '@prisma/client';
+import { QuestionStatus, Difficulty, Language, QuestionCategory, CorrectOption, SourceType } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import { computeContentHash } from '../../common/content-hash';
 
-const prisma = new PrismaClient();
 
 /** Thrown by setStatus() when publishing a question with no Difficulty set — see the comment there. */
 export class NoDifficultySetError extends Error {

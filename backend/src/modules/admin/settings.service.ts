@@ -4,8 +4,7 @@
 // service (allocation, classification, ranking) reads from — changing a
 // value here takes effect immediately, no deploy required.
 
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 const EDITABLE_FIELDS = [
   'repetitionStrategy',

@@ -5,10 +5,10 @@
 //   complete. Free practice and basic score viewing (avg %, answered,
 //   correct) never require either check.
 
-import { PrismaClient, PerformanceBucket, QuizMode } from '@prisma/client';
+import { PerformanceBucket, QuizMode } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import { isProfileComplete } from '../profile/profile.service';
 
-const prisma = new PrismaClient();
 
 export class RankingService {
   /** Call after each answer submission to keep the summary table current. */

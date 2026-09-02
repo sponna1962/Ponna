@@ -14,12 +14,11 @@
 // as a genuine conflict to hand back to the student to resolve safely (log
 // in with Phone, then link Google from Profile) — never an automatic merge.
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 let firebaseInitialized = false;

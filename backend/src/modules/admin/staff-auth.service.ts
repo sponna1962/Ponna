@@ -3,12 +3,12 @@
 // CONTENT_ADMIN, or VIEWER_STAFF role. This is a minimal JWT-based scheme;
 // swap bcrypt rounds / JWT secret handling for production hardening.
 
-import { PrismaClient, StaffRole } from '@prisma/client';
+import { StaffRole } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 export class StaffAuthService {

@@ -4,8 +4,7 @@
 // hardcoded by name/code. Full create/scope-editing admin UI is Phase 3+;
 // this service currently covers what the existing admin screens need.
 
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 export class PlansService {
   async listPlans() {

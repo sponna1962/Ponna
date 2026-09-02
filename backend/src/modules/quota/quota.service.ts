@@ -46,9 +46,9 @@
 //    student-auth.service.ts's phone backfill branch) rather than
 //    creating a usable second one.
 
-import { PrismaClient, SubscriptionStatus } from '@prisma/client';
+import { SubscriptionStatus } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // Anti-abuse daily cap for PAID/covered access — global across all exams,
 // not per-exam (finalized requirement).

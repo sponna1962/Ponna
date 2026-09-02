@@ -7,9 +7,9 @@
 // Uses the Google Gemini API directly. Requires GEMINI_API_KEY in the
 // environment — this is a real account/credential you provide (see README).
 
-import { PrismaClient, Difficulty, QuestionStatus } from '@prisma/client';
+import { Difficulty, QuestionStatus } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
-const prisma = new PrismaClient();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.7-flash'; // primary — fast + cheap, appropriate for a per-question classification call
 // If the primary model keeps returning 503 (overloaded — common right

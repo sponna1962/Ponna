@@ -19,12 +19,12 @@
 // is provided, the other is generated via background translation after
 // import (same translation service as the single-question form).
 
-import { PrismaClient, Language, CorrectOption, QuestionStatus, QuestionCategory, SourceType } from '@prisma/client';
+import { Language, CorrectOption, QuestionStatus, QuestionCategory, SourceType } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 import { parse } from 'csv-parse/sync';
 import { computeContentHash } from '../../common/content-hash';
 import { TranslationService } from './translation.service';
 
-const prisma = new PrismaClient();
 const translationService = new TranslationService();
 
 export interface BatchMetadata {
