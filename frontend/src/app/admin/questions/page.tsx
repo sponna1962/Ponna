@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SubjectInput } from '../../../components/SubjectInput';
 import { adminFetch } from '../../../lib/admin-fetch';
@@ -45,23 +46,31 @@ const SOURCE_TYPES = [
 ];
 
 export default function AdminQuestionsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20, color: '#64748b' }}>Loading…</div>}>
+      <AdminQuestionsPageInner />
+    </Suspense>
+  );
+}
+
+function AdminQuestionsPageInner() {
+  const searchParams = useSearchParams();
   const [questions, setQuestions] = useState<Question[]>([]);
-  // Initial values read directly from the URL's query string (not a
-  // separate effect) — a click on a Question Bank Stats count needs the
-  // FIRST load to already be correctly filtered, not a default/unfiltered
-  // load followed by a corrected one a beat later.
-  const [statusFilter, setStatusFilter] = useState(() => {
-    if (typeof window === 'undefined') return 'DRAFT';
-    return new URLSearchParams(window.location.search).get('status') || 'DRAFT';
-  });
+  // Initial values read directly from the URL's query string via
+  // useSearchParams() (not window.location.search) — this hook reactively
+  // reflects the CURRENT URL even when Next.js reuses this page's
+  // component instance across navigations to the same route with
+  // different query params (e.g. clicking one Question Bank Stats count,
+  // going back, then clicking a different one) — a one-time
+  // window.location.search read in a lazy initializer only fires on the
+  // very first mount and would miss every navigation after that.
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'DRAFT');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(() => {
-    if (typeof window === 'undefined') return emptyTaxonomy;
-    const params = new URLSearchParams(window.location.search);
-    const authorityId = params.get('authorityId');
-    const categoryId = params.get('categoryId');
-    const subCategoryId = params.get('subCategoryId');
+    const authorityId = searchParams.get('authorityId');
+    const categoryId = searchParams.get('categoryId');
+    const subCategoryId = searchParams.get('subCategoryId');
     return authorityId || categoryId || subCategoryId
       ? { authorityId: authorityId ?? '', categoryId: categoryId ?? '', subCategoryId: subCategoryId ?? '' }
       : emptyTaxonomy;
@@ -70,6 +79,21 @@ export default function AdminQuestionsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pendingAiCount, setPendingAiCount] = useState(0);
+
+  // Re-syncs whenever the URL's query string actually changes — covers
+  // the "component instance reused across navigations" case the lazy
+  // initializers above can't (those only run once, on first mount).
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const authorityId = searchParams.get('authorityId');
+    const categoryId = searchParams.get('categoryId');
+    const subCategoryId = searchParams.get('subCategoryId');
+    if (status || authorityId || categoryId || subCategoryId) {
+      setStatusFilter(status || 'DRAFT');
+      setTaxonomyFilter({ authorityId: authorityId ?? '', categoryId: categoryId ?? '', subCategoryId: subCategoryId ?? '' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [classifying, setClassifying] = useState<{ done: number; total: number; stopped: boolean } | null>(null);
   const stopRequestedRef = useRef(false);
   const PAGE_SIZE = 100;
