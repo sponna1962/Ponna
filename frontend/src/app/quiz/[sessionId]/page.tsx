@@ -110,6 +110,20 @@ export default function QuizSessionPage() {
 
     if (isLast) {
       await studentFetch(`/quiz/${sessionId}/complete`, { method: 'POST' });
+
+      // Finalized requirement — a Free (not covered by a paid plan)
+      // session ends by going straight to that exam's Annual Plan, not a
+      // results screen. A paid-plan session is completely unaffected —
+      // still shows the normal results screen exactly as before.
+      const accessRes = await studentFetch('/quiz/access-status');
+      if (accessRes.ok) {
+        const access = await accessRes.json();
+        if (access.hasPreference && !access.covered) {
+          window.location.href = access.applicablePlanId ? `/plans?highlight=${access.applicablePlanId}` : '/plans';
+          return;
+        }
+      }
+
       await loadResults();
       setSession({ ...session, status: 'COMPLETED' });
       return;
