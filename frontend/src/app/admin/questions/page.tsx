@@ -46,10 +46,26 @@ const SOURCE_TYPES = [
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [statusFilter, setStatusFilter] = useState('DRAFT');
+  // Initial values read directly from the URL's query string (not a
+  // separate effect) — a click on a Question Bank Stats count needs the
+  // FIRST load to already be correctly filtered, not a default/unfiltered
+  // load followed by a corrected one a beat later.
+  const [statusFilter, setStatusFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'DRAFT';
+    return new URLSearchParams(window.location.search).get('status') || 'DRAFT';
+  });
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(emptyTaxonomy);
+  const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(() => {
+    if (typeof window === 'undefined') return emptyTaxonomy;
+    const params = new URLSearchParams(window.location.search);
+    const authorityId = params.get('authorityId');
+    const categoryId = params.get('categoryId');
+    const subCategoryId = params.get('subCategoryId');
+    return authorityId || categoryId || subCategoryId
+      ? { authorityId: authorityId ?? '', categoryId: categoryId ?? '', subCategoryId: subCategoryId ?? '' }
+      : emptyTaxonomy;
+  });
   const [languageFilter, setLanguageFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -123,21 +139,9 @@ export default function AdminQuestionsPage() {
   // Pre-fills the status/taxonomy filters from the URL's query string on
   // first load — this is how a click on a number in Question Bank Stats
   // (status + authorityId/categoryId/subCategoryId) lands here already
-  // filtered to exactly those questions. Read once via window.location
-  // rather than useSearchParams() so this page doesn't need a Suspense
-  // boundary just for this.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get('status');
-    const authorityId = params.get('authorityId');
-    const categoryId = params.get('categoryId');
-    const subCategoryId = params.get('subCategoryId');
-    if (status) setStatusFilter(status);
-    if (authorityId || categoryId || subCategoryId) {
-      setTaxonomyFilter({ authorityId: authorityId ?? '', categoryId: categoryId ?? '', subCategoryId: subCategoryId ?? '' });
-    }
-  }, []);
+  // filtered to exactly those questions. See the useState initializers
+  // above — the actual read happens there, before the first render, so
+  // there's no separate effect needed here anymore.
 
   useEffect(() => {
     loadQuestions();
