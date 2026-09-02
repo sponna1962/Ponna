@@ -524,6 +524,20 @@ export class QuestionService {
   }
 
   /** Actually applies the rule — Difficulty only, status untouched. */
+  /** Chunks a large id list into Postgres-safe-sized updateMany batches —
+   * a single query has a hard limit of 32767 bind variables, and a
+   * ~50k-question backlog easily produces more ids than that in one shot
+   * (hit exactly this in production: 38803 vs the 32767 limit). */
+  private async updateManyInBatches(ids: string[], difficulty: Difficulty, batchSize = 5000) {
+    let count = 0;
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      const result = await prisma.question.updateMany({ where: { id: { in: batch } }, data: { difficulty } });
+      count += result.count;
+    }
+    return count;
+  }
+
   async applyHeuristicClassification() {
     const rows = await prisma.question.findMany({ where: { difficulty: null }, select: { id: true, questionText: true } });
     const mediumIds: string[] = [];
@@ -531,10 +545,10 @@ export class QuestionService {
     for (const r of rows) {
       (this.heuristicDifficulty(r.questionText) === Difficulty.HARD ? hardIds : mediumIds).push(r.id);
     }
-    const [mediumResult, hardResult] = await Promise.all([
-      mediumIds.length ? prisma.question.updateMany({ where: { id: { in: mediumIds } }, data: { difficulty: Difficulty.MEDIUM } }) : Promise.resolve({ count: 0 }),
-      hardIds.length ? prisma.question.updateMany({ where: { id: { in: hardIds } }, data: { difficulty: Difficulty.HARD } }) : Promise.resolve({ count: 0 }),
+    const [medium, hard] = await Promise.all([
+      this.updateManyInBatches(mediumIds, Difficulty.MEDIUM),
+      this.updateManyInBatches(hardIds, Difficulty.HARD),
     ]);
-    return { medium: mediumResult.count, hard: hardResult.count };
+    return { medium, hard };
   }
 }
