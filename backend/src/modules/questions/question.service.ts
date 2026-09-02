@@ -258,6 +258,9 @@ export class QuestionService {
     const rowsByKey = new Map<
       string,
       {
+        authorityId: string | null;
+        categoryId: string | null;
+        subCategoryId: string | null;
         authorityName: string;
         purposeName: string;
         categoryName: string;
@@ -276,6 +279,9 @@ export class QuestionService {
       const key = `${g.authorityId ?? ''}|${g.categoryId ?? ''}|${g.subCategoryId ?? ''}`;
       if (!rowsByKey.has(key)) {
         rowsByKey.set(key, {
+          authorityId: g.authorityId ?? null,
+          categoryId: g.categoryId ?? null,
+          subCategoryId: g.subCategoryId ?? null,
           authorityName: authority?.name ?? '(no authority)',
           purposeName: authority?.purpose?.name ?? '',
           categoryName: g.categoryId ? (categoryById.get(g.categoryId) ?? '(unknown)') : '—',

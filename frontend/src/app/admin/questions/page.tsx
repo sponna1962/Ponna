@@ -120,6 +120,25 @@ export default function AdminQuestionsPage() {
     setPendingAiCount(data.total ?? 0);
   }
 
+  // Pre-fills the status/taxonomy filters from the URL's query string on
+  // first load — this is how a click on a number in Question Bank Stats
+  // (status + authorityId/categoryId/subCategoryId) lands here already
+  // filtered to exactly those questions. Read once via window.location
+  // rather than useSearchParams() so this page doesn't need a Suspense
+  // boundary just for this.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    const authorityId = params.get('authorityId');
+    const categoryId = params.get('categoryId');
+    const subCategoryId = params.get('subCategoryId');
+    if (status) setStatusFilter(status);
+    if (authorityId || categoryId || subCategoryId) {
+      setTaxonomyFilter({ authorityId: authorityId ?? '', categoryId: categoryId ?? '', subCategoryId: subCategoryId ?? '' });
+    }
+  }, []);
+
   useEffect(() => {
     loadQuestions();
     loadPendingAiCount();

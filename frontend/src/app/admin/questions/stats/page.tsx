@@ -11,6 +11,9 @@ import { adminFetch } from '../../../../lib/admin-fetch';
 // fail to build over a package issue.
 
 type StatsRow = {
+  authorityId: string | null;
+  categoryId: string | null;
+  subCategoryId: string | null;
   authorityName: string;
   purposeName: string;
   categoryName: string;
@@ -28,6 +31,23 @@ type Stats = {
   grandTotal: { published: number; draft: number; disabled: number; ta: number; en: number; total: number };
   authorityTotals: { name: string; total: number }[];
 };
+
+function questionsLink(status: 'PUBLISHED' | 'DRAFT' | 'DISABLED', r: StatsRow): string {
+  const params = new URLSearchParams({ status });
+  if (r.authorityId) params.set('authorityId', r.authorityId);
+  if (r.categoryId) params.set('categoryId', r.categoryId);
+  if (r.subCategoryId) params.set('subCategoryId', r.subCategoryId);
+  return `/admin/questions?${params.toString()}`;
+}
+
+function CountLink({ href, count, color }: { href: string; count: number; color: string }) {
+  if (count === 0) return <span style={{ color: '#cbd5e1' }}>0</span>;
+  return (
+    <Link href={href} style={{ color, textDecoration: 'none', borderBottom: '1px dotted currentColor' }}>
+      {count}
+    </Link>
+  );
+}
 
 export default function QuestionBankStatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -118,9 +138,15 @@ export default function QuestionBankStatsPage() {
                   <td style={{ padding: 10 }}>{r.authorityName}</td>
                   <td style={{ padding: 10, color: '#64748b' }}>{r.categoryName}</td>
                   <td style={{ padding: 10, color: '#64748b' }}>{r.subCategoryName}</td>
-                  <td style={{ padding: 10, textAlign: 'right', color: '#16a34a' }}>{r.published}</td>
-                  <td style={{ padding: 10, textAlign: 'right', color: '#64748b' }}>{r.draft}</td>
-                  <td style={{ padding: 10, textAlign: 'right', color: '#dc2626' }}>{r.disabled}</td>
+                  <td style={{ padding: 10, textAlign: 'right', color: '#16a34a' }}>
+                    <CountLink href={questionsLink('PUBLISHED', r)} count={r.published} color="#16a34a" />
+                  </td>
+                  <td style={{ padding: 10, textAlign: 'right', color: '#64748b' }}>
+                    <CountLink href={questionsLink('DRAFT', r)} count={r.draft} color="#64748b" />
+                  </td>
+                  <td style={{ padding: 10, textAlign: 'right', color: '#dc2626' }}>
+                    <CountLink href={questionsLink('DISABLED', r)} count={r.disabled} color="#dc2626" />
+                  </td>
                   <td style={{ padding: 10, textAlign: 'right', color: '#7c3aed' }}>{r.ta}</td>
                   <td style={{ padding: 10, textAlign: 'right', color: '#0891b2' }}>{r.en}</td>
                   <td style={{ padding: 10, textAlign: 'right', fontWeight: 600 }}>{r.total}</td>
