@@ -136,6 +136,10 @@ export default function DailyQuizPage() {
       const qRes = await studentFetch(`/daily-quiz/attempts/${attempt.id}/questions`);
       setAttemptData(await qRes.json());
       setCurrentIndex(0);
+      // Root cause of the language-selector-never-hiding bug: `state`
+      // itself was never updated here, so `!state.attempt` (the
+      // selector's render condition) stayed true forever after starting.
+      setState({ ...state, attempt: { language, answeredQuestionIds: [] } });
     } finally {
       setStarting(false);
     }
@@ -232,7 +236,7 @@ export default function DailyQuizPage() {
         </div>
       )}
 
-      {state?.access === 'AVAILABLE' && !state.attempt && (
+      {state?.access === 'AVAILABLE' && !state.attempt && !attemptData && (
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, marginBottom: 4 }}>{t.dailyQuiz.readyTitle}</p>
           <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 20 }}>{t.dailyQuiz.chooseLanguage}</p>
