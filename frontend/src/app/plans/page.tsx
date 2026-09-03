@@ -75,6 +75,18 @@ function shortName(name: string): string {
   return name.replace(/ Annual Plan$/i, '').trim();
 }
 
+/** Display-only override for TNPSC's card title (finalized requirement —
+ * "இப்போதைக்கு TNPSC Annual Plan என்று மட்டும் வைத்துக்கொள்ளலாமா") — the
+ * underlying Plan.name stays "Competitive / Employment Annual Plan" in the
+ * database (unchanged everywhere else: receipts, admin lists, Students
+ * page), this only swaps what the student-facing card headline shows.
+ * Deliberately temporary/easy-to-revert rather than a DB rename, per "for
+ * now." Every other plan just shows its real name untouched. */
+function displayName(name: string): string {
+  if (/competitive|employment/i.test(name) && !/tnpsc/i.test(name)) return 'TNPSC Annual Plan';
+  return name;
+}
+
 /** Finalized marketing copy per Annual Plan (Sept 15 launch — only TNPSC
  * and TNTET are live). Matched by name substring, same precedent as
  * shortName()/buyButtonLabel() below — deriving DISPLAY TEXT from the
@@ -224,7 +236,7 @@ function PlansPageInner() {
   /** "NEET Annual Plan" -> "Get NEET Plan" / "NEET திட்டம் வாங்கவும்" — built
    * from the Plan's own name (data), never a hardcoded per-plan mapping. */
   function buyButtonLabel(name: string): string {
-    const short = shortName(name);
+    const short = shortName(displayName(name));
     return lang === 'ta' ? `${short} திட்டம் வாங்கவும்` : `Get ${short} Plan`;
   }
 
@@ -364,7 +376,7 @@ function PlansPageInner() {
                       marginBottom: 16,
                     }}
                   >
-                    <div style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 800, color: COLORS.ink, marginBottom: 6 }}>{p.name}</div>
+                    <div style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 800, color: COLORS.ink, marginBottom: 6 }}>{displayName(p.name)}</div>
 
                     {features && (
                       <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.gold, marginBottom: 14 }}>{features.highlight}</div>
