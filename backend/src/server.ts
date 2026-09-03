@@ -1152,6 +1152,18 @@ app.post('/admin/students/:id/change-phone', requireStaffAuth, requireRole('SUPE
   }
 });
 
+// DELETE /admin/students/:id — Super Admin only. Permanently deletes the
+// account and everything tied to it. Irreversible.
+app.delete('/admin/students/:id', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    await studentManagementService.deleteStudentAccount(req.params.id);
+    res.json({ deleted: true });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message ?? 'Failed to delete student account' });
+  }
+});
+
 app.get('/admin/platform-stats', requireStaffAuth, async (_req, res) => {
   res.json(await studentManagementService.getPlatformStats());
 });

@@ -107,6 +107,29 @@ export class StudentManagementService {
     return prisma.user.update({ where: { id: userId }, data: { phone: newPhone }, select: { id: true, phone: true } });
   }
 
+  /**
+   * Super Admin only — permanently deletes a student account and every
+   * record tied to it: Devices, Subscriptions, Practice Preference, quiz
+   * history (QuizSession + its QuizSessionQuestion rows,
+   * UserQuestionHistory, UserPerformanceSummary), Question Reports, and
+   * Daily Quiz activity (DailyQuizAttempt + its DailyQuizAnswer rows).
+   * Irreversible — the route requires an explicit confirmation on the
+   * frontend before calling this.
+   */
+  async deleteStudentAccount(userId: string): Promise<void> {
+    await prisma.dailyQuizAnswer.deleteMany({ where: { attempt: { userId } } });
+    await prisma.dailyQuizAttempt.deleteMany({ where: { userId } });
+    await prisma.quizSessionQuestion.deleteMany({ where: { session: { userId } } });
+    await prisma.quizSession.deleteMany({ where: { userId } });
+    await prisma.userQuestionHistory.deleteMany({ where: { userId } });
+    await prisma.userPerformanceSummary.deleteMany({ where: { userId } });
+    await prisma.device.deleteMany({ where: { userId } });
+    await prisma.questionReport.deleteMany({ where: { userId } });
+    await prisma.studentPracticePreference.deleteMany({ where: { userId } });
+    await prisma.subscription.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+  }
+
   async getStudentDetail(userId: string) {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: userId },

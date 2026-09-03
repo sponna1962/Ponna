@@ -89,6 +89,24 @@ export default function StudentsPage() {
     load();
   }
 
+  /** Super Admin only — permanently deletes the account and everything
+   * tied to it. Irreversible, so this asks the admin to type the exact
+   * account identifier back before proceeding, not just a yes/no click. */
+  async function deleteStudent(id: string, label: string) {
+    const typed = prompt(`This permanently deletes "${label}" and ALL its data (subscriptions, quiz history, Daily Quiz attempts, everything) — this cannot be undone.\n\nType the account's name/phone/email exactly to confirm:`);
+    if (typed?.trim() !== label) {
+      if (typed !== null) alert('Did not match — nothing was deleted.');
+      return;
+    }
+    const res = await adminFetch(`/admin/students/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed: ${body.error ?? 'Only Super Admin can delete accounts'}`);
+      return;
+    }
+    load();
+  }
+
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 16 }}>Students</h1>
@@ -147,8 +165,14 @@ export default function StudentsPage() {
                   <button onClick={() => toggleTestAccount(s.id, s.isTestAccount)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
                     {s.isTestAccount ? 'Unmark' : 'Mark as Test'}
                   </button>
-                  <button onClick={() => changePhone(s.id, s.phone)} style={{ fontSize: 12, padding: '4px 10px' }}>
+                  <button onClick={() => changePhone(s.id, s.phone)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
                     Change Phone
+                  </button>
+                  <button
+                    onClick={() => deleteStudent(s.id, s.name ?? s.phone ?? s.email ?? s.id)}
+                    style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626', borderColor: '#fca5a5' }}
+                  >
+                    Delete
                   </button>
                 </td>
                 <td style={{ padding: 10 }}>
