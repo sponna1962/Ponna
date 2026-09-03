@@ -16,6 +16,8 @@ const EDITABLE_FIELDS = [
   'aiConfidenceThreshold',
   'rankingEligibilityMinQuestions',
   'sessionInactivityHours',
+  'dailyQuizEnabled',
+  'dailyQuizDefaultPublishTime',
 ] as const;
 
 export class SettingsService {

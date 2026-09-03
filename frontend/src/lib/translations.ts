@@ -97,6 +97,16 @@ export const translations = {
       empty: 'இதுவரை தவறான பதில்கள் இல்லை — தொடர்ந்து பயிற்சி செய்யுங்கள்!',
       correctAnswer: 'சரியான பதில்',
     },
+    dailyQuiz: {
+      lockedTitle: 'Daily Quiz — Paid Plan மட்டும்',
+      lockedBody: 'இந்த வசதி Annual Plan-உடையவர்களுக்கு மட்டும் கிடைக்கும்.',
+      viewPlans: 'Plans-ஐ பார்க்கவும்',
+      notAvailable: 'இன்றைய Daily Quiz இன்னும் கிடைக்கவில்லை.',
+      readyTitle: 'இன்றைய Daily Quiz தயார்!',
+      chooseLanguage: 'மொழியைத் தேர்வு செய்யவும் — ஒரு முறை தேர்வு செய்தபின் மாற்ற முடியாது.',
+      resultsSubtitle: 'இன்றைய Daily Quiz முடிந்தது',
+      backHome: 'முகப்புக்கு செல்லவும்',
+    },
     quiz: {
       title: 'பயிற்சி தொடங்கவும்',
       modes: { MIXED: 'கலப்பு', MEDIUM: 'நடுத்தரம்', HARD: 'கடினம்' },
@@ -300,6 +310,16 @@ export const translations = {
       subtitle: 'Questions you answered wrong — with the correct answer.',
       empty: "No mistakes yet — keep practising!",
       correctAnswer: 'Correct answer',
+    },
+    dailyQuiz: {
+      lockedTitle: 'Daily Quiz — Paid Plan Only',
+      lockedBody: 'This feature is available for Annual Plan holders only.',
+      viewPlans: 'View Plans',
+      notAvailable: "Today's Daily Quiz is not available yet.",
+      readyTitle: "Today's Daily Quiz is ready!",
+      chooseLanguage: 'Choose a language — this cannot be changed once selected.',
+      resultsSubtitle: "Today's Daily Quiz complete",
+      backHome: 'Back to Home',
     },
     quiz: {
       title: 'Start Practice',

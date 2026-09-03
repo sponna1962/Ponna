@@ -6,10 +6,12 @@ import cron from 'node-cron';
 import { SessionService } from './quiz/session.service';
 import { RankingService } from './ranking/ranking.service';
 import { AntiAbuseService } from './anti-abuse/anti-abuse.service';
+import { DailyQuizService } from './daily-quiz/daily-quiz.service';
 
 const sessionService = new SessionService();
 const rankingService = new RankingService();
 const antiAbuseService = new AntiAbuseService();
+const dailyQuizService = new DailyQuizService();
 
 export function startScheduledJobs() {
   // Every 15 minutes: mark stale in-progress sessions as Abandoned, release
@@ -48,5 +50,17 @@ export function startScheduledJobs() {
     }
   });
 
-  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily)');
+  // Daily Quiz status sweep (finalized requirement) — every minute,
+  // SCHEDULED->PUBLISHED and PUBLISHED->EXPIRED. Display/admin
+  // convenience only — the student-facing API re-checks publishAt/
+  // expiresAt live regardless, so a delay here is never a security gap.
+  cron.schedule('* * * * *', async () => {
+    try {
+      await dailyQuizService.runStatusSweep();
+    } catch (err) {
+      console.error('[cron] Daily Quiz status sweep failed:', err);
+    }
+  });
+
+  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute)');
 }

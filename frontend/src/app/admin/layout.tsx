@@ -13,6 +13,7 @@ const navItems = [
   { href: '/admin/questions/upload', label: 'Bulk Upload' },
   { href: '/admin/questions/review', label: 'Needs Review' },
   { href: '/admin/question-reports', label: 'Question Reports' },
+  { href: '/admin/daily-quiz', label: 'Daily Quiz' },
   { href: '/admin/current-affairs', label: 'Current Affairs' },
   { href: '/admin/exam-taxonomy', label: 'Exam Taxonomy' },
   { href: '/admin/students', label: 'Students' },

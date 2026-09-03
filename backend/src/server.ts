@@ -26,6 +26,7 @@ import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLi
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
+import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
@@ -77,6 +78,7 @@ const studentAuthService = new StudentAuthService();
 const profilePhotoService = new ProfilePhotoService();
 const questionReportService = new QuestionReportService();
 const studentReviewService = new StudentReviewService();
+const dailyQuizService = new DailyQuizService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -142,6 +144,142 @@ app.get('/students/me/wrong-questions', requireStudentAuth, async (req: StudentA
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load wrong questions' });
+  }
+});
+
+// ── Daily Quiz — Student routes (finalized requirement) ────────────────
+
+// GET /daily-quiz/enabled — public "Coming Soon" gate check, before the
+// student is even necessarily on the Daily Quiz page. No student-specific
+// data, just the platform-wide toggle.
+app.get('/daily-quiz/enabled', async (_req, res) => {
+  try {
+    const settings = await settingsService.get();
+    res.json({ enabled: settings.dailyQuizEnabled });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to check Daily Quiz availability' });
+  }
+});
+
+// GET /daily-quiz/state — access gate + today's quiz + any existing attempt's progress.
+app.get('/daily-quiz/state', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await dailyQuizService.getStudentState(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load Daily Quiz' });
+  }
+});
+
+// POST /daily-quiz/:id/start  { language: 'TA' | 'EN' }
+app.post('/daily-quiz/:id/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const attempt = await dailyQuizService.startOrResumeAttempt(req.studentUserId!, req.params.id, req.body.language);
+    res.json(attempt);
+  } catch (err: any) {
+    if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to start Daily Quiz' });
+  }
+});
+
+// GET /daily-quiz/attempts/:attemptId/questions — question content in the
+// attempt's locked language; unanswered questions never expose the
+// correct answer/explanation.
+app.get('/daily-quiz/attempts/:attemptId/questions', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await dailyQuizService.getAttemptQuestions(req.studentUserId!, req.params.attemptId));
+  } catch (err: any) {
+    if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load Daily Quiz questions' });
+  }
+});
+
+// POST /daily-quiz/attempts/:attemptId/answer  { questionId, selectedOption }
+app.post('/daily-quiz/attempts/:attemptId/answer', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const answer = await dailyQuizService.submitAnswer(req.studentUserId!, req.params.attemptId, req.body.questionId, req.body.selectedOption);
+    res.json(answer);
+  } catch (err: any) {
+    if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to submit answer' });
+  }
+});
+
+// POST /daily-quiz/attempts/:attemptId/complete
+app.post('/daily-quiz/attempts/:attemptId/complete', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const attempt = await dailyQuizService.completeAttempt(req.studentUserId!, req.params.attemptId);
+    res.json(attempt);
+  } catch (err: any) {
+    if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to complete Daily Quiz' });
+  }
+});
+
+// ── Daily Quiz — Admin routes ────────────────────────────────────────
+
+// POST /admin/daily-quiz/validate-csv  { csvText } — preview only, writes nothing.
+app.post('/admin/daily-quiz/validate-csv', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(dailyQuizService.parseAndValidateCsv(req.body.csvText));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to validate CSV' });
+  }
+});
+
+// POST /admin/daily-quiz  { quizDate, publishTimeIst, rows }
+app.post('/admin/daily-quiz', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const quiz = await dailyQuizService.createDailyQuiz(req.body.quizDate, req.body.publishTimeIst, req.body.rows);
+    res.json(quiz);
+  } catch (err: any) {
+    if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create Daily Quiz' });
+  }
+});
+
+app.get('/admin/daily-quiz', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await dailyQuizService.listDailyQuizzes());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to list Daily Quizzes' });
+  }
+});
+
+app.get('/admin/daily-quiz/:id', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await dailyQuizService.getDailyQuizForAdmin(req.params.id));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load Daily Quiz' });
+  }
+});
+
+// POST /admin/daily-quiz/:id/schedule  { publishTimeIst }
+app.post('/admin/daily-quiz/:id/schedule', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await dailyQuizService.updateSchedule(req.params.id, req.body.publishTimeIst));
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update schedule' });
+  }
+});
+
+app.delete('/admin/daily-quiz/:id', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    await dailyQuizService.deleteDailyQuiz(req.params.id);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete Daily Quiz' });
   }
 });
 

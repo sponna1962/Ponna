@@ -144,6 +144,7 @@ model User {
   practicePreference  StudentPracticePreference?
   devices             Device[]
   questionReports     QuestionReport[]
+  dailyQuizAttempts   DailyQuizAttempt[]
 
   @@index([phone])
   @@index([email])
@@ -175,6 +176,102 @@ model Device {
 // practice. Deliberately simple: FLAG for admin review, never auto-hides
 // or auto-disables the question — a single report could itself be
 // mistaken, so a human always decides. Admin resolves from the Question
+// ── Daily Quiz (finalized requirement) ─────────────────────────────────
+// 10 current-affairs/news questions, published once daily, available for
+// exactly 24 hours, paid-users-only. Deliberately COMPLETELY SEPARATE
+// tables from QuizSession/QuizSessionQuestion/UserQuestionHistory/
+// UserPerformanceSummary — never touches normal Practice's quota,
+// allocation engine, no-repeat history, or Rank/Performance calculation.
+//
+// One row per question holds BOTH language versions directly (unlike the
+// main Question bank's two-linked-rows model) — Tamil and English are
+// explicitly "two versions of the same Daily Quiz," always uploaded and
+// published together as a pair, never independently, so there's no need
+// for the main bank's more flexible per-language-row structure here.
+model DailyQuiz {
+  id         String          @id @default(uuid())
+  quizDate   DateTime        @unique // the IST calendar day this quiz is FOR (date-only, time component ignored)
+  publishAt  DateTime // exact go-live instant
+  expiresAt  DateTime // exact instant it stops being accessible — always publishAt + 24h
+  // Status is a display/admin convenience only, kept in sync by the
+  // scheduled sweep — the student-facing API NEVER trusts this field
+  // alone, it always re-checks publishAt/expiresAt live (finalized
+  // requirement — a cron delay must never make an expired quiz
+  // accessible, or a not-yet-due one accessible early).
+  status     DailyQuizStatus @default(DRAFT)
+  createdAt  DateTime        @default(now())
+
+  questions  DailyQuizQuestion[]
+  attempts   DailyQuizAttempt[]
+}
+
+enum DailyQuizStatus {
+  DRAFT // uploaded + validated, not yet scheduled
+  SCHEDULED // publishAt set, waiting for that instant
+  PUBLISHED // live now
+  EXPIRED // past expiresAt
+}
+
+model DailyQuizQuestion {
+  id             String    @id @default(uuid())
+  dailyQuizId    String
+  dailyQuiz      DailyQuiz @relation(fields: [dailyQuizId], references: [id])
+  sequenceNumber Int // 1-10, display/answer order
+
+  questionTextTa String
+  optionATa      String
+  optionBTa      String
+  optionCTa      String
+  optionDTa      String
+  explanationTa  String // mandatory (finalized requirement) — immediate result+explanation is core to this feature
+
+  questionTextEn String
+  optionAEn      String
+  optionBEn      String
+  optionCEn      String
+  optionDEn      String
+  explanationEn  String // mandatory (finalized requirement)
+
+  correctOption  CorrectOption // same position (A/B/C/D) in both language option sets
+
+  answers        DailyQuizAnswer[]
+
+  @@unique([dailyQuizId, sequenceNumber])
+}
+
+// One per (student, quiz) — enforces "only one attempt per day" and "the
+// chosen language is locked once started" (finalized requirement) purely
+// via the unique constraint + never accepting a language change once a
+// row exists.
+model DailyQuizAttempt {
+  id          String     @id @default(uuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  dailyQuizId String
+  dailyQuiz   DailyQuiz  @relation(fields: [dailyQuizId], references: [id])
+  language    Language // locked at creation, never changed
+  startedAt   DateTime   @default(now())
+  completedAt DateTime?
+  score       Int? // correct-answer count, set once completedAt is set
+
+  answers     DailyQuizAnswer[]
+
+  @@unique([userId, dailyQuizId])
+}
+
+model DailyQuizAnswer {
+  id             String            @id @default(uuid())
+  attemptId      String
+  attempt        DailyQuizAttempt  @relation(fields: [attemptId], references: [id])
+  questionId     String
+  question       DailyQuizQuestion @relation(fields: [questionId], references: [id])
+  selectedOption CorrectOption
+  isCorrect      Boolean
+  answeredAt     DateTime          @default(now())
+
+  @@unique([attemptId, questionId]) // one answer per question per attempt — the resume mechanism's "already answered" check
+}
+
 // Reports page, which can also jump straight into editing the question.
 model QuestionReport {
   id         String               @id @default(uuid())
@@ -768,6 +865,17 @@ model PlatformSettings {
   // reverted back to hidden on the next deploy, since seed.ts runs on
   // every deploy.
   launchVisibilityApplied    Boolean  @default(false)
+
+  // Daily Quiz (finalized requirement) — dailyQuizEnabled is the "Coming
+  // Soon" toggle: false shows the placeholder page to students regardless
+  // of whether any DailyQuiz rows exist yet, so the admin side can be
+  // built/tested well before the student-facing feature goes live, with
+  // no deploy needed to flip it on later (same pattern as
+  // launchVisibilityApplied's studentVisible toggle). dailyQuizDefaultPublishTime
+  // is "HH:MM" in IST (e.g. "07:00") — the default the admin's Create form
+  // pre-fills; NEVER hard-coded elsewhere, and always overridable per day.
+  dailyQuizEnabled            Boolean  @default(false)
+  dailyQuizDefaultPublishTime String   @default("07:00")
 
   updatedAt                   DateTime @updatedAt
 }
