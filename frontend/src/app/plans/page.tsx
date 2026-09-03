@@ -75,6 +75,50 @@ function shortName(name: string): string {
   return name.replace(/ Annual Plan$/i, '').trim();
 }
 
+/** Finalized marketing copy per Annual Plan (Sept 15 launch — only TNPSC
+ * and TNTET are live). Matched by name substring, same precedent as
+ * shortName()/buyButtonLabel() below — deriving DISPLAY TEXT from the
+ * plan's name is fine; deriving access/scope logic from it is not (that
+ * always comes from real Purpose/Authority data elsewhere on this page).
+ * Returns null for any plan not TNPSC/TNTET (e.g. a future re-enabled
+ * exam) rather than guessing copy for it. */
+function planFeatures(name: string): { highlight: string; bullets: string[] } | null {
+  if (/tnpsc/i.test(name)) {
+    return {
+      highlight: '40,000+ Questions & Exam Practice / Year',
+      bullets: [
+        '1,00,000+ TNPSC Question Bank',
+        'Previous Year Exam Papers',
+        'Expert-Crafted Practice',
+        'Instant Answers',
+        'Daily Quiz',
+        'Brain Challenge',
+        'Live Exam',
+        'Performance Analysis',
+        'Tamil & English',
+      ],
+    };
+  }
+  if (/tntet/i.test(name)) {
+    return {
+      highlight: '40,000+ Questions & Exam Practice / Year',
+      bullets: [
+        'Complete TNTET Question Bank',
+        'Previous Year Exam Papers',
+        'Expert-Crafted Practice',
+        'Instant Answers',
+        'Daily Quiz',
+        'Brain Challenge',
+        'Live Exam',
+        'Performance Analysis',
+        'Tamil & English',
+        'Paper I & Paper II',
+      ],
+    };
+  }
+  return null;
+}
+
 export default function PlansPage() {
   return (
     <Suspense fallback={<main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>Loading…</main>}>
@@ -124,14 +168,14 @@ function PlansPageInner() {
   }, []);
 
   // Deep-linked here from the Free-fallback "Get Annual Plan" prompt —
-  // open that plan's sheet directly rather than just scrolling to a card,
-  // since the card itself is now a small grid box with no visible price
-  // detail until tapped.
+  // the highlighted plan's card already shows everything directly now
+  // (full-width hero cards, no more tap-to-open-sheet for purchasing), so
+  // this just scrolls it into view; the gold border (set via
+  // highlightPlanId below) is what actually draws the eye to it.
   useEffect(() => {
     if (!plansLoaded || !highlightPlanId) return;
-    const p = plans.find((pl) => pl.id === highlightPlanId);
-    if (p) setSheet({ title: p.name, scopeTags: scopeTags(p), price: p, action: 'buy', planId: p.id });
-  }, [plansLoaded, highlightPlanId, plans]);
+    document.getElementById(`plan-${highlightPlanId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [plansLoaded, highlightPlanId]);
 
   async function buy(planId: string) {
     setError(null);
@@ -302,41 +346,65 @@ function PlansPageInner() {
                 {t.plans.otherPlans}
               </h2>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {otherAvailablePlans.map((p) => {
-                  const hasLaunch = p.launchPrice != null;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => setSheet({ title: p.name, scopeTags: scopeTags(p), price: p, action: 'buy', planId: p.id })}
-                      style={{
-                        textAlign: 'left',
-                        background: COLORS.paper,
-                        border: `1px solid ${p.id === highlightPlanId ? COLORS.gold : COLORS.line}`,
-                        borderRadius: 12,
-                        padding: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <div style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 6, lineHeight: 1.25 }}>
-                        {shortName(p.name)}
-                      </div>
+              {otherAvailablePlans.map((p) => {
+                const hasLaunch = p.launchPrice != null;
+                const features = planFeatures(p.name);
+                return (
+                  <div
+                    key={p.id}
+                    id={`plan-${p.id}`}
+                    style={{
+                      background: COLORS.paper,
+                      border: `1.5px solid ${p.id === highlightPlanId ? COLORS.gold : COLORS.line}`,
+                      borderRadius: 16,
+                      padding: 20,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <div style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 800, color: COLORS.ink, marginBottom: 6 }}>{p.name}</div>
+
+                    {features && (
+                      <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.gold, marginBottom: 14 }}>{features.highlight}</div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
                       {hasLaunch ? (
-                        <div>
-                          <span style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 800, color: COLORS.gold }}>₹{p.launchPrice}</span>
-                          <span style={{ fontSize: 11, color: COLORS.inkMuted, marginLeft: 4 }}>{t.plans.perYear}</span>
-                          <div style={{ fontSize: 11, color: COLORS.inkMuted, textDecoration: 'line-through' }}>₹{p.regularPrice}</div>
-                        </div>
+                        <>
+                          <span style={{ fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: 800, color: COLORS.gold }}>₹{p.launchPrice}</span>
+                          <span style={{ fontSize: 13, color: COLORS.inkMuted }}>{t.plans.perYear}</span>
+                          <span style={{ fontSize: 13, color: COLORS.inkMuted, textDecoration: 'line-through' }}>₹{p.regularPrice}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#7A5A14', background: COLORS.goldLight, padding: '2px 8px', borderRadius: 4 }}>
+                            {t.plans.launchPrice}
+                          </span>
+                        </>
                       ) : (
-                        <span style={{ fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: 800 }}>
-                          ₹{p.regularPrice ?? '—'} <span style={{ fontSize: 11, fontWeight: 400 }}>{t.plans.perYear}</span>
+                        <span style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 800 }}>
+                          ₹{p.regularPrice ?? '—'} <span style={{ fontSize: 13, fontWeight: 400 }}>{t.plans.perYear}</span>
                         </span>
                       )}
-                      <div style={{ fontSize: 10, color: COLORS.gold, marginTop: 6, fontWeight: 600 }}>{t.plans.tapForDetails}</div>
+                    </div>
+
+                    {features && (
+                      <div style={{ marginBottom: 18 }}>
+                        {features.bullets.map((b) => (
+                          <div key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, fontSize: 14, color: COLORS.ink, lineHeight: 1.4 }}>
+                            <span style={{ color: COLORS.gold, fontWeight: 700, flexShrink: 0 }}>✓</span>
+                            <span>{b}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => buy(p.id)}
+                      disabled={loadingPlan === p.id}
+                      style={{ width: '100%', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}
+                    >
+                      {loadingPlan === p.id ? '…' : buyButtonLabel(p.name)}
                     </button>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </>
           )}
         </>
