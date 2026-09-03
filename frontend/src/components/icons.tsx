@@ -113,6 +113,29 @@ export function MistakesIcon(p: IconProps) {
   );
 }
 
+export function LiveExamIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="2.6" fill={p.color ?? '#1A2238'} stroke="none" />
+      <path d="M12 3.5v2.2" />
+      <path d="M20.5 12h-2.2" />
+    </Base>
+  );
+}
+
+export function DailyQuizIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <rect x="4" y="5" width="16" height="15" rx="1.6" />
+      <path d="M4 9.5h16" />
+      <path d="M8 3v3.4" />
+      <path d="M16 3v3.4" />
+      <path d="M8.5 14l2 2 4-4.2" />
+    </Base>
+  );
+}
+
 export function MenuIcon(p: IconProps) {
   return (
     <Base {...p}>
