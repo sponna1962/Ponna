@@ -18,6 +18,8 @@ const EDITABLE_FIELDS = [
   'sessionInactivityHours',
   'dailyQuizEnabled',
   'dailyQuizDefaultPublishTime',
+  'brainChallengeEnabled',
+  'brainChallengeDefaultPublishTime',
 ] as const;
 
 export class SettingsService {

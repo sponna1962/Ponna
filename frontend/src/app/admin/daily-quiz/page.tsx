@@ -1,13 +1,16 @@
 'use client';
 
-// Admin Daily Quiz management (finalized requirement) — create + validate
-// (via CSV preview) + schedule + list + edit-schedule + delete. Every
-// write action here only ever touches DailyQuiz/DailyQuizQuestion/
-// DailyQuizAttempt/DailyQuizAnswer — completely separate from the normal
-// Question bank and Practice system.
+// Admin Daily Quiz + Brain Challenge management (finalized requirement) —
+// create + validate (via CSV preview) + schedule + list + delete, for
+// EITHER content type via a tab switcher. Both share this exact page and
+// the same DailyQuiz/DailyQuizQuestion/DailyQuizAttempt/DailyQuizAnswer
+// tables (distinguished by quizType) — completely separate from the
+// normal Question bank and Practice system either way.
 
 import { useEffect, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
+
+type QuizType = 'DAILY_QUIZ' | 'BRAIN_CHALLENGE';
 
 type ParsedRow = {
   questionTextTa: string;
@@ -34,54 +37,93 @@ type DailyQuiz = {
   _count: { attempts: number };
 };
 
+type Settings = {
+  dailyQuizEnabled: boolean;
+  dailyQuizDefaultPublishTime: string;
+  brainChallengeEnabled: boolean;
+  brainChallengeDefaultPublishTime: string;
+};
+
 const CSV_TEMPLATE_HEADER =
   'Tamil Question,TA Option A,TA Option B,TA Option C,TA Option D,English Question,EN Option A,EN Option B,EN Option C,EN Option D,Correct Option,TA Explanation,EN Explanation';
 
+const TABS: { type: QuizType; label: string; note: string }[] = [
+  { type: 'DAILY_QUIZ', label: 'Daily Quiz', note: '10 current-affairs/news questions.' },
+  { type: 'BRAIN_CHALLENGE', label: 'Brain Challenge', note: '10 reasoning, logical thinking, observation, analytical thinking, and basic problem-solving questions.' },
+];
+
 export default function AdminDailyQuizPage() {
+  const [activeType, setActiveType] = useState<QuizType>('DAILY_QUIZ');
   const [quizzes, setQuizzes] = useState<DailyQuiz[]>([]);
-  const [settings, setSettings] = useState<{ dailyQuizEnabled: boolean; dailyQuizDefaultPublishTime: string } | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
+  const activeTab = TABS.find((t) => t.type === activeType)!;
+  const enabledKey = activeType === 'DAILY_QUIZ' ? 'dailyQuizEnabled' : 'brainChallengeEnabled';
+  const publishTimeKey = activeType === 'DAILY_QUIZ' ? 'dailyQuizDefaultPublishTime' : 'brainChallengeDefaultPublishTime';
+
   function load() {
-    adminFetch('/admin/daily-quiz').then((r) => r.json()).then(setQuizzes);
+    adminFetch(`/admin/daily-quiz?type=${activeType}`).then((r) => r.json()).then(setQuizzes);
     adminFetch('/admin/settings').then((r) => r.json()).then(setSettings);
   }
 
-  useEffect(load, []);
+  useEffect(load, [activeType]);
 
   async function toggleEnabled() {
     if (!settings) return;
-    const next = { ...settings, dailyQuizEnabled: !settings.dailyQuizEnabled };
+    const next = { ...settings, [enabledKey]: !settings[enabledKey] };
     await adminFetch('/admin/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) });
     setSettings(next);
   }
 
   async function deleteQuiz(id: string) {
-    if (!confirm('Delete this Daily Quiz permanently, including any student attempts?')) return;
+    if (!confirm(`Delete this ${activeTab.label} permanently, including any student attempts?`)) return;
     await adminFetch(`/admin/daily-quiz/${id}`, { method: 'DELETE' });
     load();
   }
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Daily Quiz</h1>
+      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Daily Quiz &amp; Brain Challenge</h1>
       <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
-        10 current-affairs questions, published once daily, available 24 hours, paid-users-only. Completely separate from the normal
-        Question bank and Practice system.
+        10 questions, published once daily, available 24 hours, paid-users-only. Completely separate from the normal Question bank and
+        Practice system.
       </p>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
+        {TABS.map((tab) => (
+          <button
+            key={tab.type}
+            onClick={() => setActiveType(tab.type)}
+            style={{
+              padding: '10px 18px',
+              border: 'none',
+              borderBottom: activeType === tab.type ? '2px solid #0f172a' : '2px solid transparent',
+              background: 'none',
+              fontWeight: activeType === tab.type ? 700 : 500,
+              color: activeType === tab.type ? '#0f172a' : '#64748b',
+              cursor: 'pointer',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{activeTab.note}</p>
 
       {settings && (
         <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-            <input type="checkbox" checked={settings.dailyQuizEnabled} onChange={toggleEnabled} />
-            Daily Quiz is <b>{settings.dailyQuizEnabled ? 'LIVE' : '"Coming Soon" (hidden from students)'}</b>
+            <input type="checkbox" checked={settings[enabledKey]} onChange={toggleEnabled} />
+            {activeTab.label} is <b>{settings[enabledKey] ? 'LIVE' : '"Coming Soon" (hidden from students)'}</b>
           </label>
-          <span style={{ fontSize: 12, color: '#94a3b8' }}>Default publish time: {settings.dailyQuizDefaultPublishTime} IST (edit in Settings)</span>
+          <span style={{ fontSize: 12, color: '#94a3b8' }}>Default publish time: {settings[publishTimeKey]} IST (edit in Settings)</span>
         </div>
       )}
 
       <button onClick={() => setShowCreate(true)} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', marginBottom: 20 }}>
-        + Create Daily Quiz
+        + Create {activeTab.label}
       </button>
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -126,19 +168,39 @@ export default function AdminDailyQuizPage() {
           {quizzes.length === 0 && (
             <tr>
               <td colSpan={6} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>
-                No Daily Quizzes yet.
+                No {activeTab.label} entries yet.
               </td>
             </tr>
           )}
         </tbody>
       </table>
 
-      {showCreate && <CreateModal defaultTime={settings?.dailyQuizDefaultPublishTime ?? '07:00'} onClose={() => setShowCreate(false)} onCreated={load} />}
+      {showCreate && (
+        <CreateModal
+          quizType={activeType}
+          label={activeTab.label}
+          defaultTime={settings?.[publishTimeKey] ?? '07:00'}
+          onClose={() => setShowCreate(false)}
+          onCreated={load}
+        />
+      )}
     </div>
   );
 }
 
-function CreateModal({ defaultTime, onClose, onCreated }: { defaultTime: string; onClose: () => void; onCreated: () => void }) {
+function CreateModal({
+  quizType,
+  label,
+  defaultTime,
+  onClose,
+  onCreated,
+}: {
+  quizType: QuizType;
+  label: string;
+  defaultTime: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const [quizDate, setQuizDate] = useState('');
   const [publishTime, setPublishTime] = useState(defaultTime);
   const [csvText, setCsvText] = useState('');
@@ -177,7 +239,7 @@ function CreateModal({ defaultTime, onClose, onCreated }: { defaultTime: string;
     const res = await adminFetch('/admin/daily-quiz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quizDate, publishTimeIst: publishTime, rows }),
+      body: JSON.stringify({ quizDate, publishTimeIst: publishTime, rows, quizType }),
     });
     setCreating(false);
     if (!res.ok) {
@@ -194,14 +256,14 @@ function CreateModal({ defaultTime, onClose, onCreated }: { defaultTime: string;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'daily-quiz-template.csv';
+    a.download = `${quizType === 'BRAIN_CHALLENGE' ? 'brain-challenge' : 'daily-quiz'}-template.csv`;
     a.click();
   }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 10, padding: 20, maxWidth: 640, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Create Daily Quiz</h2>
+        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Create {label}</h2>
 
         <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
           <label style={{ fontSize: 13 }}>

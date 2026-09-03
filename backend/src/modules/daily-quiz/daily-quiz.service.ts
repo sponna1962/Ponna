@@ -1,9 +1,20 @@
-// Daily Quiz (finalized requirement) — admin management + student flow.
-// Deliberately its own service, its own tables, no imports from
-// quota.service.ts, allocation.service.ts, or session.service.ts — this
-// feature must remain completely separate from normal Practice.
+// Daily Quiz + Brain Challenge (finalized requirement) — admin management
+// + student flow. Deliberately its own service, its own tables, no
+// imports from quota.service.ts, allocation.service.ts, or
+// session.service.ts — this feature must remain completely separate from
+// normal Practice.
+//
+// Brain Challenge shares this exact model/service as a second quizType
+// (finalized requirement — "same page structure, UI design, question
+// display, answer interaction, result flow" as Daily Quiz, just a
+// different question theme: reasoning/logical thinking/observation/
+// analytical thinking/basic problem-solving instead of current-affairs).
+// Every method below takes quizType as an explicit parameter rather than
+// hardcoding DAILY_QUIZ, so both modes get identical correctness
+// guarantees (IST timing, one-attempt-per-day, language-locked, cron-
+// safety, post-expiry review) for free, with zero duplicated logic.
 
-import { CorrectOption, DailyQuizStatus, Language, SubscriptionStatus, DailyQuizAnswer } from '@prisma/client';
+import { CorrectOption, DailyQuizStatus, DailyQuizType, Language, SubscriptionStatus, DailyQuizAnswer } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
 import { prisma } from '../../lib/prisma';
 
@@ -17,8 +28,6 @@ const IST_OFFSET_MINUTES = 5 * 60 + 30; // Asia/Kolkata is always UTC+5:30, no D
 function istToUtc(dateStr: string, hhmm: string): Date {
   const [h, m] = hhmm.split(':').map(Number);
   const [y, mo, d] = dateStr.split('-').map(Number);
-  // Treat the given date+time as IST wall-clock time, then subtract the
-  // IST offset to get the equivalent UTC instant.
   const utcMillis = Date.UTC(y, mo - 1, d, h, m) - IST_OFFSET_MINUTES * 60 * 1000;
   return new Date(utcMillis);
 }
@@ -53,7 +62,8 @@ export class DailyQuizService {
 
   /** Parses and validates the CSV — returns the 10 rows plus any errors.
    * Never writes to the database; the admin reviews this preview, then
-   * calls createDailyQuiz() explicitly to actually publish/schedule it. */
+   * calls createDailyQuiz() explicitly to actually publish/schedule it.
+   * Same validator for both quizTypes — the CSV shape is identical. */
   parseAndValidateCsv(csvText: string): { rows: ParsedRow[]; errors: string[] } {
     const errors: string[] = [];
     let records: Record<string, string>[];
@@ -115,12 +125,15 @@ export class DailyQuizService {
 
   // ── Admin: create + schedule ──────────────────────────────────────────
 
-  async createDailyQuiz(quizDateStr: string, publishTimeIst: string, rows: ParsedRow[]) {
+  async createDailyQuiz(quizDateStr: string, publishTimeIst: string, rows: ParsedRow[], quizType: DailyQuizType = DailyQuizType.DAILY_QUIZ) {
     const { errors } = this.parseAndValidateCsv(this.rowsToCsvForRevalidation(rows));
     if (errors.length > 0) throw new DailyQuizError(`Cannot create — validation failed: ${errors.join(' ')}`);
 
-    const existing = await prisma.dailyQuiz.findUnique({ where: { quizDate: new Date(quizDateStr) } });
-    if (existing) throw new DailyQuizError(`A Daily Quiz already exists for ${quizDateStr}. Delete it first or edit the schedule instead.`);
+    const existing = await prisma.dailyQuiz.findUnique({ where: { quizDate_quizType: { quizDate: new Date(quizDateStr), quizType } } });
+    if (existing) {
+      const label = quizType === DailyQuizType.BRAIN_CHALLENGE ? 'Brain Challenge' : 'Daily Quiz';
+      throw new DailyQuizError(`A ${label} already exists for ${quizDateStr}. Delete it first or edit the schedule instead.`);
+    }
 
     const publishAt = istToUtc(quizDateStr, publishTimeIst);
     const expiresAt = new Date(publishAt.getTime() + 24 * 60 * 60 * 1000);
@@ -128,6 +141,7 @@ export class DailyQuizService {
     return prisma.dailyQuiz.create({
       data: {
         quizDate: new Date(quizDateStr),
+        quizType,
         publishAt,
         expiresAt,
         status: DailyQuizStatus.SCHEDULED,
@@ -154,8 +168,12 @@ export class DailyQuizService {
     return [header, ...lines].join('\n');
   }
 
-  async listDailyQuizzes() {
-    return prisma.dailyQuiz.findMany({ orderBy: { quizDate: 'desc' }, include: { questions: false, _count: { select: { attempts: true } } } });
+  async listDailyQuizzes(quizType?: DailyQuizType) {
+    return prisma.dailyQuiz.findMany({
+      where: quizType ? { quizType } : undefined,
+      orderBy: { quizDate: 'desc' },
+      include: { questions: false, _count: { select: { attempts: true } } },
+    });
   }
 
   async getDailyQuizForAdmin(id: string) {
@@ -178,7 +196,9 @@ export class DailyQuizService {
   }
 
   // ── Scheduled sweep (display/admin convenience only — see note on
-  // DailyQuiz.status; the student-facing methods below never trust this) ──
+  // DailyQuiz.status; the student-facing methods below never trust this).
+  // Covers both quizTypes in one sweep — the where-clauses don't filter
+  // by type, so a single cron entry (see scheduled-jobs.ts) handles both.
 
   async runStatusSweep() {
     const now = new Date();
@@ -195,12 +215,11 @@ export class DailyQuizService {
 
   // ── Student: access + attempt flow ────────────────────────────────────
 
-  /** Daily Quiz access is a simple binary gate — ANY active paid
-   * Subscription (regardless of which exam it scopes to), since this is
-   * exam-agnostic current-affairs content, not tied to a specific exam's
+  /** Daily Quiz / Brain Challenge access is the same simple binary gate —
+   * ANY active paid Subscription (regardless of which exam it scopes to),
+   * since both are exam-agnostic content, not tied to a specific exam's
    * Plan scope. Test Accounts (isTestAccount) bypass this entirely, same
-   * as every other quota/access rule in the system — a Test Account
-   * needs zero restrictions anywhere, Daily Quiz included. */
+   * as every other quota/access rule in the system. */
   private async hasPaidAccess(userId: string): Promise<boolean> {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { isTestAccount: true } });
     if (user?.isTestAccount) return true;
@@ -211,17 +230,17 @@ export class DailyQuizService {
     return !!activeSub;
   }
 
-  /** Finds TODAY's quiz by calendar date (IST) — the semantic anchor for
-   * "is there a Daily Quiz for today", independent of whether it's inside
-   * its live publishAt/expiresAt window right now. Used so a COMPLETED
-   * attempt stays viewable even after expiresAt (finalized requirement —
-   * "a completed attempt can still have its stored result/history
-   * handled... but no retake"), while start/resume eligibility is
-   * checked separately against the live window. */
-  private async findTodaysQuizByDate() {
+  /** Finds TODAY's quiz of the given type by calendar date (IST) — the
+   * semantic anchor for "is there a quiz for today", independent of
+   * whether it's inside its live publishAt/expiresAt window right now.
+   * Used so a COMPLETED attempt stays viewable even after expiresAt
+   * (finalized requirement — "a completed attempt can still have its
+   * stored result/history handled... but no retake"), while start/resume
+   * eligibility is checked separately against the live window. */
+  private async findTodaysQuizByDate(quizType: DailyQuizType) {
     const todayStr = todayIstDateStr();
     return prisma.dailyQuiz.findUnique({
-      where: { quizDate: new Date(todayStr) },
+      where: { quizDate_quizType: { quizDate: new Date(todayStr), quizType } },
       include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
   }
@@ -231,12 +250,12 @@ export class DailyQuizService {
    * language selection / resume, or the COMPLETED summary (which stays
    * reachable even after the quiz has expired — finalized requirement).
    */
-  async getStudentState(userId: string) {
+  async getStudentState(userId: string, quizType: DailyQuizType) {
     if (!(await this.hasPaidAccess(userId))) {
       return { access: 'FREE_LOCKED' as const };
     }
 
-    const quiz = await this.findTodaysQuizByDate();
+    const quiz = await this.findTodaysQuizByDate(quizType);
     if (!quiz) {
       return { access: 'NOT_AVAILABLE' as const };
     }
@@ -288,14 +307,16 @@ export class DailyQuizService {
    * (finalized requirement — resuming never lets the language be
    * switched). Re-verifies the quiz is still live at this exact moment,
    * even if the student's client had it cached from a moment ago
-   * (finalized requirement — no longer resumable after expiry). */
+   * (finalized requirement — no longer resumable after expiry). Works
+   * identically for either quizType — dailyQuizId already identifies
+   * which one via the row itself, no separate type param needed here. */
   async startOrResumeAttempt(userId: string, dailyQuizId: string, language: Language) {
-    if (!(await this.hasPaidAccess(userId))) throw new DailyQuizError('Daily Quiz requires an active Annual Plan.');
+    if (!(await this.hasPaidAccess(userId))) throw new DailyQuizError('This requires an active Annual Plan.');
 
     const quiz = await prisma.dailyQuiz.findUniqueOrThrow({ where: { id: dailyQuizId } });
     const now = new Date();
     if (now < quiz.publishAt || now >= quiz.expiresAt) {
-      throw new DailyQuizError("Today's Daily Quiz is not available right now.");
+      throw new DailyQuizError('This is not available right now.');
     }
 
     const existing = await prisma.dailyQuizAttempt.findUnique({ where: { userId_dailyQuizId: { userId, dailyQuizId } } });
@@ -318,7 +339,7 @@ export class DailyQuizService {
 
     const now = new Date();
     if (now >= attempt.dailyQuiz.expiresAt) {
-      throw new DailyQuizError("Today's Daily Quiz has expired — this attempt can no longer be continued.");
+      throw new DailyQuizError('This has expired — this attempt can no longer be continued.');
     }
 
     const question = await prisma.dailyQuizQuestion.findUniqueOrThrow({ where: { id: questionId } });

@@ -190,7 +190,15 @@ model Device {
 // for the main bank's more flexible per-language-row structure here.
 model DailyQuiz {
   id         String          @id @default(uuid())
-  quizDate   DateTime        @unique // the IST calendar day this quiz is FOR (date-only, time component ignored)
+  // Brain Challenge (finalized requirement) shares this exact model —
+  // same 10-question/24-hour/one-attempt/paid-access structure — just a
+  // different question theme (reasoning/logic/observation/analytical/
+  // problem-solving instead of current-affairs). quizType is what lets
+  // both exist for the SAME calendar date as two independent rows,
+  // reflected in the compound unique constraint below (quizDate alone is
+  // no longer unique on its own).
+  quizType   DailyQuizType   @default(DAILY_QUIZ)
+  quizDate   DateTime // the IST calendar day this quiz is FOR (date-only, time component ignored)
   publishAt  DateTime // exact go-live instant
   expiresAt  DateTime // exact instant it stops being accessible — always publishAt + 24h
   // Status is a display/admin convenience only, kept in sync by the
@@ -203,6 +211,13 @@ model DailyQuiz {
 
   questions  DailyQuizQuestion[]
   attempts   DailyQuizAttempt[]
+
+  @@unique([quizDate, quizType])
+}
+
+enum DailyQuizType {
+  DAILY_QUIZ // current-affairs/news questions
+  BRAIN_CHALLENGE // reasoning, logical thinking, observation, analytical thinking, basic problem-solving
 }
 
 enum DailyQuizStatus {
@@ -876,6 +891,14 @@ model PlatformSettings {
   // pre-fills; NEVER hard-coded elsewhere, and always overridable per day.
   dailyQuizEnabled            Boolean  @default(false)
   dailyQuizDefaultPublishTime String   @default("07:00")
+
+  // Brain Challenge (finalized requirement) — separate Coming-Soon toggle
+  // and default publish time from Daily Quiz's own, since the two are
+  // independent content offerings that could go live on different
+  // schedules (e.g. Daily Quiz already live, Brain Challenge still being
+  // prepared) even though they share the same page and question-flow UI.
+  brainChallengeEnabled            Boolean @default(false)
+  brainChallengeDefaultPublishTime String  @default("07:00")
 
   updatedAt                   DateTime @updatedAt
 }

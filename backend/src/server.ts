@@ -27,6 +27,7 @@ import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
+import { DailyQuizType } from '@prisma/client';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
@@ -152,23 +153,25 @@ app.get('/students/me/wrong-questions', requireStudentAuth, async (req: StudentA
 // GET /daily-quiz/enabled — public "Coming Soon" gate check, before the
 // student is even necessarily on the Daily Quiz page. No student-specific
 // data, just the platform-wide toggle.
-app.get('/daily-quiz/enabled', async (_req, res) => {
+app.get('/daily-quiz/enabled', async (req, res) => {
   try {
     const settings = await settingsService.get();
-    res.json({ enabled: settings.dailyQuizEnabled });
+    const enabled = req.query.type === 'BRAIN_CHALLENGE' ? settings.brainChallengeEnabled : settings.dailyQuizEnabled;
+    res.json({ enabled });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to check Daily Quiz availability' });
+    res.status(500).json({ error: 'Failed to check availability' });
   }
 });
 
-// GET /daily-quiz/state — access gate + today's quiz + any existing attempt's progress.
+// GET /daily-quiz/state?type=DAILY_QUIZ|BRAIN_CHALLENGE — access gate + today's quiz + any existing attempt's progress.
 app.get('/daily-quiz/state', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    res.json(await dailyQuizService.getStudentState(req.studentUserId!));
+    const quizType = req.query.type === 'BRAIN_CHALLENGE' ? DailyQuizType.BRAIN_CHALLENGE : DailyQuizType.DAILY_QUIZ;
+    res.json(await dailyQuizService.getStudentState(req.studentUserId!, quizType));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to load Daily Quiz' });
+    res.status(500).json({ error: 'Failed to load quiz' });
   }
 });
 
@@ -180,7 +183,7 @@ app.post('/daily-quiz/:id/start', requireStudentAuth, async (req: StudentAuthedR
   } catch (err: any) {
     if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
     console.error(err);
-    res.status(500).json({ error: 'Failed to start Daily Quiz' });
+    res.status(500).json({ error: 'Failed to start quiz' });
   }
 });
 
@@ -193,7 +196,7 @@ app.get('/daily-quiz/attempts/:attemptId/questions', requireStudentAuth, async (
   } catch (err: any) {
     if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
     console.error(err);
-    res.status(500).json({ error: 'Failed to load Daily Quiz questions' });
+    res.status(500).json({ error: 'Failed to load quiz questions' });
   }
 });
 
@@ -217,11 +220,11 @@ app.post('/daily-quiz/attempts/:attemptId/complete', requireStudentAuth, async (
   } catch (err: any) {
     if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
     console.error(err);
-    res.status(500).json({ error: 'Failed to complete Daily Quiz' });
+    res.status(500).json({ error: 'Failed to complete quiz' });
   }
 });
 
-// ── Daily Quiz — Admin routes ────────────────────────────────────────
+// ── Daily Quiz / Brain Challenge — Admin routes ──────────────────────
 
 // POST /admin/daily-quiz/validate-csv  { csvText } — preview only, writes nothing.
 app.post('/admin/daily-quiz/validate-csv', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
@@ -233,24 +236,27 @@ app.post('/admin/daily-quiz/validate-csv', requireStaffAuth, requireRole('SUPER_
   }
 });
 
-// POST /admin/daily-quiz  { quizDate, publishTimeIst, rows }
+// POST /admin/daily-quiz  { quizDate, publishTimeIst, rows, quizType? }
 app.post('/admin/daily-quiz', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
   try {
-    const quiz = await dailyQuizService.createDailyQuiz(req.body.quizDate, req.body.publishTimeIst, req.body.rows);
+    const quizType = req.body.quizType === 'BRAIN_CHALLENGE' ? DailyQuizType.BRAIN_CHALLENGE : DailyQuizType.DAILY_QUIZ;
+    const quiz = await dailyQuizService.createDailyQuiz(req.body.quizDate, req.body.publishTimeIst, req.body.rows, quizType);
     res.json(quiz);
   } catch (err: any) {
     if (err instanceof DailyQuizError) return res.status(400).json({ error: err.message });
     console.error(err);
-    res.status(500).json({ error: 'Failed to create Daily Quiz' });
+    res.status(500).json({ error: 'Failed to create quiz' });
   }
 });
 
-app.get('/admin/daily-quiz', requireStaffAuth, async (_req, res) => {
+// GET /admin/daily-quiz?type=DAILY_QUIZ|BRAIN_CHALLENGE
+app.get('/admin/daily-quiz', requireStaffAuth, async (req, res) => {
   try {
-    res.json(await dailyQuizService.listDailyQuizzes());
+    const quizType = req.query.type === 'BRAIN_CHALLENGE' ? DailyQuizType.BRAIN_CHALLENGE : req.query.type === 'DAILY_QUIZ' ? DailyQuizType.DAILY_QUIZ : undefined;
+    res.json(await dailyQuizService.listDailyQuizzes(quizType));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to list Daily Quizzes' });
+    res.status(500).json({ error: 'Failed to list quizzes' });
   }
 });
 

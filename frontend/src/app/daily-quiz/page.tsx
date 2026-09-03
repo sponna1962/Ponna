@@ -1,16 +1,21 @@
 'use client';
 
-// Daily Quiz — student-facing flow (finalized requirement). Completely
-// separate from normal Practice: its own state machine, its own backend
-// calls, never touches quota.service.ts/allocation.service.ts or
-// UserQuestionHistory/UserPerformanceSummary.
+// Daily Quiz + Brain Challenge — student-facing flow (finalized
+// requirement: Brain Challenge shares this exact page/UI/interaction
+// pattern as a second mode, with its own separate questions/content).
+// Completely separate from normal Practice: its own state machine, its
+// own backend calls, never touches quota.service.ts/allocation.service.ts
+// or UserQuestionHistory/UserPerformanceSummary.
 //
-// Flow: check "enabled" (Coming Soon gate) -> check student state
-// (Free-locked / not-available-yet / needs-language / resume / results)
-// -> language selection -> one question at a time with immediate
-// result+explanation -> final results screen. Resuming picks up at the
-// next unanswered question; an already-answered question is never
-// re-presented for answering (finalized requirement).
+// Flow: pick a mode (tabs) -> check "enabled" (Coming Soon gate) -> check
+// student state (Free-locked / not-available-yet / needs-language /
+// resume / results) -> language selection -> one question at a time with
+// immediate result+explanation -> final results screen. Resuming picks up
+// at the next unanswered question; an already-answered question is never
+// re-presented for answering (finalized requirement). Every backend call
+// below is scoped to the active mode's own DailyQuiz row (quizType) —
+// Daily Quiz and Brain Challenge attempts, questions, and completion
+// state never mix.
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
@@ -18,6 +23,8 @@ import { studentFetch } from '../../lib/student-fetch';
 import { apiUrl } from '../../lib/api-config';
 import { StudentMenu } from '../../components/StudentMenu';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
+
+type QuizType = 'DAILY_QUIZ' | 'BRAIN_CHALLENGE';
 
 type StudentState =
   | { access: 'FREE_LOCKED' }
@@ -50,6 +57,7 @@ type AttemptQuestions = { attemptId: string; language: 'TA' | 'EN'; completedAt:
 
 export default function DailyQuizPage() {
   const { t } = useLanguage();
+  const [quizType, setQuizType] = useState<QuizType>('DAILY_QUIZ');
   const [checkedEnabled, setCheckedEnabled] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [state, setState] = useState<StudentState | null>(null);
@@ -60,13 +68,21 @@ export default function DailyQuizPage() {
   const [error, setError] = useState<string | null>(null);
   const [showReview, setShowReview] = useState(false);
 
+  // Re-runs the whole check whenever the mode tab changes — each mode is
+  // its own independent DailyQuiz row/attempt, so nothing from the
+  // previous mode carries over.
   useEffect(() => {
-    fetch(apiUrl('/daily-quiz/enabled'))
+    setCheckedEnabled(false);
+    setState(null);
+    setAttemptData(null);
+    setShowReview(false);
+    setError(null);
+    fetch(apiUrl(`/daily-quiz/enabled?type=${quizType}`))
       .then((r) => r.json())
       .then((d) => setEnabled(!!d.enabled))
       .catch(() => setEnabled(false))
       .finally(() => setCheckedEnabled(true));
-  }, []);
+  }, [quizType]);
 
   useEffect(() => {
     if (!checkedEnabled || !enabled) return;
@@ -75,7 +91,7 @@ export default function DailyQuizPage() {
   }, [checkedEnabled, enabled]);
 
   async function loadState() {
-    const res = await studentFetch('/daily-quiz/state');
+    const res = await studentFetch(`/daily-quiz/state?type=${quizType}`);
     const data: StudentState = await res.json();
     setState(data);
     if (data.access === 'AVAILABLE' && data.attempt) {
@@ -195,14 +211,41 @@ export default function DailyQuizPage() {
 
   if (!checkedEnabled) return null;
 
+  const tabs = (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      {(['DAILY_QUIZ', 'BRAIN_CHALLENGE'] as const).map((qt) => (
+        <button
+          key={qt}
+          onClick={() => setQuizType(qt)}
+          style={{
+            flex: 1,
+            padding: '10px 12px',
+            borderRadius: 10,
+            border: `1.5px solid ${quizType === qt ? COLORS.gold : COLORS.line}`,
+            background: quizType === qt ? COLORS.goldLight : COLORS.paper,
+            color: quizType === qt ? '#5C4009' : COLORS.inkMuted,
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: 'pointer',
+          }}
+        >
+          {qt === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge}
+        </button>
+      ))}
+    </div>
+  );
+
   if (!enabled) {
     return (
       <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
         <BitterFontLinks />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <StudentMenu />
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.menu.dailyQuiz}</h1>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>
+            {quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge}
+          </h1>
         </div>
+        {tabs}
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.comingSoon}</p>
         </div>
@@ -213,16 +256,21 @@ export default function DailyQuizPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <StudentMenu />
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.menu.dailyQuiz}</h1>
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>
+          {quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge}
+        </h1>
       </div>
+      {tabs}
 
       {!state && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
       {state?.access === 'FREE_LOCKED' && (
         <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 24, background: COLORS.goldLight, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 {t.dailyQuiz.lockedTitle}</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>
+            🔒 {quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge} — {t.dailyQuiz.lockedSuffix}
+          </p>
           <p style={{ fontSize: 13, color: '#5C4009', marginBottom: 16 }}>{t.dailyQuiz.lockedBody}</p>
           <a href="/plans" style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
             {t.dailyQuiz.viewPlans}
@@ -232,13 +280,13 @@ export default function DailyQuizPage() {
 
       {state?.access === 'NOT_AVAILABLE' && (
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.notAvailable}</p>
+          <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.notAvailable(quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge)}</p>
         </div>
       )}
 
       {state?.access === 'AVAILABLE' && !state.attempt && !attemptData && (
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, marginBottom: 4 }}>{t.dailyQuiz.readyTitle}</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, marginBottom: 4 }}>{t.dailyQuiz.readyTitle(quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge)}</p>
           <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 20 }}>{t.dailyQuiz.chooseLanguage}</p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
             <button
