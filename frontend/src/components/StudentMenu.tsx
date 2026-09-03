@@ -4,9 +4,29 @@
 // bar, per the agreed design. Used on Home, Dashboard, and Profile pages.
 // "Practice" here and the "Start today's quiz" button on Home both lead to
 // the same /quiz page — no duplicate flow.
+//
+// Redesigned to match the site's brand identity (finalized requirement —
+// "professional, not low quality"): custom line icons in the gold/ink
+// palette instead of emoji (which render inconsistently across phones and
+// read as unpolished for an exam-prep brand), Bitter serif for the
+// PONNA.in wordmark, and the shared paper/ink/gold color system.
 
 import { useState } from 'react';
 import { useLanguage } from '../lib/language-context';
+import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../lib/brand-theme';
+import {
+  HomeIcon,
+  PracticeIcon,
+  PlansIcon,
+  ProgressIcon,
+  ProfileIcon,
+  DevicesIcon,
+  AboutIcon,
+  HelpIcon,
+  LogoutIcon,
+  MenuIcon,
+  CloseIcon,
+} from './icons';
 
 export function StudentMenu() {
   const { t } = useLanguage();
@@ -33,35 +53,36 @@ export function StudentMenu() {
   // page's own header "Login" button, not from this menu.
   const items = isLoggedIn
     ? [
-        { href: '/', label: t.menu.home, icon: '🏠' },
-        { href: '/quiz', label: t.menu.practice, icon: '📝' },
-        { href: '/plans', label: t.menu.plans, icon: '💳' },
-        { href: '/dashboard', label: t.menu.dashboard, icon: '📊' },
-        { href: '/profile', label: t.menu.profile, icon: '👤' },
-        { href: '/devices', label: t.menu.devices, icon: '📱' },
-        { href: '/about', label: t.menu.about, icon: 'ℹ️' },
-        { href: '/help', label: t.menu.help, icon: '❓' },
+        { href: '/', label: t.menu.home, Icon: HomeIcon },
+        { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
+        { href: '/plans', label: t.menu.plans, Icon: PlansIcon },
+        { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
+        { href: '/profile', label: t.menu.profile, Icon: ProfileIcon },
+        { href: '/devices', label: t.menu.devices, Icon: DevicesIcon },
+        { href: '/about', label: t.menu.about, Icon: AboutIcon },
+        { href: '/help', label: t.menu.help, Icon: HelpIcon },
       ]
     : [
-        { href: '/', label: t.menu.home, icon: '🏠' },
-        { href: '/about', label: t.menu.about, icon: 'ℹ️' },
-        { href: '/help', label: t.menu.help, icon: '❓' },
+        { href: '/', label: t.menu.home, Icon: HomeIcon },
+        { href: '/about', label: t.menu.about, Icon: AboutIcon },
+        { href: '/help', label: t.menu.help, Icon: HelpIcon },
       ];
 
   return (
     <>
+      <BitterFontLinks />
       <button
         onClick={openMenu}
         aria-label="Menu"
-        style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', padding: 4, lineHeight: 1 }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, display: 'flex' }}
       >
-        ☰
+        <MenuIcon size={22} color={COLORS.ink} />
       </button>
 
       {open && (
         <div
           onClick={() => setOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 50 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(26,34,56,0.45)', zIndex: 50 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -70,18 +91,18 @@ export function StudentMenu() {
               top: 0,
               left: 0,
               bottom: 0,
-              width: 240,
-              background: '#fff',
-              boxShadow: '2px 0 12px rgba(0,0,0,0.15)',
+              width: 250,
+              background: COLORS.paper,
+              boxShadow: '2px 0 16px rgba(0,0,0,0.15)',
               padding: 20,
               display: 'flex',
               flexDirection: 'column',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <strong style={{ fontSize: 16 }}>PONNA.in</strong>
-              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>
-                ✕
+              <strong style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 700, color: COLORS.ink }}>PONNA.in</strong>
+              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 4 }}>
+                <CloseIcon size={18} color={COLORS.inkMuted} />
               </button>
             </div>
 
@@ -92,36 +113,38 @@ export function StudentMenu() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
-                  padding: '12px 4px',
-                  color: '#1e293b',
+                  gap: 12,
+                  padding: '12px 6px',
+                  color: COLORS.ink,
                   textDecoration: 'none',
                   fontSize: 15,
+                  borderRadius: 8,
                 }}
               >
-                <span>{item.icon}</span> {item.label}
+                <item.Icon size={19} color={COLORS.gold} /> {item.label}
               </a>
             ))}
 
             {isLoggedIn && (
-              <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 12 }}>
+              <div style={{ borderTop: `1px solid ${COLORS.line}`, marginTop: 12, paddingTop: 12 }}>
                 <button
                   onClick={logout}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 10,
-                    padding: '12px 4px',
+                    gap: 12,
+                    padding: '12px 6px',
                     background: 'none',
                     border: 'none',
-                    color: '#dc2626',
+                    color: '#B4544A',
                     fontSize: 15,
                     cursor: 'pointer',
                     width: '100%',
                     textAlign: 'left',
+                    borderRadius: 8,
                   }}
                 >
-                  🚪 {t.menu.logout}
+                  <LogoutIcon size={19} color="#B4544A" /> {t.menu.logout}
                 </button>
               </div>
             )}

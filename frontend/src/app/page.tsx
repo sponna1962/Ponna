@@ -34,6 +34,8 @@ import { apiUrl } from '../lib/api-config';
 import { studentFetch } from '../lib/student-fetch';
 import { getDeviceId, getDeviceLabel } from '../lib/device-id';
 import { StudentMenu } from '../components/StudentMenu';
+import { LogoutIcon } from '../components/icons';
+import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../lib/brand-theme';
 
 type View = 'main' | 'chooseMethod' | 'phone' | 'deviceLimit';
 type ActiveSubscription = { id: string; cycleEnd: string; plan: { name: string; nameTa: string | null } };
@@ -232,13 +234,14 @@ export default function IndexPage() {
   if (!checkedAuth) return null;
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: COLORS.paper, color: COLORS.ink }}>
+      <BitterFontLinks />
       {/* Header — identical whether logged in or not; only the top-right
           element changes. Always present, on every view of this page. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
-          <strong style={{ fontSize: 16 }}>PONNA.in</strong>
+          <strong style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 700, color: COLORS.ink }}>PONNA.in</strong>
         </div>
 
         {isLoggedIn ? (
@@ -250,8 +253,8 @@ export default function IndexPage() {
                 width: 36,
                 height: 36,
                 borderRadius: '50%',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
+                border: `1px solid ${COLORS.line}`,
+                background: COLORS.paper,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -277,19 +280,31 @@ export default function IndexPage() {
                   position: 'absolute',
                   right: 0,
                   top: 44,
-                  background: '#fff',
-                  border: '1px solid #e2e8f0',
+                  background: COLORS.paper,
+                  border: `1px solid ${COLORS.line}`,
                   borderRadius: 8,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  minWidth: 140,
+                  boxShadow: '0 4px 16px rgba(26,34,56,0.12)',
+                  minWidth: 150,
                   zIndex: 10,
                 }}
               >
                 <button
                   onClick={logout}
-                  style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', textAlign: 'left', fontSize: 14, color: '#dc2626', cursor: 'pointer' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: '10px 14px',
+                    background: 'none',
+                    border: 'none',
+                    textAlign: 'left',
+                    fontSize: 14,
+                    color: '#B4544A',
+                    cursor: 'pointer',
+                  }}
                 >
-                  🚪 Logout
+                  <LogoutIcon size={16} color="#B4544A" /> {t.menu.logout}
                 </button>
               </div>
             )}
@@ -298,7 +313,7 @@ export default function IndexPage() {
           view === 'main' && (
             <button
               onClick={openLogin}
-              style={{ padding: '8px 18px', borderRadius: 20, border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              style={{ padding: '8px 18px', borderRadius: 20, border: `1px solid ${COLORS.line}`, background: COLORS.paper, color: COLORS.ink, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
             >
               {t.index.login}
             </button>
@@ -311,33 +326,33 @@ export default function IndexPage() {
       {view === 'main' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
           {loggedOutElsewhere && (
-            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 13, color: '#78350f' }}>
+            <div style={{ background: COLORS.goldLight, border: `1px solid ${COLORS.gold}`, borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 13, color: '#5C4009' }}>
               {t.login.sessionInvalidated}
             </div>
           )}
-          <h1 style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.3, marginBottom: 4, whiteSpace: 'pre-line' }}>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 27, fontWeight: 800, lineHeight: 1.3, marginBottom: 4, whiteSpace: 'pre-line', color: COLORS.ink }}>
             வெற்றியின்{'\n'}முதல் படி.
           </h1>
-          <h1 style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.3, marginBottom: 16, whiteSpace: 'pre-line', color: '#334155' }}>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 700, lineHeight: 1.3, marginBottom: 16, whiteSpace: 'pre-line', color: COLORS.gold }}>
             The first step{'\n'}to success.
           </h1>
 
-          <p style={{ fontSize: 15, color: '#475569', marginBottom: 4, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 15, color: COLORS.inkMuted, marginBottom: 4, lineHeight: 1.5 }}>
             போட்டித் தேர்வுகள் மற்றும் நுழைவுத் தேர்வுகளுக்கான பயிற்சி இணையதளம்.
           </p>
-          <p style={{ fontSize: 14, color: '#64748b', marginBottom: 20, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 14, color: COLORS.inkMuted, marginBottom: 20, lineHeight: 1.5 }}>
             A practice platform for competitive and entrance exam aspirants.
           </p>
 
           {isLoggedIn && activeSubs && activeSubs.length > 0 && (
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, marginBottom: 20, background: '#f8fafc' }}>
-              <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 12, marginBottom: 20, background: COLORS.goldLight }}>
+              <p style={{ fontSize: 11, color: '#7A5A14', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
                 செயலில் உள்ள திட்டங்கள் / Active Plans
               </p>
               {activeSubs.map((s) => (
                 <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 2 }}>
-                  <span style={{ color: '#0f172a', fontWeight: 600 }}>{s.plan.name}</span>
-                  <span style={{ color: '#64748b' }}>{new Date(s.cycleEnd).toLocaleDateString()}</span>
+                  <span style={{ color: COLORS.ink, fontWeight: 600 }}>{s.plan.name}</span>
+                  <span style={{ color: COLORS.inkMuted }}>{new Date(s.cycleEnd).toLocaleDateString()}</span>
                 </div>
               ))}
             </div>
@@ -345,7 +360,7 @@ export default function IndexPage() {
 
           <button
             onClick={handleStartPractising}
-            style={{ display: 'block', width: '100%', textAlign: 'center', padding: 16, borderRadius: 12, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
+            style={{ display: 'block', width: '100%', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
           >
             பயிற்சியைத் தொடங்குங்கள் / Start Practising
           </button>
@@ -354,7 +369,7 @@ export default function IndexPage() {
 
       {view === 'chooseMethod' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
-          <h1 style={{ fontSize: 20, margin: '0 0 32px' }}>{t.login.title}</h1>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: '0 0 32px', color: COLORS.ink }}>{t.login.title}</h1>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <button
@@ -368,9 +383,9 @@ export default function IndexPage() {
                 width: '100%',
                 padding: 14,
                 borderRadius: 8,
-                background: '#fff',
-                color: '#1f2937',
-                border: '1px solid #cbd5e1',
+                background: COLORS.paper,
+                color: COLORS.ink,
+                border: `1px solid ${COLORS.line}`,
                 fontSize: 15,
                 fontWeight: 600,
               }}
@@ -379,10 +394,10 @@ export default function IndexPage() {
               {t.login.continueWithGoogle}
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', fontSize: 13 }}>
-              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: COLORS.inkMuted, fontSize: 13 }}>
+              <div style={{ flex: 1, height: 1, background: COLORS.line }} />
               {t.login.or}
-              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+              <div style={{ flex: 1, height: 1, background: COLORS.line }} />
             </div>
 
             <button
@@ -390,12 +405,12 @@ export default function IndexPage() {
                 setError(null);
                 setView('phone');
               }}
-              style={{ width: '100%', padding: 14, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600 }}
+              style={{ width: '100%', padding: 14, borderRadius: 8, background: COLORS.ink, color: COLORS.paper, border: 'none', fontSize: 15, fontWeight: 600 }}
             >
               📱 {t.login.continueWithPhone}
             </button>
 
-            {error && <p style={{ color: '#64748b', marginTop: 4, fontSize: 13, textAlign: 'center' }}>{error}</p>}
+            {error && <p style={{ color: COLORS.inkMuted, marginTop: 4, fontSize: 13, textAlign: 'center' }}>{error}</p>}
           </div>
         </div>
       )}
@@ -409,30 +424,30 @@ export default function IndexPage() {
               setOtpSent(false);
               setOtp('');
             }}
-            style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 13, padding: 0, marginBottom: 16, cursor: 'pointer', textAlign: 'left' }}
+            style={{ background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 13, padding: 0, marginBottom: 16, cursor: 'pointer', textAlign: 'left' }}
           >
             {t.login.back}
           </button>
 
-          <label style={{ display: 'block', fontSize: 14, marginBottom: 6 }}>{t.login.phoneLabel}</label>
+          <label style={{ display: 'block', fontSize: 14, marginBottom: 6, color: COLORS.ink }}>{t.login.phoneLabel}</label>
           <input
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             disabled={otpSent}
             placeholder="9876543210"
-            style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12, boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: 12, borderRadius: 8, border: `1px solid ${COLORS.line}`, marginBottom: 12, boxSizing: 'border-box' }}
           />
 
           {otpSent && (
             <>
-              <label style={{ display: 'block', fontSize: 14, marginBottom: 6 }}>{t.login.otpLabel}</label>
+              <label style={{ display: 'block', fontSize: 14, marginBottom: 6, color: COLORS.ink }}>{t.login.otpLabel}</label>
               <input
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 placeholder={t.login.otpPlaceholder}
-                style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12, boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: 12, borderRadius: 8, border: `1px solid ${COLORS.line}`, marginBottom: 12, boxSizing: 'border-box' }}
               />
             </>
           )}
@@ -442,49 +457,49 @@ export default function IndexPage() {
           <button
             onClick={otpSent ? verifyOtp : requestOtp}
             disabled={loading || !phone}
-            style={{ width: '100%', padding: 14, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none' }}
+            style={{ width: '100%', padding: 14, borderRadius: 8, background: COLORS.ink, color: COLORS.paper, border: 'none' }}
           >
             {loading ? '…' : otpSent ? t.login.verify : t.login.sendOtp}
           </button>
 
-          {error && <p style={{ color: '#dc2626', marginTop: 12 }}>{error}</p>}
+          {error && <p style={{ color: '#B4544A', marginTop: 12 }}>{error}</p>}
         </div>
       )}
 
       {view === 'deviceLimit' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
-          <h1 style={{ fontSize: 18, margin: '0 0 8px' }}>{t.login.deviceLimitTitle}</h1>
-          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, lineHeight: 1.5 }}>{t.login.deviceLimitBody}</p>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: '0 0 8px', color: COLORS.ink }}>{t.login.deviceLimitTitle}</h1>
+          <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 20, lineHeight: 1.5 }}>{t.login.deviceLimitBody}</p>
 
           {existingDevices.map((d) => (
             <div
               key={d.deviceId}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 10 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, border: `1px solid ${COLORS.line}`, borderRadius: 8, marginBottom: 10 }}
             >
               <div>
-                <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{d.label ?? t.login.unknownDevice}</p>
-                <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: COLORS.ink }}>{d.label ?? t.login.unknownDevice}</p>
+                <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>
                   {t.login.lastUsed}: {new Date(d.lastSeenAt).toLocaleDateString()}
                 </p>
               </div>
               <button
                 onClick={() => removeDeviceAndRetry(d.deviceId)}
                 disabled={removingDeviceId === d.deviceId}
-                style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #dc2626', color: '#dc2626', background: '#fff', fontSize: 13 }}
+                style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #B4544A', color: '#B4544A', background: COLORS.paper, fontSize: 13 }}
               >
                 {removingDeviceId === d.deviceId ? '…' : t.login.removeDevice}
               </button>
             </div>
           ))}
 
-          {error && <p style={{ color: '#dc2626', marginTop: 8 }}>{error}</p>}
+          {error && <p style={{ color: '#B4544A', marginTop: 8 }}>{error}</p>}
 
           <button
             onClick={() => {
               setView('main');
               setPendingFirebaseToken(null);
             }}
-            style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 13, marginTop: 12, cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 13, marginTop: 12, cursor: 'pointer' }}
           >
             {t.login.cancel}
           </button>
