@@ -103,6 +103,16 @@ export function LogoutIcon(p: IconProps) {
   );
 }
 
+export function MistakesIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <path d="M9 4l10 10-3.5 3.5L5 7.5z" />
+      <path d="M6.5 15.5L4 20l4.5-2.5" />
+      <path d="M13.5 6L18 10.5" />
+    </Base>
+  );
+}
+
 export function MenuIcon(p: IconProps) {
   return (
     <Base {...p}>

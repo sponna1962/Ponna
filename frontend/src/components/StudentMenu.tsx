@@ -26,6 +26,7 @@ import {
   LogoutIcon,
   MenuIcon,
   CloseIcon,
+  MistakesIcon,
 } from './icons';
 
 export function StudentMenu() {
@@ -57,6 +58,7 @@ export function StudentMenu() {
         { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
         { href: '/plans', label: t.menu.plans, Icon: PlansIcon },
         { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
+        { href: '/mistakes', label: t.menu.mistakes, Icon: MistakesIcon },
         { href: '/profile', label: t.menu.profile, Icon: ProfileIcon },
         { href: '/devices', label: t.menu.devices, Icon: DevicesIcon },
         { href: '/about', label: t.menu.about, Icon: AboutIcon },

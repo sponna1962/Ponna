@@ -91,6 +91,12 @@ export const translations = {
       remove: 'நீக்கு',
       none: 'சாதனங்கள் எதுவும் இல்லை.',
     },
+    mistakes: {
+      title: 'தவறுகளை மறுபார்வை',
+      subtitle: 'நீங்கள் தவறாக பதிலளித்த கேள்விகள் — சரியான பதில்களுடன்.',
+      empty: 'இதுவரை தவறான பதில்கள் இல்லை — தொடர்ந்து பயிற்சி செய்யுங்கள்!',
+      correctAnswer: 'சரியான பதில்',
+    },
     quiz: {
       title: 'பயிற்சி தொடங்கவும்',
       modes: { MIXED: 'கலப்பு', MEDIUM: 'நடுத்தரம்', HARD: 'கடினம்' },
@@ -159,6 +165,7 @@ export const translations = {
       profile: 'சுயவிவரம்',
       about: 'PONNA பற்றி',
       devices: 'எனது சாதனங்கள்',
+      mistakes: 'தவறுகளை மறுபார்வை',
       help: 'உதவி & ஆதரவு',
       logout: 'வெளியேறு',
     },
@@ -282,6 +289,12 @@ export const translations = {
       remove: 'Remove',
       none: 'No devices found.',
     },
+    mistakes: {
+      title: 'Review Mistakes',
+      subtitle: 'Questions you answered wrong — with the correct answer.',
+      empty: "No mistakes yet — keep practising!",
+      correctAnswer: 'Correct answer',
+    },
     quiz: {
       title: 'Start Practice',
       modes: { MIXED: 'Mixed', MEDIUM: 'Medium', HARD: 'Hard' },
@@ -350,6 +363,7 @@ export const translations = {
       profile: 'Profile',
       about: 'About PONNA',
       devices: 'My Devices',
+      mistakes: 'Review Mistakes',
       help: 'Help & Support',
       logout: 'Logout',
     },

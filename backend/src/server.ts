@@ -25,6 +25,7 @@ import { PaymentService, ProfileIncompleteError } from './modules/payments/payme
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
+import { StudentReviewService } from './modules/questions/student-review.service';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
@@ -75,6 +76,7 @@ const paymentService = new PaymentService();
 const studentAuthService = new StudentAuthService();
 const profilePhotoService = new ProfilePhotoService();
 const questionReportService = new QuestionReportService();
+const studentReviewService = new StudentReviewService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -128,6 +130,18 @@ app.post('/auth/remove-device', async (req, res) => {
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to remove device' });
+  }
+});
+
+// GET /students/me/wrong-questions — Wrong Questions Review (finalized
+// requirement). Pure review — reuses history that already exists, never
+// creates a new re-answerable session or touches the allocation engine.
+app.get('/students/me/wrong-questions', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await studentReviewService.listWrongQuestions(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load wrong questions' });
   }
 });
 
