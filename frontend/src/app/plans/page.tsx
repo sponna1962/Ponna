@@ -83,7 +83,10 @@ function shortName(name: string): string {
  * Returns null for any plan not TNPSC/TNTET (e.g. a future re-enabled
  * exam) rather than guessing copy for it. */
 function planFeatures(name: string): { highlight: string; bullets: string[] } | null {
-  if (/tnpsc/i.test(name)) {
+  // "Competitive / Employment Annual Plan" is TNPSC's real Plan name (a
+  // whole-Purpose plan) — matched here alongside a literal "TNPSC" in the
+  // name in case it's ever renamed to say that directly.
+  if (/tnpsc/i.test(name) || /competitive|employment/i.test(name)) {
     return {
       highlight: '40,000+ Questions & Exam Practice / Year',
       bullets: [
