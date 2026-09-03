@@ -87,10 +87,22 @@ export class StudentManagementService {
    * of the new number, it's Super-Admin-only and should be used
    * deliberately, not as a self-service flow.
    */
-  async changePhoneNumber(userId: string, newPhone: string) {
+  async changePhoneNumber(userId: string, newPhoneRaw: string) {
+    // Real Firebase Phone-OTP logins always store phone in E.164 format
+    // (e.g. "+919965399896" — see student-auth.service.ts's
+    // `decoded.phone_number`, used verbatim, no reformatting). An admin
+    // typing just "9965399896" here would otherwise be stored WITHOUT the
+    // "+91" prefix — a silent format mismatch that makes the very next
+    // real OTP login for that number fail to resolve back to this
+    // account (it would instead create a brand-new, unrelated one,
+    // losing isTestAccount/history access entirely). Normalize here so
+    // the stored value always matches what a real OTP login will send.
+    const digits = newPhoneRaw.replace(/[^\d]/g, '');
+    const newPhone = newPhoneRaw.trim().startsWith('+') ? newPhoneRaw.trim() : `+91${digits.replace(/^91/, '').slice(-10)}`;
+
     const conflict = await prisma.user.findUnique({ where: { phone: newPhone } });
     if (conflict && conflict.id !== userId) {
-      throw new Error('This phone number is already linked to a different account.');
+      throw new Error(`This phone number is already linked to a different account (as ${newPhone}). Remove/reassign that account's phone first.`);
     }
     return prisma.user.update({ where: { id: userId }, data: { phone: newPhone }, select: { id: true, phone: true } });
   }
