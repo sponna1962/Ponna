@@ -198,8 +198,13 @@ export class DailyQuizService {
   /** Daily Quiz access is a simple binary gate — ANY active paid
    * Subscription (regardless of which exam it scopes to), since this is
    * exam-agnostic current-affairs content, not tied to a specific exam's
-   * Plan scope. */
+   * Plan scope. Test Accounts (isTestAccount) bypass this entirely, same
+   * as every other quota/access rule in the system — a Test Account
+   * needs zero restrictions anywhere, Daily Quiz included. */
   private async hasPaidAccess(userId: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { isTestAccount: true } });
+    if (user?.isTestAccount) return true;
+
     const activeSub = await prisma.subscription.findFirst({
       where: { userId, status: SubscriptionStatus.ACTIVE, cycleEnd: { gt: new Date() }, plan: { isFree: false } },
     });
