@@ -24,6 +24,7 @@ import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
+import { QuestionReportService } from './modules/questions/question-report.service';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
@@ -73,6 +74,7 @@ const plansService = new PlansService();
 const paymentService = new PaymentService();
 const studentAuthService = new StudentAuthService();
 const profilePhotoService = new ProfilePhotoService();
+const questionReportService = new QuestionReportService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -194,6 +196,52 @@ app.post('/students/me/profile-photo', requireStudentAuth, async (req: StudentAu
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to upload photo' });
+  }
+});
+
+// POST /questions/:id/report  { reason, comment? } — student-facing
+// "Report an issue" (finalized requirement). Flag-only — never changes
+// the question itself.
+app.post('/questions/:id/report', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const { reason, comment } = req.body;
+    const report = await questionReportService.createReport(req.studentUserId!, req.params.id, reason, comment);
+    res.json(report);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to submit report' });
+  }
+});
+
+// GET /admin/question-reports?status=OPEN — admin review queue.
+app.get('/admin/question-reports', requireStaffAuth, async (req, res) => {
+  try {
+    const reports = await questionReportService.listReports(req.query.status as any);
+    res.json(reports);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load question reports' });
+  }
+});
+
+// GET /admin/question-reports/open-count — small nav badge, same pattern as "Waiting for AI".
+app.get('/admin/question-reports/open-count', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json({ count: await questionReportService.countOpen() });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to count question reports' });
+  }
+});
+
+// POST /admin/question-reports/:id/status  { status: 'RESOLVED' | 'DISMISSED' | 'OPEN' }
+app.post('/admin/question-reports/:id/status', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const report = await questionReportService.setStatus(req.params.id, req.body.status);
+    res.json(report);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update report status' });
   }
 });
 

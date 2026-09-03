@@ -143,6 +143,7 @@ model User {
   performanceSummary  UserPerformanceSummary[]
   practicePreference  StudentPracticePreference?
   devices             Device[]
+  questionReports     QuestionReport[]
 
   @@index([phone])
   @@index([email])
@@ -167,6 +168,41 @@ model Device {
 
   @@unique([userId, deviceId])
   @@index([userId])
+}
+
+// Reported Question Errors (finalized requirement — content quality
+// control) — a student-facing "Report an issue" on any question during
+// practice. Deliberately simple: FLAG for admin review, never auto-hides
+// or auto-disables the question — a single report could itself be
+// mistaken, so a human always decides. Admin resolves from the Question
+// Reports page, which can also jump straight into editing the question.
+model QuestionReport {
+  id         String               @id @default(uuid())
+  questionId String
+  question   Question             @relation(fields: [questionId], references: [id])
+  userId     String
+  user       User                 @relation(fields: [userId], references: [id])
+  reason     QuestionReportReason
+  comment    String?
+  status     QuestionReportStatus @default(OPEN)
+  createdAt  DateTime             @default(now())
+  resolvedAt DateTime?
+
+  @@index([questionId])
+  @@index([status])
+}
+
+enum QuestionReportReason {
+  WRONG_ANSWER
+  UNCLEAR_OR_TYPO
+  WRONG_OPTIONS
+  OTHER
+}
+
+enum QuestionReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
 }
 
 enum EducationStatus {
@@ -557,6 +593,7 @@ model Question {
   // also surface it, via the allocation engine's OR match — see
   // practice-preference.service.ts's resolveTaxonomyFilter.
   authorityTags  QuestionTaxonomyTag[]
+  reports        QuestionReport[]
 
   // Subject (topic/subject-matter, e.g. History, Polity, General Science) —
   // deliberately separate from the Authority→Category→Sub-Category exam-tier

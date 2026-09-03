@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import { LanguageProvider } from '../lib/language-context';
 
 export const metadata: Metadata = {
-  title: 'PONNA - Competitive Exam Practice',
+  title: 'PONNA.in — TNPSC & TNTET Exam Practice | Previous Papers, Instant Answers',
+  description:
+    'Practice for TNPSC and TNTET with previous exam questions, expert-designed practice questions, and instant answers after every question. Affordable exam preparation for Tamil Nadu students — practice anytime, in Tamil or English.',
+  keywords: ['TNPSC practice', 'TNTET practice', 'TNPSC previous papers', 'TNTET previous papers', 'TNPSC online test', 'TNTET online test', 'PONNA'],
   manifest: '/manifest.json',
   themeColor: '#0f172a',
 };

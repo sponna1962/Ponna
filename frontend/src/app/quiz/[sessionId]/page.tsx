@@ -54,6 +54,12 @@ export default function QuizSessionPage() {
   const [correctOption, setCorrectOption] = useState<string | null>(null); // option LETTER
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<Results | null>(null);
+  // Report an issue (finalized requirement — content quality control).
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<'WRONG_ANSWER' | 'UNCLEAR_OR_TYPO' | 'WRONG_OPTIONS' | 'OTHER'>('WRONG_ANSWER');
+  const [reportComment, setReportComment] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportDone, setReportDone] = useState(false);
 
   useEffect(() => {
     loadSession();
@@ -136,6 +142,29 @@ export default function QuizSessionPage() {
     setCorrectOption(nextQ.answered ? nextQ.correctOption : null);
   }
 
+  function openReport() {
+    setReportReason('WRONG_ANSWER');
+    setReportComment('');
+    setReportDone(false);
+    setReportOpen(true);
+  }
+
+  async function submitReport() {
+    if (!session) return;
+    setReportSubmitting(true);
+    try {
+      const q = session.questions[currentIndex];
+      await studentFetch(`/questions/${q.questionId}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reportReason, comment: reportComment }),
+      });
+      setReportDone(true);
+    } finally {
+      setReportSubmitting(false);
+    }
+  }
+
   if (!session) {
     return <main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>{t.quiz.loading}</main>;
   }
@@ -204,6 +233,12 @@ export default function QuizSessionPage() {
 
       <div style={{ padding: '16px 20px 8px 20px' }}>
         <p style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', lineHeight: 1.5, margin: 0 }}>{display.questionText}</p>
+        <button
+          onClick={openReport}
+          style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 12, padding: 0, marginTop: 8, cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          {t.quiz.reportIssue}
+        </button>
       </div>
 
       <div style={{ padding: '16px 20px', flex: 1 }}>
@@ -267,6 +302,62 @@ export default function QuizSessionPage() {
           </button>
         )}
       </div>
+
+      {reportOpen && (
+        <div
+          onClick={() => setReportOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '16px 16px 0 0', padding: 20 }}
+          >
+            {!reportDone ? (
+              <>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>{t.quiz.reportTitle}</h3>
+                <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>{t.quiz.reportNote}</p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                  {(['WRONG_ANSWER', 'UNCLEAR_OR_TYPO', 'WRONG_OPTIONS', 'OTHER'] as const).map((r) => (
+                    <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#1e293b' }}>
+                      <input type="radio" name="reportReason" checked={reportReason === r} onChange={() => setReportReason(r)} />
+                      {t.quiz.reportReasons[r]}
+                    </label>
+                  ))}
+                </div>
+
+                <textarea
+                  value={reportComment}
+                  onChange={(e) => setReportComment(e.target.value)}
+                  placeholder={t.quiz.reportCommentPlaceholder}
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 14, boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 13 }}
+                  rows={2}
+                />
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setReportOpen(false)} style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff' }}>
+                    {t.login.cancel}
+                  </button>
+                  <button
+                    onClick={submitReport}
+                    disabled={reportSubmitting}
+                    style={{ flex: 1, padding: 12, borderRadius: 8, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                  >
+                    {reportSubmitting ? '…' : t.quiz.reportSubmit}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 14, color: '#0f172a', marginBottom: 16 }}>✅ {t.quiz.reportThanks}</p>
+                <button onClick={() => setReportOpen(false)} style={{ width: '100%', padding: 12, borderRadius: 8, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}>
+                  {t.quiz.reportClose}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

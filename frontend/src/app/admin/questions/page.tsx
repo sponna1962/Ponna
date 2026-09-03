@@ -66,7 +66,7 @@ function AdminQuestionsPageInner() {
   // window.location.search read in a lazy initializer only fires on the
   // very first mount and would miss every navigation after that.
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'DRAFT');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyValue>(() => {
     const authorityId = searchParams.get('authorityId');
@@ -90,10 +90,12 @@ function AdminQuestionsPageInner() {
     const authorityId = searchParams.get('authorityId');
     const categoryId = searchParams.get('categoryId');
     const subCategoryId = searchParams.get('subCategoryId');
+    const searchParam = searchParams.get('search');
     if (status || authorityId || categoryId || subCategoryId) {
       setStatusFilter(status || 'DRAFT');
       setTaxonomyFilter({ authorityId: authorityId ?? '', categoryId: categoryId ?? '', subCategoryId: subCategoryId ?? '' });
     }
+    if (searchParam) setSearch(searchParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
   const [classifying, setClassifying] = useState<{ done: number; total: number; stopped: boolean } | null>(null);
