@@ -68,6 +68,27 @@ export default function StudentsPage() {
     load();
   }
 
+  /** Super Admin only — changes the phone number on an EXISTING account,
+   * keeping its history/data. Bypasses OTP verification of the new
+   * number, so this is a deliberate admin override — confirm() guards
+   * against an accidental click. */
+  async function changePhone(id: string, currentPhone: string | null) {
+    const newPhone = prompt(`Enter the new phone number to link to this account (currently: ${currentPhone ?? 'none'}):`);
+    if (!newPhone?.trim()) return;
+    if (!confirm(`Change this account's phone number to ${newPhone.trim()}? This keeps all its history/data — only the linked number changes.`)) return;
+    const res = await adminFetch(`/admin/students/${id}/change-phone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPhone: newPhone.trim() }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed: ${body.error ?? 'Only Super Admin can change this'}`);
+      return;
+    }
+    load();
+  }
+
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 16 }}>Students</h1>
@@ -123,8 +144,11 @@ export default function StudentsPage() {
                 <td style={{ padding: 10 }}>{overall?.rank ?? '—'}</td>
                 <td style={{ padding: 10, color: '#94a3b8' }}>{new Date(s.createdAt).toLocaleDateString()}</td>
                 <td style={{ padding: 10 }}>
-                  <button onClick={() => toggleTestAccount(s.id, s.isTestAccount)} style={{ fontSize: 12, padding: '4px 10px' }}>
+                  <button onClick={() => toggleTestAccount(s.id, s.isTestAccount)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
                     {s.isTestAccount ? 'Unmark' : 'Mark as Test'}
+                  </button>
+                  <button onClick={() => changePhone(s.id, s.phone)} style={{ fontSize: 12, padding: '4px 10px' }}>
+                    Change Phone
                   </button>
                 </td>
                 <td style={{ padding: 10 }}>

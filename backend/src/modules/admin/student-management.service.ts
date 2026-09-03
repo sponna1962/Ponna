@@ -75,6 +75,26 @@ export class StudentManagementService {
     });
   }
 
+  /**
+   * Super Admin only — changes the phone number on an EXISTING account,
+   * keeping every bit of its history/data (subscriptions, quiz history,
+   * Daily Quiz attempts, everything keyed to this userId) exactly as is.
+   * Different from student-auth.service.ts's linkPhoneNumber (which is
+   * self-service, OTP-verified, and only for adding a phone that wasn't
+   * there before) — this is a trusted admin override for the "same
+   * account, different number" case, e.g. a lost SIM or a test account
+   * being repointed at a new number. Since it bypasses OTP verification
+   * of the new number, it's Super-Admin-only and should be used
+   * deliberately, not as a self-service flow.
+   */
+  async changePhoneNumber(userId: string, newPhone: string) {
+    const conflict = await prisma.user.findUnique({ where: { phone: newPhone } });
+    if (conflict && conflict.id !== userId) {
+      throw new Error('This phone number is already linked to a different account.');
+    }
+    return prisma.user.update({ where: { id: userId }, data: { phone: newPhone }, select: { id: true, phone: true } });
+  }
+
   async getStudentDetail(userId: string) {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: userId },

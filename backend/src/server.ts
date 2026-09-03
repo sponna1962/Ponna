@@ -1138,6 +1138,20 @@ app.post('/admin/students/:id/clear-suspicious-flag', requireStaffAuth, requireR
   }
 });
 
+// POST /admin/students/:id/change-phone  { newPhone } — Super Admin only.
+// Changes the phone number on an EXISTING account, keeping all its
+// history/data. Bypasses OTP verification of the new number, so this is
+// a deliberate trusted-admin override, not a self-service flow.
+app.post('/admin/students/:id/change-phone', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const result = await studentManagementService.changePhoneNumber(req.params.id, req.body.newPhone);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to change phone number' });
+  }
+});
+
 app.get('/admin/platform-stats', requireStaffAuth, async (_req, res) => {
   res.json(await studentManagementService.getPlatformStats());
 });
