@@ -206,37 +206,66 @@ export class DailyQuizService {
     return !!activeSub;
   }
 
-  /** Finds a live-right-now quiz by re-checking publishAt/expiresAt
-   * directly against the current instant (finalized requirement —
-   * cron-safety: never trusts the `status` field alone). Returns null if
-   * none — including the "admin never scheduled today's quiz" case AND
-   * the "yesterday's already expired" case, both correctly, since the
-   * live check excludes both. */
-  private async findLiveQuiz() {
-    const now = new Date();
-    return prisma.dailyQuiz.findFirst({
-      where: { publishAt: { lte: now }, expiresAt: { gt: now } },
+  /** Finds TODAY's quiz by calendar date (IST) — the semantic anchor for
+   * "is there a Daily Quiz for today", independent of whether it's inside
+   * its live publishAt/expiresAt window right now. Used so a COMPLETED
+   * attempt stays viewable even after expiresAt (finalized requirement —
+   * "a completed attempt can still have its stored result/history
+   * handled... but no retake"), while start/resume eligibility is
+   * checked separately against the live window. */
+  private async findTodaysQuizByDate() {
+    const todayStr = todayIstDateStr();
+    return prisma.dailyQuiz.findUnique({
+      where: { quizDate: new Date(todayStr) },
       include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
   }
 
   /** Top-level student entry point — returns exactly what the frontend
-   * needs to decide what to show: access gate, "not available yet", or
-   * the quiz itself (with any existing attempt's progress). */
+   * needs to decide what to show: access gate, "not available yet",
+   * language selection / resume, or the COMPLETED summary (which stays
+   * reachable even after the quiz has expired — finalized requirement).
+   */
   async getStudentState(userId: string) {
     if (!(await this.hasPaidAccess(userId))) {
       return { access: 'FREE_LOCKED' as const };
     }
 
-    const quiz = await this.findLiveQuiz();
+    const quiz = await this.findTodaysQuizByDate();
     if (!quiz) {
       return { access: 'NOT_AVAILABLE' as const };
     }
+
+    const now = new Date();
+    const isLive = now >= quiz.publishAt && now < quiz.expiresAt;
 
     const attempt = await prisma.dailyQuizAttempt.findUnique({
       where: { userId_dailyQuizId: { userId, dailyQuizId: quiz.id } },
       include: { answers: true },
     });
+
+    // Completed — reachable regardless of the live window, per finalized
+    // requirement. Never offers a retake (there's simply no start/resume
+    // path presented alongside this state).
+    if (attempt?.completedAt) {
+      return {
+        access: 'COMPLETED' as const,
+        quizId: quiz.id,
+        attemptId: attempt.id,
+        totalQuestions: quiz.questions.length,
+        score: attempt.score ?? 0,
+        correctCount: attempt.answers.filter((a) => a.isCorrect).length,
+        incorrectCount: attempt.answers.filter((a) => !a.isCorrect).length,
+      };
+    }
+
+    if (!isLive) {
+      // Either not published yet, or expired without ever completing —
+      // finalized requirement: an incomplete attempt is never resumable
+      // past expiresAt, so this collapses to the same "not available"
+      // state as no-quiz-yet from the student's point of view.
+      return { access: 'NOT_AVAILABLE' as const };
+    }
 
     return {
       access: 'AVAILABLE' as const,
@@ -244,12 +273,7 @@ export class DailyQuizService {
       expiresAt: quiz.expiresAt,
       totalQuestions: quiz.questions.length,
       attempt: attempt
-        ? {
-            language: attempt.language,
-            completedAt: attempt.completedAt,
-            score: attempt.score,
-            answeredQuestionIds: attempt.answers.map((a) => a.questionId),
-          }
+        ? { language: attempt.language, answeredQuestionIds: attempt.answers.map((a) => a.questionId) }
         : null,
     };
   }

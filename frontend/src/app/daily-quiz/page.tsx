@@ -22,12 +22,13 @@ import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/
 type StudentState =
   | { access: 'FREE_LOCKED' }
   | { access: 'NOT_AVAILABLE' }
+  | { access: 'COMPLETED'; quizId: string; attemptId: string; totalQuestions: number; score: number; correctCount: number; incorrectCount: number }
   | {
       access: 'AVAILABLE';
       quizId: string;
       expiresAt: string;
       totalQuestions: number;
-      attempt: { language: 'TA' | 'EN'; completedAt: string | null; score: number | null; answeredQuestionIds: string[] } | null;
+      attempt: { language: 'TA' | 'EN'; answeredQuestionIds: string[] } | null;
     };
 
 type AttemptQuestion = {
@@ -80,6 +81,15 @@ export default function DailyQuizPage() {
     if (data.access === 'AVAILABLE' && data.attempt) {
       await loadAttemptQuestions(data.quizId, data.attempt.language);
     }
+    // COMPLETED — deliberately does NOT auto-fetch the full review (finalized
+    // requirement: show the Completed summary first; only fetch the
+    // question-by-question review when the student explicitly asks for it).
+  }
+
+  async function loadReview(attemptId: string) {
+    const qRes = await studentFetch(`/daily-quiz/attempts/${attemptId}/questions`);
+    setAttemptData(await qRes.json());
+    setShowReview(true);
   }
 
   async function loadAttemptQuestions(quizId: string, language: 'TA' | 'EN') {
@@ -168,8 +178,12 @@ export default function DailyQuizPage() {
     const isLast = currentIndex === attemptData.questions.length - 1;
     if (isLast) {
       await studentFetch(`/daily-quiz/attempts/${attemptData.attemptId}/complete`, { method: 'POST' });
-      const qRes = await studentFetch(`/daily-quiz/attempts/${attemptData.attemptId}/questions`);
-      setAttemptData(await qRes.json());
+      // Re-derive from the top — this is what correctly transitions the
+      // state machine from AVAILABLE (in-progress) to COMPLETED, since
+      // that's now a distinct `access` value from the backend rather than
+      // a flag inside the attempt data.
+      setAttemptData(null);
+      await loadState();
       return;
     }
     setCurrentIndex(currentIndex + 1);
@@ -242,7 +256,7 @@ export default function DailyQuizPage() {
         </div>
       )}
 
-      {attemptData && !attemptData.completedAt && attemptData.questions[currentIndex] && (
+      {attemptData && !showReview && attemptData.questions[currentIndex] && state?.access === 'AVAILABLE' && (
         <QuestionView
           question={attemptData.questions[currentIndex]}
           index={currentIndex}
@@ -253,8 +267,15 @@ export default function DailyQuizPage() {
         />
       )}
 
-      {attemptData?.completedAt && !showReview && <CompletedSummary data={attemptData} onReview={() => setShowReview(true)} />}
-      {attemptData?.completedAt && showReview && <ReviewAnswers data={attemptData} />}
+      {state?.access === 'COMPLETED' && !showReview && (
+        <CompletedSummary
+          totalQuestions={state.totalQuestions}
+          correctCount={state.correctCount}
+          incorrectCount={state.incorrectCount}
+          onReview={() => loadReview(state.attemptId)}
+        />
+      )}
+      {state?.access === 'COMPLETED' && showReview && attemptData && <ReviewAnswers data={attemptData} />}
     </main>
   );
 }
@@ -327,24 +348,31 @@ function QuestionView({
   );
 }
 
-function CompletedSummary({ data, onReview }: { data: AttemptQuestions; onReview: () => void }) {
+function CompletedSummary({
+  totalQuestions,
+  correctCount,
+  incorrectCount,
+  onReview,
+}: {
+  totalQuestions: number;
+  correctCount: number;
+  incorrectCount: number;
+  onReview: () => void;
+}) {
   const { t } = useLanguage();
-  const total = data.questions.length;
-  const correct = data.score ?? 0;
-  const incorrect = total - correct;
   return (
     <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
       <p style={{ fontSize: 13, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>{t.dailyQuiz.completedBadge}</p>
       <p style={{ fontFamily: FONT_FAMILY, fontSize: 40, fontWeight: 800, color: COLORS.gold, margin: '8px 0 16px' }}>
-        {correct}/{total}
+        {correctCount}/{totalQuestions}
       </p>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginBottom: 20 }}>
         <div>
-          <p style={{ fontSize: 20, fontWeight: 700, color: '#16a34a', margin: 0 }}>{correct}</p>
+          <p style={{ fontSize: 20, fontWeight: 700, color: '#16a34a', margin: 0 }}>{correctCount}</p>
           <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.quiz.correct}</p>
         </div>
         <div>
-          <p style={{ fontSize: 20, fontWeight: 700, color: '#B4544A', margin: 0 }}>{incorrect}</p>
+          <p style={{ fontSize: 20, fontWeight: 700, color: '#B4544A', margin: 0 }}>{incorrectCount}</p>
           <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.incorrect}</p>
         </div>
       </div>
