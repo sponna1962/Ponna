@@ -46,6 +46,7 @@ export default function ProfilePage() {
   // export and caused an opaque build failure. Read once on mount,
   // client-side only — fine here since it only controls a UI banner.
   const [cameFromGate, setCameFromGate] = useState(false);
+  const verifyPhoneSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -54,6 +55,18 @@ export default function ProfilePage() {
   }, []);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
+
+  // Draws the eye straight to Verify Phone Number when THAT's specifically
+  // why they were redirected here — otherwise a student could easily miss
+  // it below the fold and just click the regular Save button instead,
+  // which doesn't touch phone and would bounce them right back to this
+  // same page next time from Quiz.
+  useEffect(() => {
+    if (cameFromGate && profile && !profile.phone) {
+      verifyPhoneSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [cameFromGate, profile]);
+
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [email, setEmail] = useState('');
@@ -129,6 +142,15 @@ export default function ProfilePage() {
       const result = await res.json();
       setProfile((p) => (p ? { ...p, profileComplete: result.profileComplete } : p));
       setSaved(true);
+      // Free Preview needs BOTH email and a verified phone (finalized
+      // requirement) — if phone was already verified and this Save just
+      // supplied the missing email, both requirements are now met, so
+      // send them straight back to where they were trying to go instead
+      // of leaving them stranded on Profile to navigate back manually.
+      if (cameFromGate && profile?.phone) {
+        window.location.href = '/quiz';
+        return;
+      }
     }
   }
 
@@ -265,6 +287,13 @@ export default function ProfilePage() {
       setPhoneLinkMessage({ ok: true, text: t.profile.phoneVerified });
       setPhoneLinkStep('idle');
       setProfile((p) => (p ? { ...p, phone: phoneToVerify } : p));
+      // Same reasoning as save() above — if email was already there and
+      // this verification just supplied the missing phone, both Free
+      // Preview requirements are now met.
+      if (cameFromGate && profile?.email) {
+        window.location.href = '/quiz';
+        return;
+      }
     } catch (err: any) {
       console.error(err);
       setPhoneLinkMessage({ ok: false, text: err.message ?? t.login.verifyError });
@@ -287,6 +316,28 @@ export default function ProfilePage() {
           <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: 14, marginBottom: 20 }}>
             <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.completeYourProfile}</strong>
             <span style={{ fontSize: 13, color: '#78350f' }}>{t.profile.completeProfileNote}</span>
+          </div>
+        )}
+
+        {/* Free Preview specifically needs a verified phone (and an
+            email) — a DIFFERENT, narrower gate than the general "complete
+            your profile for Rank" one above. Without this, a student
+            redirected here for a missing phone saw no banner at all
+            whenever their general profileComplete happened to already be
+            true, and had no way to tell that clicking the regular Save
+            button (which doesn't touch phone) would never actually get
+            them past the gate — they'd just bounce straight back to this
+            same page from Quiz every time. */}
+        {cameFromGate && (!profile.phone || !profile.email) && (
+          <div style={{ background: '#fef3c7', border: '1.5px solid #f59e0b', borderRadius: 10, padding: 14, marginBottom: 20 }}>
+            <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.freePreviewGateTitle}</strong>
+            <span style={{ fontSize: 13, color: '#78350f' }}>
+              {!profile.phone && !profile.email
+                ? t.profile.freePreviewGateBothMissing
+                : !profile.phone
+                  ? t.profile.freePreviewGatePhoneMissing
+                  : t.profile.freePreviewGateEmailMissing}
+            </span>
           </div>
         )}
 
@@ -453,7 +504,7 @@ export default function ProfilePage() {
             once verified, Profile's own Phone field (read-only) picks it
             up on next load. */}
         {!profile.phone && (
-          <>
+          <div ref={verifyPhoneSectionRef}>
             {phoneLinkStep === 'idle' && (
               <button
                 onClick={() => {
@@ -539,7 +590,7 @@ export default function ProfilePage() {
             {phoneLinkMessage && (
               <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{phoneLinkMessage.text}</p>
             )}
-          </>
+          </div>
         )}
 
         {/* No Change Password — student login is Firebase Phone OTP, not
