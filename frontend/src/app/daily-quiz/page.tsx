@@ -57,6 +57,7 @@ export default function DailyQuizPage() {
   const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showReview, setShowReview] = useState(false);
 
   useEffect(() => {
     fetch(apiUrl('/daily-quiz/enabled'))
@@ -85,12 +86,19 @@ export default function DailyQuizPage() {
     // The attemptId isn't in `state` directly — start/resume returns it,
     // but on a fresh page load we don't have it yet, so resolve it by
     // starting (which is idempotent — resuming an existing attempt never
-    // creates a new one or changes its language).
+    // creates a new one or changes its language). If the quiz expired in
+    // the exact gap between loadState()'s check and this call, this can
+    // fail — fall back to re-checking state rather than crashing on a
+    // response that isn't actually an attempt.
     const startRes = await studentFetch(`/daily-quiz/${quizId}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ language }),
     });
+    if (!startRes.ok) {
+      await loadState();
+      return;
+    }
     const attempt = await startRes.json();
     const qRes = await studentFetch(`/daily-quiz/attempts/${attempt.id}/questions`);
     const qData: AttemptQuestions = await qRes.json();
@@ -245,7 +253,8 @@ export default function DailyQuizPage() {
         />
       )}
 
-      {attemptData?.completedAt && <ResultsView data={attemptData} />}
+      {attemptData?.completedAt && !showReview && <CompletedSummary data={attemptData} onReview={() => setShowReview(true)} />}
+      {attemptData?.completedAt && showReview && <ReviewAnswers data={attemptData} />}
     </main>
   );
 }
@@ -318,14 +327,68 @@ function QuestionView({
   );
 }
 
-function ResultsView({ data }: { data: AttemptQuestions }) {
+function CompletedSummary({ data, onReview }: { data: AttemptQuestions; onReview: () => void }) {
+  const { t } = useLanguage();
+  const total = data.questions.length;
+  const correct = data.score ?? 0;
+  const incorrect = total - correct;
+  return (
+    <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>{t.dailyQuiz.completedBadge}</p>
+      <p style={{ fontFamily: FONT_FAMILY, fontSize: 40, fontWeight: 800, color: COLORS.gold, margin: '8px 0 16px' }}>
+        {correct}/{total}
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginBottom: 20 }}>
+        <div>
+          <p style={{ fontSize: 20, fontWeight: 700, color: '#16a34a', margin: 0 }}>{correct}</p>
+          <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.quiz.correct}</p>
+        </div>
+        <div>
+          <p style={{ fontSize: 20, fontWeight: 700, color: '#B4544A', margin: 0 }}>{incorrect}</p>
+          <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.incorrect}</p>
+        </div>
+      </div>
+      {/* No retake — a Daily Quiz attempt is one-time (finalized requirement) */}
+      <button onClick={onReview} style={{ width: '100%', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600 }}>
+        {t.dailyQuiz.viewReview}
+      </button>
+    </div>
+  );
+}
+
+function ReviewAnswers({ data }: { data: AttemptQuestions }) {
   const { t } = useLanguage();
   return (
-    <div style={{ textAlign: 'center' }}>
-      <p style={{ fontFamily: FONT_FAMILY, fontSize: 42, fontWeight: 800, color: COLORS.gold, margin: '20px 0 4px' }}>
-        {data.score}/{data.questions.length}
-      </p>
-      <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 24 }}>{t.dailyQuiz.resultsSubtitle}</p>
+    <div>
+      {data.questions.map((q, i) => (
+        <div key={q.id} style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.ink, lineHeight: 1.5, marginBottom: 10 }}>
+            {i + 1}. {q.questionText}
+          </p>
+          {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+            const text = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }[letter];
+            const isCorrectOption = q.correctOption === letter;
+            const isWrongSelected = q.selectedOption === letter && q.correctOption !== letter;
+            return (
+              <div
+                key={letter}
+                style={{
+                  fontSize: 13,
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  marginBottom: 4,
+                  background: isCorrectOption ? COLORS.goldLight : 'transparent',
+                  color: isCorrectOption ? '#5C4009' : isWrongSelected ? '#B4544A' : COLORS.inkMuted,
+                  fontWeight: isCorrectOption ? 700 : 400,
+                }}
+              >
+                {letter}. {text} {isCorrectOption && '✓'} {isWrongSelected && '✕'}
+              </div>
+            );
+          })}
+          {q.explanation && <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 8, lineHeight: 1.5 }}>{q.explanation}</p>}
+        </div>
+      ))}
       <a href="/" style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600 }}>
         {t.dailyQuiz.backHome}
       </a>
