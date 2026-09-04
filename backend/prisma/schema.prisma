@@ -146,6 +146,7 @@ model User {
   devices             Device[]
   questionReports     QuestionReport[]
   dailyQuizAttempts   DailyQuizAttempt[]
+  mistakeReviews      MistakeReview[]
 
   @@index([phone])
   @@index([email])
@@ -827,6 +828,7 @@ model Question {
 
   history          UserQuestionHistory[]
   sessionQuestions QuizSessionQuestion[]
+  mistakeReviews   MistakeReview[]
 
   @@index([status, difficulty, category])
   @@index([contentHash])
@@ -895,6 +897,37 @@ model QuizSessionQuestion {
 }
 
 // Permanent record of every question a student has actually answered.
+// ── Review Mistakes (finalized requirement) — a REVISION flow, strictly
+// separate from normal Practice's UserQuestionHistory/performance/rank/
+// quota/Subject-Preference-allocation. One row per (student, question)
+// ever answered wrong in normal Practice (created as a side-effect of
+// session.service.ts's submitAnswer, never touched by Review Mistakes
+// itself going the other way) — deduplicated by the unique constraint, so
+// a question can never appear twice in the list. status flips to
+// CORRECTED once the student successfully re-answers it here; a further
+// wrong re-attempt here leaves it PENDING. Review attempts recorded here
+// NEVER write to UserQuestionHistory, ranking, quota, or
+// StudentSubjectTopicPreference-driven allocation — this table is the
+// complete, sealed record of the revision flow.
+enum MistakeReviewStatus {
+  PENDING
+  CORRECTED
+}
+
+model MistakeReview {
+  id             String              @id @default(uuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  questionId     String
+  question       Question            @relation(fields: [questionId], references: [id])
+  status         MistakeReviewStatus @default(PENDING)
+  lastReviewedAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([userId, questionId])
+}
+
 // Drives "unseen-first" allocation (§6.4) and performance rollups (§8).
 // Abandoned/unanswered reserved questions are NOT written here — only answered ones.
 model UserQuestionHistory {

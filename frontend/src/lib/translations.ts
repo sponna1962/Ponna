@@ -93,9 +93,14 @@ export const translations = {
     },
     mistakes: {
       title: 'தவறுகளை மறுபார்வை',
-      subtitle: 'நீங்கள் தவறாக பதிலளித்த கேள்விகள் — சரியான பதில்களுடன்.',
-      empty: 'இதுவரை தவறான பதில்கள் இல்லை — தொடர்ந்து பயிற்சி செய்யுங்கள்!',
+      subtitle: 'நீங்கள் தவறாக பதிலளித்த கேள்விகள் — மீண்டும் பயிற்சி செய்யலாம்.',
+      empty: 'இப்போதைக்கு மறுபார்வை செய்ய எதுவும் இல்லை!',
       correctAnswer: 'சரியான பதில்',
+      lockedTitle: 'Review Mistakes — Paid Plan மட்டும்',
+      lockedBody: 'இந்த வசதி Annual Plan-உடையவர்களுக்கு மட்டும் கிடைக்கும்.',
+      filters: { all: 'அனைத்தும்', subject: 'பாடம் வாரியாக', recent: 'சமீபத்தியவை' },
+      corrected: '✓ சரி செய்யப்பட்டது!',
+      stillWrong: 'மீண்டும் தவறு — தொடர்ந்து பயிற்சி செய்யுங்கள்.',
     },
     subjectPreference: {
       title: 'பாடம் & தலைப்பு விருப்பம்',
@@ -189,6 +194,7 @@ export const translations = {
     menu: {
       home: 'முகப்பு',
       practice: 'பயிற்சி தொடங்கு',
+      reviewMistakes: 'தவறுகளை மறுபார்வை',
       liveExam: 'Live Exam',
       subjectPreference: 'பாடம் & தலைப்பு விருப்பம்',
       dailyQuiz: 'தினசரி சவால்',
@@ -331,9 +337,14 @@ export const translations = {
     },
     mistakes: {
       title: 'Review Mistakes',
-      subtitle: 'Questions you answered wrong — with the correct answer.',
-      empty: "No mistakes yet — keep practising!",
+      subtitle: 'Questions you answered wrong — practise them again.',
+      empty: "Nothing to review right now!",
       correctAnswer: 'Correct answer',
+      lockedTitle: 'Review Mistakes — Paid Plan Only',
+      lockedBody: 'This feature is available for Annual Plan holders only.',
+      filters: { all: 'All', subject: 'By Subject', recent: 'Recent' },
+      corrected: '✓ Corrected!',
+      stillWrong: 'Still wrong — keep practising.',
     },
     subjectPreference: {
       title: 'Subject & Topic Preference',
@@ -427,6 +438,7 @@ export const translations = {
     menu: {
       home: 'Home',
       practice: 'Start Practice',
+      reviewMistakes: 'Review Mistakes',
       liveExam: 'Live Exam',
       subjectPreference: 'Subject & Topic Preference',
       dailyQuiz: 'Daily Challenge',

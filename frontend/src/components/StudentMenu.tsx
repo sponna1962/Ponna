@@ -37,6 +37,7 @@ import {
   LogoutIcon,
   MenuIcon,
   CloseIcon,
+  MistakesIcon,
 } from './icons';
 
 type NavItem = { href: string; label: string; Icon: (p: { size?: number; color?: string }) => React.ReactElement };
@@ -70,6 +71,7 @@ export function StudentMenu() {
           heading: t.menu.sectionPreparation,
           items: [
             { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
+            { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
             { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
             { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
             { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },

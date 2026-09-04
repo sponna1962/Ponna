@@ -26,6 +26,7 @@ import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLi
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
+import { MistakeReviewService } from './modules/questions/mistake-review.service';
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
@@ -81,6 +82,7 @@ const studentAuthService = new StudentAuthService();
 const profilePhotoService = new ProfilePhotoService();
 const questionReportService = new QuestionReportService();
 const studentReviewService = new StudentReviewService();
+const mistakeReviewService = new MistakeReviewService();
 const subjectPreferenceService = new SubjectPreferenceService();
 const dailyQuizService = new DailyQuizService();
 const syllabusService = new SyllabusService();
@@ -149,6 +151,29 @@ app.get('/students/me/wrong-questions', requireStudentAuth, async (req: StudentA
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load wrong questions' });
+  }
+});
+
+// ── Review Mistakes (finalized requirement) — separate revision flow ──────
+// GET /students/me/mistakes?filter=all|subject|recent
+app.get('/students/me/mistakes', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const filter = (req.query.filter as 'all' | 'subject' | 'recent') ?? 'all';
+    res.json(await mistakeReviewService.listMistakes(req.studentUserId!, filter));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load Review Mistakes' });
+  }
+});
+
+// POST /students/me/mistakes/:questionId/review  { selectedOption }
+app.post('/students/me/mistakes/:questionId/review', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const result = await mistakeReviewService.reviewAnswer(req.studentUserId!, req.params.questionId, req.body.selectedOption);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to submit review answer' });
   }
 });
 

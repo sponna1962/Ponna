@@ -8,11 +8,13 @@ import { QuotaService, QuotaExceededError } from '../quota/quota.service';
 import { AllocationService } from '../questions/allocation.service';
 import { RankingService } from '../ranking/ranking.service';
 import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
+import { MistakeReviewService } from '../questions/mistake-review.service';
 
 const quota = new QuotaService();
 const allocation = new AllocationService();
 const ranking = new RankingService();
 const preferenceService = new PracticePreferenceService();
+const mistakeReview = new MistakeReviewService();
 
 export class SessionService {
   /**
@@ -170,6 +172,16 @@ export class SessionService {
     // per §8.1) — only the running average/count that rank is later derived from.
     if (question.difficulty) {
       await ranking.updateSummaryAfterAnswer(session.userId, question.difficulty, isCorrect);
+    }
+
+    // Review Mistakes (finalized requirement) — a wrong answer in normal
+    // Practice is what POPULATES the revision list; this is the ONLY
+    // direction data flows between the two flows. Review Mistakes itself
+    // (mistake-review.service.ts's reviewAnswer) never writes back here,
+    // never touches UserQuestionHistory/ranking/quota, and this call never
+    // blocks or slows down the normal-practice response on failure.
+    if (!isCorrect) {
+      await mistakeReview.recordMistake(session.userId, questionId);
     }
 
     return { isCorrect, correctOption: question.correctOption };
