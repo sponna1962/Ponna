@@ -37,6 +37,7 @@ type ProfileData = {
   yearOfStudy: string | null;
   highestQualification: string | null;
   profileComplete: boolean;
+  isTestAccount: boolean;
 };
 
 export default function ProfilePage() {
@@ -116,6 +117,26 @@ export default function ProfilePage() {
       })
       .catch(() => {});
   }, []);
+
+  const [resettingHistory, setResettingHistory] = useState(false);
+
+  /** Test Accounts only (finalized requirement — self-service, no need
+   * to ask an admin each time) — wipes THIS account's own quiz history/
+   * score, keeping the account itself intact. Backend independently
+   * re-checks isTestAccount and rejects otherwise, regardless of what
+   * this button does. */
+  async function resetHistory() {
+    if (!confirm('Reset your own quiz history and score? This clears Practice, Daily Quiz, and Brain Challenge history for this account — cannot be undone.')) return;
+    setResettingHistory(true);
+    const res = await studentFetch('/students/me/reset-history', { method: 'POST' });
+    setResettingHistory(false);
+    if (res.ok) {
+      alert('History reset.');
+    } else {
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed: ${body.error ?? 'Could not reset history'}`);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -600,6 +621,22 @@ export default function ProfilePage() {
             {phoneLinkMessage && (
               <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{phoneLinkMessage.text}</p>
             )}
+          </div>
+        )}
+
+        {/* Test Accounts only (finalized requirement) — self-service reset
+            of their own quiz history/score, no need to ask an admin each
+            time. Never shown for a real student account. */}
+        {profile.isTestAccount && (
+          <div style={{ border: '1px solid #fecaca', borderRadius: 10, padding: 14, marginTop: 20 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', marginBottom: 8 }}>🧪 TEST ACCOUNT</p>
+            <button
+              onClick={resetHistory}
+              disabled={resettingHistory}
+              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #dc2626', color: '#dc2626', background: '#fff', fontSize: 13, fontWeight: 600 }}
+            >
+              {resettingHistory ? '…' : 'Reset My Quiz History & Score'}
+            </button>
           </div>
         )}
 

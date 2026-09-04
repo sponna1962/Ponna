@@ -583,6 +583,19 @@ app.patch('/students/me/profile', requireStudentAuth, async (req: StudentAuthedR
   }
 });
 
+// POST /students/me/reset-history — Test Accounts only (finalized
+// requirement). Wipes the account's own quiz history/score, not the
+// account itself.
+app.post('/students/me/reset-history', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await profileService.resetOwnHistory(req.studentUserId!);
+    res.json({ reset: true });
+  } catch (err: any) {
+    console.error(err);
+    res.status(403).json({ error: err.message ?? 'Failed to reset history' });
+  }
+});
+
 // ─────────────────────────────────────────────────────────
 // PAYMENTS  (§5, §7.6) — Razorpay
 // ─────────────────────────────────────────────────────────

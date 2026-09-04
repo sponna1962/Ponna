@@ -62,7 +62,32 @@ export class ProfileService {
       yearOfStudy: user.yearOfStudy,
       highestQualification: user.highestQualification,
       profileComplete: isProfileComplete(user),
+      isTestAccount: user.isTestAccount,
     };
+  }
+
+  /**
+   * Test Accounts only (finalized requirement — "no restrictions of any
+   * kind" for the admin's own account, including being able to clear
+   * their own quiz history themselves) — wipes this account's own
+   * QuizSession/UserQuestionHistory/UserPerformanceSummary/DailyQuiz
+   * activity, keeping the User row, Subscriptions, and Devices intact
+   * (this resets SCORE/HISTORY, not the whole account). Rejects outright
+   * for a non-test account — a genuine student must never be able to
+   * self-wipe their own history, that would defeat the point of tracking
+   * it at all.
+   */
+  async resetOwnHistory(userId: string): Promise<void> {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { isTestAccount: true } });
+    if (!user.isTestAccount) {
+      throw new Error('Only Test Accounts can reset their own history.');
+    }
+    await prisma.dailyQuizAnswer.deleteMany({ where: { attempt: { userId } } });
+    await prisma.dailyQuizAttempt.deleteMany({ where: { userId } });
+    await prisma.quizSessionQuestion.deleteMany({ where: { session: { userId } } });
+    await prisma.quizSession.deleteMany({ where: { userId } });
+    await prisma.userQuestionHistory.deleteMany({ where: { userId } });
+    await prisma.userPerformanceSummary.deleteMany({ where: { userId } });
   }
 
   /** Phone is fixed by Firebase auth — never editable here. */

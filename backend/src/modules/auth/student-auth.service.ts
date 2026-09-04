@@ -159,14 +159,22 @@ export class StudentAuthService {
       return;
     }
 
-    const count = await prisma.device.count({ where: { userId } });
-    if (count >= MAX_DEVICES_PER_ACCOUNT) {
-      const devices = await prisma.device.findMany({
-        where: { userId },
-        select: { deviceId: true, label: true, lastSeenAt: true },
-        orderBy: { lastSeenAt: 'asc' },
-      });
-      throw new DeviceLimitReachedError(devices);
+    // Test Accounts (finalized requirement — "no restrictions of any
+    // kind" for the admin's own account) skip the 2-device cap entirely,
+    // same principle as every other quota/access rule they already
+    // bypass. New devices still get tracked normally (useful to see, just
+    // never blocked or counted against a limit).
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { isTestAccount: true } });
+    if (!user?.isTestAccount) {
+      const count = await prisma.device.count({ where: { userId } });
+      if (count >= MAX_DEVICES_PER_ACCOUNT) {
+        const devices = await prisma.device.findMany({
+          where: { userId },
+          select: { deviceId: true, label: true, lastSeenAt: true },
+          orderBy: { lastSeenAt: 'asc' },
+        });
+        throw new DeviceLimitReachedError(devices);
+      }
     }
 
     await prisma.device.create({ data: { userId, deviceId, label } });
@@ -297,6 +305,18 @@ export class StudentAuthService {
     // incrementing sessionVersion here invalidates whatever token was
     // issued to any OTHER device, since requireStudentAuth below rejects
     // any token whose embedded version doesn't match the CURRENT value.
+    //
+    // Test Accounts (finalized requirement — "no restrictions of any
+    // kind" for the admin's own account) are exempt: sessionVersion is
+    // left untouched, so every token ever issued to this account — on
+    // any number of devices, logged in at any time — stays valid
+    // indefinitely instead of the newest login kicking the others out.
+    const existing = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { isTestAccount: true, sessionVersion: true } });
+    if (existing.isTestAccount) {
+      const token = jwt.sign({ userId, sessionVersion: existing.sessionVersion }, JWT_SECRET, { expiresIn: '30d' });
+      return { token, userId };
+    }
+
     const user = await prisma.user.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } });
     const token = jwt.sign({ userId, sessionVersion: user.sessionVersion }, JWT_SECRET, { expiresIn: '30d' });
     return { token, userId };
