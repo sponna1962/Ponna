@@ -35,6 +35,33 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     description: "Fetch the student's own tracked performance summary (accuracy and question count, overall and by difficulty). Use this for performance analysis or 'what should I study' type questions.",
     parameters: { type: 'object', properties: {}, required: [] },
   },
+  {
+    name: 'find_exam',
+    description: "Look up a TNPSC/TNTET exam by name (e.g. 'Group IV', 'Group I', 'TNTET') to get its exact id, needed before calling get_exam_info or get_exam_syllabus. Always call this FIRST when the student mentions an exam by name, before assuming you know which exam they mean.",
+    parameters: {
+      type: 'object',
+      properties: { examName: { type: 'string', description: "The exam name as the student said it, e.g. 'Group 4' or 'TNTET'" } },
+      required: ['examName'],
+    },
+  },
+  {
+    name: 'get_exam_info',
+    description: "Fetch PONNA's verified, admin-checked exam information for one specific exam (application dates, exam date, paper pattern, eligibility, important notes) -- each fact includes its source and the date it was last verified. THIS is the only source of truth for exam schedule/dates/pattern/eligibility -- never answer these from your own memory, since they change over time and PONNA's verified data may not cover everything. If a fact isn't returned, say plainly that it's not on file rather than guessing.",
+    parameters: {
+      type: 'object',
+      properties: { subCategoryId: { type: 'string', description: 'The exam id, from find_exam' } },
+      required: ['subCategoryId'],
+    },
+  },
+  {
+    name: 'get_exam_syllabus',
+    description: "Fetch the official Subject -> Topic syllabus structure for one specific exam. Use this when discussing what the student needs to study for a specific exam.",
+    parameters: {
+      type: 'object',
+      properties: { subCategoryId: { type: 'string', description: 'The exam id, from find_exam' } },
+      required: ['subCategoryId'],
+    },
+  },
 ];
 
 export class ToolLayerError extends Error {}
@@ -75,6 +102,42 @@ export async function executeTool(userId: string, toolName: string, args: Record
     case 'get_my_performance_summary': {
       const rows = await prisma.userPerformanceSummary.findMany({ where: { userId } });
       return rows.map((r) => ({ bucket: r.bucket, questionsAnswered: r.questionsAnswered, correctAnswers: r.correctAnswers, averagePercent: r.averagePercent }));
+    }
+
+    case 'find_exam': {
+      const examName = (args.examName as string) ?? '';
+      const matches = await prisma.examSubCategory.findMany({
+        where: { studentVisible: true, name: { contains: examName, mode: 'insensitive' } },
+        select: { id: true, name: true },
+        take: 5,
+      });
+      if (matches.length === 0) return { found: false, message: `No exam matching "${examName}" found in PONNA.` };
+      return { found: true, matches };
+    }
+
+    case 'get_exam_info': {
+      const subCategoryId = args.subCategoryId as string;
+      if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
+      const facts = await prisma.verifiedExamFact.findMany({
+        where: { subCategoryId },
+        select: { factType: true, value: true, sourceUrl: true, verifiedAt: true },
+        orderBy: { verifiedAt: 'desc' },
+      });
+      if (facts.length === 0) {
+        return { hasVerifiedInfo: false, message: 'No verified exam information is on file for this exam yet in PONNA -- direct the student to the official TNPSC notification for schedule/eligibility details.' };
+      }
+      return { hasVerifiedInfo: true, facts };
+    }
+
+    case 'get_exam_syllabus': {
+      const subCategoryId = args.subCategoryId as string;
+      if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
+      const subjects = await prisma.syllabusSubject.findMany({
+        where: { subCategoryId },
+        include: { topics: { select: { name: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] } },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      });
+      return subjects.map((s) => ({ subject: s.name, topics: s.topics.map((t) => t.name) }));
     }
 
     default:

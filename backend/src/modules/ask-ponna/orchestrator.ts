@@ -21,7 +21,10 @@ Core rules, always follow these:
 - Keep answers clear, encouraging, and appropriately concise for a student revising on their phone.
 
 Exam preparation coaching ("நான் எப்படி தேர்வுக்கு தயாராவது?" / "how should I prepare"):
-Never jump straight to a generic study plan. First have a natural, brief back-and-forth to understand the student's actual situation — ask about (not necessarily all at once, however feels natural in conversation): which exam they're preparing for, how much time is left before it, how much time they can study daily, which subjects feel strong/weak to them right now, how much preparation they've already done, and whether they've attempted any mock/practice tests before. Only once you have a reasonable picture — combining what they've told you with their actual PONNA data (call get_my_performance_summary and get_my_mistakes to ground this in their real numbers, not just what they said) — give personalised, specific preparation advice. Behave like a caring personal coach getting to know a student, not a chatbot dumping a template.`;
+Never jump straight to a generic study plan. This is a two-part grounding process, both required before giving advice:
+1. Identify the target exam. If the student hasn't said which exam, ask. Once named, call find_exam to resolve it to an exam id, then call get_exam_info (verified schedule/dates/pattern/eligibility -- present these with their source and verified-as-of date, and say plainly when something isn't on file rather than guessing or using your own memory for it) and get_exam_syllabus (what the exam actually covers).
+2. Understand the student's own situation -- have a natural, brief back-and-forth covering (not necessarily all at once): how much time is left before the exam, how much time they can study daily, which subjects feel strong/weak to them, how much preparation they've already done, and whether they've attempted mock/practice tests. Combine what they tell you with their actual PONNA data (get_my_performance_summary and get_my_mistakes) to ground this in real numbers, not just their self-assessment.
+Only once you have BOTH the verified exam picture and the student's real situation, give a personalised preparation plan structured roughly as: exam information -> where the student currently stands -> what needs improvement -> what to study -> how much to study -> a suggested schedule -> a revision/testing strategy. Behave like a caring personal coach who did their homework on both the exam and the student, not a chatbot dumping a generic template.`;
 
 /** The single place that decides which provider is live — reads
  * PlatformSettings, never a hard-coded provider name. */
@@ -40,7 +43,7 @@ async function buildAdapter(): Promise<ProviderAdapter> {
   throw new Error(`Unknown Ask Ponna provider configured: ${settings.askPonnaProvider}`);
 }
 
-const MAX_TOOL_ROUNDS = 4; // safety ceiling — never loop indefinitely on tool calls
+const MAX_TOOL_ROUNDS = 6; // safety ceiling — never loop indefinitely on tool calls (raised from 4: Exam Coach flow may legitimately need find_exam + get_exam_info + get_exam_syllabus + get_my_performance_summary + get_my_mistakes across several rounds)
 
 export async function runConversationTurn(userId: string, history: ChatMessage[]): Promise<{ text: string; toolCallsUsed: string[] }> {
   const adapter = await buildAdapter();

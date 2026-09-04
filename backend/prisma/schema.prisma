@@ -658,6 +658,7 @@ model ExamSubCategory {
   taxonomyTags QuestionTaxonomyTag[]
   syllabusSubjects SyllabusSubject[]
   subjectTopicPreferences StudentSubjectTopicPreference[]
+  verifiedExamFacts VerifiedExamFact[]
   // Student-facing launch visibility (finalized requirement — same
   // display/selection-only gate already used on ExamAuthority/ExamPurpose,
   // extended down to this level) — hides a Sub-Category that isn't an
@@ -705,6 +706,39 @@ model SyllabusTopic {
   questions Question[]
 
   @@unique([subjectId, name])
+}
+
+// ── Verified Exam Information (finalized requirement — Ask Ponna's Exam
+// Preparation Coach flow, Specification v3) ─────────────────────────────
+// Admin-maintained, source-and-date-stamped facts about one specific TNPSC
+// exam (application dates, exam date, paper structure, eligibility,
+// important notes) — the "verified/current exam information layer" the
+// AI must read from via the get_exam_info tool, NEVER answer these from
+// its own training memory. Every fact is individually source+date
+// stamped so the AI can present "as of [date], per [source]" rather than
+// asserting silently, and so an admin reviewing this list can see at a
+// glance which facts are stale and need re-checking against the official
+// TNPSC notification.
+enum VerifiedExamFactType {
+  APPLICATION_START_DATE
+  APPLICATION_END_DATE
+  EXAM_DATE
+  EXAM_PATTERN
+  ELIGIBILITY
+  IMPORTANT_NOTE
+  OTHER
+}
+
+model VerifiedExamFact {
+  id            String               @id @default(uuid())
+  subCategoryId String
+  subCategory   ExamSubCategory      @relation(fields: [subCategoryId], references: [id])
+  factType      VerifiedExamFactType
+  value         String               // the fact itself, plain text
+  sourceUrl     String?              // link to the official notification/page this was checked against
+  verifiedAt    DateTime             // when an admin last confirmed this against the official source
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────

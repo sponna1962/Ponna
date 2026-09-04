@@ -142,6 +142,131 @@ export default function SyllabusPage() {
           + Add Subject
         </button>
       </div>
+
+      {selectedExamId && <ExamFactsSection examId={selectedExamId} />}
+    </div>
+  );
+}
+
+// ── Verified Exam Facts (finalized requirement — Ask Ponna's Exam
+// Preparation Coach flow reads from this, never from AI memory) ────────
+type FactType = 'APPLICATION_START_DATE' | 'APPLICATION_END_DATE' | 'EXAM_DATE' | 'EXAM_PATTERN' | 'ELIGIBILITY' | 'IMPORTANT_NOTE' | 'OTHER';
+type ExamFact = { id: string; factType: FactType; value: string; sourceUrl: string | null; verifiedAt: string };
+
+const FACT_TYPE_LABELS: Record<FactType, string> = {
+  APPLICATION_START_DATE: 'Application Start Date',
+  APPLICATION_END_DATE: 'Application Last Date',
+  EXAM_DATE: 'Exam Date',
+  EXAM_PATTERN: 'Exam Pattern / Paper Structure',
+  ELIGIBILITY: 'Eligibility',
+  IMPORTANT_NOTE: 'Important Note',
+  OTHER: 'Other',
+};
+
+function ExamFactsSection({ examId }: { examId: string }) {
+  const [facts, setFacts] = useState<ExamFact[]>([]);
+  const [factType, setFactType] = useState<FactType>('EXAM_DATE');
+  const [value, setValue] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [verifiedAt, setVerifiedAt] = useState(() => new Date().toISOString().slice(0, 10));
+
+  function load() {
+    adminFetch(`/admin/exam-facts/${examId}`).then((r) => r.json()).then(setFacts);
+  }
+
+  useEffect(load, [examId]);
+
+  async function addFact() {
+    if (!value.trim()) return;
+    await adminFetch(`/admin/exam-facts/${examId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ factType, value, sourceUrl, verifiedAt }),
+    });
+    setValue('');
+    setSourceUrl('');
+    load();
+  }
+
+  async function deleteFact(id: string) {
+    if (!confirm('Delete this verified fact?')) return;
+    await adminFetch(`/admin/exam-facts/${id}`, { method: 'DELETE' });
+    load();
+  }
+
+  const daysSinceVerified = (d: string) => Math.floor((Date.now() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
+
+  return (
+    <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
+      <h2 style={{ fontSize: 17, marginBottom: 4 }}>Verified Exam Information</h2>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+        What Ask Ponna's Exam Coach reads for schedule/dates/pattern/eligibility — always source and verification-date stamped, never from the AI's own memory.
+      </p>
+
+      {facts.map((f) => {
+        const stale = daysSinceVerified(f.verifiedAt) > 90;
+        return (
+          <div key={f.id} style={{ border: `1px solid ${stale ? '#fca5a5' : '#e2e8f0'}`, borderRadius: 8, padding: 12, marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>
+                  {FACT_TYPE_LABELS[f.factType]}
+                </span>
+                <p style={{ fontSize: 14, margin: '6px 0 4px' }}>{f.value}</p>
+                <p style={{ fontSize: 11, color: stale ? '#dc2626' : '#94a3b8' }}>
+                  Verified {new Date(f.verifiedAt).toLocaleDateString()} {stale && '— over 90 days old, please re-check'}
+                  {f.sourceUrl && (
+                    <>
+                      {' · '}
+                      <a href={f.sourceUrl} target="_blank" rel="noreferrer">
+                        source
+                      </a>
+                    </>
+                  )}
+                </p>
+              </div>
+              <button onClick={() => deleteFact(f.id)} style={{ fontSize: 11, color: '#dc2626' }}>
+                Delete
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      {facts.length === 0 && <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>No verified facts on file for this exam yet.</p>}
+
+      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginTop: 12 }}>
+        <select value={factType} onChange={(e) => setFactType(e.target.value as FactType)} style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, marginBottom: 8, width: '100%' }}>
+          {Object.entries(FACT_TYPE_LABELS).map(([k, label]) => (
+            <option key={k} value={k}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <textarea
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="The fact itself, e.g. 'Group IV Mains exam scheduled for 12 October 2026'"
+          rows={2}
+          style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, marginBottom: 8, boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <input
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="Source URL (tnpsc.gov.in link)"
+            style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          />
+          <input
+            type="date"
+            value={verifiedAt}
+            onChange={(e) => setVerifiedAt(e.target.value)}
+            style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          />
+        </div>
+        <button onClick={addFact} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13 }}>
+          + Add Verified Fact
+        </button>
+      </div>
     </div>
   );
 }

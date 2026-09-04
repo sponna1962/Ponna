@@ -31,6 +31,7 @@ import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modu
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
+import { ExamFactsService } from './modules/admin/exam-facts.service';
 import { DailyQuizType } from '@prisma/client';
 import { ProfileService } from './modules/profile/profile.service';
 
@@ -88,6 +89,7 @@ const askPonnaService = new AskPonnaService();
 const subjectPreferenceService = new SubjectPreferenceService();
 const dailyQuizService = new DailyQuizService();
 const syllabusService = new SyllabusService();
+const examFactsService = new ExamFactsService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -1269,6 +1271,46 @@ app.delete('/admin/syllabus/topics/:id', requireStaffAuth, requireRole('SUPER_AD
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete topic' });
+  }
+});
+
+// ── Verified Exam Facts — admin management (finalized requirement, Ask
+// Ponna Exam Preparation Coach) ─────────────────────────────────────────
+
+app.get('/admin/exam-facts/:subCategoryId', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await examFactsService.listForExam(req.params.subCategoryId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load exam facts' });
+  }
+});
+
+app.post('/admin/exam-facts/:subCategoryId', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await examFactsService.create(req.params.subCategoryId, req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add exam fact' });
+  }
+});
+
+app.patch('/admin/exam-facts/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await examFactsService.update(req.params.id, req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update exam fact' });
+  }
+});
+
+app.delete('/admin/exam-facts/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await examFactsService.delete(req.params.id);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete exam fact' });
   }
 });
 
