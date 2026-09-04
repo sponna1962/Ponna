@@ -113,6 +113,12 @@ export const translations = {
       lockedBody: 'இந்த வசதி Annual Plan-உடையவர்களுக்கு மட்டும் கிடைக்கும்.',
       analyzeMyMistakes: 'இந்த தவறுகளை Ask Ponna-விடம் ஆய்வு செய்யச் சொல்லுங்கள்',
       contextPrefillMistakes: 'என் தவறுகளை ஆய்வு செய்து, என்ன பலவீனம் என்று சொல்லுங்கள்.',
+      suggestedActions: [
+        '🎯 நான் எப்படி தேர்வுக்கு தயாராவது?',
+        '📚 ஒரு கேள்வியை விளக்குங்கள்',
+        '❌ நான் செய்த தவறை விளக்குங்கள்',
+        '📊 என் செயல்திறனைப் பகுப்பாய்வு செய்யுங்கள்',
+      ],
     },
     subjectPreference: {
       title: 'பாடம் & தலைப்பு விருப்பம்',
@@ -370,6 +376,12 @@ export const translations = {
       lockedBody: 'This feature is available for Annual Plan holders only.',
       analyzeMyMistakes: 'Ask Ponna to analyze these mistakes',
       contextPrefillMistakes: 'Analyze my mistakes and tell me my weak areas.',
+      suggestedActions: [
+        '🎯 நான் எப்படி தேர்வுக்கு தயாராவது?',
+        '📚 ஒரு கேள்வியை விளக்குங்கள்',
+        '❌ நான் செய்த தவறை விளக்குங்கள்',
+        '📊 என் செயல்திறனைப் பகுப்பாய்வு செய்யுங்கள்',
+      ],
     },
     subjectPreference: {
       title: 'Subject & Topic Preference',

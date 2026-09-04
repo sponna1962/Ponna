@@ -50,9 +50,10 @@ export default function AskPonnaPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  async function send() {
-    if (!input.trim() || sending) return;
-    const userMessage = input.trim();
+  async function send(overrideText?: string) {
+    const toSend = overrideText ?? input;
+    if (!toSend.trim() || sending) return;
+    const userMessage = toSend.trim();
     setInput('');
     setError(null);
     setMessages((prev) => [...prev, { role: 'USER', content: userMessage }]);
@@ -117,7 +118,30 @@ export default function AskPonnaPage() {
 
       <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
         {messages.length === 0 && accessState !== 'locked' && (
-          <p style={{ fontSize: 13, color: COLORS.inkMuted, textAlign: 'center', marginTop: 40 }}>{t.askPonna.emptyState}</p>
+          <div style={{ marginTop: 24 }}>
+            <p style={{ fontSize: 13, color: COLORS.inkMuted, textAlign: 'center', marginBottom: 16 }}>{t.askPonna.emptyState}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {t.askPonna.suggestedActions.map((action) => (
+                <button
+                  key={action}
+                  onClick={() => send(action)}
+                  disabled={sending}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    borderRadius: 10,
+                    border: `1px solid ${COLORS.line}`,
+                    background: COLORS.paperAlt,
+                    color: COLORS.ink,
+                    fontSize: 13.5,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {action}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {messages.map((m, i) => (
           <div
@@ -159,7 +183,7 @@ export default function AskPonnaPage() {
             style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${COLORS.line}`, fontSize: 14 }}
           />
           <button
-            onClick={send}
+            onClick={() => send()}
             disabled={sending || !input.trim()}
             style={{ padding: '12px 18px', borderRadius: 10, border: 'none', background: COLORS.ink, color: COLORS.paper, fontWeight: 600 }}
           >
