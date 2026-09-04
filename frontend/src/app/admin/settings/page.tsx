@@ -19,6 +19,12 @@ type Settings = {
   aiConfidenceThreshold: number;
   rankingEligibilityMinQuestions: number;
   sessionInactivityHours: number;
+  subjectTopicPreferenceWeightPercent: number;
+  askPonnaEnabled: boolean;
+  askPonnaProvider: string;
+  askPonnaModel: string;
+  askPonnaDailyLimitFree: number;
+  askPonnaDailyLimitPaid: number;
 };
 
 export default function SettingsPage() {
@@ -113,6 +119,43 @@ export default function SettingsPage() {
       <Section title="Quiz Sessions (§4.3)">
         <Field label="Inactivity hours before a session is marked abandoned">
           <NumberInput value={settings.sessionInactivityHours} onChange={(v) => update('sessionInactivityHours', v)} disabled={!isSuperAdmin} />
+        </Field>
+      </Section>
+
+      <Section title="Subject & Topic Preference — Stage 2 Allocation">
+        <Field label="Preferred Subject/Topic weight (%)">
+          <NumberInput value={settings.subjectTopicPreferenceWeightPercent} onChange={(v) => update('subjectTopicPreferenceWeightPercent', v)} disabled={!isSuperAdmin} />
+        </Field>
+      </Section>
+
+      <Section title="Ask Ponna (Specification v3 — Gemini as initial provider)">
+        <Field label="Enabled (Coming Soon toggle)">
+          <input
+            type="checkbox"
+            checked={settings.askPonnaEnabled}
+            disabled={!isSuperAdmin}
+            onChange={(e) => update('askPonnaEnabled', e.target.checked)}
+          />
+        </Field>
+        <Field label="Provider">
+          <select value={settings.askPonnaProvider} onChange={(e) => update('askPonnaProvider', e.target.value)} disabled={!isSuperAdmin} style={selectStyle}>
+            <option value="gemini">Gemini</option>
+          </select>
+        </Field>
+        <Field label="Model">
+          <input
+            type="text"
+            value={settings.askPonnaModel}
+            disabled={!isSuperAdmin}
+            onChange={(e) => update('askPonnaModel', e.target.value)}
+            style={{ width: 220, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          />
+        </Field>
+        <Field label="Daily message limit — Free tier">
+          <NumberInput value={settings.askPonnaDailyLimitFree} onChange={(v) => update('askPonnaDailyLimitFree', v)} disabled={!isSuperAdmin} />
+        </Field>
+        <Field label="Daily message limit — Paid tier">
+          <NumberInput value={settings.askPonnaDailyLimitPaid} onChange={(v) => update('askPonnaDailyLimitPaid', v)} disabled={!isSuperAdmin} />
         </Field>
       </Section>
 
