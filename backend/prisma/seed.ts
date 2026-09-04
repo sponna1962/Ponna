@@ -276,13 +276,165 @@ async function main() {
     'Authors and their Literary Works',
   ]);
 
-  // Other TNPSC Groups — Subject headers only for now, topics to be added
-  // via the admin Subject & Topic page as each Group's syllabus is
-  // verified and entered (finalized requirement scope: master structure
-  // first, content can be completed incrementally without a deploy).
-  for (const groupName of ['Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group V', 'Group VI', 'Group VII', 'Group VIII']) {
-    await seedSyllabusSubject(groupName, 'General Studies', []);
-    await seedSyllabusSubject(groupName, 'Aptitude & Mental Ability', []);
+  // Group I-B, Group I-C — posts within the same Combined Civil Services
+  // Examination-I (Group I) notification, sharing Group I's own Prelims
+  // syllabus (verified above) rather than a separate one.
+  for (const groupName of ['Group I-B', 'Group I-C']) {
+    await seedSyllabusSubject(groupName, 'General Science', [
+      'Scientific Temper, Reasoning & Nature of Science',
+      'Physics — Mechanics, Electricity, Magnetism, Light, Sound, Heat, Nuclear Physics, Electronics',
+      'Chemistry — Elements, Compounds, Acids, Bases, Salts, Petroleum Products, Fertilizers, Pesticides',
+      'Life Science — Classification, Evolution, Genetics, Physiology, Nutrition, Health & Hygiene, Human Diseases',
+      'Environment and Ecology',
+      'Latest Inventions in Science & Technology',
+      'Current Affairs (Science)',
+    ]);
+    await seedSyllabusSubject(groupName, 'Geography of India', [
+      'Location, Physical Features, Monsoon, Rainfall, Weather and Climate',
+      'Water Resources, Rivers, Soil, Minerals and Natural Resources',
+      'Forest and Wildlife, Agricultural Pattern',
+      'Transport and Communication',
+      'Social Geography — Population Density, Distribution, Racial and Linguistic Groups, Major Tribes',
+      'Natural Calamity and Disaster Management',
+      'Environmental Pollution, Climate Change, Green Energy, Geographical Landmarks',
+    ]);
+    await seedSyllabusSubject(groupName, 'History, Culture of India, and Indian National Movement', [
+      'Indus Valley Civilization, Guptas, Delhi Sultans, Mughals, Marathas, Vijayanagaram and Bahmani Kingdoms, South Indian History',
+      'National Renaissance and Early Uprisings Against British Rule',
+      'Indian National Congress and Emergence of National Leaders',
+      'Modes of Agitation — Satyagraha and Militant Movements, Communalism and Partition',
+      'Characteristics of Indian Culture, Unity in Diversity',
+      'India as a Secular State, Social Harmony, Prominent Personalities',
+      'National Symbols, Eminent Personalities, Sports, Books and Authors',
+    ]);
+    await seedSyllabusSubject(groupName, 'Indian Polity', [
+      'Constitution of India — Preamble and Salient Features',
+      'Union, State and Union Territory',
+      'Citizenship, Fundamental Rights, Fundamental Duties, Directive Principles',
+      'Union Executive, Union Legislature, State Executive, State Legislature, Local Government, Panchayat Raj',
+      'Federalism — Centre-State Relationships',
+      'Elections, Judiciary in India, Rule of Law',
+      'Corruption in Public Life, Anti-Corruption Measures, Lokpal and Lokayukta, Right to Information',
+      'Political Parties and Political System in India',
+    ]);
+    await seedSyllabusSubject(groupName, 'Indian Economy and Development Administration in Tamil Nadu', [
+      'Nature of Indian Economy, Five-Year Plan Models, Planning Commission and NITI Aayog',
+      'Sources of Revenue, RBI, Fiscal and Monetary Policy, Finance Commission, GST',
+      'Structure of Indian Economy, Employment Generation, Land Reforms and Agriculture',
+      'Industrial Growth, Rural Welfare Programmes, Population, Education, Health, Poverty',
+      'Human Development Indicators in Tamil Nadu',
+      'Geography of Tamil Nadu and its Impact on Economic Growth',
+      'e-Governance in Tamil Nadu, Public Awareness and General Administration',
+    ]);
+    await seedSyllabusSubject(groupName, 'History, Culture, Heritage, and Socio-Political Movements in Tamil Nadu', [
+      'History of Tamil Society, Archaeological Discoveries, Tamil Literature from Sangam Age to Contemporary Times',
+      'Thirukkural — Significance, Universal Values, Relevance to Socio-Political-Economic Affairs',
+      'Role of Tamil Nadu in the Freedom Struggle, Role of Women',
+      '19th and 20th Century Socio-Political Movements — Justice Party, Self-Respect Movement, Dravidian Movement',
+    ]);
+    await seedSyllabusSubject(groupName, 'Aptitude & Mental Ability', [
+      'Simplification', 'Percentage', 'HCF and LCM', 'Ratio and Proportion',
+      'Simple Interest', 'Compound Interest', 'Area', 'Volume', 'Time and Work',
+      'Logical Reasoning', 'Puzzles', 'Dice', 'Visual Reasoning', 'Alphanumeric Reasoning', 'Number Series',
+    ]);
+  }
+
+  // Group II and Group IIA — Combined Civil Services Examination-II
+  // (CCSE-II), share ONE Common Preliminary Examination; verified
+  // question-count weightage per subject from TNPSC's own syllabus
+  // documents (codes 495/469/583).
+  for (const groupName of ['Group II', 'Group IIA']) {
+    await seedSyllabusSubject(groupName, 'General Science', ['Physics', 'Chemistry', 'Botany', 'Zoology', 'Current Events in Science']);
+    await seedSyllabusSubject(groupName, 'Geography of India', [
+      'Location, Physical Features, Monsoon, Rainfall, Weather and Climate',
+      'Water Resources, Rivers, Soil, Minerals and Natural Resources',
+      'Forest and Wildlife, Agricultural Pattern',
+      'Social Geography — Population, Natural Calamities and Disaster Management',
+    ]);
+    await seedSyllabusSubject(groupName, 'History and Indian National Movement', [
+      'Indus Valley Civilization, Guptas, Delhi Sultans, Mughals, Marathas, South Indian History',
+      'National Renaissance, Early Uprisings, Indian National Congress and National Leaders',
+      'Modes of Agitation, Communalism and Partition',
+    ]);
+    await seedSyllabusSubject(groupName, 'Indian Polity', [
+      'Constitution of India — Preamble and Salient Features, Citizenship',
+      'Fundamental Rights, Fundamental Duties, Directive Principles',
+      'Union and State Executive/Legislature, Local Government, Panchayat Raj',
+      'Judiciary, Elections, Rule of Law',
+      'Anti-Corruption Measures, Right to Information, Empowerment of Women',
+    ]);
+    await seedSyllabusSubject(groupName, 'Indian Economy and Tamil Nadu Development', [
+      'Nature of Indian Economy, Five-Year Plans, Planning Commission and NITI Aayog',
+      'RBI, Fiscal and Monetary Policy, GST',
+      'Land Reforms and Agriculture, Industrial Growth, Rural Welfare Programmes',
+      'Human Development Indicators and Economic Trends in Tamil Nadu',
+      'e-Governance in Tamil Nadu',
+    ]);
+    await seedSyllabusSubject(groupName, 'History, Culture and Socio-Political Movements of Tamil Nadu', [
+      'Tamil Society, Sangam Literature, Culture and Heritage of Tamil People',
+      'Thirukkural — Significance and Universal Values',
+      'Role of Tamil Nadu in the Freedom Struggle',
+      'Self-Respect Movement and Dravidian Movement',
+    ]);
+    await seedSyllabusSubject(groupName, 'Aptitude & Mental Ability', [
+      'Simplification', 'Percentage', 'HCF and LCM', 'Ratio and Proportion',
+      'Simple Interest', 'Compound Interest', 'Area', 'Volume', 'Time and Work',
+      'Logical Reasoning', 'Puzzles', 'Number Series', 'Dice', 'Visual and Alphanumeric Reasoning',
+    ]);
+    await seedSyllabusSubject(groupName, 'General Tamil / General English', [
+      'Grammar — Articles, Prepositions, Tense, Voice, Question Tags',
+      'Comprehension and Sentence Structure',
+      'Literature — Poetry Appreciation, Prose, Figures of Speech',
+      'Authors and their Literary Works',
+    ]);
+  }
+
+  // Group III — Tamil Language/General English (SSLC), General Studies
+  // (Higher Secondary level, includes a dedicated Tamil Nadu History/
+  // Culture unit), Aptitude & Mental Ability (SSLC).
+  await seedSyllabusSubject('Group III', 'General Studies', [
+    'General Science and Current Events',
+    'Geography of India and Tamil Nadu',
+    'History and Culture of India and Tamil Nadu',
+    'Indian Polity — Constitution, Rights, Duties, Governance',
+    'Indian Economy and Social Issues in Tamil Nadu',
+    'History, Culture, Heritage, and Socio-Political Movements of Tamil Nadu',
+  ]);
+  await seedSyllabusSubject('Group III', 'Aptitude & Mental Ability', [
+    'Simplification', 'Percentage', 'HCF and LCM', 'Ratio and Proportion',
+    'Simple Interest', 'Compound Interest', 'Area', 'Volume', 'Time and Work',
+    'Logical Reasoning', 'Number Series', 'Puzzles', 'Visual and Alphanumeric Reasoning',
+  ]);
+  await seedSyllabusSubject('Group III', 'General Tamil / General English', [
+    'Grammar — Articles, Prepositions, Tense, Voice',
+    'Comprehension, Synonyms and Antonyms, Prefix and Suffix',
+    'Prescribed Prose and Poetry',
+  ]);
+
+  // Group V, VI, VII, VIII — not standard, independently-published TNPSC
+  // Group designations with their own syllabus documents (TNPSC's
+  // official Groups are I, II, IIA, III, and IV; roles beyond that are
+  // typically named by their specific service, not a numbered "Group").
+  // Seeded here with the SAME General Studies + Aptitude structure that's
+  // genuinely common across every verified TNPSC group exam above, as a
+  // reasonable starting point — please verify/adjust via the admin
+  // Subject & Topic page against the actual notification if these
+  // correspond to specific real exams, rather than treating this as
+  // independently-sourced official content the way Groups I-III/IV are.
+  for (const groupName of ['Group V', 'Group VI', 'Group VII', 'Group VIII']) {
+    await seedSyllabusSubject(groupName, 'General Studies', [
+      'General Science and Current Events',
+      'Geography of India and Tamil Nadu',
+      'History and Culture of India and Tamil Nadu',
+      'Indian Polity',
+      'Indian Economy',
+      'History, Culture and Socio-Political Movements of Tamil Nadu',
+    ]);
+    await seedSyllabusSubject(groupName, 'Aptitude & Mental Ability', [
+      'Simplification', 'Percentage', 'HCF and LCM', 'Ratio and Proportion',
+      'Simple Interest', 'Compound Interest', 'Area', 'Volume', 'Time and Work',
+      'Logical Reasoning', 'Number Series', 'Puzzles', 'Visual and Alphanumeric Reasoning',
+    ]);
   }
 
   // Employment / Recruitment — TRB gets its full category structure (finalized
