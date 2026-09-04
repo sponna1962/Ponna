@@ -466,6 +466,21 @@ export default function QuizStartPage() {
                               </Section>
                             );
                           })}
+
+                        {/* Subject Preference (finalized requirement) — only
+                            shown once the selection resolves to exactly ONE
+                            specific exam (Sub-Category), matching Stage 2's
+                            own eligibility rule for when a preference lookup
+                            makes sense at all. Optional, underlined, no
+                            permanent screen real estate — the picker only
+                            appears in the modal on tap. */}
+                        {!authSel.allCategories &&
+                          authSel.categories.map((catSel) => {
+                            const category = authority.categories.find((c) => c.id === catSel.categoryId);
+                            if (!category || category.subCategories.length === 0) return null;
+                            if (catSel.allSubCategories || catSel.subCategoryIds.length !== 1) return null;
+                            return <SubjectPreferenceField key={catSel.categoryId} subCategoryId={catSel.subCategoryIds[0]} t={t} />;
+                          })}
                       </div>
                     );
                   })}
@@ -569,6 +584,107 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
     >
       {active ? `${label} ×` : label}
     </button>
+  );
+}
+
+// Subject Preference (finalized requirement — "Exam -> Subject Preference
+// only" phase, no Topic Preference UI). Self-contained: fetches its own
+// Subject list + saved preference for the given exam, manages its own
+// modal, saves immediately on "Done" (topicIds always sent empty — this
+// phase never touches topic-level preference). Reuses Stage 1's existing
+// /subject-preference/* routes as-is, no backend changes needed here.
+type PrefSubject = { id: string; name: string };
+
+function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t: any }) {
+  const [subjects, setSubjects] = useState<PrefSubject[] | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [open, setOpen] = useState(false);
+  const [draftIds, setDraftIds] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSubjects(null);
+    setSelectedIds(new Set());
+    Promise.all([
+      studentFetch(`/subject-preference/${subCategoryId}/syllabus`).then((r) => r.json()),
+      studentFetch(`/subject-preference/${subCategoryId}`).then((r) => r.json()),
+    ]).then(([syllabus, pref]: [{ id: string; name: string }[], { subjectIds?: string[] }]) => {
+      setSubjects(syllabus);
+      setSelectedIds(new Set(pref.subjectIds ?? []));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subCategoryId]);
+
+  function openModal() {
+    setDraftIds(new Set(selectedIds));
+    setOpen(true);
+  }
+
+  function toggleDraft(id: string) {
+    setDraftIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function done() {
+    setSaving(true);
+    await studentFetch(`/subject-preference/${subCategoryId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subjectIds: Array.from(draftIds), topicIds: [] }),
+    });
+    setSelectedIds(new Set(draftIds));
+    setSaving(false);
+    setOpen(false);
+  }
+
+  if (!subjects || subjects.length === 0) return null; // no syllabus seeded for this exam yet — field doesn't appear at all
+
+  const selectedNames = subjects.filter((s) => selectedIds.has(s.id)).map((s) => s.name);
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <h2 style={{ fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 6 }}>{t.practiceSetup.subjectPreferenceTitle}</h2>
+      <button
+        onClick={openModal}
+        style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 13, color: '#0f172a', textDecoration: 'underline', cursor: 'pointer' }}
+      >
+        {selectedNames.length > 0 ? selectedNames.join(', ') : t.practiceSetup.chooseSubjects}
+      </button>
+
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: 20, width: '100%', maxWidth: 480, margin: '0 auto', maxHeight: '70vh', overflowY: 'auto' }}
+          >
+            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{t.practiceSetup.chooseSubjects}</h3>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{t.practiceSetup.subjectPreferenceNote}</p>
+
+            {subjects.map((s) => (
+              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
+                <input type="checkbox" checked={draftIds.has(s.id)} onChange={() => toggleDraft(s.id)} />
+                {s.name}
+              </label>
+            ))}
+
+            <button
+              onClick={done}
+              disabled={saving}
+              style={{ width: '100%', padding: 12, borderRadius: 10, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, marginTop: 16 }}
+            >
+              {saving ? '…' : t.practiceSetup.done}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
