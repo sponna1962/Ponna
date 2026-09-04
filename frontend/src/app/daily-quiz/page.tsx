@@ -145,7 +145,7 @@ export default function DailyQuizPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setError(body.error ?? 'Could not start Daily Quiz.');
+        setError(body.error ?? 'Could not start. Please try again.');
         return;
       }
       const attempt = await res.json();
@@ -229,7 +229,7 @@ export default function DailyQuizPage() {
             cursor: 'pointer',
           }}
         >
-          {qt === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge}
+          {qt === 'DAILY_QUIZ' ? t.dailyQuiz.currentAffairs : t.dailyQuiz.brainChallenge}
         </button>
       ))}
     </div>
@@ -242,7 +242,7 @@ export default function DailyQuizPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <StudentMenu />
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>
-            {quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge}
+            {t.menu.dailyQuiz}
           </h1>
         </div>
         {tabs}
@@ -259,7 +259,7 @@ export default function DailyQuizPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <StudentMenu />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>
-          {quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge}
+          {t.menu.dailyQuiz}
         </h1>
       </div>
       {tabs}
@@ -269,7 +269,7 @@ export default function DailyQuizPage() {
       {state?.access === 'FREE_LOCKED' && (
         <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 24, background: COLORS.goldLight, textAlign: 'center' }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>
-            🔒 {quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge} — {t.dailyQuiz.lockedSuffix}
+            🔒 {quizType === 'DAILY_QUIZ' ? t.dailyQuiz.currentAffairs : t.dailyQuiz.brainChallenge} — {t.dailyQuiz.lockedSuffix}
           </p>
           <p style={{ fontSize: 13, color: '#5C4009', marginBottom: 16 }}>{t.dailyQuiz.lockedBody}</p>
           <a href="/plans" style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
@@ -280,13 +280,13 @@ export default function DailyQuizPage() {
 
       {state?.access === 'NOT_AVAILABLE' && (
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.notAvailable(quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge)}</p>
+          <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.notAvailable(quizType === 'DAILY_QUIZ' ? t.dailyQuiz.currentAffairs : t.dailyQuiz.brainChallenge)}</p>
         </div>
       )}
 
       {state?.access === 'AVAILABLE' && !state.attempt && !attemptData && (
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, marginBottom: 4 }}>{t.dailyQuiz.readyTitle(quizType === 'DAILY_QUIZ' ? t.menu.dailyQuiz : t.dailyQuiz.brainChallenge)}</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, marginBottom: 4 }}>{t.dailyQuiz.readyTitle(quizType === 'DAILY_QUIZ' ? t.dailyQuiz.currentAffairs : t.dailyQuiz.brainChallenge)}</p>
           <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 20 }}>{t.dailyQuiz.chooseLanguage}</p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
             <button

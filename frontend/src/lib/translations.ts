@@ -111,6 +111,7 @@ export const translations = {
       resultsSubtitle: 'இன்றைய Daily Quiz முடிந்தது',
       backHome: 'முகப்புக்கு செல்லவும்',
       brainChallenge: 'Brain Challenge',
+      currentAffairs: 'நடப்பு நிகழ்வுகள்',
     },
     quiz: {
       title: 'பயிற்சி தொடங்கவும்',
@@ -176,7 +177,7 @@ export const translations = {
       home: 'முகப்பு',
       practice: 'பயிற்சி தொடங்கு',
       liveExam: 'Live Exam',
-      dailyQuiz: 'தினசரி Quiz',
+      dailyQuiz: 'தினசரி சவால்',
       dashboard: 'செயல்திறன்',
       plans: 'திட்டம்',
       profile: 'சுயவிவரம்',
@@ -334,6 +335,7 @@ export const translations = {
       resultsSubtitle: "Today's Daily Quiz complete",
       backHome: 'Back to Home',
       brainChallenge: 'Brain Challenge',
+      currentAffairs: 'Current Affairs',
     },
     quiz: {
       title: 'Start Practice',
@@ -399,7 +401,7 @@ export const translations = {
       home: 'Home',
       practice: 'Start Practice',
       liveExam: 'Live Exam',
-      dailyQuiz: 'Daily Quiz',
+      dailyQuiz: 'Daily Challenge',
       dashboard: 'Performance',
       plans: 'Plan',
       profile: 'Profile',

@@ -48,7 +48,7 @@ const CSV_TEMPLATE_HEADER =
   'Tamil Question,TA Option A,TA Option B,TA Option C,TA Option D,English Question,EN Option A,EN Option B,EN Option C,EN Option D,Correct Option,TA Explanation,EN Explanation';
 
 const TABS: { type: QuizType; label: string; note: string }[] = [
-  { type: 'DAILY_QUIZ', label: 'Daily Quiz', note: '10 current-affairs/news questions.' },
+  { type: 'DAILY_QUIZ', label: 'Current Affairs', note: '10 current-affairs/news questions.' },
   { type: 'BRAIN_CHALLENGE', label: 'Brain Challenge', note: '10 reasoning, logical thinking, observation, analytical thinking, and basic problem-solving questions.' },
 ];
 
@@ -84,7 +84,7 @@ export default function AdminDailyQuizPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Daily Quiz &amp; Brain Challenge</h1>
+      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Daily Challenge (Current Affairs &amp; Brain Challenge)</h1>
       <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
         10 questions, published once daily, available 24 hours, paid-users-only. Completely separate from the normal Question bank and
         Practice system.
