@@ -530,7 +530,7 @@ export default function ProfilePage() {
               </button>
             )}
 
-            {phoneLinkStep === 'enterPhone' && (
+            {(phoneLinkStep === 'enterPhone' || phoneLinkStep === 'enterOtp') && (
               <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginBottom: 12 }}>
                 <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.phoneLabel}</label>
                 <input
@@ -538,37 +538,37 @@ export default function ProfilePage() {
                   value={phoneToVerify}
                   onChange={(e) => setPhoneToVerify(e.target.value)}
                   placeholder="9876543210"
-                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box' }}
+                  disabled={phoneLinkStep === 'enterOtp'}
+                  style={{
+                    width: '100%',
+                    padding: 10,
+                    borderRadius: 6,
+                    border: '1px solid #cbd5e1',
+                    marginBottom: 10,
+                    boxSizing: 'border-box',
+                    background: phoneLinkStep === 'enterOtp' ? '#f8fafc' : '#fff',
+                    color: phoneLinkStep === 'enterOtp' ? '#64748b' : 'inherit',
+                  }}
                 />
                 <div ref={phoneRecaptchaRef} />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => setPhoneLinkStep('idle')}
-                    style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
-                  >
-                    {t.login.cancel}
-                  </button>
-                  <button
-                    onClick={sendPhoneVerification}
-                    disabled={verifyingPhone || !phoneToVerify}
-                    style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
-                  >
-                    {verifyingPhone ? '…' : t.login.sendOtp}
-                  </button>
-                </div>
-              </div>
-            )}
 
-            {phoneLinkStep === 'enterOtp' && (
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginBottom: 12 }}>
-                <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.otpLabel}</label>
-                <input
-                  type="text"
-                  value={phoneOtp}
-                  onChange={(e) => setPhoneOtp(e.target.value)}
-                  placeholder={t.login.otpPlaceholder}
-                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box' }}
-                />
+                {/* OTP entry appears right here, in the SAME box, once sent
+                    — not as a separate block further down the page, so the
+                    student never loses sight of the number they just typed. */}
+                {phoneLinkStep === 'enterOtp' && (
+                  <>
+                    <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.otpLabel}</label>
+                    <input
+                      type="text"
+                      value={phoneOtp}
+                      onChange={(e) => setPhoneOtp(e.target.value)}
+                      placeholder={t.login.otpPlaceholder}
+                      style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box' }}
+                      autoFocus
+                    />
+                  </>
+                )}
+
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={() => setPhoneLinkStep('idle')}
@@ -576,13 +576,23 @@ export default function ProfilePage() {
                   >
                     {t.login.cancel}
                   </button>
-                  <button
-                    onClick={confirmPhoneVerification}
-                    disabled={verifyingPhone || !phoneOtp}
-                    style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
-                  >
-                    {verifyingPhone ? '…' : t.login.verify}
-                  </button>
+                  {phoneLinkStep === 'enterPhone' ? (
+                    <button
+                      onClick={sendPhoneVerification}
+                      disabled={verifyingPhone || !phoneToVerify}
+                      style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                    >
+                      {verifyingPhone ? '…' : t.login.sendOtp}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={confirmPhoneVerification}
+                      disabled={verifyingPhone || !phoneOtp}
+                      style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                    >
+                      {verifyingPhone ? '…' : t.login.verify}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
