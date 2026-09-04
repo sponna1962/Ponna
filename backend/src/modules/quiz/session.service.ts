@@ -65,6 +65,20 @@ export class SessionService {
 
     const taxonomyFilter = preferenceService.resolveTaxonomyFilter(preference.selections as any);
 
+    // Stage 2 (Subject & Topic Preference, finalized requirement) — only
+    // looked up when the current selection unambiguously means one
+    // specific TNPSC exam; any broader selection (All Authorities/
+    // Categories/Sub-Categories, or several chosen at once) means there's
+    // no single exam to key a preference off, so this stays null and
+    // allocation behaves exactly as it did before Stage 2 existed.
+    const singleSubCategoryId = preferenceService.extractSingleSubCategoryId(preference.selections as any);
+    const subjectTopicPreference = singleSubCategoryId
+      ? await prisma.studentSubjectTopicPreference.findUnique({
+          where: { userId_subCategoryId: { userId, subCategoryId: singleSubCategoryId } },
+          select: { subjectIds: true, topicIds: true },
+        })
+      : null;
+
     // Build the eligible question list FIRST, before touching quota — same
     // reasoning as before: never reserve quota for questions that can't
     // actually be delivered. Cap the request at a generous ceiling (100) so
@@ -76,6 +90,7 @@ export class SessionService {
       Math.min(remainingQuota, 100),
       preference.language,
       taxonomyFilter,
+      subjectTopicPreference,
     );
     const actualSize = questionIds.length;
 

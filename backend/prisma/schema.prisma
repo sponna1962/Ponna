@@ -1000,5 +1000,15 @@ model PlatformSettings {
   brainChallengeEnabled            Boolean @default(false)
   brainChallengeDefaultPublishTime String  @default("07:00")
 
+  // Subject & Topic Preference — Stage 2 (finalized requirement,
+  // "Preference-based Question Allocation"). The percentage of a
+  // session's non-Current-Affairs slots reserved for the student's
+  // preferred Subjects/Topics before falling back to the general
+  // eligible pool — configurable here, never hard-coded, so this can be
+  // tuned (or later swapped for a performance-based Adaptive Practice
+  // weight) without a code change. Only ever used when the student has
+  // saved a preference for their current exam; has zero effect otherwise.
+  subjectTopicPreferenceWeightPercent Int @default(75)
+
   updatedAt                   DateTime @updatedAt
 }

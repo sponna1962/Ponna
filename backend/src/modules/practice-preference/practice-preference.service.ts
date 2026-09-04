@@ -150,6 +150,26 @@ export class PracticePreferenceService {
    * Categories" selections for it; one with a Category (no Sub-Category)
    * matches any Sub-Category selection under that Category.
    */
+  /**
+   * Stage 2 (Subject & Topic Preference) needs to know if this practice
+   * selection resolves to EXACTLY ONE specific TNPSC exam (Sub-Category)
+   * — a Subject/Topic Preference is always scoped to one exam, so it only
+   * makes sense to look one up when the student's current selection
+   * unambiguously means "this one exam." Any broader selection (All
+   * Authorities, All Categories, All Sub-Categories, or more than one
+   * Sub-Category chosen at once) returns null — session.service.ts then
+   * simply skips the preference lookup and behaves exactly as it did
+   * before Stage 2 existed, which is the correct, safe default.
+   */
+  extractSingleSubCategoryId(selections: Selections): string | null {
+    if (selections.allAuthorities || selections.authorities.length !== 1) return null;
+    const authority = selections.authorities[0];
+    if (authority.allCategories || authority.categories.length !== 1) return null;
+    const category = authority.categories[0];
+    if (category.allSubCategories || category.subCategoryIds.length !== 1) return null;
+    return category.subCategoryIds[0];
+  }
+
   resolveTaxonomyFilter(selections: Selections): Prisma.QuestionWhereInput {
     if (selections.allAuthorities) {
       // Sept 15 launch requirement: "All Authorities" for a Purpose means

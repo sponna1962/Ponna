@@ -20,6 +20,7 @@ const EDITABLE_FIELDS = [
   'dailyQuizDefaultPublishTime',
   'brainChallengeEnabled',
   'brainChallengeDefaultPublishTime',
+  'subjectTopicPreferenceWeightPercent',
 ] as const;
 
 export class SettingsService {
