@@ -115,7 +115,7 @@ app.post('/auth/firebase-login', async (req, res) => {
       res.status(403).json({ error: err.message, code: 'DEVICE_LIMIT_REACHED', devices: err.devices });
       return;
     }
-    res.status(401).json({ error: err.message ?? 'Login failed' });
+    res.status(401).json({ error: 'Login failed. Please try again, or contact support if this continues.' });
   }
 });
 

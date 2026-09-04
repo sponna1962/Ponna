@@ -119,12 +119,22 @@ export class StudentAuthService {
 
     if (email) {
       // 2b. Google sign-in, uid not seen before. If an existing account's
-      // PROFILE email matches but it has no firebaseUid of its own linked
-      // yet (i.e. a Phone-only account whose student typed this same email
-      // into Profile), this is exactly the case the finalized requirement
-      // says must NOT auto-merge — hand it back as a conflict instead.
+      // email matches but its firebaseUid isn't THIS uid — either it has
+      // no firebaseUid at all (a Phone-only account whose student typed
+      // this same email into Profile), or it has a DIFFERENT one (same
+      // scenario, just discovered a different way — a Profile-typed
+      // email was never actually verified via a real Google sign-in, so
+      // this is genuinely the first real Google login for that email,
+      // and Firebase issues it a brand-new uid) — this is exactly the
+      // case the finalized requirement says must NOT auto-merge. Handing
+      // it back as a conflict here, rather than falling through to
+      // create(), is also what prevents a raw, user-facing Prisma unique-
+      // constraint crash (found in production — the email column really
+      // is @unique, so an uncaught create() attempt for an already-taken
+      // email throws and its raw message was leaking straight to the
+      // Login screen).
       const existingByEmail = await prisma.user.findUnique({ where: { email } });
-      if (existingByEmail && !existingByEmail.firebaseUid) {
+      if (existingByEmail && existingByEmail.firebaseUid !== uid) {
         throw new AccountLinkingConflictError();
       }
       // No conflicting account — genuinely new Google-only signup.
