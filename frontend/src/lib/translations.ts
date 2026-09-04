@@ -104,7 +104,7 @@ export const translations = {
     },
     askPonna: {
       title: 'Ask Ponna',
-      emptyState: 'உங்கள் சந்தேகங்களை கேளுங்கள் — கேள்விகள், தவறுகள், performance பற்றி ஏதும் கேட்கலாம்.',
+      emptyState: 'உங்கள் தேர்வுத் தயாரிப்புக்கு நான் உதவுகிறேன்.',
       inputPlaceholder: 'உங்கள் கேள்வியை type செய்யவும்...',
       send: 'அனுப்பு',
       thinking: 'யோசிக்கிறேன்...',
@@ -113,12 +113,8 @@ export const translations = {
       lockedBody: 'இந்த வசதி Annual Plan-உடையவர்களுக்கு மட்டும் கிடைக்கும்.',
       analyzeMyMistakes: 'இந்த தவறுகளை Ask Ponna-விடம் ஆய்வு செய்யச் சொல்லுங்கள்',
       contextPrefillMistakes: 'என் தவறுகளை ஆய்வு செய்து, என்ன பலவீனம் என்று சொல்லுங்கள்.',
-      suggestedActions: [
-        '🎯 நான் எப்படி தேர்வுக்கு தயாராவது?',
-        '📚 ஒரு கேள்வியை விளக்குங்கள்',
-        '❌ நான் செய்த தவறை விளக்குங்கள்',
-        '📊 என் செயல்திறனைப் பகுப்பாய்வு செய்யுங்கள்',
-      ],
+      examPrepButton: '🎯 நான் எப்படி தேர்வுக்குத் தயாராவது?',
+      orAskDirectly: 'அல்லது உங்கள் கேள்வியை நேரடியாகக் கேளுங்கள்.',
     },
     subjectPreference: {
       title: 'பாடம் & தலைப்பு விருப்பம்',
@@ -367,7 +363,7 @@ export const translations = {
     },
     askPonna: {
       title: 'Ask Ponna',
-      emptyState: 'Ask about your doubts, questions, mistakes, or performance.',
+      emptyState: 'உங்கள் தேர்வுத் தயாரிப்புக்கு நான் உதவுகிறேன்.',
       inputPlaceholder: 'Type your question...',
       send: 'Send',
       thinking: 'Thinking...',
@@ -376,12 +372,8 @@ export const translations = {
       lockedBody: 'This feature is available for Annual Plan holders only.',
       analyzeMyMistakes: 'Ask Ponna to analyze these mistakes',
       contextPrefillMistakes: 'Analyze my mistakes and tell me my weak areas.',
-      suggestedActions: [
-        '🎯 நான் எப்படி தேர்வுக்கு தயாராவது?',
-        '📚 ஒரு கேள்வியை விளக்குங்கள்',
-        '❌ நான் செய்த தவறை விளக்குங்கள்',
-        '📊 என் செயல்திறனைப் பகுப்பாய்வு செய்யுங்கள்',
-      ],
+      examPrepButton: '🎯 நான் எப்படி தேர்வுக்குத் தயாராவது?',
+      orAskDirectly: 'அல்லது உங்கள் கேள்வியை நேரடியாகக் கேளுங்கள்.',
     },
     subjectPreference: {
       title: 'Subject & Topic Preference',

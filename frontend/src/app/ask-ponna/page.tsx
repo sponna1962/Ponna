@@ -15,6 +15,19 @@ import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/
 
 type Message = { role: 'USER' | 'ASSISTANT'; content: string };
 
+/** Parses the trailing "[[OPTIONS: a | b | c]]" marker the system prompt
+ * instructs the AI to use whenever it wants the student to tap a choice
+ * instead of typing — returns the message with that marker stripped for
+ * display, plus the list of tappable options (empty if none). */
+function parseOptions(content: string): { text: string; options: string[] } {
+  const match = content.match(/\[\[OPTIONS:\s*(.+?)\]\]\s*$/);
+  if (!match) return { text: content, options: [] };
+  return {
+    text: content.slice(0, match.index).trim(),
+    options: match[1].split('|').map((o) => o.trim()).filter(Boolean),
+  };
+}
+
 export default function AskPonnaPage() {
   const { t } = useLanguage();
   const [checkedEnabled, setCheckedEnabled] = useState(false);
@@ -118,56 +131,81 @@ export default function AskPonnaPage() {
 
       <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
         {messages.length === 0 && accessState !== 'locked' && (
-          <div style={{ marginTop: 24 }}>
-            <p style={{ fontSize: 13, color: COLORS.inkMuted, textAlign: 'center', marginBottom: 16 }}>{t.askPonna.emptyState}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {t.askPonna.suggestedActions.map((action) => (
-                <button
-                  key={action}
-                  onClick={() => send(action)}
-                  disabled={sending}
-                  style={{
-                    textAlign: 'left',
-                    padding: '12px 14px',
-                    borderRadius: 10,
-                    border: `1px solid ${COLORS.line}`,
-                    background: COLORS.paperAlt,
-                    color: COLORS.ink,
-                    fontSize: 13.5,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {action}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
-              justifyContent: m.role === 'USER' ? 'flex-end' : 'flex-start',
-              marginBottom: 10,
-            }}
-          >
-            <div
+          <div style={{ marginTop: 24, textAlign: 'center' }}>
+            <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 20 }}>{t.askPonna.emptyState}</p>
+            <button
+              onClick={() => send(t.askPonna.examPrepButton)}
+              disabled={sending}
               style={{
-                maxWidth: '85%',
-                padding: '10px 14px',
-                borderRadius: 14,
-                fontSize: 14,
-                lineHeight: 1.5,
-                whiteSpace: 'pre-wrap',
-                background: m.role === 'USER' ? COLORS.ink : COLORS.paperAlt,
-                color: m.role === 'USER' ? COLORS.paper : COLORS.ink,
+                padding: '14px 20px',
+                borderRadius: 12,
+                border: `1.5px solid ${COLORS.gold}`,
+                background: COLORS.goldLight,
+                color: '#5C4009',
+                fontSize: 15,
+                fontWeight: 700,
               }}
             >
-              {m.content}
-            </div>
+              {t.askPonna.examPrepButton}
+            </button>
+            <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 14 }}>{t.askPonna.orAskDirectly}</p>
           </div>
-        ))}
+        )}
+        {messages.map((m, i) => {
+          const isLastAssistant = m.role === 'ASSISTANT' && i === messages.length - 1;
+          const { text, options } = m.role === 'ASSISTANT' ? parseOptions(m.content) : { text: m.content, options: [] };
+          return (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: m.role === 'USER' ? 'flex-end' : 'flex-start',
+                }}
+              >
+                <div
+                  style={{
+                    maxWidth: '85%',
+                    padding: '10px 14px',
+                    borderRadius: 14,
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    whiteSpace: 'pre-wrap',
+                    background: m.role === 'USER' ? COLORS.ink : COLORS.paperAlt,
+                    color: m.role === 'USER' ? COLORS.paper : COLORS.ink,
+                  }}
+                >
+                  {text}
+                </div>
+              </div>
+              {/* Tappable quick-reply options — only offered while this is
+                  still the latest assistant message, so tapping an older
+                  message's options never re-derails an already-moved-on
+                  conversation. */}
+              {isLastAssistant && options.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                  {options.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => send(opt)}
+                      disabled={sending}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 20,
+                        border: `1px solid ${COLORS.gold}`,
+                        background: COLORS.paper,
+                        color: '#5C4009',
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {sending && <p style={{ fontSize: 13, color: COLORS.inkMuted }}>{t.askPonna.thinking}</p>}
         {error && <p style={{ fontSize: 13, color: '#B4544A' }}>{error}</p>}
         <div ref={bottomRef} />

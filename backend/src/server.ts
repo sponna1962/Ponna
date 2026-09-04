@@ -256,6 +256,20 @@ app.get('/subject-preference/:subCategoryId/syllabus', requireStudentAuth, async
   }
 });
 
+// GET /subject-preference/:subCategoryId/exam-facts — read-only, student-
+// facing verified exam info (finalized requirement, Ask Ponna Exam Coach
+// guided flow) -- same VerifiedExamFact data the get_exam_info AI tool
+// reads, exposed directly here so the frontend wizard can show it without
+// going through the chat/AI round-trip at all for this step.
+app.get('/subject-preference/:subCategoryId/exam-facts', requireStudentAuth, async (req, res) => {
+  try {
+    res.json(await examFactsService.listForExam(req.params.subCategoryId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load exam information' });
+  }
+});
+
 app.get('/subject-preference/:subCategoryId', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
     const pref = await subjectPreferenceService.getPreference(req.studentUserId!, req.params.subCategoryId);
