@@ -621,6 +621,14 @@ model ExamSubCategory {
   questions  Question[]
   taxonomyTags QuestionTaxonomyTag[]
   syllabusSubjects SyllabusSubject[]
+  // Student-facing launch visibility (finalized requirement — same
+  // display/selection-only gate already used on ExamAuthority/ExamPurpose,
+  // extended down to this level) — hides a Sub-Category that isn't an
+  // officially-defined standalone TNPSC exam (verified against TNPSC's
+  // own published Scheme of Examination) from student-facing Practice
+  // Setup, while the admin panel keeps showing and managing it normally.
+  // Never a deletion — data stays intact for whenever it's confirmed.
+  studentVisible Boolean @default(true)
 
   @@unique([categoryId, name])
 }
@@ -917,6 +925,15 @@ model PlatformSettings {
   // reverted back to hidden on the next deploy, since seed.ts runs on
   // every deploy.
   launchVisibilityApplied    Boolean  @default(false)
+
+  // One-time marker (finalized requirement) — guards the seed script's
+  // TNPSC exam-group visibility cleanup (hiding Group V/VII/VIII, which
+  // aren't confirmed as officially-defined standalone TNPSC exams
+  // against TNPSC's own published Scheme of Examination, while adding
+  // Group I-A and Group V-A as the correctly-named official ones) so it
+  // applies exactly once and never fights a future admin re-enabling one
+  // of these via the Exam Taxonomy page's "Visible to students" toggle.
+  tnpscGroupsVisibilityCleanupApplied Boolean @default(false)
 
   // Daily Quiz (finalized requirement) — dailyQuizEnabled is the "Coming
   // Soon" toggle: false shows the placeholder page to students regardless

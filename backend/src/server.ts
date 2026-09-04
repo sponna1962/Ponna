@@ -1161,6 +1161,11 @@ app.patch('/admin/exam-taxonomy/authorities/:authorityId', requireStaffAuth, req
   res.json(await examTaxonomyService.setAuthorityConfig(req.params.authorityId, req.body));
 });
 
+// PATCH /admin/exam-taxonomy/sub-categories/:id  { studentVisible: boolean }
+app.patch('/admin/exam-taxonomy/sub-categories/:id', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await examTaxonomyService.setSubCategoryVisible(req.params.id, req.body.studentVisible));
+});
+
 // POST /admin/exam-taxonomy/authorities/:authorityId/categories  { name }
 app.post('/admin/exam-taxonomy/authorities/:authorityId/categories', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   res.json(await examTaxonomyService.createCategory(req.params.authorityId, req.body.name));

@@ -52,7 +52,10 @@ export class ExamTaxonomyService {
           include: {
             categories: {
               include: {
-                subCategories: { include: { _count: { select: { questions: true } } } },
+                subCategories: {
+                  where: { studentVisible: true },
+                  include: { _count: { select: { questions: true } } },
+                },
                 _count: { select: { questions: true } },
               },
             },
@@ -100,6 +103,15 @@ export class ExamTaxonomyService {
 
   async createCategory(authorityId: string, name: string) {
     return prisma.examCategory.create({ data: { authorityId, name } });
+  }
+
+  /** Purely the "Visible to students" toggle at the finest-grained level
+   * (one specific TNPSC exam, e.g. "Group VII") — same non-destructive
+   * hide/show semantics as setPurposeConfig/setAuthorityConfig above,
+   * used here for verified-vs-unverified TNPSC exam cleanup (finalized
+   * requirement). */
+  async setSubCategoryVisible(subCategoryId: string, studentVisible: boolean) {
+    return prisma.examSubCategory.update({ where: { id: subCategoryId }, data: { studentVisible } });
   }
 
   async createSubCategory(categoryId: string, name: string) {

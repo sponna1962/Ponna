@@ -125,8 +125,8 @@ async function main() {
   }
 
   await seedCategory(tnpsc.id, 'Group Examinations', [
-    'Group I', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group IV',
-    'Group V', 'Group VI', 'Group VII', 'Group VIII',
+    'Group I', 'Group I-A', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group IV',
+    'Group V', 'Group V-A', 'Group VI', 'Group VII', 'Group VIII',
   ]);
   await seedCategory(tnpsc.id, 'Technical Services', [
     'Interview Posts', 'Non-Interview Posts', 'Diploma / ITI Level',
@@ -279,7 +279,13 @@ async function main() {
   // Group I-B, Group I-C — posts within the same Combined Civil Services
   // Examination-I (Group I) notification, sharing Group I's own Prelims
   // syllabus (verified above) rather than a separate one.
-  for (const groupName of ['Group I-B', 'Group I-C']) {
+  // Group I-A, I-B, I-C, and VI share ONE Common Preliminary Examination
+  // per TNPSC's own published Scheme of Examination ("Combined Civil
+  // Services (Preliminary) Examination (Group IA,IB,IC and VI)") — same
+  // Prelims content as Group I; their Mains papers differ by service
+  // (not modeled here, Mains structure isn't part of this Subject/Topic
+  // Preference master data).
+  for (const groupName of ['Group I-A', 'Group I-B', 'Group I-C', 'Group VI']) {
     await seedSyllabusSubject(groupName, 'General Science', [
       'Scientific Temper, Reasoning & Nature of Science',
       'Physics — Mechanics, Electricity, Magnetism, Light, Sound, Heat, Nuclear Physics, Electronics',
@@ -411,31 +417,18 @@ async function main() {
     'Prescribed Prose and Poetry',
   ]);
 
-  // Group V, VI, VII, VIII — not standard, independently-published TNPSC
-  // Group designations with their own syllabus documents (TNPSC's
-  // official Groups are I, II, IIA, III, and IV; roles beyond that are
-  // typically named by their specific service, not a numbered "Group").
-  // Seeded here with the SAME General Studies + Aptitude structure that's
-  // genuinely common across every verified TNPSC group exam above, as a
-  // reasonable starting point — please verify/adjust via the admin
-  // Subject & Topic page against the actual notification if these
-  // correspond to specific real exams, rather than treating this as
-  // independently-sourced official content the way Groups I-III/IV are.
-  for (const groupName of ['Group V', 'Group VI', 'Group VII', 'Group VIII']) {
-    await seedSyllabusSubject(groupName, 'General Studies', [
-      'General Science and Current Events',
-      'Geography of India and Tamil Nadu',
-      'History and Culture of India and Tamil Nadu',
-      'Indian Polity',
-      'Indian Economy',
-      'History, Culture and Socio-Political Movements of Tamil Nadu',
-    ]);
-    await seedSyllabusSubject(groupName, 'Aptitude & Mental Ability', [
-      'Simplification', 'Percentage', 'HCF and LCM', 'Ratio and Proportion',
-      'Simple Interest', 'Compound Interest', 'Area', 'Volume', 'Time and Work',
-      'Logical Reasoning', 'Number Series', 'Puzzles', 'Visual and Alphanumeric Reasoning',
-    ]);
-  }
+  // Group V-A Service — verified official, but a COMPLETELY DIFFERENT
+  // structure from every other Group above ("Combined Civil Services
+  // Examination (Group - V.A Service)" per TNPSC's Scheme of
+  // Examination): just two Degree-standard, Descriptive papers, General
+  // Tamil and General English — no common General Studies/Aptitude
+  // pattern reused here, since that's genuinely not what this exam tests.
+  await seedSyllabusSubject('Group V-A', 'General Tamil', [
+    'Essay Writing', 'Précis Writing', 'Letter Writing', 'Translation — English to Tamil', 'Grammar and Composition',
+  ]);
+  await seedSyllabusSubject('Group V-A', 'General English', [
+    'Essay Writing', 'Précis Writing', 'Letter Writing', 'Translation — Tamil to English', 'Grammar and Composition',
+  ]);
 
   // Employment / Recruitment — TRB gets its full category structure (finalized
   // requirement §2); UPSC/SSC/Railway/Banking/TNUSRB stay name-only for now,
@@ -512,6 +505,25 @@ async function main() {
       data: { studentVisible: false },
     });
     await prisma.platformSettings.update({ where: { id: 'singleton' }, data: { launchVisibilityApplied: true } });
+  }
+
+  // TNPSC exam-group visibility cleanup (finalized requirement) — Group V
+  // (generic, superseded by the correctly-named Group V-A seeded above),
+  // Group VII, and Group VIII are NOT confirmed as officially-defined
+  // standalone TNPSC exams against TNPSC's own published Scheme of
+  // Examination (its official Groups are I, IA, IB, IC, VI, II, IIA, III,
+  // IV, and V-A Service specifically) — hidden from student-facing
+  // Practice Setup rather than deleted, in case any are confirmed real
+  // later (admin can re-enable via the Exam Taxonomy page's "Visible to
+  // students" toggle, no deploy needed). One-time only — never re-applied
+  // on a later deploy, so it can never fight that toggle once an admin
+  // has used it.
+  if (!platformSettings.tnpscGroupsVisibilityCleanupApplied) {
+    await prisma.examSubCategory.updateMany({
+      where: { categoryId: groupExamsCategory.id, name: { in: ['Group V', 'Group VII', 'Group VIII'] } },
+      data: { studentVisible: false },
+    });
+    await prisma.platformSettings.update({ where: { id: 'singleton' }, data: { tnpscGroupsVisibilityCleanupApplied: true } });
   }
 
   // ── Annual Plans (finalized commercial model) ────────────────────────────
