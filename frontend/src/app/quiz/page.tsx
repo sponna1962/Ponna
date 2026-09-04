@@ -647,13 +647,15 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
 
   return (
     <div style={{ marginBottom: 20 }}>
-      <h2 style={{ fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 6 }}>{t.practiceSetup.subjectPreferenceTitle}</h2>
       <button
         onClick={openModal}
-        style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 13, color: '#0f172a', textDecoration: 'underline', cursor: 'pointer' }}
+        style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#334155', textDecoration: 'underline', cursor: 'pointer', marginBottom: 6, display: 'block' }}
       >
-        {selectedNames.length > 0 ? selectedNames.join(', ') : t.practiceSetup.chooseSubjects}
+        {t.practiceSetup.subjectPreferenceTitle}
       </button>
+      <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+        {selectedNames.length > 0 ? selectedNames.join(', ') : t.practiceSetup.chooseSubjects}
+      </p>
 
       {open && (
         <div
