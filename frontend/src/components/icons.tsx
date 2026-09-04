@@ -154,3 +154,13 @@ export function CloseIcon(p: IconProps) {
     </Base>
   );
 }
+
+export function SubjectPreferenceIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <path d="M6 4h9l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
+      <path d="M14.5 4v4.5H19" />
+      <path d="M8 12.5l2.2 2.2L16 9" />
+    </Base>
+  );
+}

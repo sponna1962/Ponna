@@ -142,6 +142,7 @@ model User {
   answerHistory       UserQuestionHistory[]
   performanceSummary  UserPerformanceSummary[]
   practicePreference  StudentPracticePreference?
+  subjectTopicPreferences StudentSubjectTopicPreference[]
   devices             Device[]
   questionReports     QuestionReport[]
   dailyQuizAttempts   DailyQuizAttempt[]
@@ -364,6 +365,39 @@ model StudentPracticePreference {
   selections Json
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// ── Student Subject & Topic Preference (finalized requirement — Phase 1
+// of "TNPSC Exam -> Subject -> Topic Preference") ──────────────────────
+// One row per (student, exam) — a student can hold a saved preference for
+// more than one TNPSC exam even though only one is their currently-active
+// Practice selection. subjectIds/topicIds are plain scalar arrays (not a
+// join table) since this is an OPTIONAL preference list, not data needing
+// strict relational integrity — an id referencing a since-renamed/removed
+// SyllabusSubject or SyllabusTopic is simply ignored by the (future)
+// allocation logic rather than causing an error.
+//
+// STAGE 1 ONLY (finalized requirement — "First implement and test the
+// Student Subject & Topic Preference system. Then implement the
+// preference-based question allocation."): this model and its routes are
+// purely storage + a student-facing picker UI. Nothing in
+// allocation.service.ts/quota.service.ts reads from this table yet — a
+// saved preference has NO effect on which questions a student receives
+// until Stage 2 is explicitly implemented. Existing strict rules (Exam,
+// Subject collision-free tagging, Language, Difficulty, No-Repeat) are
+// completely untouched by this model's existence.
+model StudentSubjectTopicPreference {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  subCategoryId String          // which exam this preference is FOR (e.g. "Group I")
+  subCategory   ExamSubCategory @relation(fields: [subCategoryId], references: [id])
+  subjectIds    String[]        // selected SyllabusSubject ids — empty means no subject-level preference
+  topicIds      String[]        // selected SyllabusTopic ids — finer-grained than subjectIds; empty means no topic-level preference
+  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime        @default(now())
+
+  @@unique([userId, subCategoryId])
 }
 
 // Internal staff accounts — separate from students, per §3 (multi-role admin access)
@@ -621,6 +655,7 @@ model ExamSubCategory {
   questions  Question[]
   taxonomyTags QuestionTaxonomyTag[]
   syllabusSubjects SyllabusSubject[]
+  subjectTopicPreferences StudentSubjectTopicPreference[]
   // Student-facing launch visibility (finalized requirement — same
   // display/selection-only gate already used on ExamAuthority/ExamPurpose,
   // extended down to this level) — hides a Sub-Category that isn't an
@@ -665,6 +700,7 @@ model SyllabusTopic {
   subject   SyllabusSubject @relation(fields: [subjectId], references: [id])
   name      String          // e.g. "Modern History of India", "Geography of Tamil Nadu"
   sortOrder Int             @default(0)
+  questions Question[]
 
   @@unique([subjectId, name])
 }
@@ -751,6 +787,16 @@ model Question {
   // practice-preference.service.ts's resolveTaxonomyFilter.
   authorityTags  QuestionTaxonomyTag[]
   reports        QuestionReport[]
+  // Optional link to the Subject & Topic Preference master structure
+  // (finalized requirement — groundwork for Stage 2, "preference-based
+  // question allocation"). Nullable — the vast majority of existing
+  // questions have no topic tag yet; admin tags them progressively via
+  // the Question edit/Bulk Upload flow. NOT read by allocation.service.ts
+  // or quota.service.ts yet — Stage 1 is storage + UI only, this field
+  // has zero effect on which questions a student receives until Stage 2
+  // is explicitly implemented.
+  syllabusTopicId String?
+  syllabusTopic   SyllabusTopic? @relation(fields: [syllabusTopicId], references: [id])
 
   // Subject (topic/subject-matter, e.g. History, Polity, General Science) —
   // deliberately separate from the Authority→Category→Sub-Category exam-tier

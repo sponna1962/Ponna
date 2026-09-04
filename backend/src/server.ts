@@ -26,6 +26,7 @@ import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLi
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
+import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
 import { DailyQuizType } from '@prisma/client';
@@ -80,6 +81,7 @@ const studentAuthService = new StudentAuthService();
 const profilePhotoService = new ProfilePhotoService();
 const questionReportService = new QuestionReportService();
 const studentReviewService = new StudentReviewService();
+const subjectPreferenceService = new SubjectPreferenceService();
 const dailyQuizService = new DailyQuizService();
 const syllabusService = new SyllabusService();
 const profileService = new ProfileService();
@@ -147,6 +149,63 @@ app.get('/students/me/wrong-questions', requireStudentAuth, async (req: StudentA
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load wrong questions' });
+  }
+});
+
+// ── Student Subject & Topic Preference — Stage 1 (finalized requirement) ──
+// Storage + picker only, not yet connected to question allocation.
+
+app.get('/subject-preference/exams', requireStudentAuth, async (_req, res) => {
+  try {
+    res.json(await subjectPreferenceService.listAvailableExams());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to list exams' });
+  }
+});
+
+app.get('/subject-preference/:subCategoryId/syllabus', requireStudentAuth, async (req, res) => {
+  try {
+    res.json(await subjectPreferenceService.getSyllabus(req.params.subCategoryId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load syllabus' });
+  }
+});
+
+app.get('/subject-preference/:subCategoryId', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const pref = await subjectPreferenceService.getPreference(req.studentUserId!, req.params.subCategoryId);
+    res.json(pref ?? { subjectIds: [], topicIds: [] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load preference' });
+  }
+});
+
+// POST /subject-preference/:subCategoryId  { subjectIds: string[], topicIds: string[] }
+app.post('/subject-preference/:subCategoryId', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const result = await subjectPreferenceService.savePreference(
+      req.studentUserId!,
+      req.params.subCategoryId,
+      req.body.subjectIds ?? [],
+      req.body.topicIds ?? [],
+    );
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save preference' });
+  }
+});
+
+app.delete('/subject-preference/:subCategoryId', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await subjectPreferenceService.clearPreference(req.studentUserId!, req.params.subCategoryId);
+    res.json({ cleared: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to clear preference' });
   }
 });
 
