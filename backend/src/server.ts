@@ -27,6 +27,7 @@ import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
+import { SyllabusService } from './modules/admin/syllabus.service';
 import { DailyQuizType } from '@prisma/client';
 import { ProfileService } from './modules/profile/profile.service';
 
@@ -80,6 +81,7 @@ const profilePhotoService = new ProfilePhotoService();
 const questionReportService = new QuestionReportService();
 const studentReviewService = new StudentReviewService();
 const dailyQuizService = new DailyQuizService();
+const syllabusService = new SyllabusService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -1046,6 +1048,88 @@ app.get('/admin/ai/accuracy', requireStaffAuth, async (_req, res) => {
 app.get('/admin/exam-taxonomy', requireStaffAuth, async (_req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json(await examTaxonomyService.listFullTree());
+});
+
+// ── Subject & Topic Preference — Master Structure (finalized requirement) ──
+// Admin-only, master data for now — no student-facing routes yet.
+
+app.get('/admin/syllabus/exams', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await syllabusService.listTnpscExams());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to list TNPSC exams' });
+  }
+});
+
+app.get('/admin/syllabus/:subCategoryId', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await syllabusService.getSyllabus(req.params.subCategoryId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load syllabus' });
+  }
+});
+
+app.post('/admin/syllabus/:subCategoryId/subjects', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await syllabusService.createSubject(req.params.subCategoryId, req.body.name));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add subject' });
+  }
+});
+
+app.patch('/admin/syllabus/subjects/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await syllabusService.renameSubject(req.params.id, req.body.name));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to rename subject' });
+  }
+});
+
+app.delete('/admin/syllabus/subjects/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await syllabusService.deleteSubject(req.params.id);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete subject' });
+  }
+});
+
+// POST /admin/syllabus/subjects/:id/topics  { name } OR { names: string[] } (bulk)
+app.post('/admin/syllabus/subjects/:id/topics', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    if (Array.isArray(req.body.names)) {
+      res.json(await syllabusService.createTopicsBulk(req.params.id, req.body.names));
+    } else {
+      res.json(await syllabusService.createTopic(req.params.id, req.body.name));
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add topic(s)' });
+  }
+});
+
+app.patch('/admin/syllabus/topics/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await syllabusService.renameTopic(req.params.id, req.body.name));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to rename topic' });
+  }
+});
+
+app.delete('/admin/syllabus/topics/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await syllabusService.deleteTopic(req.params.id);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete topic' });
+  }
 });
 
 // GET /admin/subjects — for the Bulk Upload / Add Question forms'

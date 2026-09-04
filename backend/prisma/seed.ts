@@ -133,6 +133,158 @@ async function main() {
   ]);
   await seedCategory(tnpsc.id, 'Other / Special Examinations', []); // Sub-Category optional here — exact exam via examName field instead
 
+  // ── TNPSC Subject & Topic Preference — Master Structure (finalized
+  // requirement) — each Group's own official syllabus, seeded once. Real,
+  // verified content for Group I and Group IV (sourced from TNPSC's own
+  // published 2026 syllabus); the other Groups get their Subject headers
+  // seeded now with topics left for the admin to fill in via the new
+  // Subject & Topic admin page — a reasonable starting structure rather
+  // than guessed/incomplete topic lists for syllabi not yet verified here.
+  const groupExamsCategory = await prisma.examCategory.findUniqueOrThrow({
+    where: { authorityId_name: { authorityId: tnpsc.id, name: 'Group Examinations' } },
+  });
+
+  async function seedSyllabusSubject(subCategoryName: string, subjectName: string, topics: string[]) {
+    const subCategory = await prisma.examSubCategory.findUnique({
+      where: { categoryId_name: { categoryId: groupExamsCategory.id, name: subCategoryName } },
+    });
+    if (!subCategory) return; // shouldn't happen given seedCategory above already created every name in the list
+    const subject = await prisma.syllabusSubject.upsert({
+      where: { subCategoryId_name: { subCategoryId: subCategory.id, name: subjectName } },
+      create: { subCategoryId: subCategory.id, name: subjectName },
+      update: {},
+    });
+    for (const topicName of topics) {
+      await prisma.syllabusTopic.upsert({
+        where: { subjectId_name: { subjectId: subject.id, name: topicName } },
+        create: { subjectId: subject.id, name: topicName },
+        update: {},
+      });
+    }
+  }
+
+  // Group I — Prelims General Studies (6 units) + Aptitude & Mental Ability.
+  await seedSyllabusSubject('Group I', 'General Science', [
+    'Scientific Temper, Reasoning & Nature of Science',
+    'Physics — Mechanics, Electricity, Magnetism, Light, Sound, Heat, Nuclear Physics, Electronics',
+    'Chemistry — Elements, Compounds, Acids, Bases, Salts, Petroleum Products, Fertilizers, Pesticides',
+    'Life Science — Classification, Evolution, Genetics, Physiology, Nutrition, Health & Hygiene, Human Diseases',
+    'Environment and Ecology',
+    'Latest Inventions in Science & Technology',
+    'Current Affairs (Science)',
+  ]);
+  await seedSyllabusSubject('Group I', 'Geography of India', [
+    'Location, Physical Features, Monsoon, Rainfall, Weather and Climate',
+    'Water Resources, Rivers, Soil, Minerals and Natural Resources',
+    'Forest and Wildlife, Agricultural Pattern',
+    'Transport and Communication',
+    'Social Geography — Population Density, Distribution, Racial and Linguistic Groups, Major Tribes',
+    'Natural Calamity and Disaster Management',
+    'Environmental Pollution, Climate Change, Green Energy, Geographical Landmarks',
+  ]);
+  await seedSyllabusSubject('Group I', 'History, Culture of India, and Indian National Movement', [
+    'Indus Valley Civilization, Guptas, Delhi Sultans, Mughals, Marathas, Vijayanagaram and Bahmani Kingdoms, South Indian History',
+    'National Renaissance and Early Uprisings Against British Rule',
+    'Indian National Congress and Emergence of National Leaders',
+    'Modes of Agitation — Satyagraha and Militant Movements, Communalism and Partition',
+    'Characteristics of Indian Culture, Unity in Diversity',
+    'India as a Secular State, Social Harmony, Prominent Personalities',
+    'National Symbols, Eminent Personalities, Sports, Books and Authors',
+  ]);
+  await seedSyllabusSubject('Group I', 'Indian Polity', [
+    'Constitution of India — Preamble and Salient Features',
+    'Union, State and Union Territory',
+    'Citizenship, Fundamental Rights, Fundamental Duties, Directive Principles',
+    'Union Executive, Union Legislature, State Executive, State Legislature, Local Government, Panchayat Raj',
+    'Federalism — Centre-State Relationships',
+    'Elections, Judiciary in India, Rule of Law',
+    'Corruption in Public Life, Anti-Corruption Measures, Lokpal and Lokayukta, Right to Information',
+    'Political Parties and Political System in India',
+  ]);
+  await seedSyllabusSubject('Group I', 'Indian Economy and Development Administration in Tamil Nadu', [
+    'Nature of Indian Economy, Five-Year Plan Models, Planning Commission and NITI Aayog',
+    'Sources of Revenue, RBI, Fiscal and Monetary Policy, Finance Commission, GST',
+    'Structure of Indian Economy, Employment Generation, Land Reforms and Agriculture',
+    'Industrial Growth, Rural Welfare Programmes, Population, Education, Health, Poverty',
+    'Human Development Indicators in Tamil Nadu',
+    'Geography of Tamil Nadu and its Impact on Economic Growth',
+    'e-Governance in Tamil Nadu, Public Awareness and General Administration',
+  ]);
+  await seedSyllabusSubject('Group I', 'History, Culture, Heritage, and Socio-Political Movements in Tamil Nadu', [
+    'History of Tamil Society, Archaeological Discoveries, Tamil Literature from Sangam Age to Contemporary Times',
+    'Thirukkural — Significance, Universal Values, Relevance to Socio-Political-Economic Affairs',
+    'Role of Tamil Nadu in the Freedom Struggle, Role of Women',
+    '19th and 20th Century Socio-Political Movements — Justice Party, Self-Respect Movement, Dravidian Movement',
+  ]);
+  await seedSyllabusSubject('Group I', 'Aptitude & Mental Ability', [
+    'Simplification', 'Percentage', 'HCF and LCM', 'Ratio and Proportion',
+    'Simple Interest', 'Compound Interest', 'Area', 'Volume', 'Time and Work',
+    'Logical Reasoning', 'Puzzles', 'Dice', 'Visual Reasoning', 'Alphanumeric Reasoning', 'Number Series',
+  ]);
+
+  // Group IV — General Studies, Indian Polity, Indian Economy, Indian
+  // National Movement, Aptitude, General Tamil/English (shorter syllabus
+  // than Group I, but its own distinct subject set — never shares Group I's).
+  await seedSyllabusSubject('Group IV', 'General Science', [
+    'Physics', 'Chemistry', 'Botany', 'Zoology', 'Current Events in Science',
+  ]);
+  await seedSyllabusSubject('Group IV', 'Geography', [
+    'Earth and Universe, Solar System', 'Monsoon, Rainfall, Weather and Climate',
+    'Water Resources — Rivers in India', 'Soil, Minerals and Natural Resources',
+    'Forest and Wildlife, Agricultural Pattern', 'Transport and Communication',
+    'Social Geography — Population Density and Distribution', 'Natural Calamities and Disaster Management',
+  ]);
+  await seedSyllabusSubject('Group IV', 'History and Culture of India and Tamil Nadu', [
+    'Indus Valley Civilization, Guptas, Delhi Sultans, Mughals and Marathas',
+    'Age of Vijayanagaram and the Bahmanis, South Indian History',
+    'Culture and Heritage of Tamil People, India Since Independence',
+    'Characteristics of Indian Culture, Unity in Diversity',
+    'Growth of Rationalism and the Dravidian Movement in Tamil Nadu',
+    'Political Parties and Populist Schemes',
+  ]);
+  await seedSyllabusSubject('Group IV', 'Indian Polity', [
+    'Constitution of India — Preamble, Citizenship, Salient Features',
+    'Fundamental Rights, Fundamental Duties, Human Rights Charter',
+    'Parliament, Union and State Legislature, Local Government, Panchayat Raj',
+    'Judiciary in India, Rule of Law, Elections',
+    'Corruption in Public Life and Anti-Corruption Measures',
+    'Right to Information, Empowerment of Women, Consumer Protection Forums',
+  ]);
+  await seedSyllabusSubject('Group IV', 'Indian Economy', [
+    'Nature of Indian Economy, Five-Year Plan Models',
+    'Land Reforms and Agriculture, Application of Science in Agriculture',
+    'Industrial Growth, Rural Welfare Programmes',
+    'Social Sector Problems — Population, Education, Health, Employment, Poverty',
+    'Economic Trends in Tamil Nadu',
+  ]);
+  await seedSyllabusSubject('Group IV', 'Indian National Movement', [
+    'National Renaissance, Emergence of National Leaders',
+    'Role of Tamil Nadu in the Freedom Struggle',
+    'Different Modes of Agitation',
+  ]);
+  await seedSyllabusSubject('Group IV', 'Aptitude & Mental Ability', [
+    'Conversion of Information to Data, Collection, Compilation and Presentation of Data',
+    'Tables, Graphs, Diagrams, Analytical Interpretation of Data',
+    'Simplification', 'HCF and LCM', 'Percentage', 'Ratio and Proportion',
+    'Simple Interest', 'Compound Interest', 'Area', 'Volume', 'Time and Work',
+    'Puzzles', 'Number Series', 'Dice', 'Logical Reasoning', 'Visual Reasoning', 'Alphanumeric Reasoning',
+  ]);
+  await seedSyllabusSubject('Group IV', 'General English', [
+    'Grammar — Phrases and Meanings, Synonyms and Antonyms, Prefix and Suffix, Articles, Preposition, Tense, Voice',
+    'Comprehension, Sentence Structure, Degree, Compound Words',
+    'Literature — Poetry Appreciation, Figures of Speech, Prose, Biography',
+    'Authors and their Literary Works',
+  ]);
+
+  // Other TNPSC Groups — Subject headers only for now, topics to be added
+  // via the admin Subject & Topic page as each Group's syllabus is
+  // verified and entered (finalized requirement scope: master structure
+  // first, content can be completed incrementally without a deploy).
+  for (const groupName of ['Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group V', 'Group VI', 'Group VII', 'Group VIII']) {
+    await seedSyllabusSubject(groupName, 'General Studies', []);
+    await seedSyllabusSubject(groupName, 'Aptitude & Mental Ability', []);
+  }
+
   // Employment / Recruitment — TRB gets its full category structure (finalized
   // requirement §2); UPSC/SSC/Railway/Banking/TNUSRB stay name-only for now,
   // their categories/sub-categories to be added from the admin panel as

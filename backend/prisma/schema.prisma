@@ -620,8 +620,45 @@ model ExamSubCategory {
   name       String       // e.g. "Group I", "Group IV", "Preliminary"
   questions  Question[]
   taxonomyTags QuestionTaxonomyTag[]
+  syllabusSubjects SyllabusSubject[]
 
   @@unique([categoryId, name])
+}
+
+// ── Subject & Topic Preference (finalized requirement — TNPSC Subject/
+// Topic Preference System) ──────────────────────────────────────────────
+// Named SyllabusSubject/SyllabusTopic — deliberately distinct from the
+// existing flat Subject model above (a free-text tag on Question, shared
+// across every exam authority, e.g. "History", "Aptitude"). THIS
+// hierarchy is a completely different concept: the official SYLLABUS
+// structure of one specific exam, scoped to ONE ExamSubCategory (i.e. one
+// specific exam — "Group I", "Group IV", etc.), not shared across exams —
+// each TNPSC Group's own official syllabus gets its own independent
+// Subject -> Topic tree, per explicit instruction ("separately for each
+// examination rather than using one common subject list"). Purely a
+// MASTER STRUCTURE for now — no student-preference or allocation-
+// weighting wiring yet (finalized requirement: "We will then connect...
+// later"), so this doesn't touch quota.service.ts/allocation.service.ts/
+// PracticePreference in any way.
+model SyllabusSubject {
+  id            String           @id @default(uuid())
+  subCategoryId String
+  subCategory   ExamSubCategory  @relation(fields: [subCategoryId], references: [id])
+  name          String           // e.g. "General Studies", "General Tamil / General English", "Aptitude & Mental Ability"
+  sortOrder     Int              @default(0)
+  topics        SyllabusTopic[]
+
+  @@unique([subCategoryId, name])
+}
+
+model SyllabusTopic {
+  id        String          @id @default(uuid())
+  subjectId String
+  subject   SyllabusSubject @relation(fields: [subjectId], references: [id])
+  name      String          // e.g. "Modern History of India", "Geography of Tamil Nadu"
+  sortOrder Int             @default(0)
+
+  @@unique([subjectId, name])
 }
 
 // ─────────────────────────────────────────────────────────
