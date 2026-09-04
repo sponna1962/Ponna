@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const { t } = useLanguage();
   const [data, setData] = useState<DashboardData | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [nudge, setNudge] = useState<{ message: string; suggestedMessage: string } | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
@@ -38,6 +39,10 @@ export default function DashboardPage() {
     studentFetch('/students/me/profile')
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => setPhotoUrl(p?.photoUrl ?? null))
+      .catch(() => {});
+    studentFetch('/ask-ponna/nudge')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setNudge)
       .catch(() => {});
   }, []);
 
@@ -81,13 +86,32 @@ export default function DashboardPage() {
       {/* Performance Insight — same card system as everything else,
           tinted rather than bordered-plain to read as "a note", not
           another stat block. */}
-      <div style={{ ...CARD, background: COLORS.paperAlt, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+      <div style={{ ...CARD, background: COLORS.paperAlt, marginBottom: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <span style={{ fontSize: 14, lineHeight: 1.4 }}>💡</span>
         <div>
           <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 3px', letterSpacing: 0.3 }}>{t.dashboard.insightLabel}</p>
           <p style={{ fontSize: 13, color: COLORS.ink, lineHeight: 1.55, margin: 0 }}>{insight}</p>
         </div>
       </div>
+
+      {/* Ask Ponna proactive nudge (finalized requirement — "world-class"
+          polish, proactive not just reactive). Rule-based, computed
+          server-side, no AI call for this card itself — only shows when
+          something genuinely actionable applies (long inactivity, a real
+          weak area, or a pending-mistakes backlog); silently absent
+          otherwise, never a generic filler message. */}
+      {nudge && (
+        <a
+          href={`/ask-ponna?prefill=${encodeURIComponent(nudge.suggestedMessage)}`}
+          style={{ ...CARD, background: COLORS.goldLight, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'flex-start', textDecoration: 'none' }}
+        >
+          <span style={{ fontSize: 14, lineHeight: 1.4 }}>🎯</span>
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, color: '#7A5A14', margin: '0 0 3px', letterSpacing: 0.3 }}>Ask Ponna</p>
+            <p style={{ fontSize: 13, color: COLORS.ink, lineHeight: 1.55, margin: 0 }}>{nudge.message}</p>
+          </div>
+        </a>
+      )}
 
       {/* Performance by Difficulty — Medium/Hard only, equal-width and
           equal-height regardless of whether a progress bar renders. */}

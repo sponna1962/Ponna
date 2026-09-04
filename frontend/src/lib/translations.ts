@@ -115,6 +115,7 @@ export const translations = {
       contextPrefillMistakes: 'என் தவறுகளை ஆய்வு செய்து, என்ன பலவீனம் என்று சொல்லுங்கள்.',
       examPrepButton: '🎯 நான் எப்படி தேர்வுக்குத் தயாராவது?',
       orAskDirectly: 'அல்லது உங்கள் கேள்வியை நேரடியாகக் கேளுங்கள்.',
+      verifiedBadge: 'PONNA verified exam data',
     },
     subjectPreference: {
       title: 'பாடம் & தலைப்பு விருப்பம்',
@@ -374,6 +375,7 @@ export const translations = {
       contextPrefillMistakes: 'Analyze my mistakes and tell me my weak areas.',
       examPrepButton: '🎯 நான் எப்படி தேர்வுக்குத் தயாராவது?',
       orAskDirectly: 'அல்லது உங்கள் கேள்வியை நேரடியாகக் கேளுங்கள்.',
+      verifiedBadge: 'PONNA verified exam data',
     },
     subjectPreference: {
       title: 'Subject & Topic Preference',

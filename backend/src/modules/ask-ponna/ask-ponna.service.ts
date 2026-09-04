@@ -116,6 +116,6 @@ export class AskPonnaService {
     });
     await prisma.askPonnaConversation.update({ where: { id: convo.id }, data: { updatedAt: new Date() } });
 
-    return { conversationId: convo.id, reply: text };
+    return { conversationId: convo.id, reply: text, toolCallsUsed };
   }
 }

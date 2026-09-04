@@ -28,6 +28,7 @@ import { QuestionReportService } from './modules/questions/question-report.servi
 import { StudentReviewService } from './modules/questions/student-review.service';
 import { MistakeReviewService } from './modules/questions/mistake-review.service';
 import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modules/ask-ponna/ask-ponna.service';
+import { getNudge as getAskPonnaNudge } from './modules/ask-ponna/nudge';
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
@@ -191,6 +192,20 @@ app.get('/ask-ponna/enabled', async (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to check Ask Ponna availability' });
+  }
+});
+
+// GET /ask-ponna/nudge — proactive, rule-based (no AI call) Dashboard
+// insight card (finalized requirement). Returns null when nothing
+// meaningful applies -- the frontend simply shows no card in that case.
+app.get('/ask-ponna/nudge', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const settings = await settingsService.get();
+    if (!settings.askPonnaEnabled) return res.json(null);
+    res.json(await getAskPonnaNudge(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load nudge' });
   }
 });
 

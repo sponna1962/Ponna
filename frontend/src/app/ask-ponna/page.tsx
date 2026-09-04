@@ -13,7 +13,7 @@ import { apiUrl } from '../../lib/api-config';
 import { StudentMenu } from '../../components/StudentMenu';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
-type Message = { role: 'USER' | 'ASSISTANT'; content: string };
+type Message = { role: 'USER' | 'ASSISTANT'; content: string; toolCallsUsed?: string[] };
 
 /** Parses the trailing "[[OPTIONS: a | b | c]]" marker the system prompt
  * instructs the AI to use whenever it wants the student to tap a choice
@@ -52,8 +52,11 @@ export default function AskPonnaPage() {
     if (typeof window === 'undefined' || !checkedEnabled || !enabled) return;
     const params = new URLSearchParams(window.location.search);
     const context = params.get('context');
+    const prefill = params.get('prefill');
     if (context === 'mistakes') {
       setInput(t.askPonna.contextPrefillMistakes);
+    } else if (prefill) {
+      setInput(prefill);
     }
     setAccessState('available'); // access errors surface on first send instead — keeps this simple for Phase 1
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,7 +94,7 @@ export default function AskPonnaPage() {
 
     const body = await res.json();
     setConversationId(body.conversationId);
-    setMessages((prev) => [...prev, { role: 'ASSISTANT', content: body.reply }]);
+    setMessages((prev) => [...prev, { role: 'ASSISTANT', content: body.reply, toolCallsUsed: body.toolCallsUsed }]);
   }
 
   if (!checkedEnabled) return null;
@@ -177,6 +180,19 @@ export default function AskPonnaPage() {
                   {text}
                 </div>
               </div>
+              {/* Trust badge (finalized requirement — world-class polish):
+                  shows when this reply was actually grounded in PONNA's
+                  verified exam data, not just the AI's own knowledge —
+                  a visible signal, not just a design principle in code
+                  comments. Derived from real tool-call usage, never
+                  something the AI has to remember to say itself. */}
+              {m.role === 'ASSISTANT' && (m.toolCallsUsed?.includes('get_exam_info') || m.toolCallsUsed?.includes('get_exam_syllabus')) && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 4 }}>
+                  <span style={{ fontSize: 10.5, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    ✓ {t.askPonna.verifiedBadge}
+                  </span>
+                </div>
+              )}
               {/* Tappable quick-reply options — only offered while this is
                   still the latest assistant message, so tapping an older
                   message's options never re-derails an already-moved-on
