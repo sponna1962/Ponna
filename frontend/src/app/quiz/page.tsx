@@ -643,19 +643,14 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
 
   if (!subjects || subjects.length === 0) return null; // no syllabus seeded for this exam yet — field doesn't appear at all
 
-  const selectedNames = subjects.filter((s) => selectedIds.has(s.id)).map((s) => s.name);
-
   return (
     <div style={{ marginBottom: 20 }}>
       <button
         onClick={openModal}
-        style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#334155', textDecoration: 'underline', cursor: 'pointer', marginBottom: 6, display: 'block' }}
+        style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#334155', textDecoration: 'underline', cursor: 'pointer' }}
       >
         {t.practiceSetup.subjectPreferenceTitle}
       </button>
-      <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
-        {selectedNames.length > 0 ? selectedNames.join(', ') : t.practiceSetup.chooseSubjects}
-      </p>
 
       {open && (
         <div
