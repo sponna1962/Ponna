@@ -80,7 +80,13 @@ export default function MistakesPage() {
         <StudentMenu />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.mistakes.title}</h1>
       </div>
-      <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 20 }}>{t.mistakes.subtitle}</p>
+      <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 12 }}>{t.mistakes.subtitle}</p>
+      <a
+        href="/ask-ponna?context=mistakes"
+        style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: COLORS.gold, textDecoration: 'underline', marginBottom: 16 }}
+      >
+        {t.askPonna.analyzeMyMistakes}
+      </a>
 
       {!data && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 

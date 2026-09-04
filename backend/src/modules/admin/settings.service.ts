@@ -21,6 +21,11 @@ const EDITABLE_FIELDS = [
   'brainChallengeEnabled',
   'brainChallengeDefaultPublishTime',
   'subjectTopicPreferenceWeightPercent',
+  'askPonnaEnabled',
+  'askPonnaProvider',
+  'askPonnaModel',
+  'askPonnaDailyLimitFree',
+  'askPonnaDailyLimitPaid',
 ] as const;
 
 export class SettingsService {

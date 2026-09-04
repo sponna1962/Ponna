@@ -38,6 +38,7 @@ import {
   MenuIcon,
   CloseIcon,
   MistakesIcon,
+  AskPonnaIcon,
 } from './icons';
 
 type NavItem = { href: string; label: string; Icon: (p: { size?: number; color?: string }) => React.ReactElement };
@@ -70,6 +71,7 @@ export function StudentMenu() {
         {
           heading: t.menu.sectionPreparation,
           items: [
+            { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
             { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
             { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
             { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },

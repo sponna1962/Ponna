@@ -147,6 +147,7 @@ model User {
   questionReports     QuestionReport[]
   dailyQuizAttempts   DailyQuizAttempt[]
   mistakeReviews      MistakeReview[]
+  askPonnaConversations AskPonnaConversation[]
 
   @@index([phone])
   @@index([email])
@@ -914,6 +915,42 @@ enum MistakeReviewStatus {
   CORRECTED
 }
 
+// ── Ask Ponna — Personal AI Study & Exam Assistant (finalized requirement,
+// Specification v3, Phase 1) ────────────────────────────────────────────
+// Model-Agnostic Architecture is BINDING (Spec v3 §1.1-1.6): these two
+// tables store PLAIN TEXT conversation content only — never a
+// provider-specific response object (§1.4) — so history stays fully
+// readable regardless of which provider generated it or which is active
+// later. Every table in this schema outside these two remains completely
+// unaware that Ask Ponna or any AI provider exists (§1.1) — no core
+// system (Question, UserQuestionHistory, UserPerformanceSummary,
+// MistakeReview, SyllabusSubject/Topic, ranking, quota, Subject
+// Preference, No-Repeat) is touched by anything in this section.
+model AskPonnaConversation {
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  title     String?
+  messages  AskPonnaMessage[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+enum AskPonnaMessageRole {
+  USER
+  ASSISTANT
+}
+
+model AskPonnaMessage {
+  id             String               @id @default(uuid())
+  conversationId String
+  conversation   AskPonnaConversation @relation(fields: [conversationId], references: [id])
+  role           AskPonnaMessageRole
+  content        String               // plain text only — never a provider-specific object (§1.4)
+  toolCallsUsed  Json?                // audit trail: which Tool Layer functions were called, never raw provider response shapes
+  createdAt      DateTime             @default(now())
+}
+
 model MistakeReview {
   id             String              @id @default(uuid())
   userId         String
@@ -1042,6 +1079,30 @@ model PlatformSettings {
   // weight) without a code change. Only ever used when the student has
   // saved a preference for their current exam; has zero effect otherwise.
   subjectTopicPreferenceWeightPercent Int @default(75)
+
+  // Ask Ponna — Personal AI Study & Exam Assistant (finalized requirement,
+  // Specification v3, Phase 1 — Gemini as initial provider). Same
+  // Coming-Soon-toggle pattern as Daily Quiz/Brain Challenge —
+  // askPonnaEnabled defaults false so it's invisible until explicitly
+  // switched on post-deploy testing (Spec v2 §14, Stage 1).
+  //
+  // askPonnaProvider/askPonnaModel document EXACTLY which provider/model
+  // is live (Spec v3 §7's "document the exact model/version" requirement)
+  // — read by the Orchestrator to pick which ProviderAdapter to
+  // instantiate, never hard-coded in any other file (Spec v3 §1.3).
+  //
+  // askPonnaDailyLimitFree/Paid (finalized requirement — "Gemini free-tier
+  // limits must NOT be treated as unlimited") are PONNA's own per-student
+  // caps, deliberately set conservatively below Google's own free-tier
+  // daily-request ceiling (roughly 500-1500 requests/day platform-wide on
+  // Gemini's Flash-Lite free tier as of writing) so normal usage across
+  // many students never collectively trips Google's hard block — pure
+  // configuration, changeable here without any code/architecture change.
+  askPonnaEnabled          Boolean @default(false)
+  askPonnaProvider         String  @default("gemini")
+  askPonnaModel            String  @default("gemini-2.5-flash-lite")
+  askPonnaDailyLimitFree   Int     @default(0)
+  askPonnaDailyLimitPaid   Int     @default(20)
 
   updatedAt                   DateTime @updatedAt
 }

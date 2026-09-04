@@ -27,6 +27,7 @@ import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
 import { MistakeReviewService } from './modules/questions/mistake-review.service';
+import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modules/ask-ponna/ask-ponna.service';
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
@@ -83,6 +84,7 @@ const profilePhotoService = new ProfilePhotoService();
 const questionReportService = new QuestionReportService();
 const studentReviewService = new StudentReviewService();
 const mistakeReviewService = new MistakeReviewService();
+const askPonnaService = new AskPonnaService();
 const subjectPreferenceService = new SubjectPreferenceService();
 const dailyQuizService = new DailyQuizService();
 const syllabusService = new SyllabusService();
@@ -174,6 +176,60 @@ app.post('/students/me/mistakes/:questionId/review', requireStudentAuth, async (
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to submit review answer' });
+  }
+});
+
+// ── Ask Ponna — Personal AI Study & Exam Assistant (finalized requirement,
+// Specification v3, Phase 1) ────────────────────────────────────────────
+
+app.get('/ask-ponna/enabled', async (_req, res) => {
+  try {
+    const settings = await settingsService.get();
+    res.json({ enabled: settings.askPonnaEnabled });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to check Ask Ponna availability' });
+  }
+});
+
+app.get('/ask-ponna/conversations', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await askPonnaService.listConversations(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load conversations' });
+  }
+});
+
+app.get('/ask-ponna/conversations/:id', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await askPonnaService.getConversation(req.studentUserId!, req.params.id));
+  } catch (err: any) {
+    console.error(err);
+    res.status(404).json({ error: err.message ?? 'Conversation not found' });
+  }
+});
+
+app.delete('/ask-ponna/conversations/:id', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await askPonnaService.deleteConversation(req.studentUserId!, req.params.id);
+    res.json({ deleted: true });
+  } catch (err: any) {
+    console.error(err);
+    res.status(404).json({ error: err.message ?? 'Conversation not found' });
+  }
+});
+
+// POST /ask-ponna/chat  { conversationId?: string, message: string }
+app.post('/ask-ponna/chat', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const result = await askPonnaService.sendMessage(req.studentUserId!, req.body.conversationId ?? null, req.body.message);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    if (err instanceof AskPonnaAccessError) return res.status(403).json({ error: err.message });
+    if (err instanceof AskPonnaLimitError) return res.status(429).json({ error: err.message });
+    res.status(500).json({ error: 'Ask Ponna could not respond right now. Please try again.' });
   }
 });
 
