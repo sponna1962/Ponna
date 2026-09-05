@@ -145,10 +145,14 @@ export default function AskPonnaPage() {
             <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 18 }}>{t.askPonna.emptyState}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { key: 'learnExam', label: t.askPonna.flowLearnExam, prompt: t.askPonna.flowLearnExam },
-                { key: 'suitableExam', label: t.askPonna.flowSuitableExam, prompt: t.askPonna.flowSuitableExam },
-                { key: 'howToPrepare', label: t.askPonna.flowHowToPrepare, prompt: t.askPonna.flowHowToPrepare },
-                { key: 'askAnything', label: t.askPonna.flowAskAnything, prompt: t.askPonna.flowAskAnything },
+                // Scoped exception (explicit instruction) — these four
+                // labels are hardcoded Tamil regardless of the site-wide
+                // English-only UI language, unlike every other string on
+                // this page which still goes through t.askPonna.* as usual.
+                { key: 'learnExam', label: '🎯 தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்', prompt: '🎯 தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்' },
+                { key: 'suitableExam', label: '👤 உங்களுக்கு ஏற்ற தேர்வைக் கண்டறியுங்கள்', prompt: '👤 உங்களுக்கு ஏற்ற தேர்வைக் கண்டறியுங்கள்' },
+                { key: 'howToPrepare', label: '📚 எப்படி தயாராக வேண்டும்?', prompt: '📚 எப்படி தயாராக வேண்டும்?' },
+                { key: 'askAnything', label: '💬 உங்கள் கேள்வியைக் கேளுங்கள்', prompt: '💬 உங்கள் கேள்வியைக் கேளுங்கள்' },
               ].map((flow) => (
                 <button
                   key={flow.key}
