@@ -18,6 +18,9 @@ import { CorrectOption, DailyQuizStatus, DailyQuizType, Language, SubscriptionSt
 import { parse } from 'csv-parse/sync';
 import { prisma } from '../../lib/prisma';
 import { recordStreakActivity } from '../practice-preference/streak.service';
+import { MilestoneService } from '../practice-preference/milestone.service';
+
+const milestoneService = new MilestoneService();
 
 const IST_OFFSET_MINUTES = 5 * 60 + 30; // Asia/Kolkata is always UTC+5:30, no DST
 
@@ -355,6 +358,9 @@ export class DailyQuizService {
     // Daily Streak (finalized requirement) -- Daily Quiz/Brain Challenge
     // activity counts too, same as normal Practice.
     await recordStreakActivity(userId);
+
+    // Milestone Badges (finalized requirement) -- streak just potentially changed.
+    await milestoneService.checkAndAward(userId);
 
     return answer;
   }

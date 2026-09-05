@@ -32,6 +32,7 @@ import { getNudge as getAskPonnaNudge } from './modules/ask-ponna/nudge';
 import { getStreakDisplay } from './modules/practice-preference/streak.service';
 import { ShareProgressService } from './modules/practice-preference/share-progress.service';
 import { ReferralService } from './modules/practice-preference/referral.service';
+import { MilestoneService } from './modules/practice-preference/milestone.service';
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
@@ -106,6 +107,7 @@ const mockExamService = new MockExamService();
 const diagnosticService = new DiagnosticService();
 const shareProgressService = new ShareProgressService();
 const referralService = new ReferralService();
+const milestoneService = new MilestoneService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -289,6 +291,17 @@ app.get('/students/me/referral', requireStudentAuth, async (req: StudentAuthedRe
     res.status(500).json({ error: 'Failed to load referral info' });
   }
 });
+
+// GET /students/me/milestones — Milestone Badges (finalized requirement).
+app.get('/students/me/milestones', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await milestoneService.listMine(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load milestones' });
+  }
+});
+
 
 app.get('/ask-ponna/conversations', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {

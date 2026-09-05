@@ -178,6 +178,7 @@ model User {
   referredBy          User?                @relation("Referrals", fields: [referredById], references: [id])
   referrals           User[]               @relation("Referrals")
   referralConversions ReferralConversion[]
+  milestones          StudentMilestone[]
   askPonnaConversations AskPonnaConversation[]
 
   @@index([phone])
@@ -1198,6 +1199,30 @@ model ReferralConversion {
   status     ReferralStatus @default(PENDING)
   createdAt  DateTime       @default(now())
   rewardedAt DateTime?
+}
+
+// ── Milestone Badges (finalized requirement — world-class polish, item 8)
+// Derived entirely from EXISTING data (questionsAnswered, streak) --
+// no new tracking system. This table just records WHEN each milestone
+// was first crossed, so the frontend can show a one-time celebration for
+// a newly-earned badge rather than re-celebrating an old one every visit.
+enum MilestoneType {
+  QUESTIONS_100
+  QUESTIONS_500
+  QUESTIONS_1000
+  STREAK_7
+  STREAK_30
+  STREAK_100
+}
+
+model StudentMilestone {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  milestoneType MilestoneType
+  achievedAt    DateTime      @default(now())
+
+  @@unique([userId, milestoneType])
 }
 
 // Drives "unseen-first" allocation (§6.4) and performance rollups (§8).

@@ -33,6 +33,8 @@ export default function DashboardPage() {
   const [streak, setStreak] = useState<{ currentStreak: number; longestStreak: number } | null>(null);
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [milestones, setMilestones] = useState<{ type: string; label: string; emoji: string; achievedAt: string }[]>([]);
+  const [newBadge, setNewBadge] = useState<{ label: string; emoji: string } | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
@@ -54,6 +56,23 @@ export default function DashboardPage() {
     studentFetch('/students/me/share-progress')
       .then((r) => (r.ok ? r.json() : null))
       .then((s) => setShareToken(s?.active ? s.token : null))
+      .catch(() => {});
+    studentFetch('/students/me/milestones')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        setMilestones(list);
+        // Celebrate only a badge the student hasn't seen a celebration
+        // for yet -- localStorage tracks which ones have already been
+        // shown, so re-visiting the Dashboard never re-celebrates an old
+        // badge, only a genuinely new one since the last visit.
+        const seenKey = 'ponna-seen-milestones';
+        const seen: string[] = JSON.parse(localStorage.getItem(seenKey) ?? '[]');
+        const unseen = list.find((m: any) => !seen.includes(m.type));
+        if (unseen) {
+          setNewBadge(unseen);
+          localStorage.setItem(seenKey, JSON.stringify([...seen, ...list.map((m: any) => m.type)]));
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -85,6 +104,19 @@ export default function DashboardPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
+
+      {/* Milestone celebration (finalized requirement) — shown once per
+          newly-achieved badge, dismissible, never re-shown for the same
+          badge on a later visit. */}
+      {newBadge && (
+        <div
+          onClick={() => setNewBadge(null)}
+          style={{ ...CARD, background: COLORS.goldLight, marginBottom: 14, textAlign: 'center', cursor: 'pointer', border: `1px solid ${COLORS.gold}` }}
+        >
+          <p style={{ fontSize: 28, margin: '0 0 4px' }}>{newBadge.emoji}</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#5C4009', margin: 0 }}>{t.dashboard.newBadge(newBadge.label)}</p>
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <StudentMenu />
@@ -191,6 +223,22 @@ export default function DashboardPage() {
           </button>
         )}
       </div>
+
+      {/* Milestone Badges (finalized requirement) — silently absent until
+          the first badge is earned, never an empty-state placeholder. */}
+      {milestones.length > 0 && (
+        <div style={{ ...CARD, marginBottom: 18 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 10px', letterSpacing: 0.3 }}>{t.dashboard.badgesLabel}</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {milestones.map((m) => (
+              <div key={m.type} style={{ textAlign: 'center', width: 64 }}>
+                <p style={{ fontSize: 26, margin: 0 }}>{m.emoji}</p>
+                <p style={{ fontSize: 9, color: COLORS.inkMuted, margin: '2px 0 0', lineHeight: 1.2 }}>{m.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Performance by Difficulty — Medium/Hard only, equal-width and
           equal-height regardless of whether a progress bar renders. */}

@@ -10,6 +10,9 @@ import { RankingService } from '../ranking/ranking.service';
 import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
 import { MistakeReviewService } from '../questions/mistake-review.service';
 import { recordStreakActivity } from '../practice-preference/streak.service';
+import { MilestoneService } from '../practice-preference/milestone.service';
+
+const milestoneService = new MilestoneService();
 
 const quota = new QuotaService();
 const allocation = new AllocationService();
@@ -189,6 +192,13 @@ export class SessionService {
     // display value, never read by quota/ranking/allocation. Any
     // answered question counts as "did something today."
     await recordStreakActivity(session.userId);
+
+    // Milestone Badges (finalized requirement) -- checked after every
+    // answer since questionsAnswered/streak both just potentially
+    // changed. Newly-awarded ones aren't surfaced from this endpoint
+    // (the frontend checks /students/me/milestones separately) --
+    // awarding here is just the side-effect write.
+    await milestoneService.checkAndAward(session.userId);
 
     return { isCorrect, correctOption: question.correctOption };
   }
