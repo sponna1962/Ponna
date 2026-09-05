@@ -13,7 +13,7 @@ export type AskPonnaNudge = { message: string; suggestedMessage: string } | null
 
 export async function getNudge(userId: string): Promise<AskPonnaNudge> {
   const [lastSession, lastDailyQuiz, weakestBucket, pendingMistakeCount] = await Promise.all([
-    prisma.quizSession.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+    prisma.quizSession.findFirst({ where: { userId }, orderBy: { startedAt: 'desc' }, select: { startedAt: true } }),
     prisma.dailyQuizAttempt.findFirst({ where: { userId }, orderBy: { startedAt: 'desc' }, select: { startedAt: true } }),
     prisma.userPerformanceSummary.findFirst({
       where: { userId, questionsAnswered: { gte: 5 }, bucket: { not: 'OVERALL' } }, // OVERALL isn't a specific, actionable area; MEDIUM/HARD are the meaningful buckets here
@@ -23,7 +23,7 @@ export async function getNudge(userId: string): Promise<AskPonnaNudge> {
   ]);
 
   const daysSinceActivity = (() => {
-    const mostRecent = [lastSession?.createdAt, lastDailyQuiz?.startedAt].filter(Boolean).sort((a, b) => (b as Date).getTime() - (a as Date).getTime())[0];
+    const mostRecent = [lastSession?.startedAt, lastDailyQuiz?.startedAt].filter(Boolean).sort((a, b) => (b as Date).getTime() - (a as Date).getTime())[0];
     if (!mostRecent) return null;
     return Math.floor((Date.now() - (mostRecent as Date).getTime()) / (1000 * 60 * 60 * 24));
   })();
