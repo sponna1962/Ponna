@@ -61,6 +61,17 @@ model User {
   // the student explicitly opts into the predictor. Not shown or
   // referenced anywhere else on the platform.
   community          ReservationCommunity?
+  // Daily Streak (finalized requirement — ₹999 Annual Plan value-add,
+  // item 3 of 3). currentStreak counts consecutive calendar days (IST)
+  // with at least one completed activity (normal Practice session or
+  // Daily Quiz/Brain Challenge attempt); resets to 1 the day after a
+  // missed day, never silently to 0 (a fresh activity always starts a
+  // new streak of at least 1). Updated by recordStreakActivity(), called
+  // as a side-effect wherever an activity completes — never read by any
+  // quota/ranking/allocation logic, purely a motivational display value.
+  currentStreak      Int      @default(0)
+  longestStreak      Int      @default(0)
+  lastStreakDate     DateTime? // the IST calendar date (stored at midnight UTC-equivalent) currentStreak was last extended for — prevents double-counting multiple activities on the same day
   preparingFor       String[] @default([]) // superseded by the finalized Profile redesign (Education section below) — column kept, no longer read/written by the Profile page, so no data migration needed
 
   // Finalized Profile redesign — Education section. Deliberately just

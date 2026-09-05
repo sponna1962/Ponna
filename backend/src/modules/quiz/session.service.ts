@@ -9,6 +9,7 @@ import { AllocationService } from '../questions/allocation.service';
 import { RankingService } from '../ranking/ranking.service';
 import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
 import { MistakeReviewService } from '../questions/mistake-review.service';
+import { recordStreakActivity } from '../practice-preference/streak.service';
 
 const quota = new QuotaService();
 const allocation = new AllocationService();
@@ -183,6 +184,11 @@ export class SessionService {
     if (!isCorrect) {
       await mistakeReview.recordMistake(session.userId, questionId);
     }
+
+    // Daily Streak (finalized requirement) -- purely a motivational
+    // display value, never read by quota/ranking/allocation. Any
+    // answered question counts as "did something today."
+    await recordStreakActivity(session.userId);
 
     return { isCorrect, correctOption: question.correctOption };
   }

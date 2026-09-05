@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [nudge, setNudge] = useState<{ message: string; suggestedMessage: string } | null>(null);
+  const [streak, setStreak] = useState<{ currentStreak: number; longestStreak: number } | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
@@ -43,6 +44,10 @@ export default function DashboardPage() {
     studentFetch('/ask-ponna/nudge')
       .then((r) => (r.ok ? r.json() : null))
       .then(setNudge)
+      .catch(() => {});
+    studentFetch('/students/me/streak')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setStreak)
       .catch(() => {});
   }, []);
 
@@ -66,6 +71,25 @@ export default function DashboardPage() {
           <img src={photoUrl} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${COLORS.line}` }} />
         ) : null}
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.dashboard.title}</h1>
+        {streak && streak.currentStreak > 0 && (
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#B4544A',
+              background: COLORS.goldLight,
+              padding: '4px 10px',
+              borderRadius: 20,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🔥 {streak.currentStreak}
+          </span>
+        )}
       </div>
 
       {/* Overall Performance — fully vertical, centered composition: label,

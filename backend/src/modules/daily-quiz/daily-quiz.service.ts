@@ -17,6 +17,7 @@
 import { CorrectOption, DailyQuizStatus, DailyQuizType, Language, SubscriptionStatus, DailyQuizAnswer } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
 import { prisma } from '../../lib/prisma';
+import { recordStreakActivity } from '../practice-preference/streak.service';
 
 const IST_OFFSET_MINUTES = 5 * 60 + 30; // Asia/Kolkata is always UTC+5:30, no DST
 
@@ -349,7 +350,13 @@ export class DailyQuizService {
     if (alreadyAnswered) return alreadyAnswered; // idempotent — resuming never re-asks an answered question
 
     const isCorrect = selectedOption === question.correctOption;
-    return prisma.dailyQuizAnswer.create({ data: { attemptId, questionId, selectedOption, isCorrect } });
+    const answer = await prisma.dailyQuizAnswer.create({ data: { attemptId, questionId, selectedOption, isCorrect } });
+
+    // Daily Streak (finalized requirement) -- Daily Quiz/Brain Challenge
+    // activity counts too, same as normal Practice.
+    await recordStreakActivity(userId);
+
+    return answer;
   }
 
   async completeAttempt(userId: string, attemptId: string) {

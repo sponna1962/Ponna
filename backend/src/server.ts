@@ -29,6 +29,7 @@ import { StudentReviewService } from './modules/questions/student-review.service
 import { MistakeReviewService } from './modules/questions/mistake-review.service';
 import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modules/ask-ponna/ask-ponna.service';
 import { getNudge as getAskPonnaNudge } from './modules/ask-ponna/nudge';
+import { getStreakDisplay } from './modules/practice-preference/streak.service';
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
@@ -214,6 +215,16 @@ app.get('/ask-ponna/nudge', requireStudentAuth, async (req: StudentAuthedRequest
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load nudge' });
+  }
+});
+
+// GET /students/me/streak — Daily Streak (finalized requirement).
+app.get('/students/me/streak', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await getStreakDisplay(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load streak' });
   }
 });
 
