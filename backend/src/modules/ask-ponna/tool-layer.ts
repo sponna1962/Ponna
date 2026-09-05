@@ -142,6 +142,18 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ['query'],
     },
   },
+  {
+    name: 'get_previous_cutoffs',
+    description: "Fetch historical cut-off marks for one exam, community-wise. Each record includes isOfficialConfirmed (true = a real official cutoff notification; false = PONNA's own tracked historical data, not officially confirmed as this year's cutoff). Always state clearly which of official-cutoff / previous-year-cutoff / PONNA-estimate you are giving -- never state a non-official record as if it were official.",
+    parameters: {
+      type: 'object',
+      properties: {
+        subCategoryId: { type: 'string', description: 'The exam id, from find_exam' },
+        community: { type: 'string', enum: ['OC', 'BC', 'BCM', 'MBC_DNC', 'SC', 'SCA', 'ST'], description: "The student's community, if known" },
+      },
+      required: ['subCategoryId'],
+    },
+  },
 ];
 
 export class ToolLayerError extends Error {}
@@ -381,6 +393,22 @@ export async function executeTool(userId: string, toolName: string, args: Record
       const query = args.query as string;
       if (!query) throw new ToolLayerError('query is required');
       return searchCurrentInfo(query);
+    }
+
+    case 'get_previous_cutoffs': {
+      const subCategoryId = args.subCategoryId as string;
+      if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
+      const community = args.community as string | undefined;
+      const records = await prisma.cutoffRecord.findMany({
+        where: { subCategoryId, ...(community ? { community: community as any } : {}) },
+        orderBy: { year: 'desc' },
+        take: 5,
+        select: { year: true, community: true, cutoffMarks: true, totalMarks: true, isOfficialConfirmed: true, sourceUrl: true, verifiedAt: true },
+      });
+      if (records.length === 0) {
+        return { hasData: false, message: 'No cut-off data on file for this exam -- do not guess a number.' };
+      }
+      return { hasData: true, records };
     }
 
     default:
