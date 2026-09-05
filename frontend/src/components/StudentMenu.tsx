@@ -75,10 +75,10 @@ export function StudentMenu() {
             { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
             { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
             { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
-            { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
-            { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
             { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
+            { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
             { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
+            { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
           ],
         },
         {
