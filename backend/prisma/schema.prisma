@@ -1254,5 +1254,19 @@ model PlatformSettings {
   askPonnaDailyLimitFree   Int     @default(0)
   askPonnaDailyLimitPaid   Int     @default(20)
 
+  // WhatsApp Daily Reminder (finalized requirement — ₹999 Annual Plan
+  // value-add, item 3b, Meta WhatsApp Business Cloud API). Disabled by
+  // default -- the sending adapter needs WHATSAPP_ACCESS_TOKEN and
+  // WHATSAPP_PHONE_NUMBER_ID env vars (same pattern as GEMINI_API_KEY/
+  // CLOUDINARY_*, not yet set), plus a Meta-approved message template
+  // (business-initiated WhatsApp messages require pre-approval — the
+  // template NAME is configurable here, never hard-coded, since template
+  // approval/renaming happens in Meta Business Manager, outside this
+  // codebase). inactivityDaysThreshold controls how many days without
+  // activity before a student is sent a reminder.
+  whatsappReminderEnabled         Boolean @default(false)
+  whatsappTemplateName            String  @default("daily_study_reminder")
+  whatsappReminderInactivityDays  Int     @default(2)
+
   updatedAt                   DateTime @updatedAt
 }

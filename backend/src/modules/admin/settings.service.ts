@@ -26,6 +26,9 @@ const EDITABLE_FIELDS = [
   'askPonnaModel',
   'askPonnaDailyLimitFree',
   'askPonnaDailyLimitPaid',
+  'whatsappReminderEnabled',
+  'whatsappTemplateName',
+  'whatsappReminderInactivityDays',
 ] as const;
 
 export class SettingsService {

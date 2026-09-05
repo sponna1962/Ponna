@@ -7,6 +7,7 @@ import { SessionService } from './quiz/session.service';
 import { RankingService } from './ranking/ranking.service';
 import { AntiAbuseService } from './anti-abuse/anti-abuse.service';
 import { DailyQuizService } from './daily-quiz/daily-quiz.service';
+import { runWhatsAppReminderSweep } from './notifications/whatsapp-reminder.service';
 
 const sessionService = new SessionService();
 const rankingService = new RankingService();
@@ -62,5 +63,25 @@ export function startScheduledJobs() {
     }
   });
 
-  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute)');
+  // WhatsApp Daily Reminder sweep (finalized requirement) — once daily.
+  // No-ops entirely (returns zeros) if whatsappReminderEnabled is false
+  // or WHATSAPP_ACCESS_TOKEN/WHATSAPP_PHONE_NUMBER_ID aren't set yet, so
+  // this is always safe to leave scheduled even before those are
+  // configured. NOTE: this schedule string is in the SERVER's own
+  // timezone, not explicitly converted to IST like Daily Quiz's
+  // publishAt/expiresAt are -- worth revisiting once the actual Render
+  // server timezone is confirmed, same caveat already true of the
+  // suspicious-usage sweep above.
+  cron.schedule('30 2 * * *', async () => {
+    try {
+      const result = await runWhatsAppReminderSweep();
+      if (result.sent > 0 || result.failed > 0) {
+        console.log(`[cron] WhatsApp reminder sweep: sent ${result.sent}, failed ${result.failed}, skipped (no phone) ${result.skippedNoPhone}`);
+      }
+    } catch (err) {
+      console.error('[cron] WhatsApp reminder sweep failed:', err);
+    }
+  });
+
+  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute), WhatsApp reminder sweep (daily)');
 }

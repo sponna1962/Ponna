@@ -25,6 +25,9 @@ type Settings = {
   askPonnaModel: string;
   askPonnaDailyLimitFree: number;
   askPonnaDailyLimitPaid: number;
+  whatsappReminderEnabled: boolean;
+  whatsappTemplateName: string;
+  whatsappReminderInactivityDays: number;
 };
 
 export default function SettingsPage() {
@@ -157,6 +160,32 @@ export default function SettingsPage() {
         <Field label="Daily message limit — Paid tier">
           <NumberInput value={settings.askPonnaDailyLimitPaid} onChange={(v) => update('askPonnaDailyLimitPaid', v)} disabled={!isSuperAdmin} />
         </Field>
+      </Section>
+
+      <Section title="WhatsApp Daily Reminder (Meta WhatsApp Business Cloud API)">
+        <Field label="Enabled">
+          <input
+            type="checkbox"
+            checked={settings.whatsappReminderEnabled}
+            disabled={!isSuperAdmin}
+            onChange={(e) => update('whatsappReminderEnabled', e.target.checked)}
+          />
+        </Field>
+        <Field label="Meta-approved template name">
+          <input
+            type="text"
+            value={settings.whatsappTemplateName}
+            disabled={!isSuperAdmin}
+            onChange={(e) => update('whatsappTemplateName', e.target.value)}
+            style={{ width: 220, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          />
+        </Field>
+        <Field label="Remind after this many inactive days">
+          <NumberInput value={settings.whatsappReminderInactivityDays} onChange={(v) => update('whatsappReminderInactivityDays', v)} disabled={!isSuperAdmin} />
+        </Field>
+        <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+          Requires WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID env vars on Render, and a template approved in Meta Business Manager matching the name above.
+        </p>
       </Section>
 
       {isSuperAdmin && (
