@@ -1,10 +1,7 @@
 // Tool Layer (Specification v3, §1.2, BINDING). Fixed names, fixed
 // input/output shapes, plain TypeScript, zero dependency on any provider
 // SDK — the same contracts work unmodified no matter which
-// ProviderAdapter is active. Phase 1 scope only (per the agreed phased
-// plan): get_question, get_my_mistakes, get_my_performance_summary.
-// start_mini_test, get_exam_syllabus, get_exam_eligibility, and
-// search_current_info are later phases.
+// ProviderAdapter is active.
 //
 // Every function here is scoped to the CALLING student's own userId,
 // passed in by the Orchestrator from the authenticated session — never
@@ -16,6 +13,39 @@ import { prisma } from '../../lib/prisma';
 import { ToolDefinition } from './provider-adapter';
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'get_my_profile',
+    description: "Fetch the student's own name and stated highest qualification (if any). ALWAYS call this at the very start of a conversation so you can greet the student by name -- never ask for their name, it's already known. When discussing exam preparation, use the qualification here to CONFIRM with the student rather than asking fresh (e.g. 'I see you're a graduate -- is that still right?') -- only ask outright if this returns no qualification on file.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'start_diagnostic',
+    description: "Starts (or resumes) the student's one-time diagnostic 'warm-up' quiz -- a short, low-pressure set of questions to get a rough sense of their level. Call this only after the student has agreed to try it (never force it), ideally after they've named a target exam so the questions can be scoped to that exam's syllabus. Frame it as a relaxed warm-up, never as a 'test' -- no pressure, just curiosity. If they've already completed this before, this tool will say so -- don't offer it again in that case.",
+    parameters: {
+      type: 'object',
+      properties: { subCategoryId: { type: 'string', description: "The chosen exam's id, from find_exam, to scope questions to that syllabus. Omit for a general mixed sample." } },
+      required: [],
+    },
+  },
+  {
+    name: 'get_diagnostic_next_question',
+    description: "Fetch the next unanswered question in the student's in-progress diagnostic warm-up. Present the question text, then list the four options using your normal [[OPTIONS: ...]] marker so the student can tap one. Returns null/done when there are no more questions -- call complete_diagnostic then.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'submit_diagnostic_answer',
+    description: 'Submit the student\'s tapped answer for the current diagnostic question. Returns whether it was correct -- you may give brief, encouraging feedback either way (this is a low-pressure warm-up, not a graded test), then call get_diagnostic_next_question for the next one.',
+    parameters: {
+      type: 'object',
+      properties: { selectedOption: { type: 'string', enum: ['A', 'B', 'C', 'D'], description: 'The option letter the student picked' } },
+      required: ['selectedOption'],
+    },
+  },
+  {
+    name: 'complete_diagnostic',
+    description: 'Call once every diagnostic question has been answered. Returns a per-subject breakdown -- present it warmly as a rough starting impression (explicitly not a precise accuracy figure, since it is only ~12 questions), then naturally continue into personalised next-step advice.',
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
   {
     name: 'get_question',
     description: "Fetch one specific PONNA question by its id — the question text, options, correct answer, and explanation if one exists. Use this whenever the student asks about a specific question (e.g. 'explain this question', 'why was I wrong').",
@@ -34,20 +64,6 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'get_my_performance_summary',
     description: "Fetch the student's own tracked performance summary (accuracy and question count, overall and by difficulty). Use this for performance analysis or 'what should I study' type questions.",
     parameters: { type: 'object', properties: {}, required: [] },
-  },
-  {
-    name: 'get_my_profile',
-    description: "Fetch the student's own name and education qualification (if they've already set it in their Profile). ALWAYS call this at the start of a conversation and whenever discussing exam preparation -- greet the student by their actual name rather than a generic greeting, and if their education qualification is already known, confirm it briefly rather than asking for it again from scratch.",
-    parameters: { type: 'object', properties: {}, required: [] },
-  },
-  {
-    name: 'start_diagnostic',
-    description: "Starts a short (12-question) practice warm-up for the student, drawn from a specific exam's syllabus if subCategoryId is given (otherwise a general mixed sample). Use this ONLY after the student has agreed to it -- never start one without an explicit yes. Returns an attemptId the student continues on the /diagnostic page; this tool just creates the attempt, it does not run the quiz itself.",
-    parameters: {
-      type: 'object',
-      properties: { subCategoryId: { type: 'string', description: 'Optional exam id (from find_exam) to scope the warm-up questions to that syllabus' } },
-      required: [],
-    },
   },
   {
     name: 'find_exam',
@@ -125,18 +141,85 @@ export async function executeTool(userId: string, toolName: string, args: Record
 
     case 'start_diagnostic': {
       const existing = await prisma.diagnosticAttempt.findUnique({ where: { userId } });
-      if (existing) return { alreadyTaken: true };
+      if (existing?.completedAt) return { status: 'already_completed' };
+      if (existing) return { status: 'resumed' }; // in-progress, unanswered questions already exist -- just continue with get_diagnostic_next_question
+
       const subCategoryId = args.subCategoryId as string | undefined;
       const questions = await prisma.question.findMany({
         where: subCategoryId ? { status: 'PUBLISHED', authorityTags: { some: { subCategoryId } } } : { status: 'PUBLISHED' },
         take: 12,
         orderBy: { createdAt: 'asc' },
       });
-      if (questions.length < 12) return { error: 'Not enough published questions available yet for this warm-up.' };
-      const attempt = await prisma.diagnosticAttempt.create({
+      if (questions.length < 12) return { status: 'error', message: 'Not enough published questions available yet for this warm-up.' };
+
+      await prisma.diagnosticAttempt.create({
         data: { userId, answers: { create: questions.map((q, i) => ({ questionId: q.id, sequenceNumber: i + 1 })) } },
       });
-      return { attemptId: attempt.id, path: `/diagnostic?attemptId=${attempt.id}` };
+      return { status: 'started', totalQuestions: questions.length };
+    }
+
+    case 'get_diagnostic_next_question': {
+      const attempt = await prisma.diagnosticAttempt.findUnique({ where: { userId } });
+      if (!attempt) throw new ToolLayerError('No diagnostic in progress -- call start_diagnostic first.');
+      const next = await prisma.diagnosticAnswer.findFirst({
+        where: { attemptId: attempt.id, selectedOption: null },
+        orderBy: { sequenceNumber: 'asc' },
+        include: { question: { select: { questionText: true, optionA: true, optionB: true, optionC: true, optionD: true } } },
+      });
+      if (!next) return { done: true };
+      return {
+        done: false,
+        sequenceNumber: next.sequenceNumber,
+        questionText: next.question.questionText,
+        optionA: next.question.optionA,
+        optionB: next.question.optionB,
+        optionC: next.question.optionC,
+        optionD: next.question.optionD,
+      };
+    }
+
+    case 'submit_diagnostic_answer': {
+      const attempt = await prisma.diagnosticAttempt.findUnique({ where: { userId } });
+      if (!attempt) throw new ToolLayerError('No diagnostic in progress -- call start_diagnostic first.');
+      const current = await prisma.diagnosticAnswer.findFirst({
+        where: { attemptId: attempt.id, selectedOption: null },
+        orderBy: { sequenceNumber: 'asc' },
+      });
+      if (!current) throw new ToolLayerError('No unanswered diagnostic question to submit for -- call complete_diagnostic.');
+
+      const question = await prisma.question.findUniqueOrThrow({ where: { id: current.questionId } });
+      const selectedOption = args.selectedOption as string;
+      const isCorrect = question.correctOption === selectedOption;
+
+      await prisma.diagnosticAnswer.update({
+        where: { id: current.id },
+        data: { selectedOption: selectedOption as any, isCorrect, answeredAt: new Date() },
+      });
+      return { isCorrect };
+    }
+
+    case 'complete_diagnostic': {
+      const attempt = await prisma.diagnosticAttempt.findUnique({
+        where: { userId },
+        include: { answers: { include: { question: { include: { subject: true } } } } },
+      });
+      if (!attempt) throw new ToolLayerError('No diagnostic in progress -- call start_diagnostic first.');
+
+      await prisma.diagnosticAttempt.update({ where: { id: attempt.id }, data: { completedAt: new Date() } });
+
+      const bySubject = new Map<string, { correct: number; total: number }>();
+      for (const a of attempt.answers) {
+        const key = a.question.subject?.name ?? 'General';
+        const entry = bySubject.get(key) ?? { correct: 0, total: 0 };
+        entry.total += 1;
+        if (a.isCorrect) entry.correct += 1;
+        bySubject.set(key, entry);
+      }
+      return {
+        totalCorrect: attempt.answers.filter((a) => a.isCorrect).length,
+        totalQuestions: attempt.answers.length,
+        bySubject: Array.from(bySubject.entries()).map(([subject, v]) => ({ subject, correct: v.correct, total: v.total })),
+      };
     }
 
     case 'find_exam': {
