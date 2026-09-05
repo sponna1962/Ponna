@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useLanguage } from '../../../lib/language-context';
 import { studentFetch } from '../../../lib/student-fetch';
+import { useOnlineStatus } from '../../../lib/use-online-status';
 
 // Quiz-taking screen — implements §4.3 (Taking a Quiz): one question per
 // screen, resumable, ends in a results summary.
@@ -60,6 +61,7 @@ export default function QuizSessionPage() {
   const [reportComment, setReportComment] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportDone, setReportDone] = useState(false);
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     loadSession();
@@ -96,6 +98,7 @@ export default function QuizSessionPage() {
   // Selecting an option IS submitting — locks immediately, shows feedback at once.
   async function selectOption(letter: string) {
     if (!session || selected || submitting) return;
+    if (!isOnline) return; // question content is already cached in `session`, but a fresh answer submission needs the server — disabled rather than queued, since the answer endpoint isn't safely retry-idempotent (a double-submit on reconnect would double-count ranking/streak updates)
     setSelected(letter);
     setSubmitting(true);
 
@@ -115,6 +118,7 @@ export default function QuizSessionPage() {
     const isLast = currentIndex === session.questions.length - 1;
 
     if (isLast) {
+      if (!isOnline) return; // finishing needs the server to finalize the session — the button below is disabled in this state so this is a defensive guard, not the primary UX signal
       await studentFetch(`/quiz/${sessionId}/complete`, { method: 'POST' });
 
       // Finalized requirement — a Free (not covered by a paid plan)
@@ -201,6 +205,11 @@ export default function QuizSessionPage() {
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      {!isOnline && (
+        <div style={{ background: '#fef3c7', borderBottom: '1px solid #fde68a', padding: '8px 20px', fontSize: 12, color: '#92400e', textAlign: 'center' }}>
+          {t.quiz.offlineNotice}
+        </div>
+      )}
       <div style={{ padding: '16px 20px 0 20px' }}>
         <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
           {t.quiz.questionCounter(currentIndex + 1, session.totalQuestions)}
@@ -265,8 +274,9 @@ export default function QuizSessionPage() {
                 marginBottom: 10,
                 fontSize: 15,
                 color: '#1e293b',
-                cursor: answered ? 'default' : 'pointer',
+                cursor: answered ? 'default' : !isOnline ? 'not-allowed' : 'pointer',
                 background: bgColor,
+                opacity: !answered && !isOnline ? 0.5 : 1,
               }}
             >
               <span
@@ -296,9 +306,20 @@ export default function QuizSessionPage() {
         {answered && (
           <button
             onClick={goNext}
-            style={{ width: '100%', padding: 14, borderRadius: 10, background: '#0f172a', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600 }}
+            disabled={isLastQuestion && !isOnline}
+            style={{
+              width: '100%',
+              padding: 14,
+              borderRadius: 10,
+              background: isLastQuestion && !isOnline ? '#94a3b8' : '#0f172a',
+              color: '#fff',
+              border: 'none',
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: isLastQuestion && !isOnline ? 'not-allowed' : 'pointer',
+            }}
           >
-            {isLastQuestion ? t.quiz.finish : t.quiz.next}
+            {isLastQuestion && !isOnline ? t.quiz.finishOffline : isLastQuestion ? t.quiz.finish : t.quiz.next}
           </button>
         )}
       </div>
