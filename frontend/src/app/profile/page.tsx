@@ -17,6 +17,7 @@ import { useEffect, useState, useRef } from 'react';
 import { GoogleAuthProvider, linkWithPopup, RecaptchaVerifier, linkWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { firebaseAuth } from '../../lib/firebase';
 import { useLanguage } from '../../lib/language-context';
+import { useTheme } from '../../lib/theme-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
 
@@ -43,6 +44,7 @@ type ProfileData = {
 
 export default function ProfilePage() {
   const { t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   // Read ?complete=1 via the plain browser API rather than Next's
   // useSearchParams(), which requires a Suspense boundary during static
   // export and caused an opaque build failure. Read once on mount,
@@ -654,6 +656,38 @@ export default function ProfilePage() {
             reward trigger pending Razorpay integration). Lazily fetches/
             generates the student's own code on this page's load. */}
         <ReferralSection />
+
+        {/* Dark Mode (finalized requirement) — persisted in localStorage
+            (theme-context.tsx), applies instantly across every page via
+            CSS custom properties (brand-theme.tsx), no reload needed. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginTop: 16 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>🌙 {t.profile.darkMode}</span>
+          <button
+            onClick={toggleTheme}
+            style={{
+              width: 46,
+              height: 26,
+              borderRadius: 13,
+              border: 'none',
+              background: theme === 'dark' ? '#0f172a' : '#cbd5e1',
+              position: 'relative',
+              cursor: 'pointer',
+            }}
+          >
+            <span
+              style={{
+                position: 'absolute',
+                top: 3,
+                left: theme === 'dark' ? 23 : 3,
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                background: '#fff',
+                transition: 'left 0.15s',
+              }}
+            />
+          </button>
+        </div>
 
         {/* Test Accounts only (finalized requirement) — self-service reset
             of their own quiz history/score, no need to ask an admin each

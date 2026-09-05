@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { LanguageProvider } from '../lib/language-context';
+import { ThemeProvider } from '../lib/theme-context';
+import { ThemeStyles } from '../lib/brand-theme';
 
 export const metadata: Metadata = {
   title: 'PONNA.in — TNPSC & TNTET Exam Practice | Previous Papers, Instant Answers',
@@ -16,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <ThemeStyles />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         {/* Noto Sans Tamil — the browser's default system font renders Tamil
             poorly on many devices (outlined/broken-looking glyphs, especially
@@ -30,7 +33,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body style={{ fontFamily: "'Noto Sans Tamil', 'Noto Sans', -apple-system, sans-serif", margin: 0 }}>
-        <LanguageProvider>{children}</LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider>{children}</LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
