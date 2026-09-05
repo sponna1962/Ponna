@@ -35,6 +35,8 @@ import { SyllabusService } from './modules/admin/syllabus.service';
 import { ExamFactsService } from './modules/admin/exam-facts.service';
 import { CutoffService } from './modules/admin/cutoff.service';
 import { CutoffPredictorService } from './modules/practice-preference/cutoff-predictor.service';
+import { MockExamAdminService } from './modules/admin/mock-exam-admin.service';
+import { MockExamService } from './modules/quiz/mock-exam.service';
 import { DailyQuizType } from '@prisma/client';
 import { ProfileService } from './modules/profile/profile.service';
 
@@ -95,6 +97,8 @@ const syllabusService = new SyllabusService();
 const examFactsService = new ExamFactsService();
 const cutoffService = new CutoffService();
 const cutoffPredictorService = new CutoffPredictorService();
+const mockExamAdminService = new MockExamAdminService();
+const mockExamService = new MockExamService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -1394,6 +1398,83 @@ app.delete('/admin/cutoffs/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'C
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete cut-off record' });
+  }
+});
+
+// ── Live Exam / Mock Exam — admin configuration (finalized requirement) ───
+
+app.get('/admin/mock-exam/:subCategoryId', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await mockExamAdminService.getConfig(req.params.subCategoryId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load Live Exam config' });
+  }
+});
+
+app.post('/admin/mock-exam/:subCategoryId', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await mockExamAdminService.upsertConfig(req.params.subCategoryId, req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save Live Exam config' });
+  }
+});
+
+app.delete('/admin/mock-exam/:subCategoryId', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await mockExamAdminService.deleteConfig(req.params.subCategoryId);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete Live Exam config' });
+  }
+});
+
+// ── Live Exam / Mock Exam — student-facing (finalized requirement) ────────
+
+app.get('/live-exam/:subCategoryId/state', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await mockExamService.getState(req.studentUserId!, req.params.subCategoryId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load Live Exam' });
+  }
+});
+
+app.post('/live-exam/:subCategoryId/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await mockExamService.startAttempt(req.studentUserId!, req.params.subCategoryId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to start Live Exam' });
+  }
+});
+
+app.get('/live-exam/attempts/:attemptId/questions', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await mockExamService.getQuestions(req.studentUserId!, req.params.attemptId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to load questions' });
+  }
+});
+
+app.post('/live-exam/attempts/:attemptId/answer', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await mockExamService.submitAnswer(req.studentUserId!, req.params.attemptId, req.body.questionId, req.body.selectedOption));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to save answer' });
+  }
+});
+
+app.post('/live-exam/attempts/:attemptId/submit', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await mockExamService.submitExam(req.studentUserId!, req.params.attemptId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to submit Live Exam' });
   }
 });
 

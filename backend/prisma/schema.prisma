@@ -153,6 +153,7 @@ model User {
   questionReports     QuestionReport[]
   dailyQuizAttempts   DailyQuizAttempt[]
   mistakeReviews      MistakeReview[]
+  mockExamAttempts    MockExamAttempt[]
   askPonnaConversations AskPonnaConversation[]
 
   @@index([phone])
@@ -666,6 +667,8 @@ model ExamSubCategory {
   subjectTopicPreferences StudentSubjectTopicPreference[]
   verifiedExamFacts VerifiedExamFact[]
   cutoffRecords CutoffRecord[]
+  mockExamConfig MockExamConfig?
+  mockExamAttempts MockExamAttempt[]
   // Student-facing launch visibility (finalized requirement — same
   // display/selection-only gate already used on ExamAuthority/ExamPurpose,
   // extended down to this level) — hides a Sub-Category that isn't an
@@ -905,6 +908,7 @@ model Question {
   history          UserQuestionHistory[]
   sessionQuestions QuizSessionQuestion[]
   mistakeReviews   MistakeReview[]
+  mockExamQuestions MockExamQuestion[]
 
   @@index([status, difficulty, category])
   @@index([contentHash])
@@ -1038,6 +1042,66 @@ model MistakeReview {
   updatedAt      DateTime            @updatedAt
 
   @@unique([userId, questionId])
+}
+
+// ── Live Exam — Full-Length Mock Exam Simulation (finalized requirement,
+// ₹999 Annual Plan value-add, item 2 of 3) ──────────────────────────────
+// A genuine timed exam simulation: fixed question count + strict time
+// limit matching the REAL exam pattern (admin-configured per exam,
+// verified against the official notification — never guessed), answers
+// hidden until final submission (unlike Daily Quiz/normal Practice, which
+// reveal immediately) so it actually feels like sitting the real exam,
+// and negative marking if that exam uses it. Completely separate from
+// normal Practice: its own tables, no quota, no Subject Preference
+// weighting (a mock exam tests FULL syllabus coverage, exactly like the
+// real exam does), no effect on UserQuestionHistory/ranking/no-repeat.
+model MockExamConfig {
+  id                      String          @id @default(uuid())
+  subCategoryId           String          @unique
+  subCategory             ExamSubCategory @relation(fields: [subCategoryId], references: [id])
+  questionCount           Int
+  durationMinutes         Int
+  marksPerQuestion        Float           @default(1)
+  negativeMarkingFraction Float           @default(0) // e.g. 0.33 for -1/3 per wrong answer; 0 = no negative marking
+  sourceUrl               String?
+  verifiedAt              DateTime
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+}
+
+enum MockExamAttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED // time ran out before the student submitted — auto-closed, scored on whatever was answered
+}
+
+model MockExamAttempt {
+  id            String                @id @default(uuid())
+  userId        String
+  user          User                  @relation(fields: [userId], references: [id])
+  subCategoryId String
+  subCategory   ExamSubCategory       @relation(fields: [subCategoryId], references: [id])
+  startedAt     DateTime              @default(now())
+  expiresAt     DateTime              // startedAt + MockExamConfig.durationMinutes at creation time — fixed, never extended
+  completedAt   DateTime?
+  status        MockExamAttemptStatus @default(IN_PROGRESS)
+  score         Float?                // computed at completion, includes negative marking
+  totalMarks    Float?                // questionCount * marksPerQuestion, snapshot at start (config could change later)
+  questions     MockExamQuestion[]
+}
+
+model MockExamQuestion {
+  id             String          @id @default(uuid())
+  attemptId      String
+  attempt        MockExamAttempt @relation(fields: [attemptId], references: [id])
+  questionId     String
+  question       Question        @relation(fields: [questionId], references: [id])
+  sequenceNumber Int
+  selectedOption CorrectOption?  // null until answered; never revealed as correct/incorrect to the student until the attempt is completed
+  isCorrect      Boolean?
+  answeredAt     DateTime?
+
+  @@unique([attemptId, questionId])
 }
 
 // Drives "unseen-first" allocation (§6.4) and performance rollups (§8).

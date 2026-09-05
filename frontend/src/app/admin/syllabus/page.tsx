@@ -145,6 +145,7 @@ export default function SyllabusPage() {
 
       {selectedExamId && <ExamFactsSection examId={selectedExamId} />}
       {selectedExamId && <CutoffSection examId={selectedExamId} />}
+      {selectedExamId && <MockExamSection examId={selectedExamId} />}
     </div>
   );
 }
@@ -407,6 +408,119 @@ function CutoffSection({ examId }: { examId: string }) {
         <button onClick={addRecord} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13 }}>
           + Add Cut-off Record
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Live Exam / Mock Exam — admin configuration (finalized requirement,
+// ₹999 Annual Plan value-add). Real exam pattern only — never guessed.
+type MockConfig = {
+  questionCount: number;
+  durationMinutes: number;
+  marksPerQuestion: number;
+  negativeMarkingFraction: number;
+  sourceUrl: string | null;
+  verifiedAt: string;
+} | null;
+
+function MockExamSection({ examId }: { examId: string }) {
+  const [config, setConfig] = useState<MockConfig>(null);
+  const [questionCount, setQuestionCount] = useState('100');
+  const [durationMinutes, setDurationMinutes] = useState('180');
+  const [marksPerQuestion, setMarksPerQuestion] = useState('1');
+  const [negativeMarkingFraction, setNegativeMarkingFraction] = useState('0');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [verifiedAt, setVerifiedAt] = useState(() => new Date().toISOString().slice(0, 10));
+
+  function load() {
+    adminFetch(`/admin/mock-exam/${examId}`)
+      .then((r) => r.json())
+      .then((data: MockConfig) => {
+        setConfig(data);
+        if (data) {
+          setQuestionCount(String(data.questionCount));
+          setDurationMinutes(String(data.durationMinutes));
+          setMarksPerQuestion(String(data.marksPerQuestion));
+          setNegativeMarkingFraction(String(data.negativeMarkingFraction));
+          setSourceUrl(data.sourceUrl ?? '');
+          setVerifiedAt(data.verifiedAt.slice(0, 10));
+        }
+      });
+  }
+
+  useEffect(load, [examId]);
+
+  async function save() {
+    await adminFetch(`/admin/mock-exam/${examId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        questionCount: parseInt(questionCount, 10),
+        durationMinutes: parseInt(durationMinutes, 10),
+        marksPerQuestion: parseFloat(marksPerQuestion),
+        negativeMarkingFraction: parseFloat(negativeMarkingFraction),
+        sourceUrl,
+        verifiedAt,
+      }),
+    });
+    load();
+  }
+
+  async function remove() {
+    if (!confirm('Remove Live Exam configuration for this exam? Students will no longer be able to start it.')) return;
+    await adminFetch(`/admin/mock-exam/${examId}`, { method: 'DELETE' });
+    setConfig(null);
+  }
+
+  return (
+    <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
+      <h2 style={{ fontSize: 17, marginBottom: 4 }}>Live Exam (Full Mock Simulation)</h2>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+        Real exam pattern — question count, time limit, marking scheme — verified against the official notification, never guessed.
+        {config ? ' Currently configured; students can attempt this exam once.' : ' Not configured yet — Live Exam stays hidden for this exam until set up.'}
+      </p>
+
+      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <label style={{ flex: 1, fontSize: 12 }}>
+            Question Count
+            <input type="number" value={questionCount} onChange={(e) => setQuestionCount(e.target.value)} style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', marginTop: 4 }} />
+          </label>
+          <label style={{ flex: 1, fontSize: 12 }}>
+            Duration (minutes)
+            <input type="number" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', marginTop: 4 }} />
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <label style={{ flex: 1, fontSize: 12 }}>
+            Marks / Question
+            <input type="number" step="0.1" value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', marginTop: 4 }} />
+          </label>
+          <label style={{ flex: 1, fontSize: 12 }}>
+            Negative Marking (fraction, e.g. 0.33 for -1/3; 0 = none)
+            <input type="number" step="0.01" value={negativeMarkingFraction} onChange={(e) => setNegativeMarkingFraction(e.target.value)} style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', marginTop: 4 }} />
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <input
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="Source URL (tnpsc.gov.in exam pattern page)"
+            style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          />
+          <input type="date" value={verifiedAt} onChange={(e) => setVerifiedAt(e.target.value)} style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }} />
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={save} style={{ flex: 1, padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13 }}>
+            {config ? 'Update' : 'Save'} Configuration
+          </button>
+          {config && (
+            <button onClick={remove} style={{ padding: '8px 16px', borderRadius: 6, background: '#fff', color: '#dc2626', border: '1px solid #fca5a5', fontSize: 13 }}>
+              Remove
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
