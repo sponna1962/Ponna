@@ -39,6 +39,9 @@ import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-qui
 import { SyllabusService } from './modules/admin/syllabus.service';
 import { ExamFactsService } from './modules/admin/exam-facts.service';
 import { CutoffService } from './modules/admin/cutoff.service';
+import { CurrentAffairsService } from './modules/admin/current-affairs.service';
+import { PonnaFaqService } from './modules/admin/ponna-faq.service';
+import { NotificationImportService } from './modules/admin/notification-import.service';
 import { CutoffPredictorService } from './modules/practice-preference/cutoff-predictor.service';
 import { MockExamAdminService } from './modules/admin/mock-exam-admin.service';
 import { MockExamService } from './modules/quiz/mock-exam.service';
@@ -102,6 +105,9 @@ const dailyQuizService = new DailyQuizService();
 const syllabusService = new SyllabusService();
 const examFactsService = new ExamFactsService();
 const cutoffService = new CutoffService();
+const currentAffairsService = new CurrentAffairsService();
+const ponnaFaqService = new PonnaFaqService();
+const notificationImportService = new NotificationImportService();
 const cutoffPredictorService = new CutoffPredictorService();
 const mockExamAdminService = new MockExamAdminService();
 const mockExamService = new MockExamService();
@@ -1495,6 +1501,129 @@ app.delete('/admin/cutoffs/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'C
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete cut-off record' });
+  }
+});
+
+// ── Ask Ponna Master Requirement -- Current Affairs (admin, BINDING) ────
+app.get('/admin/current-affairs', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await currentAffairsService.list());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load current affairs' });
+  }
+});
+app.post('/admin/current-affairs', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await currentAffairsService.create(req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add current affairs item' });
+  }
+});
+app.delete('/admin/current-affairs/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await currentAffairsService.delete(req.params.id);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete current affairs item' });
+  }
+});
+
+// ── Ask Ponna Master Requirement -- PONNA Feature FAQ (admin, BINDING) ──
+app.get('/admin/ponna-faq', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await ponnaFaqService.list(req.query.featureKey as string | undefined));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load PONNA FAQ' });
+  }
+});
+app.post('/admin/ponna-faq', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await ponnaFaqService.create(req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add FAQ entry' });
+  }
+});
+app.patch('/admin/ponna-faq/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await ponnaFaqService.update(req.params.id, req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update FAQ entry' });
+  }
+});
+app.delete('/admin/ponna-faq/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await ponnaFaqService.delete(req.params.id);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete FAQ entry' });
+  }
+});
+
+// ── Ask Ponna Master Requirement -- Official Data Import Workflow
+// (admin, Spec v5 Refinement 3, BINDING) ────────────────────────────────
+app.post('/admin/notification-imports/:subCategoryId', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await notificationImportService.createImport(req.params.subCategoryId, req.body.rawText, req.body.sourceUrl));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create import' });
+  }
+});
+app.get('/admin/notification-imports', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await notificationImportService.listPending());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load pending imports' });
+  }
+});
+app.get('/admin/notification-imports/:id', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await notificationImportService.getImport(req.params.id));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load import' });
+  }
+});
+app.patch('/admin/notification-import-candidates/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await notificationImportService.updateCandidate(req.params.id, req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update candidate' });
+  }
+});
+app.post('/admin/notification-import-candidates/:id/approve', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await notificationImportService.approveCandidate(req.params.id, req.body.verifiedAt));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to approve candidate' });
+  }
+});
+app.delete('/admin/notification-import-candidates/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await notificationImportService.discardCandidate(req.params.id);
+    res.json({ discarded: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to discard candidate' });
+  }
+});
+app.post('/admin/notification-imports/:id/mark-reviewed', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await notificationImportService.markReviewed(req.params.id);
+    res.json({ reviewed: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to mark reviewed' });
   }
 });
 

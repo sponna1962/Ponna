@@ -692,6 +692,7 @@ model ExamSubCategory {
   subjectTopicPreferences StudentSubjectTopicPreference[]
   verifiedExamFacts VerifiedExamFact[]
   cutoffRecords CutoffRecord[]
+  notificationImports NotificationImport[]
   mockExamConfig MockExamConfig?
   mockExamAttempts MockExamAttempt[]
   // Student-facing launch visibility (finalized requirement — same
@@ -754,6 +755,19 @@ model SyllabusTopic {
 // asserting silently, and so an admin reviewing this list can see at a
 // glance which facts are stale and need re-checking against the official
 // TNPSC notification.
+// ── Ask Ponna Master Requirement (Spec v4/v5/v6, BINDING) ──────────────
+// Split into two behavioral groups for the "is this stale enough to
+// re-verify via live search" check (search_current_info, Spec v5
+// Refinement 1 / v6 Refinement 2) -- kept as a comment here since Prisma
+// enums can't carry metadata; the actual set-membership check lives in
+// code (ask-ponna/verification-tiers.ts).
+//   TIME-SENSITIVE (30-day staleness applies): APPLICATION_START_DATE,
+//     APPLICATION_END_DATE, EXAM_DATE, VACANCY_COUNT, HALL_TICKET_INFO,
+//     ANSWER_KEY_STATUS, RESULT_STATUS, APPLICATION_CORRECTION_WINDOW
+//   STABLE (never auto-flagged stale by age alone): EXAM_PATTERN,
+//     ELIGIBILITY, AGE_LIMIT, AGE_RELAXATION, EXAM_STAGES,
+//     PAPER_STRUCTURE, SELECTION_PROCESS, POSTS_COVERED,
+//     DEPARTMENT_SERVICE, RESERVATION_INFO, IMPORTANT_NOTE, OTHER
 enum VerifiedExamFactType {
   APPLICATION_START_DATE
   APPLICATION_END_DATE
@@ -762,6 +776,20 @@ enum VerifiedExamFactType {
   ELIGIBILITY
   IMPORTANT_NOTE
   OTHER
+  // New in Spec v4/v5 -- full Section 3 coverage
+  POSTS_COVERED
+  DEPARTMENT_SERVICE
+  AGE_LIMIT
+  AGE_RELAXATION
+  EXAM_STAGES
+  PAPER_STRUCTURE
+  SELECTION_PROCESS
+  VACANCY_COUNT
+  HALL_TICKET_INFO
+  ANSWER_KEY_STATUS
+  RESULT_STATUS
+  APPLICATION_CORRECTION_WINDOW
+  RESERVATION_INFO
 }
 
 model VerifiedExamFact {
@@ -770,6 +798,12 @@ model VerifiedExamFact {
   subCategory   ExamSubCategory      @relation(fields: [subCategoryId], references: [id])
   factType      VerifiedExamFactType
   value         String               // the fact itself, plain text
+  // Official vs tentative (Spec v4 §5/v5 Refinement 1, BINDING) -- true
+  // means admin confirmed this against an official notification/website;
+  // false means it's a tentative/expected value admin is tracking before
+  // official confirmation exists yet. Ask Ponna must always state which
+  // one this is, never blur the two (see verification-tiers.ts).
+  isOfficialConfirmed Boolean        @default(true)
   sourceUrl     String?              // link to the official notification/page this was checked against
   verifiedAt    DateTime             // when an admin last confirmed this against the official source
   createdAt     DateTime             @default(now())
@@ -802,12 +836,89 @@ model CutoffRecord {
   community     ReservationCommunity
   cutoffMarks   Float
   totalMarks    Float?               // if known, lets the UI show "X out of Y" rather than a bare number
+  // Official cutoff vs previous-year/PONNA-estimate (Spec v5 Refinement
+  // 4, BINDING) -- true only when admin has an actual official cutoff
+  // notification as the source. Never permanently assumed false --
+  // admin can mark a record official the moment a real one is added.
+  isOfficialConfirmed Boolean        @default(false)
   sourceUrl     String?
   verifiedAt    DateTime
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 
   @@unique([subCategoryId, year, community])
+}
+
+// ── Current Affairs layer (Spec v4/v5, BINDING) — admin-maintained,
+// dated news items with an EXPLICIT, SEPARATE exam-relevance note, so
+// Ask Ponna never conflates the news fact itself with PONNA's own
+// preparation-relevance commentary (Master Requirement §13). This is
+// Tier 1 for current-affairs questions; search_current_info (Tier 3,
+// live web search) is the fallback when nothing recent enough exists
+// here — see verification-tiers.ts for the staleness rule.
+model CurrentAffairsItem {
+  id                String   @id @default(uuid())
+  date              DateTime
+  headline          String
+  summary           String
+  sourceUrl         String?
+  examRelevanceNote String?  // PONNA's own "why this matters for the exam" -- kept separate from the news fact itself
+  verifiedAt        DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ── PONNA Feature FAQ (Spec v4/v5, BINDING) — a small, admin-editable
+// canonical Q&A set about PONNA's OWN features (Review Mistakes, Daily
+// Challenge, Subject Preference, plans, etc.), per Master Requirement
+// §15: "These answers should come from the PONNA product knowledge
+// base, not generic AI assumptions." Ask Ponna retrieves and paraphrases
+// these rather than describing features from its own possibly-stale
+// understanding of the codebase.
+model PonnaFeatureFAQ {
+  id         String   @id @default(uuid())
+  featureKey String   // e.g. "review_mistakes", "daily_challenge", "subject_preference", "annual_plan"
+  question   String
+  answer     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([featureKey])
+}
+
+// ── Official Data Import Workflow (Spec v5 Refinement 3, BINDING) —
+// admin pastes/uploads a notification's text; the system suggests
+// candidate VerifiedExamFact rows (pattern-matching only, never
+// auto-published); admin reviews and approves each one individually (or
+// all at once) before it becomes real verified data. Admin approval
+// remains the sole authority -- nothing here is ever treated as
+// verified PONNA knowledge until explicitly approved.
+enum NotificationImportStatus {
+  PENDING
+  REVIEWED
+}
+
+model NotificationImport {
+  id            String                      @id @default(uuid())
+  subCategoryId String
+  subCategory   ExamSubCategory             @relation(fields: [subCategoryId], references: [id])
+  rawText       String                      // pasted notification text (or extracted text from an uploaded PDF)
+  sourceUrl     String?
+  status        NotificationImportStatus    @default(PENDING)
+  importedAt    DateTime                    @default(now())
+  reviewedAt    DateTime?
+  candidates    NotificationImportCandidateFact[]
+}
+
+model NotificationImportCandidateFact {
+  id               String              @id @default(uuid())
+  importId         String
+  import           NotificationImport  @relation(fields: [importId], references: [id])
+  suggestedFactType VerifiedExamFactType
+  suggestedValue   String
+  approved         Boolean             @default(false)
+  resultingFactId  String?             // set once approved and a real VerifiedExamFact row is created from this candidate
+  createdAt        DateTime            @default(now())
 }
 
 // ─────────────────────────────────────────────────────────

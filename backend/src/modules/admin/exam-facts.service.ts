@@ -13,7 +13,7 @@ export class ExamFactsService {
     });
   }
 
-  async create(subCategoryId: string, data: { factType: string; value: string; sourceUrl?: string; verifiedAt: string }) {
+  async create(subCategoryId: string, data: { factType: string; value: string; sourceUrl?: string; verifiedAt: string; isOfficialConfirmed?: boolean }) {
     return prisma.verifiedExamFact.create({
       data: {
         subCategoryId,
@@ -21,17 +21,19 @@ export class ExamFactsService {
         value: data.value.trim(),
         sourceUrl: data.sourceUrl?.trim() || null,
         verifiedAt: new Date(data.verifiedAt),
+        isOfficialConfirmed: data.isOfficialConfirmed ?? true,
       },
     });
   }
 
-  async update(id: string, data: { value?: string; sourceUrl?: string; verifiedAt?: string }) {
+  async update(id: string, data: { value?: string; sourceUrl?: string; verifiedAt?: string; isOfficialConfirmed?: boolean }) {
     return prisma.verifiedExamFact.update({
       where: { id },
       data: {
         ...(data.value !== undefined ? { value: data.value.trim() } : {}),
         ...(data.sourceUrl !== undefined ? { sourceUrl: data.sourceUrl.trim() || null } : {}),
         ...(data.verifiedAt !== undefined ? { verifiedAt: new Date(data.verifiedAt) } : {}),
+        ...(data.isOfficialConfirmed !== undefined ? { isOfficialConfirmed: data.isOfficialConfirmed } : {}),
       },
     });
   }

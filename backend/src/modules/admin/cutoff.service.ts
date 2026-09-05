@@ -14,7 +14,7 @@ export class CutoffService {
     });
   }
 
-  async create(subCategoryId: string, data: { year: number; community: string; cutoffMarks: number; totalMarks?: number; sourceUrl?: string; verifiedAt: string }) {
+  async create(subCategoryId: string, data: { year: number; community: string; cutoffMarks: number; totalMarks?: number; sourceUrl?: string; verifiedAt: string; isOfficialConfirmed?: boolean }) {
     return prisma.cutoffRecord.create({
       data: {
         subCategoryId,
@@ -24,11 +24,12 @@ export class CutoffService {
         totalMarks: data.totalMarks ?? null,
         sourceUrl: data.sourceUrl?.trim() || null,
         verifiedAt: new Date(data.verifiedAt),
+        isOfficialConfirmed: data.isOfficialConfirmed ?? false,
       },
     });
   }
 
-  async update(id: string, data: { cutoffMarks?: number; totalMarks?: number; sourceUrl?: string; verifiedAt?: string }) {
+  async update(id: string, data: { cutoffMarks?: number; totalMarks?: number; sourceUrl?: string; verifiedAt?: string; isOfficialConfirmed?: boolean }) {
     return prisma.cutoffRecord.update({
       where: { id },
       data: {
@@ -36,6 +37,7 @@ export class CutoffService {
         ...(data.totalMarks !== undefined ? { totalMarks: data.totalMarks } : {}),
         ...(data.sourceUrl !== undefined ? { sourceUrl: data.sourceUrl.trim() || null } : {}),
         ...(data.verifiedAt !== undefined ? { verifiedAt: new Date(data.verifiedAt) } : {}),
+        ...(data.isOfficialConfirmed !== undefined ? { isOfficialConfirmed: data.isOfficialConfirmed } : {}),
       },
     });
   }
