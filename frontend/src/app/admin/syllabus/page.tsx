@@ -153,7 +153,7 @@ export default function SyllabusPage() {
 // ── Verified Exam Facts (finalized requirement — Ask Ponna's Exam
 // Preparation Coach flow reads from this, never from AI memory) ────────
 type FactType = 'APPLICATION_START_DATE' | 'APPLICATION_END_DATE' | 'EXAM_DATE' | 'EXAM_PATTERN' | 'ELIGIBILITY' | 'IMPORTANT_NOTE' | 'OTHER';
-type ExamFact = { id: string; factType: FactType; value: string; sourceUrl: string | null; verifiedAt: string };
+type ExamFact = { id: string; factType: FactType; value: string; sourceUrl: string | null; verifiedAt: string; isOfficialConfirmed: boolean };
 
 const FACT_TYPE_LABELS: Record<FactType, string> = {
   APPLICATION_START_DATE: 'Application Start Date',
@@ -171,6 +171,7 @@ function ExamFactsSection({ examId }: { examId: string }) {
   const [value, setValue] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [verifiedAt, setVerifiedAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [isOfficialConfirmed, setIsOfficialConfirmed] = useState(true);
 
   function load() {
     adminFetch(`/admin/exam-facts/${examId}`).then((r) => r.json()).then(setFacts);
@@ -183,7 +184,7 @@ function ExamFactsSection({ examId }: { examId: string }) {
     await adminFetch(`/admin/exam-facts/${examId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ factType, value, sourceUrl, verifiedAt }),
+      body: JSON.stringify({ factType, value, sourceUrl, verifiedAt, isOfficialConfirmed }),
     });
     setValue('');
     setSourceUrl('');
@@ -213,6 +214,19 @@ function ExamFactsSection({ examId }: { examId: string }) {
               <div>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>
                   {FACT_TYPE_LABELS[f.factType]}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    marginLeft: 6,
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    color: f.isOfficialConfirmed ? '#166534' : '#92400e',
+                    background: f.isOfficialConfirmed ? '#dcfce7' : '#fef3c7',
+                  }}
+                >
+                  {f.isOfficialConfirmed ? 'OFFICIAL' : 'TENTATIVE'}
                 </span>
                 <p style={{ fontSize: 14, margin: '6px 0 4px' }}>{f.value}</p>
                 <p style={{ fontSize: 11, color: stale ? '#dc2626' : '#94a3b8' }}>
@@ -265,6 +279,10 @@ function ExamFactsSection({ examId }: { examId: string }) {
             style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
           />
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginBottom: 8 }}>
+          <input type="checkbox" checked={isOfficialConfirmed} onChange={(e) => setIsOfficialConfirmed(e.target.checked)} />
+          Officially confirmed (uncheck for a tentative/expected value)
+        </label>
         <button onClick={addFact} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13 }}>
           + Add Verified Fact
         </button>
@@ -279,7 +297,7 @@ function ExamFactsSection({ examId }: { examId: string }) {
 // cut-offs entered here from the official published notification, never
 // guessed or seeded automatically.
 type Community = 'OC' | 'BC' | 'BCM' | 'MBC_DNC' | 'SC' | 'SCA' | 'ST';
-type CutoffRecordRow = { id: string; year: number; community: Community; cutoffMarks: number; totalMarks: number | null; sourceUrl: string | null; verifiedAt: string };
+type CutoffRecordRow = { id: string; year: number; community: Community; cutoffMarks: number; totalMarks: number | null; sourceUrl: string | null; verifiedAt: string; isOfficialConfirmed: boolean };
 
 const COMMUNITIES: Community[] = ['OC', 'BC', 'BCM', 'MBC_DNC', 'SC', 'SCA', 'ST'];
 
@@ -291,6 +309,7 @@ function CutoffSection({ examId }: { examId: string }) {
   const [totalMarks, setTotalMarks] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [verifiedAt, setVerifiedAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [isOfficialConfirmed, setIsOfficialConfirmed] = useState(false);
 
   function load() {
     adminFetch(`/admin/cutoffs/${examId}`).then((r) => r.json()).then(setRecords);
@@ -310,6 +329,7 @@ function CutoffSection({ examId }: { examId: string }) {
         totalMarks: totalMarks.trim() ? parseFloat(totalMarks) : undefined,
         sourceUrl,
         verifiedAt,
+        isOfficialConfirmed,
       }),
     });
     setCutoffMarks('');
@@ -336,6 +356,19 @@ function CutoffSection({ examId }: { examId: string }) {
           <div>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>
               {r.year} · {r.community}
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                marginLeft: 6,
+                padding: '2px 8px',
+                borderRadius: 4,
+                color: r.isOfficialConfirmed ? '#166534' : '#92400e',
+                background: r.isOfficialConfirmed ? '#dcfce7' : '#fef3c7',
+              }}
+            >
+              {r.isOfficialConfirmed ? 'OFFICIAL CUTOFF' : 'ESTIMATE / HISTORICAL'}
             </span>
             <p style={{ fontSize: 16, fontWeight: 700, margin: '6px 0 4px' }}>
               {r.cutoffMarks}
@@ -405,6 +438,10 @@ function CutoffSection({ examId }: { examId: string }) {
             style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
           />
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginBottom: 8 }}>
+          <input type="checkbox" checked={isOfficialConfirmed} onChange={(e) => setIsOfficialConfirmed(e.target.checked)} />
+          This is a real official cutoff (uncheck for historical/estimate data)
+        </label>
         <button onClick={addRecord} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13 }}>
           + Add Cut-off Record
         </button>
