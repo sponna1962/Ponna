@@ -13,9 +13,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
 import { StudentMenu } from '../../components/StudentMenu';
+import { ExamHierarchyPicker } from '../../components/ExamHierarchyPicker';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
-type Exam = { id: string; name: string };
 type Config = { questionCount: number; durationMinutes: number; marksPerQuestion: number; negativeMarkingFraction: number };
 type State =
   | { access: 'FREE_LOCKED' }
@@ -39,8 +39,8 @@ type ExamQuestion = {
 
 export default function LiveExamPage() {
   const { t } = useLanguage();
-  const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState('');
+  const [selectedExamName, setSelectedExamName] = useState<string | null>(null);
   const [state, setState] = useState<State | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[] | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -48,14 +48,10 @@ export default function LiveExamPage() {
   const [starting, setStarting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    studentFetch('/subject-preference/exams')
-      .then((r) => r.json())
-      .then((data: Exam[]) => {
-        setExams(data);
-        if (data.length > 0) setSelectedExamId(data[0].id);
-      });
-  }, []);
+  function handleSelect(subCategoryId: string, subCategoryName: string) {
+    setSelectedExamId(subCategoryId);
+    setSelectedExamName(subCategoryName);
+  }
 
   function loadState(examId: string) {
     studentFetch(`/live-exam/${examId}/state`)
@@ -150,21 +146,14 @@ export default function LiveExamPage() {
         )}
       </div>
 
-      {state?.access !== 'IN_PROGRESS' && exams.length > 0 && (
-        <select
-          value={selectedExamId}
-          onChange={(e) => setSelectedExamId(e.target.value)}
-          style={{ display: 'block', width: '100%', padding: 10, marginBottom: 20, borderRadius: 8, border: `1px solid ${COLORS.line}`, fontSize: 14 }}
-        >
-          {exams.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
+      {state?.access !== 'IN_PROGRESS' && (
+        <div style={{ marginBottom: 20 }}>
+          <ExamHierarchyPicker onSelect={handleSelect} selectedName={selectedExamName} />
+        </div>
       )}
 
-      {!state && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
+      {!selectedExamId && <p style={{ color: COLORS.inkMuted, fontSize: 13, textAlign: 'center' }}>{t.liveExamPage.chooseExamFirst}</p>}
+      {selectedExamId && !state && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
       {state?.access === 'FREE_LOCKED' && (
         <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 24, background: COLORS.goldLight, textAlign: 'center' }}>

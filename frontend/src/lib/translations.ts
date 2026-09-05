@@ -118,6 +118,7 @@ export const translations = {
       verifiedBadge: 'PONNA verified exam data',
     },
     liveExamPage: {
+      chooseExamFirst: 'மேலே ஒரு தேர்வைத் தேர்வு செய்யவும்.',
       lockedTitle: 'Live Exam — Paid Plan மட்டும்',
       lockedBody: 'இந்த வசதி Annual Plan-உடையவர்களுக்கு மட்டும் கிடைக்கும்.',
       notConfigured: 'இந்த தேர்வுக்கு Live Exam இன்னும் தயாராகவில்லை.',
@@ -138,6 +139,7 @@ export const translations = {
     cutoffPredictor: {
       title: 'Cut-off Predictor',
       note: 'முந்தைய வருடங்களின் verified cut-off marks-உடன், உங்கள் practice accuracy-ஐ ஒப்பிடலாம்.',
+      chooseExamFirst: 'மேலே ஒரு தேர்வைத் தேர்வு செய்யவும்.',
       lockedTitle: 'Cut-off Predictor — Paid Plan மட்டும்',
       lockedBody: 'இந்த வசதி Annual Plan-உடையவர்களுக்கு மட்டும் கிடைக்கும்.',
       needsCommunity: 'Cut-off marks உங்கள் Community-க்கு ஏற்ப மாறும். இதைப் பார்க்க, Profile-ல் உங்கள் Community-ஐ (விருப்பம்) தேர்வு செய்யவும்.',
@@ -415,6 +417,7 @@ export const translations = {
       verifiedBadge: 'PONNA verified exam data',
     },
     liveExamPage: {
+      chooseExamFirst: 'Choose an exam above.',
       lockedTitle: 'Live Exam — Paid Plan Only',
       lockedBody: 'This feature is available for Annual Plan holders only.',
       notConfigured: 'Live Exam is not ready for this exam yet.',
@@ -435,6 +438,7 @@ export const translations = {
     cutoffPredictor: {
       title: 'Cut-off Predictor',
       note: 'Compare verified historical cut-off marks with your own practice accuracy.',
+      chooseExamFirst: 'Choose an exam above.',
       lockedTitle: 'Cut-off Predictor — Paid Plan Only',
       lockedBody: 'This feature is available for Annual Plan holders only.',
       needsCommunity: 'Cut-off marks vary by Community. To see this, please set your Community (optional) on your Profile.',

@@ -9,9 +9,9 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
 import { StudentMenu } from '../../components/StudentMenu';
+import { ExamHierarchyPicker } from '../../components/ExamHierarchyPicker';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
-type Exam = { id: string; name: string };
 type CutoffRecord = { year: number; cutoffMarks: number; totalMarks: number | null; sourceUrl: string | null; verifiedAt: string };
 type Prediction =
   | { access: 'FREE_LOCKED' }
@@ -20,18 +20,14 @@ type Prediction =
 
 export default function CutoffPredictorPage() {
   const { t } = useLanguage();
-  const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState('');
+  const [selectedExamName, setSelectedExamName] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
 
-  useEffect(() => {
-    studentFetch('/subject-preference/exams')
-      .then((r) => r.json())
-      .then((data: Exam[]) => {
-        setExams(data);
-        if (data.length > 0) setSelectedExamId(data[0].id);
-      });
-  }, []);
+  function handleSelect(subCategoryId: string, subCategoryName: string) {
+    setSelectedExamId(subCategoryId);
+    setSelectedExamName(subCategoryName);
+  }
 
   useEffect(() => {
     if (!selectedExamId) return;
@@ -50,20 +46,12 @@ export default function CutoffPredictorPage() {
       </div>
       <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 16, lineHeight: 1.5 }}>{t.cutoffPredictor.note}</p>
 
-      {exams.length > 0 && (
-        <label style={{ fontSize: 13, display: 'block', marginBottom: 20 }}>
-          <select
-            value={selectedExamId}
-            onChange={(e) => setSelectedExamId(e.target.value)}
-            style={{ display: 'block', width: '100%', padding: 10, borderRadius: 8, border: `1px solid ${COLORS.line}`, fontSize: 14 }}
-          >
-            {exams.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div style={{ marginBottom: 20 }}>
+        <ExamHierarchyPicker onSelect={handleSelect} selectedName={selectedExamName} />
+      </div>
+
+      {!selectedExamId && (
+        <p style={{ fontSize: 13, color: COLORS.inkMuted, textAlign: 'center' }}>{t.cutoffPredictor.chooseExamFirst}</p>
       )}
 
       {prediction?.access === 'FREE_LOCKED' && (
