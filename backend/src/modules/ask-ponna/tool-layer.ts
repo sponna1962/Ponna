@@ -11,6 +11,8 @@
 
 import { prisma } from '../../lib/prisma';
 import { ToolDefinition } from './provider-adapter';
+import { isFactStale } from './verification-tiers';
+import { searchCurrentInfo } from './live-search-adapter';
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -90,6 +92,54 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       type: 'object',
       properties: { subCategoryId: { type: 'string', description: 'The exam id, from find_exam' } },
       required: ['subCategoryId'],
+    },
+  },
+  {
+    name: 'get_exam_full_info',
+    description: "Fetch the FULL structured exam information for one specific exam -- posts covered, department/service, age limit/relaxation, exam stages, paper structure, selection process, vacancy count, hall ticket/answer key/result status, application dates, reservation info, and any other verified facts on file. Each fact includes isOfficialConfirmed (true = admin-confirmed against an official source; false = tentative/expected) and whether it is stale (only ever true for genuinely time-varying facts -- dates, vacancy, hall ticket, answer key, result, application window -- never for stable facts like syllabus or eligibility). If a stale time-sensitive fact is returned, call search_current_info to check for a more current value before answering. Never state a fact's official/tentative status incorrectly -- always relay exactly what this tool says.",
+    parameters: {
+      type: 'object',
+      properties: { subCategoryId: { type: 'string', description: 'The exam id, from find_exam' } },
+      required: ['subCategoryId'],
+    },
+  },
+  {
+    name: 'get_current_affairs',
+    description: "Fetch PONNA's verified current-affairs items (Tier 1 source), most recent first. Each item has the news itself (headline, summary, source) kept SEPARATE from PONNA's own exam-relevance note -- present both, never blend them into one sentence as if the news source said the exam-relevance part. If nothing recent enough is returned, call search_current_info for a live check.",
+    parameters: {
+      type: 'object',
+      properties: { date: { type: 'string', description: 'Optional specific date (YYYY-MM-DD) to look up; omit for most recent items' } },
+      required: [],
+    },
+  },
+  {
+    name: 'get_ponna_faq',
+    description: "Fetch PONNA's own canonical answers about its features (Review Mistakes, Daily Challenge, Subject Preference, Annual Plan, etc.). ALWAYS use this instead of describing PONNA's own features from your own general understanding -- it may be outdated. If nothing matches, say you're not sure how that specific feature works rather than guessing.",
+    parameters: {
+      type: 'object',
+      properties: { featureKey: { type: 'string', description: "Optional specific feature key if known (e.g. 'review_mistakes', 'daily_challenge'); omit to get the full list" } },
+      required: [],
+    },
+  },
+  {
+    name: 'suitable_exam_finder',
+    description: "Given the student's stated qualification (and optionally age), returns candidate TNPSC/TNTET exams that MAY be suitable, each with its on-file eligibility fact (if any) and whether that fact is officially confirmed. This is a GUIDED SUGGESTION tool, never a final eligibility verdict -- always present results as 'candidates to verify', explicitly naming what still needs official confirmation. Never say a student 'IS eligible' from this alone.",
+    parameters: {
+      type: 'object',
+      properties: {
+        qualification: { type: 'string', description: "The student's stated qualification, e.g. '10th', '12th', 'Degree', 'PG'" },
+        age: { type: 'number', description: "Optional -- the student's age, if they've shared it" },
+      },
+      required: ['qualification'],
+    },
+  },
+  {
+    name: 'search_current_info',
+    description: "Live web search for a time-sensitive question (Tier 3) when PONNA's verified data (get_exam_full_info/get_current_affairs) is missing or flagged stale. Prioritizes official exam-authority sources automatically -- the response tells you whether the result IS from an official source or not. If isOfficialSource is true, you may present it as reasonably current official information (still note it came from a live check, not PONNA's own verified database). If false, you MUST present it as 'தற்போதைய web தகவல் (அதிகாரப்பூர்வமாக உறுதிப்படுத்தப்படவில்லை)' -- never implied as officially confirmed. If available is false, tell the student this couldn't be checked right now and to verify with the official notification -- never guess instead.",
+    parameters: {
+      type: 'object',
+      properties: { query: { type: 'string', description: 'A focused search query, e.g. "TNPSC Group IV 2026 exam date"' } },
+      required: ['query'],
     },
   },
 ];
@@ -256,6 +306,81 @@ export async function executeTool(userId: string, toolName: string, args: Record
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       });
       return subjects.map((s) => ({ subject: s.name, topics: s.topics.map((t) => t.name) }));
+    }
+
+    case 'get_exam_full_info': {
+      const subCategoryId = args.subCategoryId as string;
+      if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
+      const facts = await prisma.verifiedExamFact.findMany({
+        where: { subCategoryId },
+        select: { factType: true, value: true, sourceUrl: true, verifiedAt: true, isOfficialConfirmed: true },
+        orderBy: { verifiedAt: 'desc' },
+      });
+      if (facts.length === 0) {
+        return { hasVerifiedInfo: false, message: 'No verified exam information is on file for this exam yet in PONNA -- direct the student to the official TNPSC notification, or call search_current_info for a live check.' };
+      }
+      return {
+        hasVerifiedInfo: true,
+        facts: facts.map((f) => ({ ...f, isStale: isFactStale(f.factType, f.verifiedAt) })),
+      };
+    }
+
+    case 'get_current_affairs': {
+      const dateStr = args.date as string | undefined;
+      const items = await prisma.currentAffairsItem.findMany({
+        where: dateStr ? { date: new Date(dateStr) } : undefined,
+        orderBy: { date: 'desc' },
+        take: 10,
+        select: { date: true, headline: true, summary: true, sourceUrl: true, examRelevanceNote: true, verifiedAt: true },
+      });
+      if (items.length === 0) {
+        return { hasItems: false, message: 'No verified current affairs items found for this -- call search_current_info for a live check.' };
+      }
+      // Current affairs are always time-sensitive -- a >30-day-old item
+      // should prompt a live check for anything freshly asked about.
+      const mostRecentIsStale = (Date.now() - items[0].date.getTime()) / (1000 * 60 * 60 * 24) > 30;
+      return { hasItems: true, mostRecentIsStale, items };
+    }
+
+    case 'get_ponna_faq': {
+      const featureKey = args.featureKey as string | undefined;
+      const rows = await prisma.ponnaFeatureFAQ.findMany({ where: featureKey ? { featureKey } : undefined });
+      if (rows.length === 0) return { found: false };
+      return { found: true, entries: rows.map((r) => ({ featureKey: r.featureKey, question: r.question, answer: r.answer })) };
+    }
+
+    case 'suitable_exam_finder': {
+      const exams = await prisma.examSubCategory.findMany({
+        where: { studentVisible: true },
+        select: { id: true, name: true },
+      });
+      const withEligibility = await Promise.all(
+        exams.map(async (exam) => {
+          const eligibilityFact = await prisma.verifiedExamFact.findFirst({
+            where: { subCategoryId: exam.id, factType: 'ELIGIBILITY' },
+            select: { value: true, isOfficialConfirmed: true, verifiedAt: true },
+          });
+          return {
+            examId: exam.id,
+            examName: exam.name,
+            eligibilityOnFile: eligibilityFact
+              ? { value: eligibilityFact.value, isOfficialConfirmed: eligibilityFact.isOfficialConfirmed, verifiedAt: eligibilityFact.verifiedAt }
+              : null,
+          };
+        }),
+      );
+      return {
+        studentQualification: args.qualification,
+        studentAge: args.age ?? null,
+        candidates: withEligibility,
+        reminder: 'These are candidates to discuss, not a final eligibility verdict -- always tell the student which eligibility facts still need official confirmation.',
+      };
+    }
+
+    case 'search_current_info': {
+      const query = args.query as string;
+      if (!query) throw new ToolLayerError('query is required');
+      return searchCurrentInfo(query);
     }
 
     default:
