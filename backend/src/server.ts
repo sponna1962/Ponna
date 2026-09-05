@@ -30,6 +30,7 @@ import { MistakeReviewService } from './modules/questions/mistake-review.service
 import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modules/ask-ponna/ask-ponna.service';
 import { getNudge as getAskPonnaNudge } from './modules/ask-ponna/nudge';
 import { getStreakDisplay } from './modules/practice-preference/streak.service';
+import { ShareProgressService } from './modules/practice-preference/share-progress.service';
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
@@ -102,6 +103,7 @@ const cutoffPredictorService = new CutoffPredictorService();
 const mockExamAdminService = new MockExamAdminService();
 const mockExamService = new MockExamService();
 const diagnosticService = new DiagnosticService();
+const shareProgressService = new ShareProgressService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -227,6 +229,48 @@ app.get('/students/me/streak', requireStudentAuth, async (req: StudentAuthedRequ
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load streak' });
+  }
+});
+
+// ── Parent/Mentor Progress Sharing (finalized requirement) ─────────────
+
+app.get('/students/me/share-progress', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await shareProgressService.getStatus(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load share status' });
+  }
+});
+
+app.post('/students/me/share-progress', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await shareProgressService.createOrGetToken(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create share link' });
+  }
+});
+
+app.delete('/students/me/share-progress', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await shareProgressService.revoke(req.studentUserId!);
+    res.json({ revoked: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to revoke share link' });
+  }
+});
+
+// GET /shared/:token — PUBLIC, no auth. Safe summary only, never PII.
+app.get('/shared/:token', async (req, res) => {
+  try {
+    const summary = await shareProgressService.getPublicSummary(req.params.token);
+    if (!summary) return res.status(404).json({ error: 'This share link is invalid or has been revoked.' });
+    res.json(summary);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load shared progress' });
   }
 });
 

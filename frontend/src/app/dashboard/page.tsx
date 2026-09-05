@@ -31,6 +31,8 @@ export default function DashboardPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [nudge, setNudge] = useState<{ message: string; suggestedMessage: string } | null>(null);
   const [streak, setStreak] = useState<{ currentStreak: number; longestStreak: number } | null>(null);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
@@ -49,7 +51,27 @@ export default function DashboardPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setStreak)
       .catch(() => {});
+    studentFetch('/students/me/share-progress')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => setShareToken(s?.active ? s.token : null))
+      .catch(() => {});
   }, []);
+
+  async function createShareLink() {
+    setSharing(true);
+    const res = await studentFetch('/students/me/share-progress', { method: 'POST' });
+    setSharing(false);
+    if (res.ok) {
+      const body = await res.json();
+      setShareToken(body.token);
+    }
+  }
+
+  async function revokeShareLink() {
+    if (!confirm(t.dashboard.confirmRevokeShare)) return;
+    await studentFetch('/students/me/share-progress', { method: 'DELETE' });
+    setShareToken(null);
+  }
 
   const overall = data?.buckets.OVERALL;
   const answered = overall?.questionsAnswered ?? 0;
@@ -136,6 +158,39 @@ export default function DashboardPage() {
           </div>
         </a>
       )}
+
+      {/* Parent/Mentor Progress Sharing (finalized requirement) — a
+          student-initiated, revocable, read-only public link. Default
+          private; never PII, only accuracy/streak/subject performance. */}
+      <div style={{ ...CARD, marginBottom: 18 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 8px', letterSpacing: 0.3 }}>{t.dashboard.shareProgressLabel}</p>
+        {shareToken ? (
+          <>
+            <p style={{ fontSize: 12, color: COLORS.inkMuted, marginBottom: 8, wordBreak: 'break-all' }}>
+              {typeof window !== 'undefined' ? `${window.location.origin}/shared/${shareToken}` : ''}
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => navigator.clipboard.writeText(`${window.location.origin}/shared/${shareToken}`)}
+                style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${COLORS.line}`, background: COLORS.paper, fontSize: 12, fontWeight: 600 }}
+              >
+                {t.dashboard.copyLink}
+              </button>
+              <button onClick={revokeShareLink} style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', fontSize: 12, fontWeight: 600 }}>
+                {t.dashboard.revokeLink}
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={createShareLink}
+            disabled={sharing}
+            style={{ width: '100%', padding: 10, borderRadius: 8, border: 'none', background: COLORS.ink, color: COLORS.paper, fontSize: 13, fontWeight: 600 }}
+          >
+            {sharing ? '…' : t.dashboard.createShareLink}
+          </button>
+        )}
+      </div>
 
       {/* Performance by Difficulty — Medium/Hard only, equal-width and
           equal-height regardless of whether a progress bar renders. */}

@@ -166,6 +166,7 @@ model User {
   mistakeReviews      MistakeReview[]
   mockExamAttempts    MockExamAttempt[]
   diagnosticAttempt   DiagnosticAttempt?
+  shareToken          ShareToken?
   askPonnaConversations AskPonnaConversation[]
 
   @@index([phone])
@@ -1149,6 +1150,21 @@ model DiagnosticAnswer {
   answeredAt     DateTime?
 
   @@unique([attemptId, questionId])
+}
+
+// ── Parent/Mentor Progress Sharing (finalized requirement — world-class
+// polish, item 2). A student-initiated, revocable, read-only public link
+// to a SAFE summary of their own progress (accuracy, streak, subject
+// strengths/weaknesses) -- never phone/email/other PII. Default private:
+// no token exists until the student explicitly creates one; can be
+// revoked at any time, which immediately invalidates the public link.
+model ShareToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique // one active share link per student at a time -- creating again just returns the same token unless revoked first
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique @default(uuid())
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 // Drives "unseen-first" allocation (§6.4) and performance rollups (§8).
