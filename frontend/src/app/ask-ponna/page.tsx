@@ -141,24 +141,36 @@ export default function AskPonnaPage() {
 
       <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
         {messages.length === 0 && accessState !== 'locked' && (
-          <div style={{ marginTop: 24, textAlign: 'center' }}>
-            <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 20 }}>{t.askPonna.emptyState}</p>
-            <button
-              onClick={() => send(t.askPonna.examPrepButton)}
-              disabled={sending}
-              style={{
-                padding: '14px 20px',
-                borderRadius: 12,
-                border: `1.5px solid ${COLORS.gold}`,
-                background: COLORS.goldLight,
-                color: '#5C4009',
-                fontSize: 15,
-                fontWeight: 700,
-              }}
-            >
-              {t.askPonna.examPrepButton}
-            </button>
-            <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 14 }}>{t.askPonna.orAskDirectly}</p>
+          <div style={{ marginTop: 20, textAlign: 'center' }}>
+            <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 18 }}>{t.askPonna.emptyState}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { key: 'learnExam', label: t.askPonna.flowLearnExam, prompt: t.askPonna.flowLearnExam },
+                { key: 'suitableExam', label: t.askPonna.flowSuitableExam, prompt: t.askPonna.flowSuitableExam },
+                { key: 'howToPrepare', label: t.askPonna.flowHowToPrepare, prompt: t.askPonna.flowHowToPrepare },
+                { key: 'askAnything', label: t.askPonna.flowAskAnything, prompt: t.askPonna.flowAskAnything },
+              ].map((flow) => (
+                <button
+                  key={flow.key}
+                  onClick={() => send(flow.prompt)}
+                  disabled={sending}
+                  style={{
+                    padding: '14px 18px',
+                    borderRadius: 12,
+                    border: `1px solid ${COLORS.line}`,
+                    background: COLORS.paperAlt,
+                    color: COLORS.ink,
+                    fontSize: 14.5,
+                    fontWeight: 600,
+                    textAlign: 'left',
+                  }}
+                >
+                  {flow.label}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 16 }}>{t.askPonna.orAskDirectly}</p>
+            <p style={{ fontSize: 10.5, color: COLORS.inkMuted, marginTop: 20, opacity: 0.75, lineHeight: 1.5 }}>{t.askPonna.aiDisclaimer}</p>
           </div>
         )}
         {messages.map((m, i) => {
@@ -193,11 +205,22 @@ export default function AskPonnaPage() {
                   a visible signal, not just a design principle in code
                   comments. Derived from real tool-call usage, never
                   something the AI has to remember to say itself. */}
-              {m.role === 'ASSISTANT' && (m.toolCallsUsed?.includes('get_exam_info') || m.toolCallsUsed?.includes('get_exam_syllabus')) && (
+              {m.role === 'ASSISTANT' &&
+                m.toolCallsUsed?.some((t) =>
+                  ['get_exam_info', 'get_exam_syllabus', 'get_exam_full_info', 'get_current_affairs', 'get_previous_cutoffs', 'get_ponna_faq'].includes(t),
+                ) && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 4 }}>
                   <span style={{ fontSize: 10.5, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                     ✓ {t.askPonna.verifiedBadge}
                   </span>
+                </div>
+              )}
+              {/* Tier 3 (live search) indicator -- small, distinct from the
+                  Tier 1 verified badge above, per Spec v6 Refinement 3:
+                  clearly distinguished but never a large warning block. */}
+              {m.role === 'ASSISTANT' && m.toolCallsUsed?.includes('search_current_info') && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 4 }}>
+                  <span style={{ fontSize: 10.5, color: '#B4744A', fontWeight: 600 }}>🔍 {t.askPonna.liveSearchBadge}</span>
                 </div>
               )}
               {/* Tappable quick-reply options — only offered while this is
