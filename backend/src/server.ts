@@ -33,6 +33,7 @@ import { getStreakDisplay } from './modules/practice-preference/streak.service';
 import { ShareProgressService } from './modules/practice-preference/share-progress.service';
 import { ReferralService } from './modules/practice-preference/referral.service';
 import { MilestoneService } from './modules/practice-preference/milestone.service';
+import { getTimeAnalytics } from './modules/practice-preference/time-analytics.service';
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
@@ -299,6 +300,16 @@ app.get('/students/me/milestones', requireStudentAuth, async (req: StudentAuthed
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load milestones' });
+  }
+});
+
+// GET /students/me/time-analytics — Time-Management Analytics (finalized requirement).
+app.get('/students/me/time-analytics', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await getTimeAnalytics(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load time analytics' });
   }
 });
 
@@ -792,11 +803,11 @@ app.get('/quiz/:sessionId', requireStudentAuth, async (req: StudentAuthedRequest
   }
 });
 
-// POST /quiz/:sessionId/answer  { questionId, selectedOption }
+// POST /quiz/:sessionId/answer  { questionId, selectedOption, timeSpentSeconds? }
 app.post('/quiz/:sessionId/answer', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    const { questionId, selectedOption } = req.body;
-    const result = await sessionService.submitAnswer(req.params.sessionId, questionId, selectedOption);
+    const { questionId, selectedOption, timeSpentSeconds } = req.body;
+    const result = await sessionService.submitAnswer(req.params.sessionId, questionId, selectedOption, timeSpentSeconds);
     res.json(result);
   } catch (err) {
     console.error(err);

@@ -135,6 +135,7 @@ export class SessionService {
     sessionId: string,
     questionId: string,
     selectedOption: CorrectOption,
+    timeSpentSeconds?: number,
   ) {
     const session = await prisma.quizSession.findUniqueOrThrow({ where: { id: sessionId } });
     if (session.status !== SessionStatus.IN_PROGRESS) {
@@ -147,7 +148,7 @@ export class SessionService {
     await prisma.$transaction([
       prisma.quizSessionQuestion.update({
         where: { sessionId_questionId: { sessionId, questionId } },
-        data: { answered: true, selectedOption, isCorrect, answeredAt: new Date() },
+        data: { answered: true, selectedOption, isCorrect, answeredAt: new Date(), timeSpentSeconds },
       }),
       prisma.quizSession.update({
         where: { id: sessionId },

@@ -997,6 +997,12 @@ model QuizSessionQuestion {
   selectedOption CorrectOption?
   isCorrect     Boolean?
   answeredAt    DateTime?
+  // Time-Management Analytics (finalized requirement — world-class
+  // polish, item 6). Measured client-side (question-shown timestamp to
+  // submit timestamp) and sent along with the answer -- purely additive,
+  // never affects scoring/quota/ranking. Null for older answers recorded
+  // before this field existed.
+  timeSpentSeconds Int?
 
   @@unique([sessionId, questionId])
   @@index([sessionId, sequenceNumber])
@@ -1126,6 +1132,7 @@ model MockExamQuestion {
   selectedOption CorrectOption?  // null until answered; never revealed as correct/incorrect to the student until the attempt is completed
   isCorrect      Boolean?
   answeredAt     DateTime?
+  timeSpentSeconds Int? // Time-Management Analytics (finalized requirement) -- same purely-additive field as QuizSessionQuestion
 
   @@unique([attemptId, questionId])
 }

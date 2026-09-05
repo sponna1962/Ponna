@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useLanguage } from '../../../lib/language-context';
 import { studentFetch } from '../../../lib/student-fetch';
@@ -51,6 +51,14 @@ export default function QuizSessionPage() {
 
   const [session, setSession] = useState<SessionData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  // Time-Management Analytics (finalized requirement) -- reset whenever
+  // the displayed question changes, read at submit time. A plain ref
+  // (not state) since it's never rendered, just measured.
+  const questionShownAt = useRef<number>(Date.now());
+
+  useEffect(() => {
+    questionShownAt.current = Date.now();
+  }, [currentIndex]);
   const [selected, setSelected] = useState<string | null>(null); // option LETTER — language-independent
   const [correctOption, setCorrectOption] = useState<string | null>(null); // option LETTER
   const [submitting, setSubmitting] = useState(false);
@@ -106,7 +114,11 @@ export default function QuizSessionPage() {
     const res = await studentFetch(`/quiz/${sessionId}/answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: question.questionId, selectedOption: letter }),
+      body: JSON.stringify({
+        questionId: question.questionId,
+        selectedOption: letter,
+        timeSpentSeconds: Math.round((Date.now() - questionShownAt.current) / 1000),
+      }),
     });
     const { correctOption: correct } = await res.json();
     setCorrectOption(correct);

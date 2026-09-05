@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [sharing, setSharing] = useState(false);
   const [milestones, setMilestones] = useState<{ type: string; label: string; emoji: string; achievedAt: string }[]>([]);
   const [newBadge, setNewBadge] = useState<{ label: string; emoji: string } | null>(null);
+  const [timeAnalytics, setTimeAnalytics] = useState<{ overallAverageSeconds: number; byDifficulty: { difficulty: string; averageSeconds: number; sampleSize: number }[] } | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
@@ -73,6 +74,10 @@ export default function DashboardPage() {
           localStorage.setItem(seenKey, JSON.stringify([...seen, ...list.map((m: any) => m.type)]));
         }
       })
+      .catch(() => {});
+    studentFetch('/students/me/time-analytics')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setTimeAnalytics)
       .catch(() => {});
   }, []);
 
@@ -237,6 +242,23 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Time-Management Analytics (finalized requirement) — framed as
+          "room to improve" against TNPSC's real exam time pressure, never
+          as a negative judgement. Silently absent until there's at least
+          some timed data. */}
+      {timeAnalytics && (
+        <div style={{ ...CARD, marginBottom: 18 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 8px', letterSpacing: 0.3 }}>{t.dashboard.timeAnalyticsLabel}</p>
+          <p style={{ fontSize: 13, color: COLORS.ink, marginBottom: 8 }}>{t.dashboard.avgTimeOverall(timeAnalytics.overallAverageSeconds)}</p>
+          {timeAnalytics.byDifficulty.map((d) => (
+            <div key={d.difficulty} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: `1px solid ${COLORS.line}`, fontSize: 12 }}>
+              <span style={{ color: COLORS.inkMuted }}>{t.dashboard.buckets[d.difficulty as 'EASY' | 'MEDIUM' | 'HARD'] ?? d.difficulty}</span>
+              <span style={{ fontWeight: 600 }}>{t.dashboard.secondsPerQuestion(d.averageSeconds)}</span>
+            </div>
+          ))}
         </div>
       )}
 
