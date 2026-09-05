@@ -146,13 +146,34 @@ export default function SyllabusPage() {
       {selectedExamId && <ExamFactsSection examId={selectedExamId} />}
       {selectedExamId && <CutoffSection examId={selectedExamId} />}
       {selectedExamId && <MockExamSection examId={selectedExamId} />}
+      {selectedExamId && <NotificationImportSection examId={selectedExamId} />}
     </div>
   );
 }
 
 // ── Verified Exam Facts (finalized requirement — Ask Ponna's Exam
 // Preparation Coach flow reads from this, never from AI memory) ────────
-type FactType = 'APPLICATION_START_DATE' | 'APPLICATION_END_DATE' | 'EXAM_DATE' | 'EXAM_PATTERN' | 'ELIGIBILITY' | 'IMPORTANT_NOTE' | 'OTHER';
+type FactType =
+  | 'APPLICATION_START_DATE'
+  | 'APPLICATION_END_DATE'
+  | 'EXAM_DATE'
+  | 'EXAM_PATTERN'
+  | 'ELIGIBILITY'
+  | 'IMPORTANT_NOTE'
+  | 'OTHER'
+  | 'POSTS_COVERED'
+  | 'DEPARTMENT_SERVICE'
+  | 'AGE_LIMIT'
+  | 'AGE_RELAXATION'
+  | 'EXAM_STAGES'
+  | 'PAPER_STRUCTURE'
+  | 'SELECTION_PROCESS'
+  | 'VACANCY_COUNT'
+  | 'HALL_TICKET_INFO'
+  | 'ANSWER_KEY_STATUS'
+  | 'RESULT_STATUS'
+  | 'APPLICATION_CORRECTION_WINDOW'
+  | 'RESERVATION_INFO';
 type ExamFact = { id: string; factType: FactType; value: string; sourceUrl: string | null; verifiedAt: string; isOfficialConfirmed: boolean };
 
 const FACT_TYPE_LABELS: Record<FactType, string> = {
@@ -163,6 +184,19 @@ const FACT_TYPE_LABELS: Record<FactType, string> = {
   ELIGIBILITY: 'Eligibility',
   IMPORTANT_NOTE: 'Important Note',
   OTHER: 'Other',
+  POSTS_COVERED: 'Posts Covered',
+  DEPARTMENT_SERVICE: 'Department / Service',
+  AGE_LIMIT: 'Age Limit',
+  AGE_RELAXATION: 'Age Relaxation',
+  EXAM_STAGES: 'Exam Stages',
+  PAPER_STRUCTURE: 'Paper Structure',
+  SELECTION_PROCESS: 'Selection Process',
+  VACANCY_COUNT: 'Vacancy Count',
+  HALL_TICKET_INFO: 'Hall Ticket Info',
+  ANSWER_KEY_STATUS: 'Answer Key Status',
+  RESULT_STATUS: 'Result Status',
+  APPLICATION_CORRECTION_WINDOW: 'Application Correction Window',
+  RESERVATION_INFO: 'Reservation Info',
 };
 
 function ExamFactsSection({ examId }: { examId: string }) {
@@ -559,6 +593,153 @@ function MockExamSection({ examId }: { examId: string }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Official Data Import Workflow (Ask Ponna Master Requirement, Spec v5
+// Refinement 3, BINDING). Admin pastes a notification's text; the system
+// suggests candidate facts via simple pattern-matching; admin reviews,
+// edits, and approves each one (or discards it) before it becomes real
+// verified data. Nothing here is EVER treated as verified until
+// explicitly approved -- admin approval remains the sole authority.
+type ImportCandidate = { id: string; suggestedFactType: FactType; suggestedValue: string; approved: boolean };
+type NotificationImportRow = { id: string; rawText: string; sourceUrl: string | null; status: 'PENDING' | 'REVIEWED'; candidates: ImportCandidate[] };
+
+function NotificationImportSection({ examId }: { examId: string }) {
+  const [rawText, setRawText] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [currentImport, setCurrentImport] = useState<NotificationImportRow | null>(null);
+  const [verifiedAt, setVerifiedAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [creating, setCreating] = useState(false);
+
+  async function createImport() {
+    if (!rawText.trim()) return;
+    setCreating(true);
+    const res = await adminFetch(`/admin/notification-imports/${examId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawText, sourceUrl }),
+    });
+    setCreating(false);
+    const data = await res.json();
+    setCurrentImport(data);
+    setRawText('');
+  }
+
+  async function updateCandidateValue(candidateId: string, value: string) {
+    if (!currentImport) return;
+    await adminFetch(`/admin/notification-import-candidates/${candidateId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ suggestedValue: value }),
+    });
+    setCurrentImport({
+      ...currentImport,
+      candidates: currentImport.candidates.map((c) => (c.id === candidateId ? { ...c, suggestedValue: value } : c)),
+    });
+  }
+
+  async function approveCandidate(candidateId: string) {
+    await adminFetch(`/admin/notification-import-candidates/${candidateId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verifiedAt }),
+    });
+    if (currentImport) {
+      setCurrentImport({
+        ...currentImport,
+        candidates: currentImport.candidates.map((c) => (c.id === candidateId ? { ...c, approved: true } : c)),
+      });
+    }
+  }
+
+  async function discardCandidate(candidateId: string) {
+    await adminFetch(`/admin/notification-import-candidates/${candidateId}`, { method: 'DELETE' });
+    if (currentImport) {
+      setCurrentImport({ ...currentImport, candidates: currentImport.candidates.filter((c) => c.id !== candidateId) });
+    }
+  }
+
+  async function markReviewed() {
+    if (!currentImport) return;
+    await adminFetch(`/admin/notification-imports/${currentImport.id}/mark-reviewed`, { method: 'POST' });
+    setCurrentImport(null);
+  }
+
+  return (
+    <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
+      <h2 style={{ fontSize: 17, marginBottom: 4 }}>Official Data Import</h2>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+        Paste an official notification's text below. The system will suggest candidate facts (pattern-matching only) -- nothing becomes real verified data until you review and approve each one individually.
+      </p>
+
+      {!currentImport && (
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
+          <textarea
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+            placeholder="Paste the official notification's text here..."
+            rows={6}
+            style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, marginBottom: 8, boxSizing: 'border-box' }}
+          />
+          <input
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="Source URL (the official notification link)"
+            style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}
+          />
+          <button onClick={createImport} disabled={creating} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13 }}>
+            {creating ? 'Analyzing…' : 'Find Candidate Facts'}
+          </button>
+        </div>
+      )}
+
+      {currentImport && (
+        <div>
+          <p style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
+            {currentImport.candidates.length === 0
+              ? 'No candidates were pattern-matched from this text -- you can still add facts manually above, or discard this import.'
+              : `${currentImport.candidates.filter((c) => !c.approved).length} candidate(s) awaiting review:`}
+          </p>
+          {currentImport.candidates.map((c) => (
+            <div key={c.id} style={{ border: `1px solid ${c.approved ? '#86efac' : '#e2e8f0'}`, borderRadius: 8, padding: 12, marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>
+                {FACT_TYPE_LABELS[c.suggestedFactType]}
+              </span>
+              {c.approved ? (
+                <p style={{ fontSize: 13, margin: '8px 0 0', color: '#166534', fontWeight: 600 }}>✓ Approved — {c.suggestedValue}</p>
+              ) : (
+                <>
+                  <textarea
+                    value={c.suggestedValue}
+                    onChange={(e) => updateCandidateValue(c.id, e.target.value)}
+                    rows={2}
+                    style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, margin: '8px 0', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => approveCandidate(c.id)} style={{ padding: '6px 14px', borderRadius: 6, background: '#166534', color: '#fff', border: 'none', fontSize: 12 }}>
+                      Approve
+                    </button>
+                    <button onClick={() => discardCandidate(c.id)} style={{ padding: '6px 14px', borderRadius: 6, background: '#fff', color: '#dc2626', border: '1px solid #fca5a5', fontSize: 12 }}>
+                      Discard
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+            <label style={{ fontSize: 12 }}>
+              Verified date for approvals:
+              <input type="date" value={verifiedAt} onChange={(e) => setVerifiedAt(e.target.value)} style={{ marginLeft: 6, padding: 4, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }} />
+            </label>
+          </div>
+          <button onClick={markReviewed} style={{ marginTop: 12, padding: '8px 16px', borderRadius: 6, background: '#fff', color: '#0f172a', border: '1px solid #cbd5e1', fontSize: 13 }}>
+            Done — Mark Import Reviewed
+          </button>
+        </div>
+      )}
     </div>
   );
 }
