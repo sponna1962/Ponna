@@ -167,6 +167,17 @@ model User {
   mockExamAttempts    MockExamAttempt[]
   diagnosticAttempt   DiagnosticAttempt?
   shareToken          ShareToken?
+  // Referral Program (finalized requirement — world-class growth item 3;
+  // structure only for now, per explicit instruction -- the reward
+  // trigger depends on Razorpay payment confirmation, which is paused/
+  // not yet integrated. referralCode is auto-generated once, lazily, on
+  // first access -- never required at signup. referredBy is set once, at
+  // signup, if a valid ?ref= code was present -- never changeable after.
+  referralCode        String?              @unique
+  referredById        String?
+  referredBy          User?                @relation("Referrals", fields: [referredById], references: [id])
+  referrals           User[]               @relation("Referrals")
+  referralConversions ReferralConversion[]
   askPonnaConversations AskPonnaConversation[]
 
   @@index([phone])
@@ -1165,6 +1176,28 @@ model ShareToken {
   token     String   @unique @default(uuid())
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// ── Referral Program (finalized requirement — world-class growth item 3,
+// STRUCTURE ONLY per explicit instruction; the reward trigger is wired up
+// once Razorpay payment confirmation is live) ───────────────────────────
+// One row per successfully-referred person (refereeId unique -- a person
+// can only ever be counted as referred once). status stays PENDING until
+// an admin (today) or an automated payment-confirmation webhook (once
+// Razorpay is integrated) marks it REWARDED.
+enum ReferralStatus {
+  PENDING
+  REWARDED
+}
+
+model ReferralConversion {
+  id         String         @id @default(uuid())
+  referrerId String
+  referrer   User           @relation(fields: [referrerId], references: [id])
+  refereeId  String         @unique
+  status     ReferralStatus @default(PENDING)
+  createdAt  DateTime       @default(now())
+  rewardedAt DateTime?
 }
 
 // Drives "unseen-first" allocation (§6.4) and performance rollups (§8).

@@ -18,6 +18,9 @@ import { prisma } from '../../lib/prisma';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
+import { ReferralService } from '../practice-preference/referral.service';
+
+const referralService = new ReferralService();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -73,7 +76,7 @@ export class StudentAuthService {
    * login. Throws DeviceLimitReachedError instead of issuing a session
    * when this is a genuinely new (3rd+) device.
    */
-  async loginWithFirebaseToken(firebaseIdToken: string, deviceId: string, deviceLabel?: string, ip?: string) {
+  async loginWithFirebaseToken(firebaseIdToken: string, deviceId: string, deviceLabel?: string, ip?: string, referralCode?: string) {
     ensureFirebaseInitialized();
 
     const decoded = await admin.auth().verifyIdToken(firebaseIdToken);
@@ -113,6 +116,7 @@ export class StudentAuthService {
       // never overwritten again (see the suspicious-usage sweep's
       // account-clustering signal, anti-abuse.service.ts).
       user = await prisma.user.create({ data: { firebaseUid: uid, phone, signupIp: ip, lastLoginIp: ip } });
+      await referralService.recordReferralIfPresent(user.id, referralCode);
       await this.registerDevice(user.id, deviceId, deviceLabel);
       return this.issueSession(user.id);
     }
@@ -139,6 +143,7 @@ export class StudentAuthService {
       }
       // No conflicting account — genuinely new Google-only signup.
       user = await prisma.user.create({ data: { firebaseUid: uid, email, photoUrl: googlePicture, signupIp: ip, lastLoginIp: ip } });
+      await referralService.recordReferralIfPresent(user.id, referralCode);
       await this.registerDevice(user.id, deviceId, deviceLabel);
       return this.issueSession(user.id);
     }

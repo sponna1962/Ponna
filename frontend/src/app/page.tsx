@@ -117,10 +117,15 @@ export default function IndexPage() {
    * keeping the Firebase token so the same login can be retried right
    * after a device is removed — no need to sign in with Google/OTP again. */
   async function attemptLogin(firebaseIdToken: string) {
+    // Referral Program (finalized requirement) — captured once from the
+    // URL (?ref=CODE), only actually used server-side for a genuinely
+    // NEW signup (recordReferralIfPresent no-ops for an existing login),
+    // so sending it here on every login attempt is harmless.
+    const referralCode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('ref') : null;
     const res = await fetch(apiUrl('/auth/firebase-login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firebaseIdToken, deviceId: getDeviceId(), deviceLabel: getDeviceLabel() }),
+      body: JSON.stringify({ firebaseIdToken, deviceId: getDeviceId(), deviceLabel: getDeviceLabel(), referralCode }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

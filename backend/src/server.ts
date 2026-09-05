@@ -31,6 +31,7 @@ import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modu
 import { getNudge as getAskPonnaNudge } from './modules/ask-ponna/nudge';
 import { getStreakDisplay } from './modules/practice-preference/streak.service';
 import { ShareProgressService } from './modules/practice-preference/share-progress.service';
+import { ReferralService } from './modules/practice-preference/referral.service';
 import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
@@ -104,6 +105,7 @@ const mockExamAdminService = new MockExamAdminService();
 const mockExamService = new MockExamService();
 const diagnosticService = new DiagnosticService();
 const shareProgressService = new ShareProgressService();
+const referralService = new ReferralService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -116,12 +118,12 @@ const profileService = new ProfileService();
 // same way; see student-auth.service.ts for how each is resolved.
 app.post('/auth/firebase-login', async (req, res) => {
   try {
-    const { firebaseIdToken, deviceId, deviceLabel } = req.body;
+    const { firebaseIdToken, deviceId, deviceLabel, referralCode } = req.body;
     if (!deviceId) {
       res.status(400).json({ error: 'deviceId is required' });
       return;
     }
-    const result = await studentAuthService.loginWithFirebaseToken(firebaseIdToken, deviceId, deviceLabel, req.ip);
+    const result = await studentAuthService.loginWithFirebaseToken(firebaseIdToken, deviceId, deviceLabel, req.ip, referralCode);
     res.json(result);
   } catch (err: any) {
     console.error(err);
@@ -271,6 +273,20 @@ app.get('/shared/:token', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load shared progress' });
+  }
+});
+
+// ── Referral Program (finalized requirement — structure only, reward
+// trigger pending Razorpay integration) ────────────────────────────────
+
+app.get('/students/me/referral', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const code = await referralService.getOrCreateCode(req.studentUserId!);
+    const stats = await referralService.getMyReferrals(req.studentUserId!);
+    res.json({ code, ...stats });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load referral info' });
   }
 });
 

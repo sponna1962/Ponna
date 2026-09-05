@@ -650,6 +650,11 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Referral Program (finalized requirement — structure only,
+            reward trigger pending Razorpay integration). Lazily fetches/
+            generates the student's own code on this page's load. */}
+        <ReferralSection />
+
         {/* Test Accounts only (finalized requirement) — self-service reset
             of their own quiz history/score, no need to ask an admin each
             time. Never shown for a real student account. */}
@@ -726,6 +731,47 @@ function DateField({ label, value, onChange, required }: { label: string; value:
         onChange={(e) => onChange(e.target.value)}
         style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
       />
+    </div>
+  );
+}
+
+// Referral Program (finalized requirement — structure only for now, per
+// explicit instruction; reward is manually marked by admin today, will
+// be automated once Razorpay payment confirmation is wired up).
+function ReferralSection() {
+  const [info, setInfo] = useState<{ code: string; totalReferred: number; totalRewarded: number; pending: number } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    studentFetch('/students/me/referral')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setInfo)
+      .catch(() => {});
+  }, []);
+
+  if (!info) return null;
+
+  const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${info.code}` : '';
+
+  function copyLink() {
+    navigator.clipboard.writeText(shareLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginTop: 20 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>🎁 Invite &amp; Earn</p>
+      <p style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>Invite a friend — you both get a reward once they get a paid plan.</p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        <input readOnly value={shareLink} style={{ flex: 1, padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, background: '#f8fafc' }} />
+        <button onClick={copyLink} style={{ padding: '8px 14px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontSize: 12, fontWeight: 600 }}>
+          {copied ? '✓' : 'Copy'}
+        </button>
+      </div>
+      <p style={{ fontSize: 11, color: '#94a3b8' }}>
+        {info.totalReferred} invited · {info.totalRewarded} rewarded · {info.pending} pending
+      </p>
     </div>
   );
 }
