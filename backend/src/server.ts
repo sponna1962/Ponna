@@ -38,6 +38,7 @@ import { CutoffService } from './modules/admin/cutoff.service';
 import { CutoffPredictorService } from './modules/practice-preference/cutoff-predictor.service';
 import { MockExamAdminService } from './modules/admin/mock-exam-admin.service';
 import { MockExamService } from './modules/quiz/mock-exam.service';
+import { DiagnosticService } from './modules/quiz/diagnostic.service';
 import { DailyQuizType } from '@prisma/client';
 import { ProfileService } from './modules/profile/profile.service';
 
@@ -100,6 +101,7 @@ const cutoffService = new CutoffService();
 const cutoffPredictorService = new CutoffPredictorService();
 const mockExamAdminService = new MockExamAdminService();
 const mockExamService = new MockExamService();
+const diagnosticService = new DiagnosticService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -1486,6 +1488,53 @@ app.post('/live-exam/attempts/:attemptId/submit', requireStudentAuth, async (req
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to submit Live Exam' });
+  }
+});
+
+// ── Diagnostic Quiz at Signup (finalized requirement) ──────────────────
+
+app.get('/diagnostic/state', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await diagnosticService.getState(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load diagnostic state' });
+  }
+});
+
+app.post('/diagnostic/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await diagnosticService.start(req.studentUserId!));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to start diagnostic' });
+  }
+});
+
+app.get('/diagnostic/attempts/:attemptId/questions', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await diagnosticService.getQuestions(req.studentUserId!, req.params.attemptId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to load questions' });
+  }
+});
+
+app.post('/diagnostic/attempts/:attemptId/answer', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await diagnosticService.submitAnswer(req.studentUserId!, req.params.attemptId, req.body.questionId, req.body.selectedOption));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to submit answer' });
+  }
+});
+
+app.post('/diagnostic/attempts/:attemptId/complete', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await diagnosticService.complete(req.studentUserId!, req.params.attemptId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to complete diagnostic' });
   }
 });
 

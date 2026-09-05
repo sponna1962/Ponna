@@ -165,6 +165,7 @@ model User {
   dailyQuizAttempts   DailyQuizAttempt[]
   mistakeReviews      MistakeReview[]
   mockExamAttempts    MockExamAttempt[]
+  diagnosticAttempt   DiagnosticAttempt?
   askPonnaConversations AskPonnaConversation[]
 
   @@index([phone])
@@ -920,6 +921,7 @@ model Question {
   sessionQuestions QuizSessionQuestion[]
   mistakeReviews   MistakeReview[]
   mockExamQuestions MockExamQuestion[]
+  diagnosticAnswers DiagnosticAnswer[]
 
   @@index([status, difficulty, category])
   @@index([contentHash])
@@ -1109,6 +1111,40 @@ model MockExamQuestion {
   question       Question        @relation(fields: [questionId], references: [id])
   sequenceNumber Int
   selectedOption CorrectOption?  // null until answered; never revealed as correct/incorrect to the student until the attempt is completed
+  isCorrect      Boolean?
+  answeredAt     DateTime?
+
+  @@unique([attemptId, questionId])
+}
+
+// ── Diagnostic Quiz at Signup (finalized requirement — world-class
+// onboarding polish) ────────────────────────────────────────────────────
+// A short (10-15 question), mixed-subject, mixed-difficulty sample taken
+// once, right after signup, purely to give the student a quick
+// "here's roughly where you stand" impression and steer them toward
+// Subject Preference. Completely separate from normal Practice: never
+// touches UserQuestionHistory/UserPerformanceSummary/ranking/quota/
+// no-repeat -- a 10-15 question sample is too small to responsibly
+// report as a real "accuracy" statistic anywhere those numbers are
+// otherwise trusted. One attempt ever, per student; skippable, never
+// forced.
+model DiagnosticAttempt {
+  id          String                  @id @default(uuid())
+  userId      String                  @unique
+  user        User                    @relation(fields: [userId], references: [id])
+  startedAt   DateTime                @default(now())
+  completedAt DateTime?
+  answers     DiagnosticAnswer[]
+}
+
+model DiagnosticAnswer {
+  id             String            @id @default(uuid())
+  attemptId      String
+  attempt        DiagnosticAttempt @relation(fields: [attemptId], references: [id])
+  questionId     String
+  question       Question          @relation(fields: [questionId], references: [id])
+  sequenceNumber Int
+  selectedOption CorrectOption?
   isCorrect      Boolean?
   answeredAt     DateTime?
 

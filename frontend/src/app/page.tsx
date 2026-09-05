@@ -67,6 +67,7 @@ export default function IndexPage() {
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
   const [headerPhotoUrl, setHeaderPhotoUrl] = useState<string | null>(null);
+  const [showDiagnosticPrompt, setShowDiagnosticPrompt] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [loggedOutElsewhere, setLoggedOutElsewhere] = useState(false);
 
@@ -96,6 +97,10 @@ export default function IndexPage() {
         setLoginMethod(data?.phone ? 'phone' : data?.email ? 'google' : null);
         setHeaderPhotoUrl(data?.photoUrl ?? null);
       })
+      .catch(() => {});
+    studentFetch('/diagnostic/state')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => setShowDiagnosticPrompt(s?.access === 'NOT_STARTED'))
       .catch(() => {});
   }, [isLoggedIn]);
 
@@ -343,6 +348,16 @@ export default function IndexPage() {
           <p style={{ fontSize: 14, color: COLORS.inkMuted, marginBottom: 20, lineHeight: 1.5 }}>
             A practice platform for competitive and entrance exam aspirants.
           </p>
+
+          {isLoggedIn && showDiagnosticPrompt && (
+            <a
+              href="/diagnostic"
+              style={{ display: 'block', border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 14, marginBottom: 20, textDecoration: 'none', background: COLORS.paperAlt }}
+            >
+              <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.ink, marginBottom: 4 }}>🎯 {t.diagnostic.introTitle}</p>
+              <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.diagnostic.introBody}</p>
+            </a>
+          )}
 
           {isLoggedIn && activeSubs && activeSubs.length > 0 && (
             <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 12, marginBottom: 20, background: COLORS.goldLight }}>
