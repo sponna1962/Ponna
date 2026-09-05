@@ -36,6 +36,20 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     parameters: { type: 'object', properties: {}, required: [] },
   },
   {
+    name: 'get_my_profile',
+    description: "Fetch the student's own name and education qualification (if they've already set it in their Profile). ALWAYS call this at the start of a conversation and whenever discussing exam preparation -- greet the student by their actual name rather than a generic greeting, and if their education qualification is already known, confirm it briefly rather than asking for it again from scratch.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'start_diagnostic',
+    description: "Starts a short (12-question) practice warm-up for the student, drawn from a specific exam's syllabus if subCategoryId is given (otherwise a general mixed sample). Use this ONLY after the student has agreed to it -- never start one without an explicit yes. Returns an attemptId the student continues on the /diagnostic page; this tool just creates the attempt, it does not run the quiz itself.",
+    parameters: {
+      type: 'object',
+      properties: { subCategoryId: { type: 'string', description: 'Optional exam id (from find_exam) to scope the warm-up questions to that syllabus' } },
+      required: [],
+    },
+  },
+  {
     name: 'find_exam',
     description: "Look up a TNPSC/TNTET exam by name (e.g. 'Group IV', 'Group I', 'TNTET') to get its exact id, needed before calling get_exam_info or get_exam_syllabus. Always call this FIRST when the student mentions an exam by name, before assuming you know which exam they mean.",
     parameters: {
@@ -102,6 +116,27 @@ export async function executeTool(userId: string, toolName: string, args: Record
     case 'get_my_performance_summary': {
       const rows = await prisma.userPerformanceSummary.findMany({ where: { userId } });
       return rows.map((r) => ({ bucket: r.bucket, questionsAnswered: r.questionsAnswered, correctAnswers: r.correctAnswers, averagePercent: r.averagePercent }));
+    }
+
+    case 'get_my_profile': {
+      const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, highestQualification: true, educationStatus: true } });
+      return { name: user.name, educationStatus: user.educationStatus, highestQualification: user.highestQualification };
+    }
+
+    case 'start_diagnostic': {
+      const existing = await prisma.diagnosticAttempt.findUnique({ where: { userId } });
+      if (existing) return { alreadyTaken: true };
+      const subCategoryId = args.subCategoryId as string | undefined;
+      const questions = await prisma.question.findMany({
+        where: subCategoryId ? { status: 'PUBLISHED', authorityTags: { some: { subCategoryId } } } : { status: 'PUBLISHED' },
+        take: 12,
+        orderBy: { createdAt: 'asc' },
+      });
+      if (questions.length < 12) return { error: 'Not enough published questions available yet for this warm-up.' };
+      const attempt = await prisma.diagnosticAttempt.create({
+        data: { userId, answers: { create: questions.map((q, i) => ({ questionId: q.id, sequenceNumber: i + 1 })) } },
+      });
+      return { attemptId: attempt.id, path: `/diagnostic?attemptId=${attempt.id}` };
     }
 
     case 'find_exam': {

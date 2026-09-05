@@ -13,6 +13,7 @@ export const translations = {
     },
     index: {
       pitch: 'போட்டித் தேர்வுகள் மற்றும் நுழைவுத் தேர்வுகளுக்கான பயிற்சி இணையதளம்.',
+      askPonnaPromptBody: 'உங்கள் பெயர், கல்வி, இலக்கு தேர்வுக்கு ஏற்ப தனிப்பட்ட வழிகாட்டுதல்.',
       cta: 'பயிற்சியைத் தொடங்குங்கள் / Start Practising',
       login: 'உள்நுழைய',
     },
@@ -350,6 +351,7 @@ export const translations = {
     },
     index: {
       pitch: 'A practice platform for competitive and entrance exam aspirants.',
+      askPonnaPromptBody: 'Personalised guidance based on your name, education, and target exam.',
       cta: 'பயிற்சியைத் தொடங்குங்கள் / Start Practising',
       login: 'Login',
     },

@@ -1588,7 +1588,7 @@ app.get('/diagnostic/state', requireStudentAuth, async (req: StudentAuthedReques
 
 app.post('/diagnostic/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    res.json(await diagnosticService.start(req.studentUserId!));
+    res.json(await diagnosticService.start(req.studentUserId!, req.body?.subCategoryId));
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to start diagnostic' });

@@ -15,16 +15,23 @@ import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/
 
 type Message = { role: 'USER' | 'ASSISTANT'; content: string; toolCallsUsed?: string[] };
 
-/** Parses the trailing "[[OPTIONS: a | b | c]]" marker the system prompt
- * instructs the AI to use whenever it wants the student to tap a choice
- * instead of typing — returns the message with that marker stripped for
- * display, plus the list of tappable options (empty if none). */
-function parseOptions(content: string): { text: string; options: string[] } {
+/** Parses trailing "[[OPTIONS: a | b | c]]" (tappable choices sent as the
+ * next chat message) and "[[NAVIGATE: /path | Button label]]" (a tappable
+ * link that navigates the browser instead, used for e.g. handing off to
+ * the dedicated /diagnostic quiz-taking page) markers the system prompt
+ * instructs the AI to use — returns the message with any marker
+ * stripped for display, plus whichever one was present (never both). */
+function parseOptions(content: string): { text: string; options: string[]; navigateTo: { path: string; label: string } | null } {
+  const navMatch = content.match(/\[\[NAVIGATE:\s*(.+?)\s*\|\s*(.+?)\]\]\s*$/);
+  if (navMatch) {
+    return { text: content.slice(0, navMatch.index).trim(), options: [], navigateTo: { path: navMatch[1].trim(), label: navMatch[2].trim() } };
+  }
   const match = content.match(/\[\[OPTIONS:\s*(.+?)\]\]\s*$/);
-  if (!match) return { text: content, options: [] };
+  if (!match) return { text: content, options: [], navigateTo: null };
   return {
     text: content.slice(0, match.index).trim(),
     options: match[1].split('|').map((o) => o.trim()).filter(Boolean),
+    navigateTo: null,
   };
 }
 
@@ -156,7 +163,7 @@ export default function AskPonnaPage() {
         )}
         {messages.map((m, i) => {
           const isLastAssistant = m.role === 'ASSISTANT' && i === messages.length - 1;
-          const { text, options } = m.role === 'ASSISTANT' ? parseOptions(m.content) : { text: m.content, options: [] };
+          const { text, options, navigateTo } = m.role === 'ASSISTANT' ? parseOptions(m.content) : { text: m.content, options: [], navigateTo: null };
           return (
             <div key={i} style={{ marginBottom: 10 }}>
               <div
@@ -217,6 +224,25 @@ export default function AskPonnaPage() {
                       {opt}
                     </button>
                   ))}
+                </div>
+              )}
+              {isLastAssistant && navigateTo && (
+                <div style={{ marginTop: 8 }}>
+                  <a
+                    href={navigateTo.path}
+                    style={{
+                      display: 'inline-block',
+                      padding: '10px 18px',
+                      borderRadius: 20,
+                      background: COLORS.ink,
+                      color: COLORS.paper,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {navigateTo.label}
+                  </a>
                 </div>
               )}
             </div>

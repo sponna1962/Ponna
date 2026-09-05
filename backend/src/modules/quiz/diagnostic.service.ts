@@ -18,17 +18,18 @@ export class DiagnosticService {
     return { access: 'COMPLETED' as const, attemptId: existing.id };
   }
 
-  async start(userId: string) {
+  async start(userId: string, subCategoryId?: string) {
     const existing = await prisma.diagnosticAttempt.findUnique({ where: { userId } });
     if (existing) throw new DiagnosticError('Diagnostic already taken.');
 
-    // A broad, mixed-difficulty, mixed-subject sample -- not tied to any
-    // one exam's syllabus, since this runs before the student has
-    // necessarily chosen one. Deliberately simple selection (no
-    // allocation-engine complexity needed for a one-time, 12-question
-    // sample).
+    // If Ask Ponna has already established which exam the student is
+    // targeting (finalized requirement -- merged into the Ask Ponna Exam
+    // Coach flow rather than a separate, context-free 12-question
+    // sample), pull questions from THAT exam's syllabus specifically so
+    // the "warm-up" is actually relevant. Falls back to the original
+    // broad, mixed-subject sample when no exam context exists yet.
     const questions = await prisma.question.findMany({
-      where: { status: 'PUBLISHED' },
+      where: subCategoryId ? { status: 'PUBLISHED', authorityTags: { some: { subCategoryId } } } : { status: 'PUBLISHED' },
       take: QUESTION_COUNT,
       orderBy: { createdAt: 'asc' },
     });
