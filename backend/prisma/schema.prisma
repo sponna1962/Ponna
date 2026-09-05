@@ -55,6 +55,12 @@ model User {
   // Required only when the student tries to view Rank or pay for a plan.
   district           String?
   cityTownVillage    String?
+  // Reservation community (finalized requirement — Cut-off Marks
+  // Predictor). Entirely optional and self-declared, never required to
+  // use PONNA -- only used to look up the matching CutoffRecord row when
+  // the student explicitly opts into the predictor. Not shown or
+  // referenced anywhere else on the platform.
+  community          ReservationCommunity?
   preparingFor       String[] @default([]) // superseded by the finalized Profile redesign (Education section below) — column kept, no longer read/written by the Profile page, so no data migration needed
 
   // Finalized Profile redesign — Education section. Deliberately just
@@ -659,6 +665,7 @@ model ExamSubCategory {
   syllabusSubjects SyllabusSubject[]
   subjectTopicPreferences StudentSubjectTopicPreference[]
   verifiedExamFacts VerifiedExamFact[]
+  cutoffRecords CutoffRecord[]
   // Student-facing launch visibility (finalized requirement — same
   // display/selection-only gate already used on ExamAuthority/ExamPurpose,
   // extended down to this level) — hides a Sub-Category that isn't an
@@ -739,6 +746,40 @@ model VerifiedExamFact {
   verifiedAt    DateTime             // when an admin last confirmed this against the official source
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
+}
+
+// ── Cut-off Marks Predictor (finalized requirement — Annual Plan value-add) ─
+// Admin-maintained, source-and-date stamped historical cut-off marks per
+// exam, year, and reservation community — same verify-don't-guess
+// discipline as VerifiedExamFact/Syllabus. Community is standard TNPSC
+// published categorization (OC/BC/BCM/MBC-DNC/SC/SCA/ST), the same
+// categories TNPSC's own official cut-off notifications are published
+// under — legitimate, expected data for this specific feature on any
+// Tamil Nadu competitive-exam prep platform, not gratuitous collection.
+enum ReservationCommunity {
+  OC
+  BC
+  BCM
+  MBC_DNC
+  SC
+  SCA
+  ST
+}
+
+model CutoffRecord {
+  id            String               @id @default(uuid())
+  subCategoryId String
+  subCategory   ExamSubCategory      @relation(fields: [subCategoryId], references: [id])
+  year          Int
+  community     ReservationCommunity
+  cutoffMarks   Float
+  totalMarks    Float?               // if known, lets the UI show "X out of Y" rather than a bare number
+  sourceUrl     String?
+  verifiedAt    DateTime
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@unique([subCategoryId, year, community])
 }
 
 // ─────────────────────────────────────────────────────────

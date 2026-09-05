@@ -175,3 +175,15 @@ export function AskPonnaIcon(p: IconProps) {
     </Base>
   );
 }
+
+export function CutoffPredictorIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <path d="M4 19V10" />
+      <path d="M10 19V5" />
+      <path d="M16 19v-7" />
+      <path d="M20 19V9" />
+      <path d="M3 19h18" />
+    </Base>
+  );
+}

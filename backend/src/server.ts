@@ -33,6 +33,8 @@ import { SubjectPreferenceService } from './modules/practice-preference/subject-
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
 import { ExamFactsService } from './modules/admin/exam-facts.service';
+import { CutoffService } from './modules/admin/cutoff.service';
+import { CutoffPredictorService } from './modules/practice-preference/cutoff-predictor.service';
 import { DailyQuizType } from '@prisma/client';
 import { ProfileService } from './modules/profile/profile.service';
 
@@ -91,6 +93,8 @@ const subjectPreferenceService = new SubjectPreferenceService();
 const dailyQuizService = new DailyQuizService();
 const syllabusService = new SyllabusService();
 const examFactsService = new ExamFactsService();
+const cutoffService = new CutoffService();
+const cutoffPredictorService = new CutoffPredictorService();
 const profileService = new ProfileService();
 
 // ─────────────────────────────────────────────────────────
@@ -282,6 +286,17 @@ app.get('/subject-preference/:subCategoryId/exam-facts', requireStudentAuth, asy
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load exam information' });
+  }
+});
+
+// GET /cutoff-predictor/:subCategoryId — Cut-off Marks Predictor
+// (finalized requirement, paid-only, ₹999 Annual Plan value-add).
+app.get('/cutoff-predictor/:subCategoryId', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await cutoffPredictorService.getPrediction(req.studentUserId!, req.params.subCategoryId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load cut-off prediction' });
   }
 });
 
@@ -1340,6 +1355,45 @@ app.delete('/admin/exam-facts/:id', requireStaffAuth, requireRole('SUPER_ADMIN',
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete exam fact' });
+  }
+});
+
+// ── Cut-off Marks Predictor — admin management (finalized requirement) ────
+
+app.get('/admin/cutoffs/:subCategoryId', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await cutoffService.listForExam(req.params.subCategoryId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load cut-off records' });
+  }
+});
+
+app.post('/admin/cutoffs/:subCategoryId', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await cutoffService.create(req.params.subCategoryId, req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add cut-off record' });
+  }
+});
+
+app.patch('/admin/cutoffs/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await cutoffService.update(req.params.id, req.body));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update cut-off record' });
+  }
+});
+
+app.delete('/admin/cutoffs/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await cutoffService.delete(req.params.id);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete cut-off record' });
   }
 });
 

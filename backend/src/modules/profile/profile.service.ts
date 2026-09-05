@@ -61,6 +61,7 @@ export class ProfileService {
       courseOrDegree: user.courseOrDegree,
       yearOfStudy: user.yearOfStudy,
       highestQualification: user.highestQualification,
+      community: user.community,
       profileComplete: isProfileComplete(user),
       isTestAccount: user.isTestAccount,
     };
@@ -105,6 +106,7 @@ export class ProfileService {
       courseOrDegree?: string;
       yearOfStudy?: string;
       highestQualification?: string;
+      community?: string | '';
     },
   ) {
     // Switching educationStatus clears the OTHER two detail fields — a
@@ -132,6 +134,7 @@ export class ProfileService {
         ...(data.courseOrDegree !== undefined ? { courseOrDegree: data.courseOrDegree } : {}),
         ...(data.yearOfStudy !== undefined ? { yearOfStudy: data.yearOfStudy } : {}),
         ...(data.highestQualification !== undefined ? { highestQualification: data.highestQualification } : {}),
+        ...(data.community !== undefined ? { community: (data.community || null) as any } : {}),
       },
     });
     return { profileComplete: isProfileComplete(updated) };

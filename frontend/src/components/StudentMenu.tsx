@@ -39,6 +39,7 @@ import {
   CloseIcon,
   MistakesIcon,
   AskPonnaIcon,
+  CutoffPredictorIcon,
 } from './icons';
 
 type NavItem = { href: string; label: string; Icon: (p: { size?: number; color?: string }) => React.ReactElement };
@@ -74,6 +75,7 @@ export function StudentMenu() {
             { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
             { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
             { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
+            { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
             { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
             { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
             { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },

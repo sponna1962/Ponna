@@ -144,6 +144,7 @@ export default function SyllabusPage() {
       </div>
 
       {selectedExamId && <ExamFactsSection examId={selectedExamId} />}
+      {selectedExamId && <CutoffSection examId={selectedExamId} />}
     </div>
   );
 }
@@ -265,6 +266,146 @@ function ExamFactsSection({ examId }: { examId: string }) {
         </div>
         <button onClick={addFact} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13 }}>
           + Add Verified Fact
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Cut-off Marks Predictor — admin management (finalized requirement,
+// ₹999 Annual Plan value-add). Same verify-don't-guess, source+date
+// stamped discipline as Verified Exam Facts -- real historical TNPSC
+// cut-offs entered here from the official published notification, never
+// guessed or seeded automatically.
+type Community = 'OC' | 'BC' | 'BCM' | 'MBC_DNC' | 'SC' | 'SCA' | 'ST';
+type CutoffRecordRow = { id: string; year: number; community: Community; cutoffMarks: number; totalMarks: number | null; sourceUrl: string | null; verifiedAt: string };
+
+const COMMUNITIES: Community[] = ['OC', 'BC', 'BCM', 'MBC_DNC', 'SC', 'SCA', 'ST'];
+
+function CutoffSection({ examId }: { examId: string }) {
+  const [records, setRecords] = useState<CutoffRecordRow[]>([]);
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [community, setCommunity] = useState<Community>('OC');
+  const [cutoffMarks, setCutoffMarks] = useState('');
+  const [totalMarks, setTotalMarks] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [verifiedAt, setVerifiedAt] = useState(() => new Date().toISOString().slice(0, 10));
+
+  function load() {
+    adminFetch(`/admin/cutoffs/${examId}`).then((r) => r.json()).then(setRecords);
+  }
+
+  useEffect(load, [examId]);
+
+  async function addRecord() {
+    if (!cutoffMarks.trim()) return;
+    await adminFetch(`/admin/cutoffs/${examId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year,
+        community,
+        cutoffMarks: parseFloat(cutoffMarks),
+        totalMarks: totalMarks.trim() ? parseFloat(totalMarks) : undefined,
+        sourceUrl,
+        verifiedAt,
+      }),
+    });
+    setCutoffMarks('');
+    setTotalMarks('');
+    setSourceUrl('');
+    load();
+  }
+
+  async function deleteRecord(id: string) {
+    if (!confirm('Delete this cut-off record?')) return;
+    await adminFetch(`/admin/cutoffs/${id}`, { method: 'DELETE' });
+    load();
+  }
+
+  return (
+    <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
+      <h2 style={{ fontSize: 17, marginBottom: 4 }}>Cut-off Marks (Predictor)</h2>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+        Real historical cut-off marks, community-wise, from the official TNPSC notification. Never guessed.
+      </p>
+
+      {records.map((r) => (
+        <div key={r.id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>
+              {r.year} · {r.community}
+            </span>
+            <p style={{ fontSize: 16, fontWeight: 700, margin: '6px 0 4px' }}>
+              {r.cutoffMarks}
+              {r.totalMarks ? ` / ${r.totalMarks}` : ''}
+            </p>
+            <p style={{ fontSize: 11, color: '#94a3b8' }}>
+              Verified {new Date(r.verifiedAt).toLocaleDateString()}
+              {r.sourceUrl && (
+                <>
+                  {' · '}
+                  <a href={r.sourceUrl} target="_blank" rel="noreferrer">
+                    source
+                  </a>
+                </>
+              )}
+            </p>
+          </div>
+          <button onClick={() => deleteRecord(r.id)} style={{ fontSize: 11, color: '#dc2626' }}>
+            Delete
+          </button>
+        </div>
+      ))}
+      {records.length === 0 && <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>No cut-off records on file for this exam yet.</p>}
+
+      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginTop: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <input
+            type="number"
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value, 10))}
+            placeholder="Year"
+            style={{ width: 90, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+          />
+          <select value={community} onChange={(e) => setCommunity(e.target.value as Community)} style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}>
+            {COMMUNITIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            value={cutoffMarks}
+            onChange={(e) => setCutoffMarks(e.target.value)}
+            placeholder="Cut-off marks"
+            style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+          />
+          <input
+            type="number"
+            value={totalMarks}
+            onChange={(e) => setTotalMarks(e.target.value)}
+            placeholder="Total (optional)"
+            style={{ width: 110, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <input
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="Source URL (tnpsc.gov.in link)"
+            style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          />
+          <input
+            type="date"
+            value={verifiedAt}
+            onChange={(e) => setVerifiedAt(e.target.value)}
+            style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          />
+        </div>
+        <button onClick={addRecord} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13 }}>
+          + Add Cut-off Record
         </button>
       </div>
     </div>

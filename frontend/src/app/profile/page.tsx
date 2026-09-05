@@ -36,6 +36,7 @@ type ProfileData = {
   courseOrDegree: string | null;
   yearOfStudy: string | null;
   highestQualification: string | null;
+  community: string | null;
   profileComplete: boolean;
   isTestAccount: boolean;
 };
@@ -79,6 +80,7 @@ export default function ProfilePage() {
   const [courseOrDegree, setCourseOrDegree] = useState('');
   const [yearOfStudy, setYearOfStudy] = useState('');
   const [highestQualification, setHighestQualification] = useState('');
+  const [community, setCommunity] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
@@ -114,6 +116,7 @@ export default function ProfilePage() {
         setCourseOrDegree(data.courseOrDegree ?? '');
         setYearOfStudy(data.yearOfStudy ?? '');
         setHighestQualification(data.highestQualification ?? '');
+        setCommunity(data.community ?? '');
       })
       .catch(() => {});
   }, []);
@@ -156,6 +159,7 @@ export default function ProfilePage() {
         courseOrDegree,
         yearOfStudy,
         highestQualification,
+        community,
       }),
     });
     setSaving(false);
@@ -465,6 +469,28 @@ export default function ProfilePage() {
         {educationStatus === 'COMPLETED_STUDIES' && (
           <TextField label={t.profile.highestQualification} required value={highestQualification} onChange={setHighestQualification} />
         )}
+
+        {/* Community — entirely optional (finalized requirement), only
+            used for the Cut-off Marks Predictor. Never required to use
+            PONNA, never shown elsewhere. */}
+        <label style={{ display: 'block', marginBottom: 16 }}>
+          <span style={{ fontSize: 13, color: '#64748b', display: 'block', marginBottom: 6 }}>{t.profile.communityLabel}</span>
+          <select
+            value={community}
+            onChange={(e) => setCommunity(e.target.value)}
+            style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
+          >
+            <option value="">{t.profile.communitySkip}</option>
+            <option value="OC">OC</option>
+            <option value="BC">BC</option>
+            <option value="BCM">BCM</option>
+            <option value="MBC_DNC">MBC / DNC</option>
+            <option value="SC">SC</option>
+            <option value="SCA">SC(A)</option>
+            <option value="ST">ST</option>
+          </select>
+          <span style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginTop: 4 }}>{t.profile.communityNote}</span>
+        </label>
 
         <button
           onClick={save}
