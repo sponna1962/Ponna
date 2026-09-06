@@ -70,9 +70,9 @@ function scopeTags(p: Scope): string[] {
   return [];
 }
 
-/** "NEET Annual Plan" -> "NEET" — used for compact chip/box titles. */
+/** "NEET Annual Pass" -> "NEET" — used for compact chip/box titles. */
 function shortName(name: string): string {
-  return name.replace(/ Annual Plan$/i, '').trim();
+  return name.replace(/ Annual (?:Plan|Pass)$/i, '').trim();
 }
 
 /** Display-only override for TNPSC's card title (finalized requirement —
@@ -83,8 +83,8 @@ function shortName(name: string): string {
  * Deliberately temporary/easy-to-revert rather than a DB rename, per "for
  * now." Every other plan just shows its real name untouched. */
 function displayName(name: string): string {
-  if (/competitive|employment/i.test(name) && !/tnpsc/i.test(name)) return 'TNPSC Annual Plan';
-  return name;
+  if (/competitive|employment/i.test(name) && !/tnpsc/i.test(name)) return 'TNPSC Annual Pass';
+  return name.replace(/ Annual Plan$/i, ' Annual Pass');
 }
 
 /** Finalized marketing copy per Annual Plan (Sept 15 launch — only TNPSC
@@ -237,7 +237,7 @@ function PlansPageInner() {
    * from the Plan's own name (data), never a hardcoded per-plan mapping. */
   function buyButtonLabel(name: string): string {
     const short = shortName(displayName(name));
-    return lang === 'ta' ? `${short} திட்டம் வாங்கவும்` : `Get ${short} Plan`;
+    return lang === 'ta' ? `${short} பாஸ் வாங்கவும்` : `Get ${short} Pass`;
   }
 
   const activePlanIds = new Set(activeSubs.map((s) => s.planId));
@@ -252,7 +252,7 @@ function PlansPageInner() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: activeSubs.length > 0 ? 16 : 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.plans.myPlansTitle}</h1>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 700, margin: 0, color: COLORS.ink }}>{lang === 'ta' ? 'எனது பாஸ்கள்' : 'My Passes'}</h1>
         </div>
 
         {/* Free chip lives right next to the title when there's nothing
@@ -297,7 +297,7 @@ function PlansPageInner() {
                   key={s.id}
                   onClick={() =>
                     setSheet({
-                      title: s.plan.name,
+                      title: displayName(s.plan.name),
                       scopeTags: scopeTags(s.plan),
                       activeUntil: s.cycleEnd,
                       action: 'practice',
@@ -358,7 +358,7 @@ function PlansPageInner() {
                   borderBottom: `2px solid ${COLORS.goldLight}`,
                 }}
               >
-                {t.plans.otherPlans}
+                {lang === 'ta' ? 'உங்கள் பாஸைத் தேர்வு செய்யவும்' : 'Choose Your Pass'}
               </h2>
 
               {otherAvailablePlans.map((p) => {
