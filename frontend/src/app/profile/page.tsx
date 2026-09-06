@@ -50,7 +50,6 @@ export default function ProfilePage() {
   const { t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [cameFromGate, setCameFromGate] = useState(false);
-  const verifyPhoneSectionRef = useRef<HTMLDivElement>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
   useEffect(() => {
@@ -59,15 +58,10 @@ export default function ProfilePage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (cameFromGate && profile && !profile.phone) {
-      verifyPhoneSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [cameFromGate, profile]);
-
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneToVerify, setPhoneToVerify] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [district, setDistrict] = useState('');
   const [city, setCity] = useState('');
@@ -85,8 +79,7 @@ export default function ProfilePage() {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [googleLinkMessage, setGoogleLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const [phoneLinkStep, setPhoneLinkStep] = useState<'idle' | 'enterPhone' | 'enterOtp'>('idle');
-  const [phoneToVerify, setPhoneToVerify] = useState('');
+  const [phoneLinkStep, setPhoneLinkStep] = useState<'idle' | 'enterOtp'>('idle');
   const [phoneOtp, setPhoneOtp] = useState('');
   const [verifyingPhone, setVerifyingPhone] = useState(false);
   const [phoneLinkMessage, setPhoneLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -102,6 +95,7 @@ export default function ProfilePage() {
         setName(data.name ?? '');
         setDateOfBirth(data.dateOfBirth ? data.dateOfBirth.slice(0, 10) : '');
         setEmail(data.email ?? '');
+        setPhoneToVerify(data.phone ?? '');
         setWhatsapp(data.whatsappNumber ?? '');
         setDistrict(data.district ?? '');
         setCity(data.cityTownVillage ?? '');
@@ -121,6 +115,12 @@ export default function ProfilePage() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (cameFromGate && profile && !profile.phone) {
+      document.getElementById('phone-number-field')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [cameFromGate, profile]);
 
   async function resetHistory() {
     if (!confirm('Reset your own quiz history and score? This clears Practice, Daily Quiz, and Brain Challenge history for this account — cannot be undone.')) return;
@@ -249,9 +249,15 @@ export default function ProfilePage() {
         setPhoneLinkMessage({ ok: false, text: t.profile.googleLinkNeedsRelogin });
         return;
       }
+      const normalized = phoneToVerify.trim().replace(/[\s-]/g, '');
+      if (!/^\+?\d{10,15}$/.test(normalized)) {
+        setPhoneLinkMessage({ ok: false, text: 'Enter a valid phone number.' });
+        return;
+      }
+      const fullPhone = normalized.startsWith('+') ? normalized : `+91${normalized}`;
       const verifier = new RecaptchaVerifier(firebaseAuth, phoneRecaptchaRef.current!, { size: 'invisible' });
-      const fullPhone = phoneToVerify.startsWith('+') ? phoneToVerify : `+91${phoneToVerify}`;
       phoneConfirmationRef.current = await linkWithPhoneNumber(firebaseAuth.currentUser, fullPhone, verifier);
+      setPhoneToVerify(fullPhone);
       setPhoneLinkStep('enterOtp');
     } catch (err: any) {
       console.error(err);
@@ -277,9 +283,10 @@ export default function ProfilePage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? 'Failed to link phone number');
       }
+      const verifiedPhone = phoneToVerify;
       setPhoneLinkMessage({ ok: true, text: t.profile.phoneVerified });
       setPhoneLinkStep('idle');
-      setProfile((p) => (p ? { ...p, phone: phoneToVerify } : p));
+      setProfile((p) => (p ? { ...p, phone: verifiedPhone } : p));
       if (cameFromGate && profile?.email) {
         window.location.href = '/quiz';
         return;
@@ -357,65 +364,63 @@ export default function ProfilePage() {
         <DateField label={t.profile.dateOfBirth} required value={dateOfBirth} onChange={setDateOfBirth} />
         <TextField label={t.profile.email} required type="email" value={email} onChange={setEmail} />
 
-        <ReadOnlyField label={t.profile.phone} value={profile.phone ?? '—'} />
-
-        {!profile.phone && (
-          <div ref={verifyPhoneSectionRef} style={{ marginBottom: 12 }}>
-            {phoneLinkStep === 'idle' && (
-              <button
-                type="button"
-                onClick={() => { setPhoneLinkMessage(null); setPhoneLinkStep('enterPhone'); }}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#1f2937', fontWeight: 600 }}
-              >
-                📱 {t.profile.verifyPhone}
-              </button>
-            )}
-
-            {(phoneLinkStep === 'enterPhone' || phoneLinkStep === 'enterOtp') && (
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginTop: 8 }}>
-                <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.phoneLabel}</label>
-                <input
-                  type="tel"
-                  value={phoneToVerify}
-                  onChange={(e) => setPhoneToVerify(e.target.value)}
-                  placeholder="9876543210"
-                  disabled={phoneLinkStep === 'enterOtp'}
-                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box', background: phoneLinkStep === 'enterOtp' ? '#f8fafc' : '#fff' }}
-                />
-                <div ref={phoneRecaptchaRef} />
-                {phoneLinkStep === 'enterOtp' && (
-                  <>
-                    <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.otpLabel}</label>
-                    <input
-                      type="text"
-                      value={phoneOtp}
-                      onChange={(e) => setPhoneOtp(e.target.value)}
-                      placeholder={t.login.otpPlaceholder}
-                      style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box' }}
-                      autoFocus
-                    />
-                  </>
-                )}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button type="button" onClick={() => setPhoneLinkStep('idle')} style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}>
-                    {t.login.cancel}
-                  </button>
-                  {phoneLinkStep === 'enterPhone' ? (
-                    <button type="button" onClick={sendPhoneVerification} disabled={verifyingPhone || !phoneToVerify} style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}>
-                      {verifyingPhone ? '…' : t.login.sendOtp}
+        <div id="phone-number-field" style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
+            {t.profile.phone} {!profile.phone && <span style={{ color: '#dc2626' }}>*</span>}
+          </label>
+          {profile.phone ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+              <span style={{ color: '#334155', fontSize: 14 }}>{profile.phone}</span>
+              <span style={{ color: '#16a34a', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>✓ Verified</span>
+            </div>
+          ) : (
+            <>
+              <input
+                type="tel"
+                value={phoneToVerify}
+                onChange={(e) => { setPhoneToVerify(e.target.value); setPhoneLinkMessage(null); }}
+                placeholder="9876543210"
+                disabled={phoneLinkStep === 'enterOtp' || verifyingPhone}
+                autoComplete="tel"
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box', background: phoneLinkStep === 'enterOtp' ? '#f8fafc' : '#fff' }}
+              />
+              <div ref={phoneRecaptchaRef} />
+              {phoneLinkStep === 'idle' && (
+                <button
+                  type="button"
+                  onClick={sendPhoneVerification}
+                  disabled={verifyingPhone || !phoneToVerify.trim()}
+                  style={{ width: '100%', marginTop: 8, padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#111827', fontWeight: 700, cursor: verifyingPhone || !phoneToVerify.trim() ? 'not-allowed' : 'pointer', opacity: verifyingPhone || !phoneToVerify.trim() ? 0.55 : 1 }}
+                >
+                  📱 {verifyingPhone ? 'Sending OTP…' : t.profile.verifyPhone}
+                </button>
+              )}
+              {phoneLinkStep === 'enterOtp' && (
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>{t.login.otpLabel}</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={phoneOtp}
+                    onChange={(e) => setPhoneOtp(e.target.value)}
+                    placeholder={t.login.otpPlaceholder}
+                    autoFocus
+                    style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box', marginBottom: 8 }}
+                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" onClick={() => { setPhoneLinkStep('idle'); setPhoneOtp(''); setPhoneLinkMessage(null); }} style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff' }}>
+                      {t.login.cancel}
                     </button>
-                  ) : (
-                    <button type="button" onClick={confirmPhoneVerification} disabled={verifyingPhone || !phoneOtp} style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}>
+                    <button type="button" onClick={confirmPhoneVerification} disabled={verifyingPhone || !phoneOtp.trim()} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, opacity: verifyingPhone || !phoneOtp.trim() ? 0.55 : 1 }}>
                       {verifyingPhone ? '…' : t.login.verify}
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
-            )}
-            {phoneLinkMessage && <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 0 }}>{phoneLinkMessage.text}</p>}
-          </div>
-        )}
-        {profile.phone && phoneLinkMessage && <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 12 }}>{phoneLinkMessage.text}</p>}
+              )}
+              {phoneLinkMessage && <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', margin: '8px 0 0' }}>{phoneLinkMessage.text}</p>}
+            </>
+          )}
+        </div>
 
         <TextField label={t.profile.whatsapp} required type="tel" value={whatsapp} onChange={setWhatsapp} />
         <TextField label={t.profile.district} required value={district} onChange={setDistrict} />
@@ -520,15 +525,6 @@ export default function ProfilePage() {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return <h2 style={{ fontSize: 13, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, margin: '20px 0 10px' }}>{children}</h2>;
-}
-
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9', marginBottom: 4 }}>
-      <span style={{ fontSize: 13, color: '#64748b' }}>{label}</span>
-      <span style={{ color: '#334155', fontSize: 14 }}>{value}</span>
-    </div>
-  );
 }
 
 function TextField({ label, value, onChange, required, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; required?: boolean; type?: string }) {
