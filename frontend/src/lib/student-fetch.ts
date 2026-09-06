@@ -7,6 +7,24 @@ import { apiUrl } from './api-config';
 export async function studentFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('ponna_student_token') : null;
 
+  // Start Practice is intentionally a free-first experience: the student
+  // must be allowed to start before we show any Annual Plan gate. The real
+  // access/quota decision still happens server-side in /quiz/start, where
+  // the daily free 5-question allowance is enforced atomically.
+  // Keep the normal access-status response everywhere else (especially the
+  // quiz result page, where the Annual Plan offer is shown after the free
+  // session is completed).
+  if (
+    typeof window !== 'undefined' &&
+    /^\/quiz\/?$/.test(window.location.pathname) &&
+    path === '/quiz/access-status'
+  ) {
+    return new Response(JSON.stringify({ hasPreference: true, covered: true, applicablePlanId: null }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const res = await fetch(apiUrl(path), {
     ...options,
     // Never let the browser HTTP cache serve a stale GET response — this
