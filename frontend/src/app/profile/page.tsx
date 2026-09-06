@@ -1,17 +1,9 @@
 'use client';
 
-// Profile page — finalized redesign. Personal Information + Education only;
-// Account section links out to My Plans (subscription info lives there, not
-// duplicated here) and — no Change Password, since student login is
-// Firebase Phone OTP, not password-based, so that option doesn't apply.
-//
-// This same page IS the "Complete Your Profile" flow — when a student is
-// redirected here from a locked Rank or from a payment attempt, the required
-// fields are simply highlighted/empty and ready to fill in.
-//
-// Date of Birth/Education are collected for FUTURE personalization only —
-// never used here or anywhere else to restrict exam access (finalized
-// requirement).
+// Profile page — finalized redesign. Personal Information + Education only.
+// Account section contains Plans, Google linking and test-account tools.
+// Date of Birth/Education are collected for future personalization only and
+// never restrict exam access.
 
 import { useEffect, useState, useRef } from 'react';
 import { GoogleAuthProvider, linkWithPopup, RecaptchaVerifier, linkWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
@@ -42,15 +34,24 @@ type ProfileData = {
   isTestAccount: boolean;
 };
 
+const QUALIFICATION_OPTIONS = [
+  { value: 'SSLC', label: '10th / SSLC' },
+  { value: 'HSC', label: '12th / HSC' },
+  { value: 'ITI', label: 'ITI' },
+  { value: 'DIPLOMA', label: 'Diploma' },
+  { value: 'UG', label: 'Undergraduate Degree' },
+  { value: 'PG', label: 'Postgraduate Degree' },
+  { value: 'MPHIL', label: 'M.Phil.' },
+  { value: 'PHD', label: 'Ph.D.' },
+];
+const QUALIFICATION_VALUES = QUALIFICATION_OPTIONS.map((o) => o.value);
+
 export default function ProfilePage() {
   const { t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  // Read ?complete=1 via the plain browser API rather than Next's
-  // useSearchParams(), which requires a Suspense boundary during static
-  // export and caused an opaque build failure. Read once on mount,
-  // client-side only — fine here since it only controls a UI banner.
   const [cameFromGate, setCameFromGate] = useState(false);
   const verifyPhoneSectionRef = useRef<HTMLDivElement>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -58,13 +59,6 @@ export default function ProfilePage() {
     }
   }, []);
 
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-
-  // Draws the eye straight to Verify Phone Number when THAT's specifically
-  // why they were redirected here — otherwise a student could easily miss
-  // it below the fold and just click the regular Save button instead,
-  // which doesn't touch phone and would bounce them right back to this
-  // same page next time from Quiz.
   useEffect(() => {
     if (cameFromGate && profile && !profile.phone) {
       verifyPhoneSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -82,6 +76,7 @@ export default function ProfilePage() {
   const [courseOrDegree, setCourseOrDegree] = useState('');
   const [yearOfStudy, setYearOfStudy] = useState('');
   const [highestQualification, setHighestQualification] = useState('');
+  const [otherQualification, setOtherQualification] = useState('');
   const [community, setCommunity] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -90,10 +85,6 @@ export default function ProfilePage() {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [googleLinkMessage, setGoogleLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  // Verify Phone Number (finalized requirement — Free Preview needs a
-  // verified phone; a Google-only account has none by default). Same
-  // Firebase phone-OTP pattern as the login page's flow, but linking onto
-  // the ALREADY-authenticated current user instead of a fresh sign-in.
   const [phoneLinkStep, setPhoneLinkStep] = useState<'idle' | 'enterPhone' | 'enterOtp'>('idle');
   const [phoneToVerify, setPhoneToVerify] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
@@ -101,6 +92,7 @@ export default function ProfilePage() {
   const [phoneLinkMessage, setPhoneLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const phoneConfirmationRef = useRef<ConfirmationResult | null>(null);
   const phoneRecaptchaRef = useRef<HTMLDivElement>(null);
+  const [resettingHistory, setResettingHistory] = useState(false);
 
   useEffect(() => {
     studentFetch('/students/me/profile')
@@ -117,19 +109,19 @@ export default function ProfilePage() {
         setCurrentClass(data.currentClass ?? '');
         setCourseOrDegree(data.courseOrDegree ?? '');
         setYearOfStudy(data.yearOfStudy ?? '');
-        setHighestQualification(data.highestQualification ?? '');
+        const existingQualification = data.highestQualification ?? '';
+        if (QUALIFICATION_VALUES.includes(existingQualification)) {
+          setHighestQualification(existingQualification);
+          setOtherQualification('');
+        } else {
+          setHighestQualification(existingQualification);
+          setOtherQualification(existingQualification);
+        }
         setCommunity(data.community ?? '');
       })
       .catch(() => {});
   }, []);
 
-  const [resettingHistory, setResettingHistory] = useState(false);
-
-  /** Test Accounts only (finalized requirement — self-service, no need
-   * to ask an admin each time) — wipes THIS account's own quiz history/
-   * score, keeping the account itself intact. Backend independently
-   * re-checks isTestAccount and rejects otherwise, regardless of what
-   * this button does. */
   async function resetHistory() {
     if (!confirm('Reset your own quiz history and score? This clears Practice, Daily Quiz, and Brain Challenge history for this account — cannot be undone.')) return;
     setResettingHistory(true);
@@ -169,11 +161,6 @@ export default function ProfilePage() {
       const result = await res.json();
       setProfile((p) => (p ? { ...p, profileComplete: result.profileComplete } : p));
       setSaved(true);
-      // Free Preview needs BOTH email and a verified phone (finalized
-      // requirement) — if phone was already verified and this Save just
-      // supplied the missing email, both requirements are now met, so
-      // send them straight back to where they were trying to go instead
-      // of leaving them stranded on Profile to navigate back manually.
       if (cameFromGate && profile?.phone) {
         window.location.href = '/quiz';
         return;
@@ -181,22 +168,10 @@ export default function ProfilePage() {
     }
   }
 
-  /**
-   * Links Google to the currently-logged-in (Phone-OTP) student account.
-   * linkWithPopup operates on the CURRENT Firebase Auth session — same uid
-   * before and after — so this is the secure alternative to guessing based
-   * on matching emails. `auth/credential-already-in-use` means this exact
-   * Google account is already the canonical identity of a DIFFERENT
-   * account (e.g. from a prior fresh "Continue with Google"); surfaced
-   * clearly rather than silently failing.
-   */
-  /** Reads the picked file as a base64 data URL and uploads it — Part B
-   * (finalized requirement): every student, not just Google sign-ins. */
   async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    e.target.value = ''; // lets picking the same file again re-trigger onChange
+    e.target.value = '';
     if (!file) return;
-
     if (!file.type.startsWith('image/')) {
       setPhotoError('Please choose an image file.');
       return;
@@ -205,7 +180,6 @@ export default function ProfilePage() {
       setPhotoError('Image is too large — please choose one under 5MB.');
       return;
     }
-
     setUploadingPhoto(true);
     setPhotoError(null);
     try {
@@ -215,7 +189,6 @@ export default function ProfilePage() {
         reader.onerror = () => reject(new Error('Failed to read the selected file.'));
         reader.readAsDataURL(file);
       });
-
       const res = await studentFetch('/students/me/profile-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -245,7 +218,6 @@ export default function ProfilePage() {
       }
       const credential = await linkWithPopup(firebaseAuth.currentUser, new GoogleAuthProvider());
       const firebaseIdToken = await credential.user.getIdToken();
-
       const res = await studentFetch('/students/me/link-google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -269,11 +241,6 @@ export default function ProfilePage() {
     }
   }
 
-  /**
-   * Sends an OTP to verify+link a phone number onto the currently-logged-in
-   * (Google) student account — mirrors connectGoogle above, using Firebase's
-   * linkWithPhoneNumber on the CURRENT session instead of a fresh sign-in.
-   */
   async function sendPhoneVerification() {
     setVerifyingPhone(true);
     setPhoneLinkMessage(null);
@@ -301,7 +268,6 @@ export default function ProfilePage() {
       if (!phoneConfirmationRef.current) throw new Error('No OTP request in progress');
       const credential = await phoneConfirmationRef.current.confirm(phoneOtp);
       const firebaseIdToken = await credential.user.getIdToken();
-
       const res = await studentFetch('/students/me/link-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -314,9 +280,6 @@ export default function ProfilePage() {
       setPhoneLinkMessage({ ok: true, text: t.profile.phoneVerified });
       setPhoneLinkStep('idle');
       setProfile((p) => (p ? { ...p, phone: phoneToVerify } : p));
-      // Same reasoning as save() above — if email was already there and
-      // this verification just supplied the missing phone, both Free
-      // Preview requirements are now met.
       if (cameFromGate && profile?.email) {
         window.location.href = '/quiz';
         return;
@@ -331,12 +294,28 @@ export default function ProfilePage() {
 
   if (!profile) return <p style={{ padding: 24, color: '#94a3b8' }}>{t.quiz.loading}</p>;
 
+  const qualificationChoice = QUALIFICATION_VALUES.includes(highestQualification)
+    ? highestQualification
+    : highestQualification
+      ? 'OTHER'
+      : '';
+
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
         <StudentMenu />
         <strong style={{ fontSize: 16 }}>{t.profile.title}</strong>
-      </div>
+        <div style={{ flex: 1 }} />
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={t.profile.darkMode}
+          title={t.profile.darkMode}
+          style={{ width: 44, height: 28, borderRadius: 14, border: '1px solid #cbd5e1', background: theme === 'dark' ? '#0f172a' : '#e2e8f0', position: 'relative', cursor: 'pointer', padding: 0 }}
+        >
+          <span style={{ position: 'absolute', top: 3, left: theme === 'dark' ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+        </button>
+      </header>
 
       <div style={{ padding: '0 20px' }}>
         {cameFromGate && !profile.profileComplete && (
@@ -346,83 +325,26 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Free Preview specifically needs a verified phone (and an
-            email) — a DIFFERENT, narrower gate than the general "complete
-            your profile for Rank" one above. Without this, a student
-            redirected here for a missing phone saw no banner at all
-            whenever their general profileComplete happened to already be
-            true, and had no way to tell that clicking the regular Save
-            button (which doesn't touch phone) would never actually get
-            them past the gate — they'd just bounce straight back to this
-            same page from Quiz every time. */}
         {cameFromGate && (!profile.phone || !profile.email) && (
           <div style={{ background: '#fef3c7', border: '1.5px solid #f59e0b', borderRadius: 10, padding: 14, marginBottom: 20 }}>
             <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.freePreviewGateTitle}</strong>
             <span style={{ fontSize: 13, color: '#78350f' }}>
-              {!profile.phone && !profile.email
-                ? t.profile.freePreviewGateBothMissing
-                : !profile.phone
-                  ? t.profile.freePreviewGatePhoneMissing
-                  : t.profile.freePreviewGateEmailMissing}
+              {!profile.phone && !profile.email ? t.profile.freePreviewGateBothMissing : !profile.phone ? t.profile.freePreviewGatePhoneMissing : t.profile.freePreviewGateEmailMissing}
             </span>
           </div>
         )}
 
-        {/* Profile photo — auto-filled from the Google account photo on
-            Google sign-in (Part A); every student can also upload their
-            own (Part B) — tapping the circle opens the file picker. A
-            student's own upload always takes precedence over the
-            Google-auto-captured one (student-auth.service.ts only backfills
-            when photoUrl is still null). */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
-          <button
-            onClick={() => photoInputRef.current?.click()}
-            disabled={uploadingPhoto}
-            style={{ position: 'relative', border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
-          >
+          <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto} style={{ position: 'relative', border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
             {profile.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.photoUrl}
-                alt=""
-                style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0', opacity: uploadingPhoto ? 0.5 : 1 }}
-              />
+              <img src={profile.photoUrl} alt="" style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0', opacity: uploadingPhoto ? 0.5 : 1 }} />
             ) : (
-              <div
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: '50%',
-                  background: '#e2e8f0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 32,
-                  fontWeight: 700,
-                  color: '#64748b',
-                  opacity: uploadingPhoto ? 0.5 : 1,
-                }}
-              >
+              <div style={{ width: 88, height: 88, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 700, color: '#64748b', opacity: uploadingPhoto ? 0.5 : 1 }}>
                 {(profile.name || '?').trim().charAt(0).toUpperCase()}
               </div>
             )}
-            <span
-              style={{
-                position: 'absolute',
-                right: -2,
-                bottom: -2,
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: '#0f172a',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 13,
-                border: '2px solid #fff',
-              }}
-            >
+            <span style={{ position: 'absolute', right: -2, bottom: -2, width: 28, height: 28, borderRadius: '50%', background: '#0f172a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, border: '2px solid #fff' }}>
               {uploadingPhoto ? '…' : '📷'}
             </span>
           </button>
@@ -431,156 +353,26 @@ export default function ProfilePage() {
         </div>
 
         <SectionHeading>{t.profile.personalInfo}</SectionHeading>
-
         <TextField label={t.profile.name} required value={name} onChange={setName} />
         <DateField label={t.profile.dateOfBirth} required value={dateOfBirth} onChange={setDateOfBirth} />
         <TextField label={t.profile.email} required type="email" value={email} onChange={setEmail} />
+
         <ReadOnlyField label={t.profile.phone} value={profile.phone ?? '—'} />
-        <TextField label={t.profile.whatsapp} required type="tel" value={whatsapp} onChange={setWhatsapp} />
-        <TextField label={t.profile.district} required value={district} onChange={setDistrict} />
-        <TextField label={t.profile.cityTownVillage} required value={city} onChange={setCity} />
 
-        <SectionHeading>{t.profile.education}</SectionHeading>
-
-        <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
-          {t.profile.educationStatus} {!educationStatus && <span style={{ color: '#dc2626' }}>*</span>}
-        </label>
-        <select
-          value={educationStatus}
-          onChange={(e) => setEducationStatus(e.target.value as EducationStatus)}
-          style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12 }}
-        >
-          <option value="">—</option>
-          <option value="SCHOOL_STUDENT">{t.profile.educationSchool}</option>
-          <option value="COLLEGE_STUDENT">{t.profile.educationCollege}</option>
-          <option value="COMPLETED_STUDIES">{t.profile.educationCompleted}</option>
-        </select>
-
-        {/* Exactly one detail field, matching the chosen status — never all
-            three at once, and switching status clears the others (server
-            enforces this too, see profile.service.ts). */}
-        {educationStatus === 'SCHOOL_STUDENT' && (
-          <TextField label={t.profile.currentClass} required value={currentClass} onChange={setCurrentClass} />
-        )}
-        {educationStatus === 'COLLEGE_STUDENT' && (
-          <>
-            <TextField label={t.profile.courseOrDegree} required value={courseOrDegree} onChange={setCourseOrDegree} />
-            <TextField label={t.profile.yearOfStudy} required value={yearOfStudy} onChange={setYearOfStudy} />
-          </>
-        )}
-        {educationStatus === 'COMPLETED_STUDIES' && (
-          <TextField label={t.profile.highestQualification} required value={highestQualification} onChange={setHighestQualification} />
-        )}
-
-        {/* Community — entirely optional (finalized requirement), only
-            used for the Cut-off Marks Predictor. Never required to use
-            PONNA, never shown elsewhere. */}
-        <label style={{ display: 'block', marginBottom: 16 }}>
-          <span style={{ fontSize: 13, color: '#64748b', display: 'block', marginBottom: 6 }}>{t.profile.communityLabel}</span>
-          <select
-            value={community}
-            onChange={(e) => setCommunity(e.target.value)}
-            style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
-          >
-            <option value="">{t.profile.communitySkip}</option>
-            <option value="OC">OC</option>
-            <option value="BC">BC</option>
-            <option value="BCM">BCM</option>
-            <option value="MBC_DNC">MBC / DNC</option>
-            <option value="SC">SC</option>
-            <option value="SCA">SC(A)</option>
-            <option value="ST">ST</option>
-          </select>
-          <span style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginTop: 4 }}>{t.profile.communityNote}</span>
-        </label>
-
-        <button
-          onClick={save}
-          disabled={saving}
-          style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600, marginTop: 8, marginBottom: 8 }}
-        >
-          {saving ? '…' : t.profile.save}
-        </button>
-        {saved && <p style={{ color: '#16a34a', fontSize: 13, marginBottom: 16 }}>{t.profile.saved}</p>}
-
-        <SectionHeading>{t.profile.account}</SectionHeading>
-        <a
-          href="/plans"
-          style={{
-            display: 'block',
-            textAlign: 'center',
-            padding: 12,
-            borderRadius: 8,
-            border: '1px solid #cbd5e1',
-            color: '#0f172a',
-            textDecoration: 'none',
-            fontWeight: 600,
-            marginBottom: 12,
-          }}
-        >
-          {t.profile.viewMyPlans}
-        </a>
-
-        {/* Google account linking (finalized requirement) — a Phone-OTP
-            account can link Google here, via Firebase's own authenticated
-            linkWithPopup (same Firebase uid preserved throughout), never
-            by matching emails after the fact. */}
-        <button
-          onClick={connectGoogle}
-          disabled={connectingGoogle}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            width: '100%',
-            padding: 12,
-            borderRadius: 8,
-            border: '1px solid #cbd5e1',
-            background: '#fff',
-            color: '#1f2937',
-            fontWeight: 600,
-            marginBottom: 8,
-          }}
-        >
-          {connectingGoogle ? '…' : `🔵 ${t.profile.connectGoogle}`}
-        </button>
-        {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{googleLinkMessage.text}</p>}
-
-        {/* Verify Phone Number (finalized requirement — Free Preview
-            requires a verified phone; a Google-only account has none by
-            default). Only shown when there's no phone on the account yet —
-            once verified, Profile's own Phone field (read-only) picks it
-            up on next load. */}
         {!profile.phone && (
-          <div ref={verifyPhoneSectionRef}>
+          <div ref={verifyPhoneSectionRef} style={{ marginBottom: 12 }}>
             {phoneLinkStep === 'idle' && (
               <button
-                onClick={() => {
-                  setPhoneLinkMessage(null);
-                  setPhoneLinkStep('enterPhone');
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  width: '100%',
-                  padding: 12,
-                  borderRadius: 8,
-                  border: '1px solid #cbd5e1',
-                  background: '#fff',
-                  color: '#1f2937',
-                  fontWeight: 600,
-                  marginBottom: 8,
-                }}
+                type="button"
+                onClick={() => { setPhoneLinkMessage(null); setPhoneLinkStep('enterPhone'); }}
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#1f2937', fontWeight: 600 }}
               >
                 📱 {t.profile.verifyPhone}
               </button>
             )}
 
             {(phoneLinkStep === 'enterPhone' || phoneLinkStep === 'enterOtp') && (
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginBottom: 12 }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginTop: 8 }}>
                 <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.phoneLabel}</label>
                 <input
                   type="tel"
@@ -588,22 +380,9 @@ export default function ProfilePage() {
                   onChange={(e) => setPhoneToVerify(e.target.value)}
                   placeholder="9876543210"
                   disabled={phoneLinkStep === 'enterOtp'}
-                  style={{
-                    width: '100%',
-                    padding: 10,
-                    borderRadius: 6,
-                    border: '1px solid #cbd5e1',
-                    marginBottom: 10,
-                    boxSizing: 'border-box',
-                    background: phoneLinkStep === 'enterOtp' ? '#f8fafc' : '#fff',
-                    color: phoneLinkStep === 'enterOtp' ? '#64748b' : 'inherit',
-                  }}
+                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 10, boxSizing: 'border-box', background: phoneLinkStep === 'enterOtp' ? '#f8fafc' : '#fff' }}
                 />
                 <div ref={phoneRecaptchaRef} />
-
-                {/* OTP entry appears right here, in the SAME box, once sent
-                    — not as a separate block further down the page, so the
-                    student never loses sight of the number they just typed. */}
                 {phoneLinkStep === 'enterOtp' && (
                   <>
                     <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>{t.login.otpLabel}</label>
@@ -617,96 +396,123 @@ export default function ProfilePage() {
                     />
                   </>
                 )}
-
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => setPhoneLinkStep('idle')}
-                    style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
-                  >
+                  <button type="button" onClick={() => setPhoneLinkStep('idle')} style={{ flex: 1, padding: 10, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}>
                     {t.login.cancel}
                   </button>
                   {phoneLinkStep === 'enterPhone' ? (
-                    <button
-                      onClick={sendPhoneVerification}
-                      disabled={verifyingPhone || !phoneToVerify}
-                      style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
-                    >
+                    <button type="button" onClick={sendPhoneVerification} disabled={verifyingPhone || !phoneToVerify} style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}>
                       {verifyingPhone ? '…' : t.login.sendOtp}
                     </button>
                   ) : (
-                    <button
-                      onClick={confirmPhoneVerification}
-                      disabled={verifyingPhone || !phoneOtp}
-                      style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
-                    >
+                    <button type="button" onClick={confirmPhoneVerification} disabled={verifyingPhone || !phoneOtp} style={{ flex: 1, padding: 10, borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}>
                       {verifyingPhone ? '…' : t.login.verify}
                     </button>
                   )}
                 </div>
               </div>
             )}
+            {phoneLinkMessage && <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 0 }}>{phoneLinkMessage.text}</p>}
+          </div>
+        )}
+        {profile.phone && phoneLinkMessage && <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 12 }}>{phoneLinkMessage.text}</p>}
 
-            {phoneLinkMessage && (
-              <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{phoneLinkMessage.text}</p>
+        <TextField label={t.profile.whatsapp} required type="tel" value={whatsapp} onChange={setWhatsapp} />
+        <TextField label={t.profile.district} required value={district} onChange={setDistrict} />
+        <TextField label={t.profile.cityTownVillage} required value={city} onChange={setCity} />
+
+        <SectionHeading>{t.profile.education}</SectionHeading>
+        <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
+          {t.profile.educationStatus} {!educationStatus && <span style={{ color: '#dc2626' }}>*</span>}
+        </label>
+        <select value={educationStatus} onChange={(e) => setEducationStatus(e.target.value as EducationStatus)} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12 }}>
+          <option value="">—</option>
+          <option value="SCHOOL_STUDENT">{t.profile.educationSchool}</option>
+          <option value="COLLEGE_STUDENT">{t.profile.educationCollege}</option>
+          <option value="COMPLETED_STUDIES">{t.profile.educationCompleted}</option>
+        </select>
+
+        {educationStatus === 'SCHOOL_STUDENT' && <TextField label={t.profile.currentClass} required value={currentClass} onChange={setCurrentClass} />}
+        {educationStatus === 'COLLEGE_STUDENT' && (
+          <>
+            <TextField label={t.profile.courseOrDegree} required value={courseOrDegree} onChange={setCourseOrDegree} />
+            <TextField label={t.profile.yearOfStudy} required value={yearOfStudy} onChange={setYearOfStudy} />
+          </>
+        )}
+        {educationStatus === 'COMPLETED_STUDIES' && (
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
+              {t.profile.highestQualification} {!highestQualification && <span style={{ color: '#dc2626' }}>*</span>}
+            </label>
+            <select
+              value={qualificationChoice}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'OTHER') {
+                  setHighestQualification(otherQualification);
+                } else {
+                  setHighestQualification(value);
+                  setOtherQualification('');
+                }
+              }}
+              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+            >
+              <option value="">—</option>
+              {QUALIFICATION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              <option value="OTHER">Other</option>
+            </select>
+            {qualificationChoice === 'OTHER' && (
+              <input
+                type="text"
+                value={otherQualification}
+                onChange={(e) => { setOtherQualification(e.target.value); setHighestQualification(e.target.value); }}
+                placeholder="Other Qualification"
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box', marginTop: 8 }}
+              />
             )}
           </div>
         )}
 
-        {/* Referral Program (finalized requirement — structure only,
-            reward trigger pending Razorpay integration). Lazily fetches/
-            generates the student's own code on this page's load. */}
+        <label style={{ display: 'block', marginBottom: 16 }}>
+          <span style={{ fontSize: 13, color: '#64748b', display: 'block', marginBottom: 6 }}>{t.profile.communityLabel}</span>
+          <select value={community} onChange={(e) => setCommunity(e.target.value)} style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}>
+            <option value="">{t.profile.communitySkip}</option>
+            <option value="OC">OC</option>
+            <option value="BC">BC</option>
+            <option value="BCM">BCM</option>
+            <option value="MBC_DNC">MBC / DNC</option>
+            <option value="SC">SC</option>
+            <option value="SCA">SC(A)</option>
+            <option value="ST">ST</option>
+          </select>
+          <span style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginTop: 4 }}>{t.profile.communityNote}</span>
+        </label>
+
+        <button onClick={save} disabled={saving} style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600, marginTop: 8, marginBottom: 8 }}>
+          {saving ? '…' : t.profile.save}
+        </button>
+        {saved && <p style={{ color: '#16a34a', fontSize: 13, marginBottom: 16 }}>{t.profile.saved}</p>}
+
+        <SectionHeading>{t.profile.account}</SectionHeading>
+        <a href="/plans" style={{ display: 'block', textAlign: 'center', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', color: '#0f172a', textDecoration: 'none', fontWeight: 600, marginBottom: 12 }}>
+          {t.profile.viewMyPlans}
+        </a>
+
+        <button onClick={connectGoogle} disabled={connectingGoogle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#1f2937', fontWeight: 600, marginBottom: 8 }}>
+          {connectingGoogle ? '…' : `🔵 ${t.profile.connectGoogle}`}
+        </button>
+        {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{googleLinkMessage.text}</p>}
+
         <ReferralSection />
 
-        {/* Dark Mode (finalized requirement) — persisted in localStorage
-            (theme-context.tsx), applies instantly across every page via
-            CSS custom properties (brand-theme.tsx), no reload needed. */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginTop: 16 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>🌙 {t.profile.darkMode}</span>
-          <button
-            onClick={toggleTheme}
-            style={{
-              width: 46,
-              height: 26,
-              borderRadius: 13,
-              border: 'none',
-              background: theme === 'dark' ? '#0f172a' : '#cbd5e1',
-              position: 'relative',
-              cursor: 'pointer',
-            }}
-          >
-            <span
-              style={{
-                position: 'absolute',
-                top: 3,
-                left: theme === 'dark' ? 23 : 3,
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: '#fff',
-                transition: 'left 0.15s',
-              }}
-            />
-          </button>
-        </div>
-
-        {/* Test Accounts only (finalized requirement) — self-service reset
-            of their own quiz history/score, no need to ask an admin each
-            time. Never shown for a real student account. */}
         {profile.isTestAccount && (
           <div style={{ border: '1px solid #fecaca', borderRadius: 10, padding: 14, marginTop: 20 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', marginBottom: 8 }}>🧪 TEST ACCOUNT</p>
-            <button
-              onClick={resetHistory}
-              disabled={resettingHistory}
-              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #dc2626', color: '#dc2626', background: '#fff', fontSize: 13, fontWeight: 600 }}
-            >
+            <button onClick={resetHistory} disabled={resettingHistory} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #dc2626', color: '#dc2626', background: '#fff', fontSize: 13, fontWeight: 600 }}>
               {resettingHistory ? '…' : 'Reset My Quiz History & Score'}
             </button>
           </div>
         )}
-
-        {/* No Change Password — student login is Firebase Phone OTP, not
-            password-based, so this option from the spec doesn't apply here. */}
       </div>
     </main>
   );
@@ -725,30 +531,13 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function TextField({
-  label,
-  value,
-  onChange,
-  required,
-  type = 'text',
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  required?: boolean;
-  type?: string;
-}) {
+function TextField({ label, value, onChange, required, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; required?: boolean; type?: string }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
         {label} {required && !value && <span style={{ color: '#dc2626' }}>*</span>}
       </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
-      />
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
     </div>
   );
 }
@@ -759,19 +548,11 @@ function DateField({ label, value, onChange, required }: { label: string; value:
       <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
         {label} {required && !value && <span style={{ color: '#dc2626' }}>*</span>}
       </label>
-      <input
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
-      />
+      <input type="date" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
     </div>
   );
 }
 
-// Referral Program (finalized requirement — structure only for now, per
-// explicit instruction; reward is manually marked by admin today, will
-// be automated once Razorpay payment confirmation is wired up).
 function ReferralSection() {
   const [info, setInfo] = useState<{ code: string; totalReferred: number; totalRewarded: number; pending: number } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -784,7 +565,6 @@ function ReferralSection() {
   }, []);
 
   if (!info) return null;
-
   const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${info.code}` : '';
 
   function copyLink() {
@@ -799,13 +579,9 @@ function ReferralSection() {
       <p style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>Invite a friend — you both get a reward once they get a paid plan.</p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <input readOnly value={shareLink} style={{ flex: 1, padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, background: '#f8fafc' }} />
-        <button onClick={copyLink} style={{ padding: '8px 14px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontSize: 12, fontWeight: 600 }}>
-          {copied ? '✓' : 'Copy'}
-        </button>
+        <button onClick={copyLink} style={{ padding: '8px 14px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontSize: 12, fontWeight: 600 }}>{copied ? '✓' : 'Copy'}</button>
       </div>
-      <p style={{ fontSize: 11, color: '#94a3b8' }}>
-        {info.totalReferred} invited · {info.totalRewarded} rewarded · {info.pending} pending
-      </p>
+      <p style={{ fontSize: 11, color: '#94a3b8' }}>{info.totalReferred} invited · {info.totalRewarded} rewarded · {info.pending} pending</p>
     </div>
   );
 }
