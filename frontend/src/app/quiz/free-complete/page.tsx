@@ -24,14 +24,7 @@ export default function FreePracticeCompletePage() {
           }}
         >
           <StudentMenu />
-          <div>
-            <div style={{ fontSize: 18, lineHeight: 1.15, fontWeight: 800, color: '#172033' }}>
-              பயிற்சி
-            </div>
-            <div style={{ fontSize: 10, lineHeight: 1.2, marginTop: 2, color: '#a87917', fontWeight: 600 }}>
-              Practice
-            </div>
-          </div>
+          <h1 style={{ fontSize: 20, margin: 0 }}>Practice</h1>
         </div>
 
         <section
