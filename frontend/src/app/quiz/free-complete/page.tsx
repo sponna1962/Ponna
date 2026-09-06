@@ -17,7 +17,7 @@ export default function FreePracticeCompletePage() {
           இன்றைய இலவச பயிற்சி முடிந்தது
         </h2>
         <p style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5, color: '#334155', margin: '0 0 8px' }}>
-          5 கேள்விகளையும் முடித்துவிட்டீர்கள். தொடர்ந்து பயிற்சி செய்ய ஆண்டு திட்டத்தைப் பெறுங்கள்.
+          5 கேள்விகளையும் முடித்துவிட்டீர்கள். பயிற்சி தொடர Ponna Pass பெறுங்கள்.
         </p>
 
         <div style={{ height: 1, background: '#e2e8f0', margin: '18px auto' }} />
@@ -26,20 +26,16 @@ export default function FreePracticeCompletePage() {
           Today’s free practice is complete
         </h3>
         <p style={{ fontSize: 15, lineHeight: 1.5, color: '#64748b', margin: '0 auto 24px', maxWidth: 400 }}>
-          You’ve completed all 5 questions. Get an Annual Plan to continue practising.
+          You’ve completed 5 questions. Get Ponna Pass to continue practising.
         </p>
 
         <a
           href="/plans"
-          style={{ display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, borderRadius: 10, background: '#0f172a', color: '#fff', textDecoration: 'none', fontSize: 15, fontWeight: 700, marginBottom: 10 }}
+          style={{ display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, borderRadius: 10, background: '#0f172a', color: '#fff', textDecoration: 'none', fontSize: 15, fontWeight: 700 }}
         >
-          ஆண்டு திட்டங்களைப் பார்க்கவும் | View Annual Plans
-        </a>
-        <a
-          href="/quiz"
-          style={{ display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, borderRadius: 10, border: '1px solid #cbd5e1', color: '#0f172a', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}
-        >
-          பின்னர் மீண்டும் முயற்சி செய்யலாம் | Practice Again Later
+          பொன்னா பாஸ் பெறுங்கள்
+          <br />
+          Get Ponna Pass
         </a>
       </section>
     </main>
