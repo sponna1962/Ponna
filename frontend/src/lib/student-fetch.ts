@@ -38,6 +38,20 @@ export async function studentFetch(path: string, options: RequestInit = {}) {
     },
   });
 
+  // The normal Practice page already knows how to navigate a successful
+  // session response. When the daily free allowance is exhausted, turn the
+  // quota error into a lightweight navigation response so the same Start
+  // Practice button opens the dedicated completion page instead of /plans.
+  if (path === '/quiz/start' && !res.ok) {
+    const body = await res.clone().json().catch(() => ({}));
+    if (body.code === 'FREE_PREVIEW_ALREADY_USED') {
+      return new Response(JSON.stringify({ id: 'free-complete' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
   if (res.status === 401) {
     // Distinguish "logged in on another device" (finalized requirement —
     // single-active-session enforcement) from a plain expired/invalid
