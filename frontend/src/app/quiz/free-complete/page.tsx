@@ -8,27 +8,27 @@ export default function FreePracticeCompletePage() {
       style={{
         minHeight: '100dvh',
         boxSizing: 'border-box',
-        padding: '18px 18px 36px',
+        padding: '18px 18px 40px',
         background: '#fbfaf6',
         color: '#172033',
       }}
     >
-      <div style={{ maxWidth: 520, margin: '0 auto' }}>
+      <div style={{ maxWidth: 540, margin: '0 auto' }}>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 12,
             height: 46,
-            marginBottom: 34,
+            marginBottom: 30,
           }}
         >
           <StudentMenu />
           <div>
-            <div style={{ fontSize: 19, lineHeight: 1.15, fontWeight: 800, color: '#172033' }}>
+            <div style={{ fontSize: 18, lineHeight: 1.15, fontWeight: 800, color: '#172033' }}>
               பயிற்சி
             </div>
-            <div style={{ fontSize: 11, lineHeight: 1.2, marginTop: 2, color: '#a87917', fontWeight: 600 }}>
+            <div style={{ fontSize: 10, lineHeight: 1.2, marginTop: 2, color: '#a87917', fontWeight: 600 }}>
               Practice
             </div>
           </div>
@@ -37,25 +37,25 @@ export default function FreePracticeCompletePage() {
         <section
           style={{
             background: '#fffefa',
-            border: '1px solid #e8dfca',
-            borderRadius: 22,
-            padding: '42px 30px 34px',
+            border: '1px solid #e6ddc9',
+            borderRadius: 20,
+            padding: '38px 34px 32px',
             textAlign: 'center',
-            boxShadow: '0 12px 35px rgba(23,32,51,.07)',
+            boxShadow: '0 16px 40px rgba(23,32,51,.06)',
           }}
         >
           <div
             style={{
-              width: 68,
-              height: 68,
-              margin: '0 auto 20px',
+              width: 60,
+              height: 60,
+              margin: '0 auto 17px',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               background: '#b8860b',
               color: '#fffefa',
-              fontSize: 36,
+              fontSize: 31,
               fontWeight: 500,
               lineHeight: 1,
             }}
@@ -67,14 +67,14 @@ export default function FreePracticeCompletePage() {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              padding: '6px 13px',
+              padding: '5px 12px',
               borderRadius: 999,
-              background: '#f7efd8',
-              color: '#9a6f14',
-              border: '1px solid #ead9aa',
-              fontSize: 12,
+              background: '#f8f1df',
+              color: '#947018',
+              border: '1px solid #eadcb8',
+              fontSize: 11,
               fontWeight: 800,
-              marginBottom: 18,
+              marginBottom: 16,
             }}
           >
             5 / 5 கேள்விகள்
@@ -82,12 +82,12 @@ export default function FreePracticeCompletePage() {
 
           <h2
             style={{
-              fontSize: 24,
-              lineHeight: 1.35,
-              margin: '0 0 13px',
+              fontSize: 22,
+              lineHeight: 1.45,
+              margin: '0 0 10px',
               color: '#172033',
               fontWeight: 800,
-              letterSpacing: '-.2px',
+              letterSpacing: '-.1px',
             }}
           >
             இன்றைய இலவச பயிற்சி முடிந்தது
@@ -95,11 +95,11 @@ export default function FreePracticeCompletePage() {
 
           <p
             style={{
-              fontSize: 16,
-              lineHeight: 1.65,
-              color: '#43506a',
+              fontSize: 15,
+              lineHeight: 1.6,
+              color: '#536078',
               margin: 0,
-              fontWeight: 600,
+              fontWeight: 500,
             }}
           >
             பயிற்சியைத் தொடர பொன்னா பாஸ் பெறுங்கள்.
@@ -107,34 +107,34 @@ export default function FreePracticeCompletePage() {
 
           <div
             style={{
-              height: 1,
-              background: '#e8dfca',
-              margin: '28px 0 25px',
-            }}
-          />
-
-          <h3
-            style={{
-              fontSize: 19,
-              lineHeight: 1.4,
-              margin: '0 0 8px',
-              color: '#172033',
-              fontWeight: 750,
+              marginTop: 25,
+              paddingTop: 22,
+              borderTop: '1px solid #eee6d5',
             }}
           >
-            Today’s free practice is complete
-          </h3>
+            <div
+              style={{
+                fontSize: 18,
+                lineHeight: 1.4,
+                margin: '0 0 6px',
+                color: '#172033',
+                fontWeight: 750,
+              }}
+            >
+              Today’s free practice is complete
+            </div>
 
-          <p
-            style={{
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: '#69758a',
-              margin: 0,
-            }}
-          >
-            Get Ponna Pass to continue practising.
-          </p>
+            <p
+              style={{
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: '#748096',
+                margin: 0,
+              }}
+            >
+              Get Ponna Pass to continue practising.
+            </p>
+          </div>
 
           <a
             href="/plans"
@@ -142,20 +142,20 @@ export default function FreePracticeCompletePage() {
               display: 'block',
               width: '100%',
               boxSizing: 'border-box',
-              padding: '15px 20px',
-              marginTop: 27,
-              borderRadius: 11,
+              padding: '14px 20px',
+              marginTop: 24,
+              borderRadius: 10,
               background: '#172033',
               color: '#fffefa',
               textDecoration: 'none',
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 800,
               lineHeight: 1.35,
               border: '1px solid #172033',
             }}
           >
             <span style={{ display: 'block' }}>பொன்னா பாஸ் பெறுங்கள்</span>
-            <span style={{ display: 'block', fontSize: 12, marginTop: 4, color: '#d8b45a', fontWeight: 700 }}>
+            <span style={{ display: 'block', fontSize: 11, marginTop: 3, color: '#d8b45a', fontWeight: 700 }}>
               Get Ponna Pass
             </span>
           </a>
