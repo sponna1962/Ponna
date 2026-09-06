@@ -6,15 +6,6 @@ import { useLanguage } from '../../../lib/language-context';
 import { studentFetch } from '../../../lib/student-fetch';
 import { useOnlineStatus } from '../../../lib/use-online-status';
 
-// Quiz-taking screen — implements §4.3 (Taking a Quiz): one question per
-// screen, resumable, ends in a results summary.
-//
-// No language toggle here (finalized requirement — the earlier real-time
-// toggle was dropped). Practice language is a one-time Setup choice (see
-// /quiz/page.tsx's Practice Preference Setup) and stays fixed for the whole
-// session — every question in this session was allocated in that single
-// language, so `content` below only ever has one key populated.
-
 type LangContent = { questionText: string; optionA: string; optionB: string; optionC: string; optionD: string };
 
 type SessionQuestion = {
@@ -23,10 +14,10 @@ type SessionQuestion = {
   answered: boolean;
   selectedOption: string | null;
   isCorrect: boolean | null;
-  correctOption: string | null; // present once answered=true
+  correctOption: string | null;
   difficulty: 'MEDIUM' | 'HARD';
   category: 'STANDARD' | 'CURRENT_AFFAIRS';
-  content: Partial<Record<'TA' | 'EN', LangContent>>; // whichever language(s) exist for this question
+  content: Partial<Record<'TA' | 'EN', LangContent>>;
 };
 
 type SessionData = {
@@ -51,19 +42,16 @@ export default function QuizSessionPage() {
 
   const [session, setSession] = useState<SessionData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  // Time-Management Analytics (finalized requirement) -- reset whenever
-  // the displayed question changes, read at submit time. A plain ref
-  // (not state) since it's never rendered, just measured.
   const questionShownAt = useRef<number>(Date.now());
 
   useEffect(() => {
     questionShownAt.current = Date.now();
   }, [currentIndex]);
-  const [selected, setSelected] = useState<string | null>(null); // option LETTER — language-independent
-  const [correctOption, setCorrectOption] = useState<string | null>(null); // option LETTER
+
+  const [selected, setSelected] = useState<string | null>(null);
+  const [correctOption, setCorrectOption] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<Results | null>(null);
-  // Report an issue (finalized requirement — content quality control).
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<'WRONG_ANSWER' | 'UNCLEAR_OR_TYPO' | 'WRONG_OPTIONS' | 'OTHER'>('WRONG_ANSWER');
   const [reportComment, setReportComment] = useState('');
@@ -103,10 +91,9 @@ export default function QuizSessionPage() {
     if (res.ok) setResults(await res.json());
   }
 
-  // Selecting an option IS submitting — locks immediately, shows feedback at once.
   async function selectOption(letter: string) {
     if (!session || selected || submitting) return;
-    if (!isOnline) return; // question content is already cached in `session`, but a fresh answer submission needs the server — disabled rather than queued, since the answer endpoint isn't safely retry-idempotent (a double-submit on reconnect would double-count ranking/streak updates)
+    if (!isOnline) return;
     setSelected(letter);
     setSubmitting(true);
 
@@ -130,18 +117,21 @@ export default function QuizSessionPage() {
     const isLast = currentIndex === session.questions.length - 1;
 
     if (isLast) {
-      if (!isOnline) return; // finishing needs the server to finalize the session — the button below is disabled in this state so this is a defensive guard, not the primary UX signal
+      if (!isOnline) return;
       await studentFetch(`/quiz/${sessionId}/complete`, { method: 'POST' });
 
-      // Finalized requirement — a Free (not covered by a paid plan)
-      // session ends by going straight to that exam's Annual Plan, not a
-      // results screen. A paid-plan session is completely unaffected —
-      // still shows the normal results screen exactly as before.
+      // Free practice: after the student presses the normal Next button on
+      // question 5, show a dedicated completion page explaining that today's
+      // five free questions are over and offering the Annual Plan. Paid users
+      // continue to the normal results screen.
       const accessRes = await studentFetch('/quiz/access-status');
       if (accessRes.ok) {
         const access = await accessRes.json();
         if (access.hasPreference && !access.covered) {
-          window.location.href = access.applicablePlanId ? `/plans?highlight=${access.applicablePlanId}` : '/plans';
+          const target = access.applicablePlanId
+            ? `/quiz/free-complete?planId=${encodeURIComponent(access.applicablePlanId)}`
+            : '/quiz/free-complete';
+          window.location.href = target;
           return;
         }
       }
@@ -190,12 +180,6 @@ export default function QuizSessionPage() {
   }
 
   const q = session.questions[currentIndex];
-
-  // Defensive guard — a session can end up with zero questions if the
-  // student's saved preference (Authority/Category/Language combination)
-  // has no matching Published questions with a Difficulty set. Without
-  // this check, `q` is undefined here and every access below crashes the
-  // whole page instead of showing a clear message.
   if (!q) {
     return (
       <main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
@@ -206,13 +190,6 @@ export default function QuizSessionPage() {
 
   const isLastQuestion = currentIndex === session.questions.length - 1;
   const answered = !!selected;
-
-  // Real-time language switch: pick whichever language's content is
-  // available for THIS question, preferring the student's current toggle
-  // state; fall back to whichever language actually exists if the preferred
-  // one hasn't been translated yet (e.g. background translation still running).
-  // Practice language is fixed for the whole session — content only has one
-  // key populated (whichever language the student's saved preference specifies).
   const display = q.content.TA ?? q.content.EN!;
 
   return (
@@ -276,7 +253,6 @@ export default function QuizSessionPage() {
           const isSelected = selected === letter;
           const isCorrectOption = answered && correctOption === letter;
           const isWrongSelected = answered && isSelected && correctOption !== letter;
-
           const borderColor = isCorrectOption ? '#16a34a' : isWrongSelected ? '#dc2626' : isSelected ? '#0f172a' : '#e2e8f0';
           const bgColor = isCorrectOption ? '#f0fdf4' : isWrongSelected ? '#fef2f2' : isSelected ? '#f8fafc' : '#fff';
 
@@ -339,7 +315,7 @@ export default function QuizSessionPage() {
               cursor: isLastQuestion && !isOnline ? 'not-allowed' : 'pointer',
             }}
           >
-            {isLastQuestion && !isOnline ? t.quiz.finishOffline : isLastQuestion ? t.quiz.finish : t.quiz.next}
+            {isLastQuestion && !isOnline ? t.quiz.finishOffline : t.quiz.next}
           </button>
         )}
       </div>
