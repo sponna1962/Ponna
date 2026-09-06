@@ -82,12 +82,12 @@ export default function FreePracticeCompletePage() {
 
           <h2
             style={{
-              fontSize: 28,
-              lineHeight: 1.3,
-              margin: '0 0 12px',
+              fontSize: 24,
+              lineHeight: 1.35,
+              margin: '0 0 13px',
               color: '#172033',
-              fontWeight: 850,
-              letterSpacing: '-.3px',
+              fontWeight: 800,
+              letterSpacing: '-.2px',
             }}
           >
             இன்றைய இலவச பயிற்சி முடிந்தது
@@ -95,7 +95,7 @@ export default function FreePracticeCompletePage() {
 
           <p
             style={{
-              fontSize: 17,
+              fontSize: 16,
               lineHeight: 1.65,
               color: '#43506a',
               margin: 0,
@@ -115,11 +115,11 @@ export default function FreePracticeCompletePage() {
 
           <h3
             style={{
-              fontSize: 21,
-              lineHeight: 1.35,
-              margin: '0 0 9px',
+              fontSize: 19,
+              lineHeight: 1.4,
+              margin: '0 0 8px',
               color: '#172033',
-              fontWeight: 800,
+              fontWeight: 750,
             }}
           >
             Today’s free practice is complete
@@ -127,7 +127,7 @@ export default function FreePracticeCompletePage() {
 
           <p
             style={{
-              fontSize: 15,
+              fontSize: 14,
               lineHeight: 1.6,
               color: '#69758a',
               margin: 0,
@@ -142,20 +142,20 @@ export default function FreePracticeCompletePage() {
               display: 'block',
               width: '100%',
               boxSizing: 'border-box',
-              padding: '16px 20px',
-              marginTop: 28,
+              padding: '15px 20px',
+              marginTop: 27,
               borderRadius: 11,
               background: '#172033',
               color: '#fffefa',
               textDecoration: 'none',
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: 800,
               lineHeight: 1.35,
               border: '1px solid #172033',
             }}
           >
             <span style={{ display: 'block' }}>பொன்னா பாஸ் பெறுங்கள்</span>
-            <span style={{ display: 'block', fontSize: 13, marginTop: 4, color: '#d8b45a', fontWeight: 700 }}>
+            <span style={{ display: 'block', fontSize: 12, marginTop: 4, color: '#d8b45a', fontWeight: 700 }}>
               Get Ponna Pass
             </span>
           </a>
