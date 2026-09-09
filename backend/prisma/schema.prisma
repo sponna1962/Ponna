@@ -84,7 +84,8 @@ model User {
   currentClass         String? // when educationStatus = SCHOOL_STUDENT
   courseOrDegree       String? // when educationStatus = COLLEGE_STUDENT
   yearOfStudy          String? // when educationStatus = COLLEGE_STUDENT
-  highestQualification String? // when educationStatus = COMPLETED_STUDIES
+  highestQualification   HighestQualification? // when educationStatus = COMPLETED_STUDIES
+  otherQualificationText String?               // free text when highestQualification = OTHER
 
   // Test/QA accounts (finalized requirement) — bypasses ALL quota
   // restrictions (free daily limit, paid cycle limit, plan expiry) and is
@@ -356,6 +357,34 @@ enum EducationStatus {
   SCHOOL_STUDENT
   COLLEGE_STUDENT
   COMPLETED_STUDIES
+}
+
+// Highest Qualification — fixed 19-item list + OTHER (finalized requirement,
+// Profile Page redesign). OTHER's free-text detail lives in
+// User.otherQualificationText, never in this enum, so the stored value stays
+// duplicate-free/structured. Old values (SSLC/HSC/ITI/DIPLOMA/UG/PG/MPHIL/PHD)
+// preserved as-is for backward compatibility with existing student data.
+enum HighestQualification {
+  BELOW_SSLC
+  SSLC
+  HSC
+  ITI
+  DIPLOMA
+  UG
+  UG_ENGINEERING
+  UG_COMMERCE_MGMT
+  UG_LAW
+  UG_MEDICINE
+  BED_TEACHER_TRAINING
+  PG
+  PG_ENGINEERING
+  PG_COMMERCE_MGMT
+  PG_LAW
+  PG_MEDICINE
+  MPHIL
+  PHD
+  PROFESSIONAL_CERT
+  OTHER
 }
 
 // Practice Preference — Language + Exam Authority/Category/Sub-Category

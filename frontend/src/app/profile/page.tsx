@@ -29,22 +29,33 @@ type ProfileData = {
   courseOrDegree: string | null;
   yearOfStudy: string | null;
   highestQualification: string | null;
+  otherQualificationText: string | null;
   community: string | null;
   profileComplete: boolean;
   isTestAccount: boolean;
 };
 
 const QUALIFICATION_OPTIONS = [
+  { value: 'BELOW_SSLC', label: 'Below 10th' },
   { value: 'SSLC', label: '10th / SSLC' },
   { value: 'HSC', label: '12th / HSC' },
   { value: 'ITI', label: 'ITI' },
-  { value: 'DIPLOMA', label: 'Diploma' },
-  { value: 'UG', label: 'Undergraduate Degree' },
-  { value: 'PG', label: 'Postgraduate Degree' },
+  { value: 'DIPLOMA', label: 'Diploma (Polytechnic)' },
+  { value: 'UG', label: 'UG — Arts & Science (B.A./B.Sc.)' },
+  { value: 'UG_ENGINEERING', label: 'UG — Engineering (B.E./B.Tech)' },
+  { value: 'UG_COMMERCE_MGMT', label: 'UG — Commerce/Management (B.Com/BBA)' },
+  { value: 'UG_LAW', label: 'UG — Law (LLB)' },
+  { value: 'UG_MEDICINE', label: 'UG — Medicine (MBBS)' },
+  { value: 'BED_TEACHER_TRAINING', label: 'B.Ed / Teacher Training' },
+  { value: 'PG', label: 'PG — Arts & Science (M.A./M.Sc.)' },
+  { value: 'PG_ENGINEERING', label: 'PG — Engineering (M.E./M.Tech)' },
+  { value: 'PG_COMMERCE_MGMT', label: 'PG — Management (MBA/M.Com)' },
+  { value: 'PG_LAW', label: 'PG — Law (LLM)' },
+  { value: 'PG_MEDICINE', label: 'PG — Medicine (MD/MS)' },
   { value: 'MPHIL', label: 'M.Phil.' },
   { value: 'PHD', label: 'Ph.D.' },
+  { value: 'PROFESSIONAL_CERT', label: 'Professional Cert. (CA/CS/ICWA/CMA)' },
 ];
-const QUALIFICATION_VALUES = QUALIFICATION_OPTIONS.map((o) => o.value);
 
 export default function ProfilePage() {
   const { t } = useLanguage();
@@ -70,7 +81,7 @@ export default function ProfilePage() {
   const [courseOrDegree, setCourseOrDegree] = useState('');
   const [yearOfStudy, setYearOfStudy] = useState('');
   const [highestQualification, setHighestQualification] = useState('');
-  const [otherQualification, setOtherQualification] = useState('');
+  const [otherQualificationText, setOtherQualificationText] = useState('');
   const [community, setCommunity] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -103,14 +114,8 @@ export default function ProfilePage() {
         setCurrentClass(data.currentClass ?? '');
         setCourseOrDegree(data.courseOrDegree ?? '');
         setYearOfStudy(data.yearOfStudy ?? '');
-        const existingQualification = data.highestQualification ?? '';
-        if (QUALIFICATION_VALUES.includes(existingQualification)) {
-          setHighestQualification(existingQualification);
-          setOtherQualification('');
-        } else {
-          setHighestQualification(existingQualification);
-          setOtherQualification(existingQualification);
-        }
+        setHighestQualification(data.highestQualification ?? '');
+        setOtherQualificationText(data.otherQualificationText ?? '');
         setCommunity(data.community ?? '');
       })
       .catch(() => {});
@@ -153,6 +158,7 @@ export default function ProfilePage() {
         courseOrDegree,
         yearOfStudy,
         highestQualification,
+        otherQualificationText: highestQualification === 'OTHER' ? otherQualificationText : '',
         community,
       }),
     });
@@ -301,12 +307,6 @@ export default function ProfilePage() {
 
   if (!profile) return <p style={{ padding: 24, color: '#94a3b8' }}>{t.quiz.loading}</p>;
 
-  const qualificationChoice = QUALIFICATION_VALUES.includes(highestQualification)
-    ? highestQualification
-    : highestQualification
-      ? 'OTHER'
-      : '';
-
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
@@ -450,28 +450,20 @@ export default function ProfilePage() {
               {t.profile.highestQualification} {!highestQualification && <span style={{ color: '#dc2626' }}>*</span>}
             </label>
             <select
-              value={qualificationChoice}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === 'OTHER') {
-                  setHighestQualification(otherQualification);
-                } else {
-                  setHighestQualification(value);
-                  setOtherQualification('');
-                }
-              }}
+              value={highestQualification}
+              onChange={(e) => setHighestQualification(e.target.value)}
               style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
             >
               <option value="">—</option>
               {QUALIFICATION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               <option value="OTHER">Other</option>
             </select>
-            {qualificationChoice === 'OTHER' && (
+            {highestQualification === 'OTHER' && (
               <input
                 type="text"
-                value={otherQualification}
-                onChange={(e) => { setOtherQualification(e.target.value); setHighestQualification(e.target.value); }}
-                placeholder="Other Qualification"
+                value={otherQualificationText}
+                onChange={(e) => setOtherQualificationText(e.target.value)}
+                placeholder="Please specify your qualification"
                 style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box', marginTop: 8 }}
               />
             )}

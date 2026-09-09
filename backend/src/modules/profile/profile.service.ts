@@ -61,6 +61,7 @@ export class ProfileService {
       courseOrDegree: user.courseOrDegree,
       yearOfStudy: user.yearOfStudy,
       highestQualification: user.highestQualification,
+      otherQualificationText: user.otherQualificationText,
       community: user.community,
       profileComplete: isProfileComplete(user),
       isTestAccount: user.isTestAccount,
@@ -105,7 +106,8 @@ export class ProfileService {
       currentClass?: string;
       courseOrDegree?: string;
       yearOfStudy?: string;
-      highestQualification?: string;
+      highestQualification?: string; // HighestQualification enum value
+      otherQualificationText?: string;
       community?: string | '';
     },
   ) {
@@ -113,8 +115,8 @@ export class ProfileService {
     // student who was College and switches to School shouldn't leave a
     // stale courseOrDegree/yearOfStudy sitting in the database.
     const educationClears: Record<string, object> = {
-      SCHOOL_STUDENT: { courseOrDegree: null, yearOfStudy: null, highestQualification: null },
-      COLLEGE_STUDENT: { currentClass: null, highestQualification: null },
+      SCHOOL_STUDENT: { courseOrDegree: null, yearOfStudy: null, highestQualification: null, otherQualificationText: null },
+      COLLEGE_STUDENT: { currentClass: null, highestQualification: null, otherQualificationText: null },
       COMPLETED_STUDIES: { currentClass: null, courseOrDegree: null, yearOfStudy: null },
     };
 
@@ -133,7 +135,8 @@ export class ProfileService {
         ...(data.currentClass !== undefined ? { currentClass: data.currentClass } : {}),
         ...(data.courseOrDegree !== undefined ? { courseOrDegree: data.courseOrDegree } : {}),
         ...(data.yearOfStudy !== undefined ? { yearOfStudy: data.yearOfStudy } : {}),
-        ...(data.highestQualification !== undefined ? { highestQualification: data.highestQualification } : {}),
+        ...(data.highestQualification !== undefined ? { highestQualification: (data.highestQualification || null) as any } : {}),
+        ...(data.otherQualificationText !== undefined ? { otherQualificationText: data.otherQualificationText || null } : {}),
         ...(data.community !== undefined ? { community: (data.community || null) as any } : {}),
       },
     });
