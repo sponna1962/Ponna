@@ -20,29 +20,57 @@ function daysBetween(a: Date, b: Date): number {
   return Math.round((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export async function recordStreakActivity(userId: string): Promise<void> {
+/** Core streak-advance logic, generalized to an explicit date instead of
+ * always "now" — shared by the real-time path (today) and the Offline
+ * Practice backfill path (a past date the student actually practiced
+ * offline on) below. */
+async function recordStreakActivityForDate(userId: string, activityDate: Date): Promise<void> {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
     select: { currentStreak: true, longestStreak: true, lastStreakDate: true },
   });
 
-  const today = todayIstAsDate();
-
-  if (user.lastStreakDate && daysBetween(today, user.lastStreakDate) === 0) {
-    return; // already recorded today — never double-counts multiple activities on the same day
+  if (user.lastStreakDate && daysBetween(activityDate, user.lastStreakDate) <= 0) {
+    return; // already recorded on or after this date — never moves the streak backward
   }
 
-  const isConsecutive = user.lastStreakDate && daysBetween(today, user.lastStreakDate) === 1;
-  const newStreak = isConsecutive ? user.currentStreak + 1 : 1; // missed a day (or first-ever activity) -> restart at 1, never silently to 0
+  const isConsecutive = user.lastStreakDate && daysBetween(activityDate, user.lastStreakDate) === 1;
+  const newStreak = isConsecutive ? user.currentStreak + 1 : 1;
 
   await prisma.user.update({
     where: { id: userId },
     data: {
       currentStreak: newStreak,
       longestStreak: Math.max(newStreak, user.longestStreak),
-      lastStreakDate: today,
+      lastStreakDate: activityDate,
     },
   });
+}
+
+export async function recordStreakActivity(userId: string): Promise<void> {
+  return recordStreakActivityForDate(userId, todayIstAsDate());
+}
+
+/** Offline Practice backfill (Sept 2026) — replays each distinct day the
+ * student actually answered offline questions on (from the DEVICE's own
+ * recorded timestamp, never the sync time), in chronological order, so
+ * e.g. 3 offline days genuinely extend the streak by 3, not by 1.
+ *
+ * Safety: re-checks lastStreakDate before each date (a concurrent
+ * real-time activity could interleave) and SKIPS any date at or before
+ * the already-recorded lastStreakDate, rather than replaying it — an
+ * out-of-order sync (e.g. the student practiced online today, then synced
+ * an offline pack from 3 days ago) must never move an already-advanced
+ * streak backward or corrupt it. Those stale dates are simply moot: the
+ * streak already reflects a later real date.
+ */
+export async function backfillStreakForDates(userId: string, activityDates: Date[]): Promise<void> {
+  const sorted = [...activityDates].sort((a, b) => a.getTime() - b.getTime());
+  for (const date of sorted) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { lastStreakDate: true } });
+    if (user.lastStreakDate && date <= user.lastStreakDate) continue;
+    await recordStreakActivityForDate(userId, date);
+  }
 }
 
 /** Read-only — also resets the DISPLAYED currentStreak to 0 if a day was

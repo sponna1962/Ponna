@@ -181,6 +181,7 @@ model User {
   referralConversions ReferralConversion[]
   milestones          StudentMilestone[]
   pushSubscriptions   PushSubscription[]
+  offlinePacks        OfflinePack[]
   askPonnaConversations AskPonnaConversation[]
 
   @@index([phone])
@@ -1179,6 +1180,7 @@ model Question {
   authorityTags  QuestionTaxonomyTag[]
   reports        QuestionReport[]
   auditFlags     QuestionAuditFlag[]
+  offlinePackItems OfflinePackItem[]
   auditRunItems  QuestionAuditRunItem[]
   // Optional link to the Subject & Topic Preference master structure
   // (finalized requirement — groundwork for Stage 2, "preference-based
@@ -1294,6 +1296,55 @@ model QuizSessionQuestion {
 
   @@unique([sessionId, questionId])
   @@index([sessionId, sequenceNumber])
+}
+
+// ── Offline Practice (Sept 2026, dedicated phase) ───────────────────────
+// Deliberately a SEPARATE flow from normal Practice (QuizSession), same
+// "separate-flow principle" already used for Daily Quiz/Live Exam/Review
+// Mistakes — normal Practice quota/ranking/no-repeat logic stays exactly
+// as-is; an OfflinePack is its own self-contained unit.
+//
+// Quota is deducted at DOWNLOAD time (reusing quota.service.ts's own
+// reserveQuota(), exactly like a normal session start) — never at sync
+// time, so a student can't download+practice online in parallel and get
+// double quota. The full question content (including correctOption and
+// explanation, which a normal in-progress session never exposes) is
+// sent to the client at download time, since offline answer-checking has
+// no server round-trip available — an unavoidable trade-off of true
+// offline support, not a bug.
+enum OfflinePackStatus {
+  ACTIVE // downloaded, not yet (fully) synced back
+  SYNCED // every item has a synced answer (or the pack was abandoned)
+}
+
+model OfflinePack {
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  status    OfflinePackStatus @default(ACTIVE)
+  createdAt DateTime          @default(now())
+  syncedAt  DateTime?
+  items     OfflinePackItem[]
+
+  @@index([userId, status])
+}
+
+model OfflinePackItem {
+  id             String      @id @default(uuid())
+  packId         String
+  pack           OfflinePack @relation(fields: [packId], references: [id])
+  questionId     String
+  question       Question    @relation(fields: [questionId], references: [id])
+  sequenceNumber Int
+
+  // Filled in at sync time, from the client's offline-recorded answer.
+  selectedOption   CorrectOption?
+  isCorrect        Boolean?
+  answeredAtClient DateTime? // the ACTUAL offline answer time the device reports — never the sync time, so streak backfill uses the real day
+  synced           Boolean   @default(false)
+
+  @@unique([packId, questionId])
+  @@index([packId])
 }
 
 // Permanent record of every question a student has actually answered.

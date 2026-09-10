@@ -380,6 +380,12 @@ export default function QuizStartPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
         <StudentMenu />
         <h1 style={{ fontSize: 20, margin: 0 }}>{t.quiz.title}</h1>
+        {/* Sept 2026 — Offline Practice entry point. Deliberately not a
+            new sidebar item (nav structure is finalized) — lives here
+            instead, right where a student starts practice. */}
+        <a href="/offline-practice" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#A8791F', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          📥 Offline
+        </a>
       </div>
 
       <div style={{ padding: '0 20px' }}>

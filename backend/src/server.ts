@@ -13,6 +13,7 @@ import { RankingService } from './modules/ranking/ranking.service';
 import { activitySummaryService } from './modules/students/activity-summary.service';
 import { weakAreaService } from './modules/practice-preference/weak-area.service';
 import { examCountdownService } from './modules/practice-preference/exam-countdown.service';
+import { offlinePracticeService } from './modules/practice-preference/offline-practice.service';
 import { pushNotificationService } from './modules/notifications/push-notification.service';
 import { QuotaExceededError, QuotaService } from './modules/quota/quota.service';
 import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
@@ -984,6 +985,36 @@ app.get('/students/me/exam-countdown', requireStudentAuth, async (req: StudentAu
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load exam countdown' });
+  }
+});
+
+// ── Offline Practice (Sept 2026, dedicated phase) ──────────────────────
+
+// POST /students/me/offline-pack — downloads a new pack (reuses saved
+// Practice Preference, deducts quota immediately, same as a normal
+// session start).
+app.post('/students/me/offline-pack', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await offlinePracticeService.createPack(req.studentUserId!));
+  } catch (err: any) {
+    if (err instanceof QuotaExceededError) {
+      res.status(403).json({ error: err.message, code: err.code });
+      return;
+    }
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to create offline pack' });
+  }
+});
+
+// POST /students/me/offline-pack/:id/sync
+// { answers: [{ questionId, selectedOption, answeredAt }] }
+app.post('/students/me/offline-pack/:id/sync', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const result = await offlinePracticeService.syncPack(req.studentUserId!, req.params.id, req.body.answers ?? []);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to sync offline pack' });
   }
 });
 
