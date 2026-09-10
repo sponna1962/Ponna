@@ -125,7 +125,7 @@ async function main() {
   }
 
   await seedCategory(tnpsc.id, 'Group Examinations', [
-    'Group I', 'Group I-A', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group IV',
+    'Group I', 'Group I-A', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III',
     'Group V', 'Group V-A', 'Group VI', 'Group VII', 'Group VIII',
   ]);
   await seedCategory(tnpsc.id, 'Technical Services', [
@@ -143,6 +143,28 @@ async function main() {
   const groupExamsCategory = await prisma.examCategory.findUniqueOrThrow({
     where: { authorityId_name: { authorityId: tnpsc.id, name: 'Group Examinations' } },
   });
+
+  // Sept 2026 (BINDING, bugfix) — 'Group IV' is deliberately NOT in the
+  // fixed seedCategory list above anymore. Once the Group 4 - VAO merge
+  // further below renames it to the canonical name, this fixed-list
+  // upsert would otherwise recreate a fresh, empty 'Group IV' row on
+  // every later deploy (upsert's `create` branch fires because no row
+  // named 'Group IV' exists post-rename) — which then collides with the
+  // merge's own rename attempt (P2002 unique constraint on
+  // categoryId+name, since the canonical name is already taken by the
+  // real, question-holding row). Only create 'Group IV' here if the
+  // canonical row doesn't exist yet — i.e. the merge hasn't run yet.
+  const group4VaoCanonicalName = 'குரூப் 4 - வி.ஏ.ஓ.';
+  const group4VaoAlreadyMerged = await prisma.examSubCategory.findUnique({
+    where: { categoryId_name: { categoryId: groupExamsCategory.id, name: group4VaoCanonicalName } },
+  });
+  if (!group4VaoAlreadyMerged) {
+    await prisma.examSubCategory.upsert({
+      where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'Group IV' } },
+      create: { categoryId: groupExamsCategory.id, name: 'Group IV' },
+      update: {},
+    });
+  }
 
   async function seedSyllabusSubject(subCategoryName: string, subjectName: string, topics: string[]) {
     const subCategory = await prisma.examSubCategory.findUnique({
@@ -293,22 +315,40 @@ async function main() {
   async function mergeGroup4Vao(categoryId: string) {
     const canonicalName = 'குரூப் 4 - வி.ஏ.ஓ.';
 
-    const group4ByOldName = await prisma.examSubCategory.findUnique({
+    const canonicalRow = await prisma.examSubCategory.findUnique({
+      where: { categoryId_name: { categoryId, name: canonicalName } },
+    });
+    const oldGroup4Row = await prisma.examSubCategory.findUnique({
       where: { categoryId_name: { categoryId, name: 'Group IV' } },
     });
 
-    if (!group4ByOldName) {
-      // Already merged & renamed in an earlier successful deploy — the
-      // canonical row already exists and IS the former "Group IV" row
-      // (this function guarantees only one row ever ends up with this
-      // name). Nothing left to do.
-      return prisma.examSubCategory.findUniqueOrThrow({
-        where: { categoryId_name: { categoryId, name: canonicalName } },
-      });
-    }
-    const group4 = group4ByOldName;
+    // Steady state after a successful earlier run — nothing left to do.
+    if (canonicalRow && !oldGroup4Row) return canonicalRow;
 
-    const priorNames = ['VAO', 'Group 4 & VAO', 'Group IV & VAO', canonicalName];
+    // Recovery case (bugfix): a stray/empty 'Group IV' row exists
+    // ALONGSIDE the already-merged canonical row — this can only happen
+    // from a deploy that crashed after re-creating 'Group IV' but before
+    // this function's own bugfix (see the conditional creation just
+    // above this function's call site) started preventing that
+    // recreation. The canonical row is the real content-holder; retire
+    // the stray rather than treat it as authoritative.
+    if (canonicalRow && oldGroup4Row) {
+      await prisma.question.updateMany({ where: { subCategoryId: oldGroup4Row.id }, data: { subCategoryId: canonicalRow.id } });
+      await prisma.questionTaxonomyTag.updateMany({ where: { subCategoryId: oldGroup4Row.id }, data: { subCategoryId: canonicalRow.id } });
+      await prisma.planSubCategoryScope.deleteMany({ where: { subCategoryId: oldGroup4Row.id } });
+      await prisma.examSubCategory.update({
+        where: { id: oldGroup4Row.id },
+        data: { studentVisible: false, name: `Group IV (stray, merged into ${canonicalName})` },
+      });
+      return canonicalRow;
+    }
+
+    // First-ever run — 'Group IV' holds the real content, nothing merged yet.
+    const group4 = await prisma.examSubCategory.findUniqueOrThrow({
+      where: { categoryId_name: { categoryId, name: 'Group IV' } },
+    });
+
+    const priorNames = ['VAO', 'Group 4 & VAO', 'Group IV & VAO'];
     for (const priorName of priorNames) {
       const stray = await prisma.examSubCategory.findUnique({ where: { categoryId_name: { categoryId, name: priorName } } });
       if (!stray || stray.id === group4.id) continue;
