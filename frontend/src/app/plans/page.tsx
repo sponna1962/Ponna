@@ -105,7 +105,7 @@ function displayName(name: string): string {
  * features" sheet instead (see COMMON_FEATURES below). Returns null for
  * any plan not one of these three (e.g. a future re-enabled exam) rather
  * than guessing copy for it. */
-function planFeatures(name: string, restrictToScope?: boolean): { highlight: string; bullets: string[]; buttonLabel: string } | null {
+function planFeatures(name: string, restrictToScope?: boolean): { description: string; mainBullets: string[]; buttonLabel: string } | null {
   // Detected by restrictToScope (real Plan data), never by matching the
   // Tamil name — matching this generic function's own "never guess
   // access/scope from the name string" principle used everywhere else on
@@ -114,8 +114,8 @@ function planFeatures(name: string, restrictToScope?: boolean): { highlight: str
   // broader case first.
   if (restrictToScope) {
     return {
-      highlight: 'குரூப் 4 - வி.ஏ.ஓ. தேர்வுக்கான சிறப்பு பயிற்சி',
-      bullets: ['குரூப் 4 - வி.ஏ.ஓ. Question Bank', 'Group 4 Syllabus-based Preparation', 'Group 4 Exam-focused Practice'],
+      description: 'குரூப் 4 - வி.ஏ.ஓ. தேர்வுக்கான சிறப்பு பயிற்சி',
+      mainBullets: ['குரூப் 4 - வி.ஏ.ஓ. கேள்வி வங்கி', 'அதிகாரப்பூர்வ பாடத்திட்டத்தின் அடிப்படையிலான பயிற்சி'],
       buttonLabel: 'Get TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass',
     };
   }
@@ -124,28 +124,34 @@ function planFeatures(name: string, restrictToScope?: boolean): { highlight: str
   // name in case it's ever renamed to say that directly.
   if (/tnpsc/i.test(name) || /competitive|employment/i.test(name)) {
     return {
-      highlight: '40,000+ Questions & Exam Practice / Year',
-      bullets: ['1,00,000+ TNPSC Question Bank', 'Multiple TNPSC Examinations', 'Complete TNPSC Preparation'],
+      description: 'முழுமையான TNPSC தேர்வு பயிற்சி',
+      mainBullets: ['1,00,000+ TNPSC கேள்விகள்', 'அனைத்து முக்கிய TNPSC தேர்வுகளுக்கான பயிற்சி'],
       buttonLabel: 'Get TNPSC Pass',
     };
   }
   if (/tntet/i.test(name)) {
     return {
-      highlight: '40,000+ Questions & Exam Practice / Year',
-      bullets: ['Complete TNTET Question Bank', 'Paper I & Paper II', 'Complete TNTET Preparation'],
+      description: 'முழுமையான TNTET தேர்வு பயிற்சி',
+      mainBullets: ['முழுமையான TNTET கேள்வி வங்கி', 'தாள் I & தாள் II பயிற்சி'],
       buttonLabel: 'Get TNTET Pass',
     };
   }
   return null;
 }
 
-/** Sept 2026 finalized — features common to every paid Pass, shown once
- * via the "View all features" sheet rather than repeated on each card. */
-const COMMON_FEATURES: { group: string; items: string[] }[] = [
-  { group: 'Practice', items: ['Previous Year Exam Papers', 'Expert-Crafted Practice', 'Instant Answers'] },
-  { group: 'Daily Learning', items: ['Daily Challenge', 'Brain Challenge'] },
-  { group: 'Improve', items: ['Review Mistakes', 'Performance Analysis'] },
-  { group: 'Languages', items: ['Tamil & English'] },
+/** Sept 2026 finalized — features common to every paid Pass. Shown as a
+ * compact "View More Features →" link on each card, opening a per-card
+ * bottom sheet with this same list — keeps the card itself short while
+ * the complete feature set stays available for every Pass. */
+const MORE_FEATURES = [
+  'Previous Year Exam Papers',
+  'Expert-Crafted Practice',
+  'Instant Answers',
+  'Daily Challenge',
+  'Brain Challenge',
+  'Review Mistakes',
+  'Performance Analysis',
+  'Tamil & English',
 ];
 
 
@@ -178,7 +184,7 @@ function PlansPageInner() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetContent | null>(null);
-  const [showFeaturesSheet, setShowFeaturesSheet] = useState(false);
+  const [moreFeaturesFor, setMoreFeaturesFor] = useState<{ title: string } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -393,10 +399,10 @@ function PlansPageInner() {
                       marginBottom: 16,
                     }}
                   >
-                    <div style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 800, color: COLORS.ink, marginBottom: 6 }}>{displayName(p.name)}</div>
+                    <div style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 800, color: COLORS.ink, marginBottom: 4 }}>{displayName(p.name)}</div>
 
                     {features && (
-                      <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.gold, marginBottom: 14 }}>{features.highlight}</div>
+                      <div style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 14 }}>{features.description}</div>
                     )}
 
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -417,8 +423,8 @@ function PlansPageInner() {
                     </div>
 
                     {features && (
-                      <div style={{ marginBottom: 18 }}>
-                        {features.bullets.map((b) => (
+                      <div style={{ marginBottom: 10 }}>
+                        {features.mainBullets.map((b) => (
                           <div key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, fontSize: 14, color: COLORS.ink, lineHeight: 1.4 }}>
                             <span style={{ color: COLORS.gold, fontWeight: 700, flexShrink: 0 }}>✓</span>
                             <span>{b}</span>
@@ -426,6 +432,18 @@ function PlansPageInner() {
                         ))}
                       </div>
                     )}
+
+                    {/* Sept 2026 finalized redesign — the full common
+                        feature set stays PART of this Pass (per-card,
+                        not a separate shared entry point) but lives
+                        behind a compact link so the card itself stays
+                        short. */}
+                    <button
+                      onClick={() => setMoreFeaturesFor({ title: displayName(p.name) })}
+                      style={{ display: 'block', background: 'none', border: 'none', padding: 0, marginBottom: 16, fontSize: 13, fontWeight: 700, color: COLORS.gold, cursor: 'pointer' }}
+                    >
+                      View More Features →
+                    </button>
 
                     <button
                       onClick={() => buy(p.id)}
@@ -438,33 +456,11 @@ function PlansPageInner() {
                 );
               })}
 
-              {/* Sept 2026 finalized redesign — every feature common to all
-                  Passes lives here once, instead of repeated on each card
-                  above, so the cards stay compact and scannable. */}
-              <button
-                onClick={() => setShowFeaturesSheet(true)}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  background: COLORS.paperAlt,
-                  border: `1px solid ${COLORS.line}`,
-                  borderRadius: 12,
-                  padding: '14px 16px',
-                  marginBottom: 16,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink }}>
-                  {lang === 'ta' ? 'ஒவ்வொரு PONNA பாஸ்-லும் அடங்கியிருப்பவை' : "What's included with every PONNA Pass"}
-                </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.gold, whiteSpace: 'nowrap' }}>
-                  {lang === 'ta' ? 'அனைத்தையும் காண →' : 'View all features →'}
-                </span>
-              </button>
+              {/* Sept 2026 finalized redesign (per-card "View More
+                  Features") — the shared feature list is now surfaced
+                  from each card individually (see moreFeaturesFor
+                  above), so no separate global trigger lives here
+                  anymore. */}
             </>
           )}
         </>
@@ -482,7 +478,7 @@ function PlansPageInner() {
         />
       )}
 
-      {showFeaturesSheet && <CommonFeaturesSheet onClose={() => setShowFeaturesSheet(false)} lang={lang} />}
+      {moreFeaturesFor && <MoreFeaturesSheet title={moreFeaturesFor.title} onClose={() => setMoreFeaturesFor(null)} lang={lang} />}
     </main>
   );
 }
@@ -597,10 +593,13 @@ function PlanSheet({
   );
 }
 
-/** Sept 2026 finalized redesign — the "View all features" bottom sheet.
- * Static content (COMMON_FEATURES) shared by every paid Pass — not
- * fetched, since it's identical for all of them. */
-function CommonFeaturesSheet({ onClose, lang }: { onClose: () => void; lang: string }) {
+/** Sept 2026 finalized redesign — each plan card's "View More Features"
+ * link opens this, titled with that card's own Pass name. Content
+ * (MORE_FEATURES) is the same underlying feature set for every Pass —
+ * not fetched, since it's static and identical for all of them — but the
+ * sheet itself is per-card, so the feature set still reads as fully part
+ * of THAT Pass rather than a separate, detached "common features" page. */
+function MoreFeaturesSheet({ title, onClose, lang }: { title: string; onClose: () => void; lang: string }) {
   return (
     <div
       onClick={onClose}
@@ -619,27 +618,21 @@ function CommonFeaturesSheet({ onClose, lang }: { onClose: () => void; lang: str
           boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
         }}
       >
-        <h3 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, color: COLORS.ink, marginBottom: 16 }}>
-          {lang === 'ta' ? 'ஒவ்வொரு PONNA பாஸ்-லும் அடங்கியிருப்பவை' : "What's included with every PONNA Pass"}
-        </h3>
+        <h3 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, color: COLORS.ink, marginBottom: 2 }}>{title}</h3>
+        <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 16 }}>
+          {lang === 'ta' ? 'இந்த பாஸ்-ல் அடங்கியிருப்பவை' : 'Included with this Pass'}
+        </p>
 
-        {COMMON_FEATURES.map((section) => (
-          <div key={section.group} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.gold, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>
-              {section.group}
-            </div>
-            {section.items.map((item) => (
-              <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6, fontSize: 14, color: COLORS.ink, lineHeight: 1.4 }}>
-                <span style={{ color: COLORS.gold, fontWeight: 700, flexShrink: 0 }}>✓</span>
-                <span>{item}</span>
-              </div>
-            ))}
+        {MORE_FEATURES.map((item) => (
+          <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, fontSize: 14, color: COLORS.ink, lineHeight: 1.4 }}>
+            <span style={{ color: COLORS.gold, fontWeight: 700, flexShrink: 0 }}>✓</span>
+            <span>{item}</span>
           </div>
         ))}
 
         <button
           onClick={onClose}
-          style={{ width: '100%', padding: 13, borderRadius: 10, background: COLORS.paperAlt, color: COLORS.ink, border: `1px solid ${COLORS.line}`, fontWeight: 600, fontSize: 15, cursor: 'pointer', marginTop: 4 }}
+          style={{ width: '100%', padding: 13, borderRadius: 10, background: COLORS.paperAlt, color: COLORS.ink, border: `1px solid ${COLORS.line}`, fontWeight: 600, fontSize: 15, cursor: 'pointer', marginTop: 12 }}
         >
           {lang === 'ta' ? 'மூடு' : 'Close'}
         </button>
