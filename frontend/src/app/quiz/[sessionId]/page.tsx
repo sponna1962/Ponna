@@ -232,12 +232,6 @@ export default function QuizSessionPage() {
       <div style={{ padding: '16px 20px 8px 20px' }}>
         <p style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', lineHeight: 1.5, margin: 0 }}>{display.questionText}</p>
         <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-          <a
-            href={`/ask-ponna?prefill=${encodeURIComponent(t.quiz.simpleTamilPrompt(display.questionText))}`}
-            style={{ color: '#A8791F', fontSize: 12, textDecoration: 'underline' }}
-          >
-            {t.quiz.explainSimply}
-          </a>
           <button
             onClick={openReport}
             style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 12, padding: 0, cursor: 'pointer', textDecoration: 'underline' }}
