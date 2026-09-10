@@ -99,8 +99,13 @@ function displayName(name: string): string {
  * always comes from real Purpose/Authority data elsewhere on this page).
  * Returns null for any plan not TNPSC/TNTET (e.g. a future re-enabled
  * exam) rather than guessing copy for it. */
-function planFeatures(name: string, restrictToScope?: boolean): { highlight: string; bullets: string[] } | null {
-  // Sept 2026 — TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass (finalized requirement).
+/** Sept 2026 finalized Plans page redesign — each purchasable plan card
+ * shows only its OWN 3 defining benefits (compact, scannable); every
+ * other feature common to all Passes lives in the single "View all
+ * features" sheet instead (see COMMON_FEATURES below). Returns null for
+ * any plan not one of these three (e.g. a future re-enabled exam) rather
+ * than guessing copy for it. */
+function planFeatures(name: string, restrictToScope?: boolean): { highlight: string; bullets: string[]; buttonLabel: string } | null {
   // Detected by restrictToScope (real Plan data), never by matching the
   // Tamil name — matching this generic function's own "never guess
   // access/scope from the name string" principle used everywhere else on
@@ -109,18 +114,9 @@ function planFeatures(name: string, restrictToScope?: boolean): { highlight: str
   // broader case first.
   if (restrictToScope) {
     return {
-      highlight: 'Focused preparation for Group 4 - VAO',
-      bullets: [
-        'TNPSC Group 4 - VAO Question Bank',
-        'Previous Year Exam Papers',
-        'Expert-Crafted Practice',
-        'Instant Answers',
-        'Daily Challenge',
-        'Brain Challenge',
-        'Review Mistakes',
-        'Performance Analysis',
-        'Tamil & English',
-      ],
+      highlight: 'குரூப் 4 - வி.ஏ.ஓ. தேர்வுக்கான சிறப்பு பயிற்சி',
+      bullets: ['குரூப் 4 - வி.ஏ.ஓ. Question Bank', 'Group 4 Syllabus-based Preparation', 'Group 4 Exam-focused Practice'],
+      buttonLabel: 'Get TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass',
     };
   }
   // "Competitive / Employment Annual Plan" is TNPSC's real Plan name (a
@@ -129,38 +125,30 @@ function planFeatures(name: string, restrictToScope?: boolean): { highlight: str
   if (/tnpsc/i.test(name) || /competitive|employment/i.test(name)) {
     return {
       highlight: '40,000+ Questions & Exam Practice / Year',
-      bullets: [
-        '1,00,000+ TNPSC Question Bank',
-        'Previous Year Exam Papers',
-        'Expert-Crafted Practice',
-        'Instant Answers',
-        'Daily Quiz',
-        'Brain Challenge',
-        'Live Exam',
-        'Performance Analysis',
-        'Tamil & English',
-      ],
+      bullets: ['1,00,000+ TNPSC Question Bank', 'Multiple TNPSC Examinations', 'Complete TNPSC Preparation'],
+      buttonLabel: 'Get TNPSC Pass',
     };
   }
   if (/tntet/i.test(name)) {
     return {
       highlight: '40,000+ Questions & Exam Practice / Year',
-      bullets: [
-        'Complete TNTET Question Bank',
-        'Previous Year Exam Papers',
-        'Expert-Crafted Practice',
-        'Instant Answers',
-        'Daily Quiz',
-        'Brain Challenge',
-        'Live Exam',
-        'Performance Analysis',
-        'Tamil & English',
-        'Paper I & Paper II',
-      ],
+      bullets: ['Complete TNTET Question Bank', 'Paper I & Paper II', 'Complete TNTET Preparation'],
+      buttonLabel: 'Get TNTET Pass',
     };
   }
   return null;
 }
+
+/** Sept 2026 finalized — features common to every paid Pass, shown once
+ * via the "View all features" sheet rather than repeated on each card. */
+const COMMON_FEATURES: { group: string; items: string[] }[] = [
+  { group: 'Practice', items: ['Previous Year Exam Papers', 'Expert-Crafted Practice', 'Instant Answers'] },
+  { group: 'Daily Learning', items: ['Daily Challenge', 'Brain Challenge'] },
+  { group: 'Improve', items: ['Review Mistakes', 'Performance Analysis'] },
+  { group: 'Languages', items: ['Tamil & English'] },
+];
+
+
 
 export default function PlansPage() {
   return (
@@ -190,6 +178,7 @@ function PlansPageInner() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetContent | null>(null);
+  const [showFeaturesSheet, setShowFeaturesSheet] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -443,11 +432,39 @@ function PlansPageInner() {
                       disabled={loadingPlan === p.id}
                       style={{ width: '100%', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}
                     >
-                      {loadingPlan === p.id ? '…' : buyButtonLabel(p.name)}
+                      {loadingPlan === p.id ? '…' : features?.buttonLabel ?? buyButtonLabel(p.name)}
                     </button>
                   </div>
                 );
               })}
+
+              {/* Sept 2026 finalized redesign — every feature common to all
+                  Passes lives here once, instead of repeated on each card
+                  above, so the cards stay compact and scannable. */}
+              <button
+                onClick={() => setShowFeaturesSheet(true)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  background: COLORS.paperAlt,
+                  border: `1px solid ${COLORS.line}`,
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                  marginBottom: 16,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink }}>
+                  {lang === 'ta' ? 'ஒவ்வொரு PONNA பாஸ்-லும் அடங்கியிருப்பவை' : "What's included with every PONNA Pass"}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.gold, whiteSpace: 'nowrap' }}>
+                  {lang === 'ta' ? 'அனைத்தையும் காண →' : 'View all features →'}
+                </span>
+              </button>
             </>
           )}
         </>
@@ -464,6 +481,8 @@ function PlansPageInner() {
           buyLabel={sheet.planId ? buyButtonLabel(sheet.title) : ''}
         />
       )}
+
+      {showFeaturesSheet && <CommonFeaturesSheet onClose={() => setShowFeaturesSheet(false)} lang={lang} />}
     </main>
   );
 }
@@ -572,6 +591,57 @@ function PlanSheet({
 
         <button onClick={onClose} style={{ width: '100%', background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 13, padding: 4, cursor: 'pointer' }}>
           {t.plans.close}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Sept 2026 finalized redesign — the "View all features" bottom sheet.
+ * Static content (COMMON_FEATURES) shared by every paid Pass — not
+ * fetched, since it's identical for all of them. */
+function CommonFeaturesSheet({ onClose, lang }: { onClose: () => void; lang: string }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(26,34,56,0.45)', zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: 480,
+          background: COLORS.paper,
+          borderRadius: '16px 16px 0 0',
+          padding: 20,
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
+        }}
+      >
+        <h3 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, color: COLORS.ink, marginBottom: 16 }}>
+          {lang === 'ta' ? 'ஒவ்வொரு PONNA பாஸ்-லும் அடங்கியிருப்பவை' : "What's included with every PONNA Pass"}
+        </h3>
+
+        {COMMON_FEATURES.map((section) => (
+          <div key={section.group} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.gold, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>
+              {section.group}
+            </div>
+            {section.items.map((item) => (
+              <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6, fontSize: 14, color: COLORS.ink, lineHeight: 1.4 }}>
+                <span style={{ color: COLORS.gold, fontWeight: 700, flexShrink: 0 }}>✓</span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+
+        <button
+          onClick={onClose}
+          style={{ width: '100%', padding: 13, borderRadius: 10, background: COLORS.paperAlt, color: COLORS.ink, border: `1px solid ${COLORS.line}`, fontWeight: 600, fontSize: 15, cursor: 'pointer', marginTop: 4 }}
+        >
+          {lang === 'ta' ? 'மூடு' : 'Close'}
         </button>
       </div>
     </div>
