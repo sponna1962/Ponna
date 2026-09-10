@@ -12,6 +12,7 @@ import { PracticePreferenceService, InvalidSelectionError } from './modules/prac
 import { RankingService } from './modules/ranking/ranking.service';
 import { activitySummaryService } from './modules/students/activity-summary.service';
 import { weakAreaService } from './modules/practice-preference/weak-area.service';
+import { examCountdownService } from './modules/practice-preference/exam-countdown.service';
 import { pushNotificationService } from './modules/notifications/push-notification.service';
 import { QuotaExceededError, QuotaService } from './modules/quota/quota.service';
 import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
@@ -971,6 +972,18 @@ app.get('/students/me/weak-area', requireStudentAuth, async (req: StudentAuthedR
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load weak-area alert' });
+  }
+});
+
+// GET /students/me/exam-countdown — Sept 2026, "N days remaining" for
+// the student's selected exam, from an admin-set structured date. Null
+// if no date has been confirmed yet for their exam.
+app.get('/students/me/exam-countdown', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await examCountdownService.getCountdown(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load exam countdown' });
   }
 });
 
@@ -1975,6 +1988,23 @@ app.patch('/admin/exam-taxonomy/authorities/:authorityId', requireStaffAuth, req
 // PATCH /admin/exam-taxonomy/sub-categories/:id  { studentVisible: boolean }
 app.patch('/admin/exam-taxonomy/sub-categories/:id', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   res.json(await examTaxonomyService.setSubCategoryVisible(req.params.id, req.body.studentVisible));
+});
+
+// PATCH /admin/exam-taxonomy/sub-categories/:id/exam-date  { examDate: string | null }
+// Sept 2026 — Exam Countdown. Structured date, admin-set once known.
+app.patch('/admin/exam-taxonomy/sub-categories/:id/exam-date', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const { examDate } = req.body;
+    const date = examDate ? new Date(examDate) : null;
+    if (examDate && Number.isNaN(date?.getTime())) {
+      res.status(400).json({ error: 'Invalid date' });
+      return;
+    }
+    res.json(await examTaxonomyService.setSubCategoryExamDate(req.params.id, date));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update exam date' });
+  }
 });
 
 // POST /admin/exam-taxonomy/authorities/:authorityId/categories  { name }

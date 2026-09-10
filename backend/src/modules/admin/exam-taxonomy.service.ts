@@ -114,6 +114,12 @@ export class ExamTaxonomyService {
     return prisma.examSubCategory.update({ where: { id: subCategoryId }, data: { studentVisible } });
   }
 
+  /** Exam Countdown (Sept 2026) — admin sets/clears the actual exam date
+   * once known. Pass null to clear it back to "unknown". */
+  async setSubCategoryExamDate(subCategoryId: string, examDate: Date | null) {
+    return prisma.examSubCategory.update({ where: { id: subCategoryId }, data: { examDate } });
+  }
+
   async createSubCategory(categoryId: string, name: string) {
     return prisma.examSubCategory.create({ data: { categoryId, name } });
   }

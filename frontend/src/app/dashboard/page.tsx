@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const [monthlySummary, setMonthlySummary] = useState<{ questionsAnswered: number; timeSpentMinutes: number; currentStreak: number } | null>(null);
   const [weakArea, setWeakArea] = useState<{ subCategoryId: string; subjectId: string; subjectName: string; accuracy: number; overallAccuracy: number; sampleSize: number } | null>(null);
   const [settingWeakAreaPractice, setSettingWeakAreaPractice] = useState(false);
+  const [examCountdown, setExamCountdown] = useState<{ subCategoryId: string; subCategoryName: string; examDate: string; daysRemaining: number } | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
@@ -89,6 +90,10 @@ export default function DashboardPage() {
     studentFetch('/students/me/weak-area')
       .then((r) => (r.ok ? r.json() : null))
       .then(setWeakArea)
+      .catch(() => {});
+    studentFetch('/students/me/exam-countdown')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setExamCountdown)
       .catch(() => {});
   }, []);
 
@@ -177,6 +182,17 @@ export default function DashboardPage() {
           </span>
         )}
       </div>
+
+      {/* Sept 2026 — Exam Countdown (Personalization). Same data/rules
+          as Home. */}
+      {examCountdown && (
+        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 12, marginBottom: 12, background: COLORS.goldLight, textAlign: 'center' }}>
+          <p style={{ fontSize: 12, color: '#7A5A14', margin: '0 0 2px', fontWeight: 600 }}>{examCountdown.subCategoryName}</p>
+          <p style={{ fontSize: 22, fontWeight: 800, color: '#5C4009', margin: 0, fontFamily: FONT_FAMILY }}>
+            இன்னும் {examCountdown.daysRemaining} நாட்கள்
+          </p>
+        </div>
+      )}
 
       {/* Sept 2026 — "this month" effort summary (world-class-polish
           quick win). Reuses the same /students/me/monthly-summary as

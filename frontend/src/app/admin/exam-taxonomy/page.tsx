@@ -8,7 +8,7 @@ import { adminFetch } from '../../../lib/admin-fetch';
 // structure is hardcoded beyond the initial seed data, so growth into new
 // exam families never requires a schema change or a deploy.
 
-type SubCategory = { id: string; name: string; _count: { questions: number } };
+type SubCategory = { id: string; name: string; examDate: string | null; _count: { questions: number } };
 type Category = { id: string; name: string; subCategories: SubCategory[]; _count: { questions: number } };
 type Authority = {
   id: string;
@@ -129,6 +129,18 @@ export default function ExamTaxonomyPage() {
       body: JSON.stringify({ name }),
     });
     setNewSubCategoryName({ ...newSubCategoryName, [categoryId]: '' });
+    load();
+  }
+
+  // Sept 2026 — Exam Countdown. Admin sets the actual, structured exam
+  // date once known/confirmed — drives the student-facing "N days
+  // remaining" countdown. Empty input clears it back to unknown.
+  async function setSubCategoryExamDate(subCategoryId: string, value: string) {
+    await adminFetch(`/admin/exam-taxonomy/sub-categories/${subCategoryId}/exam-date`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ examDate: value || null }),
+    });
     load();
   }
 
@@ -262,9 +274,19 @@ export default function ExamTaxonomyPage() {
                     {cat.name} <span style={{ color: '#94a3b8', fontWeight: 400 }}>({cat._count.questions} questions)</span>
                   </div>
                   {cat.subCategories.length > 0 && (
-                    <ul style={{ marginLeft: 16, marginBottom: 8, fontSize: 13, color: '#475569' }}>
+                    <ul style={{ marginLeft: 16, marginBottom: 8, fontSize: 13, color: '#475569', listStyle: 'none', paddingLeft: 0 }}>
                       {cat.subCategories.map((sub) => (
-                        <li key={sub.id}>{sub.name} <span style={{ color: '#94a3b8' }}>({sub._count.questions})</span></li>
+                        <li key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span>{sub.name} <span style={{ color: '#94a3b8' }}>({sub._count.questions})</span></span>
+                          {/* Sept 2026 — Exam Countdown date, inline. */}
+                          <input
+                            type="date"
+                            defaultValue={sub.examDate ? sub.examDate.slice(0, 10) : ''}
+                            onBlur={(e) => setSubCategoryExamDate(sub.id, e.target.value)}
+                            title="Exam date (drives student countdown)"
+                            style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, border: '1px solid #cbd5e1' }}
+                          />
+                        </li>
                       ))}
                     </ul>
                   )}

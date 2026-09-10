@@ -871,6 +871,14 @@ model ExamSubCategory {
   // Never a deletion — data stays intact for whenever it's confirmed.
   studentVisible Boolean @default(true)
 
+  // Exam Countdown (Sept 2026, Priority — Personalization) — admin-set,
+  // structured date, distinct from VerifiedExamFact's free-text EXAM_DATE
+  // value (which can't be reliably parsed for a "N days remaining"
+  // countdown). Null until admin actually knows/confirms the date — the
+  // countdown feature simply doesn't show for that exam until then,
+  // rather than guessing from unstructured text.
+  examDate DateTime?
+
   @@unique([categoryId, name])
 }
 

@@ -69,6 +69,7 @@ export default function IndexPage() {
   const [monthlySummary, setMonthlySummary] = useState<{ questionsAnswered: number; timeSpentMinutes: number; currentStreak: number } | null>(null);
   const [weakArea, setWeakArea] = useState<{ subCategoryId: string; subjectId: string; subjectName: string; accuracy: number; overallAccuracy: number; sampleSize: number } | null>(null);
   const [settingWeakAreaPractice, setSettingWeakAreaPractice] = useState(false);
+  const [examCountdown, setExamCountdown] = useState<{ subCategoryId: string; subCategoryName: string; examDate: string; daysRemaining: number } | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
   const [headerPhotoUrl, setHeaderPhotoUrl] = useState<string | null>(null);
   const [showDiagnosticPrompt, setShowDiagnosticPrompt] = useState(false);
@@ -103,6 +104,10 @@ export default function IndexPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setWeakArea)
       .catch(() => setWeakArea(null));
+    studentFetch('/students/me/exam-countdown')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setExamCountdown)
+      .catch(() => setExamCountdown(null));
     studentFetch('/students/me/profile')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -188,6 +193,7 @@ export default function IndexPage() {
     setActiveSubs(null);
     setMonthlySummary(null);
     setWeakArea(null);
+    setExamCountdown(null);
     setLoginMethod(null);
     setAccountMenuOpen(false);
     setView('main');
@@ -417,6 +423,19 @@ export default function IndexPage() {
               <a href="/plans" style={{ display: 'inline-block', marginTop: 4, fontSize: 12, fontWeight: 700, color: '#7A5A14', textDecoration: 'none' }}>
                 View Plan →
               </a>
+            </div>
+          )}
+
+          {/* Sept 2026 — Exam Countdown (Personalization). Only shown once
+              admin has confirmed the actual exam date for the student's
+              selected exam — see exam-countdown.service.ts's own comment
+              on why VerifiedExamFact's free-text date isn't used here. */}
+          {isLoggedIn && examCountdown && (
+            <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 12, marginBottom: 20, background: COLORS.goldLight, textAlign: 'center' }}>
+              <p style={{ fontSize: 12, color: '#7A5A14', margin: '0 0 2px', fontWeight: 600 }}>{examCountdown.subCategoryName}</p>
+              <p style={{ fontSize: 22, fontWeight: 800, color: '#5C4009', margin: 0, fontFamily: FONT_FAMILY }}>
+                இன்னும் {examCountdown.daysRemaining} நாட்கள்
+              </p>
             </div>
           )}
 
