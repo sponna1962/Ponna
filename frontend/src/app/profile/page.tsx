@@ -98,6 +98,8 @@ export default function ProfilePage() {
   const phoneRecaptchaRef = useRef<HTMLDivElement>(null);
   const [resettingHistory, setResettingHistory] = useState(false);
   const [milestones, setMilestones] = useState<{ type: string; label: string; emoji: string; achievedAt: string }[]>([]);
+  const [pushStatus, setPushStatus] = useState<{ configured: boolean; subscribed: boolean; vapidPublicKey: string | null } | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
 
   useEffect(() => {
     studentFetch('/students/me/profile')
@@ -131,6 +133,71 @@ export default function ProfilePage() {
       .then((data) => setMilestones(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
+
+  // Sept 2026 — Push Notifications (Priority 1, Accessibility & Reach).
+  useEffect(() => {
+    studentFetch('/students/me/push-subscription/status')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setPushStatus)
+      .catch(() => {});
+  }, []);
+
+  function urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  async function enablePushNotifications() {
+    if (!pushStatus?.vapidPublicKey) return;
+    setPushBusy(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setPushBusy(false);
+        return;
+      }
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(pushStatus.vapidPublicKey) as BufferSource,
+      });
+      await studentFetch('/students/me/push-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription.toJSON()),
+      });
+      setPushStatus((cur) => (cur ? { ...cur, subscribed: true } : cur));
+    } catch (err) {
+      console.error('Push subscribe failed:', err);
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function disablePushNotifications() {
+    setPushBusy(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await studentFetch('/students/me/push-subscription', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        });
+        await subscription.unsubscribe();
+      }
+      setPushStatus((cur) => (cur ? { ...cur, subscribed: false } : cur));
+    } catch (err) {
+      console.error('Push unsubscribe failed:', err);
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   async function shareBadge(m: { label: string; emoji: string }) {
     const text = `நான் PONNA-ல் "${m.label}" ${m.emoji} சாதனை பெற்றேன்! நீங்களும் இணையுங்க: https://ponna.in`;
@@ -366,6 +433,39 @@ export default function ProfilePage() {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Sept 2026 — Push Notifications (Priority 1, Accessibility &
+          Reach). Hidden entirely if VAPID keys aren't configured on the
+          backend yet, rather than offering a toggle that would silently
+          do nothing. Opt-in only, surfaced here (not a popup) — matches
+          the "non-spam" scope agreed for this release. */}
+      {pushStatus?.configured && (
+        <div style={{ margin: '0 16px 16px', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 600, margin: '0 0 2px' }}>🔔 Notifications</p>
+            <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Daily Challenge, streak reminders, exam updates</p>
+          </div>
+          <button
+            type="button"
+            disabled={pushBusy}
+            onClick={() => (pushStatus.subscribed ? disablePushNotifications() : enablePushNotifications())}
+            aria-label="Toggle notifications"
+            style={{
+              width: 44,
+              height: 28,
+              borderRadius: 14,
+              border: '1px solid #cbd5e1',
+              background: pushStatus.subscribed ? '#0f172a' : '#e2e8f0',
+              position: 'relative',
+              cursor: 'pointer',
+              padding: 0,
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ position: 'absolute', top: 3, left: pushStatus.subscribed ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+          </button>
         </div>
       )}
 

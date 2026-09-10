@@ -180,6 +180,7 @@ model User {
   referrals           User[]               @relation("Referrals")
   referralConversions ReferralConversion[]
   milestones          StudentMilestone[]
+  pushSubscriptions   PushSubscription[]
   askPonnaConversations AskPonnaConversation[]
 
   @@index([phone])
@@ -1503,6 +1504,23 @@ enum MilestoneType {
   FIRST_PASS
   MISTAKES_FIXED_50
   DAILY_CHALLENGE_10
+}
+
+// Push Notifications (Sept 2026, Priority 1 — Accessibility & Reach).
+// One row per subscribed browser/device (a student may have several —
+// phone + desktop, or after reinstalling). endpoint is globally unique
+// (it's the browser's own push-service URL) — re-subscribing the same
+// device just upserts the same row rather than duplicating it.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model StudentMilestone {

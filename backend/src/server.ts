@@ -12,6 +12,7 @@ import { PracticePreferenceService, InvalidSelectionError } from './modules/prac
 import { RankingService } from './modules/ranking/ranking.service';
 import { activitySummaryService } from './modules/students/activity-summary.service';
 import { weakAreaService } from './modules/practice-preference/weak-area.service';
+import { pushNotificationService } from './modules/notifications/push-notification.service';
 import { QuotaExceededError, QuotaService } from './modules/quota/quota.service';
 import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
 import { BulkUploadService } from './modules/questions/bulk-upload.service';
@@ -970,6 +971,66 @@ app.get('/students/me/weak-area', requireStudentAuth, async (req: StudentAuthedR
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load weak-area alert' });
+  }
+});
+
+// ── Push Notifications (Sept 2026, Priority 1) ─────────────────────────
+
+// GET /students/me/push-subscription/status — { configured, subscribed }.
+// "configured" tells the frontend whether VAPID keys even exist yet, so
+// it can hide the opt-in toggle entirely rather than offering something
+// that will silently do nothing.
+app.get('/students/me/push-subscription/status', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json({
+      configured: pushNotificationService.isConfigured(),
+      subscribed: await pushNotificationService.isSubscribed(req.studentUserId!),
+      vapidPublicKey: pushNotificationService.isConfigured() ? process.env.VAPID_PUBLIC_KEY : null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load push status' });
+  }
+});
+
+// POST /students/me/push-subscription  — the browser's PushSubscription
+// object (endpoint + keys), saved after the student grants Notification
+// permission and the frontend calls pushManager.subscribe().
+app.post('/students/me/push-subscription', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await pushNotificationService.subscribe(req.studentUserId!, req.body);
+    res.json({ subscribed: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save push subscription' });
+  }
+});
+
+// DELETE /students/me/push-subscription  { endpoint }
+app.delete('/students/me/push-subscription', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await pushNotificationService.unsubscribe(req.body.endpoint);
+    res.json({ subscribed: false });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to remove push subscription' });
+  }
+});
+
+// POST /admin/push/broadcast  { title, body, url? } — the one
+// admin-triggered "important exam update" category (finalized scope —
+// no automatic exam-update detection in this release).
+app.post('/admin/push/broadcast', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const { title, body, url } = req.body;
+    if (!title || !body) {
+      res.status(400).json({ error: 'title and body are required' });
+      return;
+    }
+    res.json(await pushNotificationService.broadcastToAll({ title, body, url }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to broadcast push notification' });
   }
 });
 

@@ -8,6 +8,7 @@ import { RankingService } from './ranking/ranking.service';
 import { AntiAbuseService } from './anti-abuse/anti-abuse.service';
 import { DailyQuizService } from './daily-quiz/daily-quiz.service';
 import { runWhatsAppReminderSweep } from './notifications/whatsapp-reminder.service';
+import { pushNotificationService } from './notifications/push-notification.service';
 
 const sessionService = new SessionService();
 const rankingService = new RankingService();
@@ -55,11 +56,36 @@ export function startScheduledJobs() {
   // SCHEDULED->PUBLISHED and PUBLISHED->EXPIRED. Display/admin
   // convenience only — the student-facing API re-checks publishAt/
   // expiresAt live regardless, so a delay here is never a security gap.
+  // Sept 2026: when this minute's sweep actually just published a Daily
+  // Quiz (published > 0), also push-notify subscribed students — a
+  // simple, correct-enough "notify once" signal (only fires the exact
+  // minute the status transition happens, not every minute).
   cron.schedule('* * * * *', async () => {
     try {
-      await dailyQuizService.runStatusSweep();
+      const result = await dailyQuizService.runStatusSweep();
+      if (result.published > 0) {
+        pushNotificationService
+          .notifyDailyChallengeReady()
+          .catch((err) => console.error('[cron] Daily Challenge push notification failed:', err));
+      }
     } catch (err) {
       console.error('[cron] Daily Quiz status sweep failed:', err);
+    }
+  });
+
+  // Push practice/streak reminder (Sept 2026, Priority 1) — once daily,
+  // evening IST-ish. Own opt-in list (PushSubscription), own simple "has
+  // a live streak, hasn't practiced today yet" rule — see
+  // push-notification.service.ts. No-ops entirely if VAPID keys aren't
+  // set, so always safe to leave scheduled.
+  cron.schedule('30 13 * * *', async () => {
+    try {
+      const result = await pushNotificationService.sendPracticeReminders();
+      if (result.sent > 0) {
+        console.log(`[cron] Push practice reminders: sent ${result.sent}`);
+      }
+    } catch (err) {
+      console.error('[cron] Push practice reminder sweep failed:', err);
     }
   });
 
@@ -83,5 +109,5 @@ export function startScheduledJobs() {
     }
   });
 
-  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute), WhatsApp reminder sweep (daily)');
+  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute), WhatsApp reminder sweep (daily), push practice reminder sweep (daily)');
 }
