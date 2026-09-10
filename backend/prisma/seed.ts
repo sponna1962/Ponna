@@ -680,7 +680,6 @@ async function main() {
       0,
     );
   }
-  }
 
   // Higher Education / Entrance — exam-specific plans only (finalized
   // requirement: never a single Purpose-wide plan for this group).
