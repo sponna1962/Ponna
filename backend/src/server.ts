@@ -11,6 +11,7 @@ import { SessionService } from './modules/quiz/session.service';
 import { PracticePreferenceService, InvalidSelectionError } from './modules/practice-preference/practice-preference.service';
 import { RankingService } from './modules/ranking/ranking.service';
 import { activitySummaryService } from './modules/students/activity-summary.service';
+import { weakAreaService } from './modules/practice-preference/weak-area.service';
 import { QuotaExceededError, QuotaService } from './modules/quota/quota.service';
 import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
 import { BulkUploadService } from './modules/questions/bulk-upload.service';
@@ -956,6 +957,19 @@ app.get('/students/me/monthly-summary', requireStudentAuth, async (req: StudentA
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load monthly summary' });
+  }
+});
+
+// GET /students/me/weak-area — Sept 2026, single weakest-Subject alert,
+// scoped to the student's current Practice Preference Sub-Category.
+// Returns null (200, empty body semantics via null) if there's nothing
+// reliable to flag yet — never an error for that case.
+app.get('/students/me/weak-area', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await weakAreaService.getWeakArea(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load weak-area alert' });
   }
 });
 

@@ -67,6 +67,8 @@ export default function IndexPage() {
   // Logged-in extras
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
   const [monthlySummary, setMonthlySummary] = useState<{ questionsAnswered: number; timeSpentMinutes: number; currentStreak: number } | null>(null);
+  const [weakArea, setWeakArea] = useState<{ subCategoryId: string; subjectId: string; subjectName: string; accuracy: number; overallAccuracy: number; sampleSize: number } | null>(null);
+  const [settingWeakAreaPractice, setSettingWeakAreaPractice] = useState(false);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
   const [headerPhotoUrl, setHeaderPhotoUrl] = useState<string | null>(null);
   const [showDiagnosticPrompt, setShowDiagnosticPrompt] = useState(false);
@@ -97,6 +99,10 @@ export default function IndexPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setMonthlySummary)
       .catch(() => setMonthlySummary(null));
+    studentFetch('/students/me/weak-area')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setWeakArea)
+      .catch(() => setWeakArea(null));
     studentFetch('/students/me/profile')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -181,6 +187,7 @@ export default function IndexPage() {
     setIsLoggedIn(false);
     setActiveSubs(null);
     setMonthlySummary(null);
+    setWeakArea(null);
     setLoginMethod(null);
     setAccountMenuOpen(false);
     setView('main');
@@ -429,6 +436,39 @@ export default function IndexPage() {
                 {monthlySummary.questionsAnswered} கேள்விகள் · {monthlySummary.timeSpentMinutes} நிமிடங்கள்
                 {monthlySummary.currentStreak > 0 && <> · {monthlySummary.currentStreak} நாள் streak</>}
               </p>
+            </div>
+          )}
+
+          {/* Sept 2026 — Weak-Area Alert (BINDING, careful design — see
+              weak-area.service.ts's own header comment for the sample-
+              size/relative-gap rules that keep this from being a noisy,
+              misleading signal for a first-time/rural student). Practice
+              Now sets Subject Preference for this one weakest Subject
+              (reusing the existing feature, not a new mechanism), then
+              goes straight to Start Practice. */}
+          {isLoggedIn && weakArea && (
+            <div style={{ border: '1px solid #F3D9A8', borderRadius: 10, padding: 12, marginBottom: 20, background: '#FFF8EC' }}>
+              <p style={{ fontSize: 11, color: '#92400E', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+                கவனிக்க வேண்டிய பகுதி / Weak Area
+              </p>
+              <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 10px', lineHeight: 1.5 }}>
+                <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
+              </p>
+              <button
+                disabled={settingWeakAreaPractice}
+                onClick={async () => {
+                  setSettingWeakAreaPractice(true);
+                  await studentFetch(`/subject-preference/${weakArea.subCategoryId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subjectIds: [weakArea.subjectId], topicIds: [] }),
+                  });
+                  window.location.href = '/quiz';
+                }}
+                style={{ padding: '9px 16px', borderRadius: 8, background: '#92400E', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                {settingWeakAreaPractice ? '...' : 'இப்போ Practice பண்ணுங்க'}
+              </button>
             </div>
           )}
 

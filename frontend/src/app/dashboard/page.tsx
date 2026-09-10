@@ -37,6 +37,8 @@ export default function DashboardPage() {
   const [newBadge, setNewBadge] = useState<{ label: string; emoji: string } | null>(null);
   const [timeAnalytics, setTimeAnalytics] = useState<{ overallAverageSeconds: number; byDifficulty: { difficulty: string; averageSeconds: number; sampleSize: number }[] } | null>(null);
   const [monthlySummary, setMonthlySummary] = useState<{ questionsAnswered: number; timeSpentMinutes: number; currentStreak: number } | null>(null);
+  const [weakArea, setWeakArea] = useState<{ subCategoryId: string; subjectId: string; subjectName: string; accuracy: number; overallAccuracy: number; sampleSize: number } | null>(null);
+  const [settingWeakAreaPractice, setSettingWeakAreaPractice] = useState(false);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
@@ -83,6 +85,10 @@ export default function DashboardPage() {
     studentFetch('/students/me/monthly-summary')
       .then((r) => (r.ok ? r.json() : null))
       .then(setMonthlySummary)
+      .catch(() => {});
+    studentFetch('/students/me/weak-area')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setWeakArea)
       .catch(() => {});
   }, []);
 
@@ -184,6 +190,34 @@ export default function DashboardPage() {
             {monthlySummary.questionsAnswered} கேள்விகள் · {monthlySummary.timeSpentMinutes} நிமிடங்கள்
             {monthlySummary.currentStreak > 0 && <> · {monthlySummary.currentStreak} நாள் streak</>}
           </p>
+        </div>
+      )}
+
+      {/* Sept 2026 — Weak-Area Alert. Same source/rules as Home — see
+          weak-area.service.ts's header comment. */}
+      {weakArea && (
+        <div style={{ border: '1px solid #F3D9A8', borderRadius: 10, padding: 12, marginBottom: 12, background: '#FFF8EC' }}>
+          <p style={{ fontSize: 11, color: '#92400E', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+            கவனிக்க வேண்டிய பகுதி / Weak Area
+          </p>
+          <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 10px', lineHeight: 1.5 }}>
+            <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
+          </p>
+          <button
+            disabled={settingWeakAreaPractice}
+            onClick={async () => {
+              setSettingWeakAreaPractice(true);
+              await studentFetch(`/subject-preference/${weakArea.subCategoryId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subjectIds: [weakArea.subjectId], topicIds: [] }),
+              });
+              window.location.href = '/quiz';
+            }}
+            style={{ padding: '9px 16px', borderRadius: 8, background: '#92400E', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+          >
+            {settingWeakAreaPractice ? '...' : 'இப்போ Practice பண்ணுங்க'}
+          </button>
         </div>
       )}
 
