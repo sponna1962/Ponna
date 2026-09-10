@@ -36,6 +36,7 @@ declare global {
 type Scope = {
   purpose: { name: string; authorities: { name: string }[] } | null;
   authorityScopes: { authority: { name: string; categories: { name: string }[] } }[];
+  subCategoryScopes?: { subCategory: { name: string } }[];
 };
 
 type Plan = Scope & {
@@ -45,6 +46,7 @@ type Plan = Scope & {
   launchPrice: string | null;
   active: boolean;
   isFree: boolean;
+  restrictToScope?: boolean;
 };
 
 type ActiveSubscription = {
@@ -67,6 +69,9 @@ function scopeTags(p: Scope): string[] {
     if (authority.categories.length > 0) return authority.categories.map((c) => c.name);
     return [authority.name];
   }
+  // Restricted/exclusive plans (e.g. TNPSC Group IV & VAO Pass) scope via
+  // Sub-Categories directly rather than a whole Authority.
+  if (p.subCategoryScopes && p.subCategoryScopes.length > 0) return p.subCategoryScopes.map((s) => s.subCategory.name);
   return [];
 }
 
@@ -95,6 +100,25 @@ function displayName(name: string): string {
  * Returns null for any plan not TNPSC/TNTET (e.g. a future re-enabled
  * exam) rather than guessing copy for it. */
 function planFeatures(name: string): { highlight: string; bullets: string[] } | null {
+  // Sept 2026 — TNPSC Group IV & VAO Pass (finalized requirement). Checked
+  // BEFORE the generic /tnpsc/i match below, since this plan's name also
+  // contains "TNPSC" and would otherwise match that broader case first.
+  if (/group\s*iv\s*&\s*vao/i.test(name)) {
+    return {
+      highlight: 'Focused preparation for Group IV & VAO',
+      bullets: [
+        'Group IV & VAO Question Bank',
+        'Previous Year Exam Papers',
+        'Expert-Crafted Practice',
+        'Instant Answers',
+        'Daily Challenge',
+        'Brain Challenge',
+        'Review Mistakes',
+        'Performance Analysis',
+        'Tamil & English',
+      ],
+    };
+  }
   // "Competitive / Employment Annual Plan" is TNPSC's real Plan name (a
   // whole-Purpose plan) — matched here alongside a literal "TNPSC" in the
   // name in case it's ever renamed to say that directly.
@@ -394,7 +418,7 @@ function PlansPageInner() {
                         </>
                       ) : (
                         <span style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 800 }}>
-                          ₹{p.regularPrice ?? '—'} <span style={{ fontSize: 13, fontWeight: 400 }}>{t.plans.perYear}</span>
+                          ₹{p.regularPrice ?? '—'} <span style={{ fontSize: 13, fontWeight: 400 }}>{p.restrictToScope ? t.plans.untilExam : t.plans.perYear}</span>
                         </span>
                       )}
                     </div>

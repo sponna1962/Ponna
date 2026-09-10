@@ -9,6 +9,7 @@
 
 import { CorrectOption, MockExamAttemptStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { scopeAccessService, ScopeRestrictedError } from '../quota/scope-access.service';
 
 export class MockExamError extends Error {}
 
@@ -54,6 +55,13 @@ export class MockExamService {
 
   async getState(userId: string, subCategoryId: string) {
     if (!(await this.hasPaidAccess(userId))) return { access: 'FREE_LOCKED' as const };
+    // Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING).
+    try {
+      await scopeAccessService.assertSubCategoryAllowed(userId, subCategoryId);
+    } catch (e) {
+      if (e instanceof ScopeRestrictedError) return { access: 'FREE_LOCKED' as const };
+      throw e;
+    }
 
     const config = await prisma.mockExamConfig.findUnique({ where: { subCategoryId } });
     if (!config) return { access: 'NOT_CONFIGURED' as const };
@@ -83,6 +91,14 @@ export class MockExamService {
 
   async startAttempt(userId: string, subCategoryId: string) {
     if (!(await this.hasPaidAccess(userId))) throw new MockExamError('Live Exam requires an active Annual Plan.');
+    // Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING) — blocks
+    // even a direct API request for another exam's Live Exam.
+    try {
+      await scopeAccessService.assertSubCategoryAllowed(userId, subCategoryId);
+    } catch (e) {
+      if (e instanceof ScopeRestrictedError) throw new MockExamError(e.message);
+      throw e;
+    }
 
     const config = await prisma.mockExamConfig.findUnique({ where: { subCategoryId } });
     if (!config) throw new MockExamError('Live Exam is not configured for this exam yet.');

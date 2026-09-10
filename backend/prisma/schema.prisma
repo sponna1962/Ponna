@@ -516,11 +516,44 @@ model Plan {
   // this number.
   sortOrder       Int      @default(0)
 
+  // Exclusive/locked plan (TNPSC Group IV & VAO Pass, Sept 2026 requirement).
+  // true = this plan grants access to ONLY its subCategoryScopes, never a
+  // full Authority, AND disables the Subject Preference feature for
+  // students whose sole active paid coverage is this plan. A broader
+  // unrestricted plan (e.g. the ₹999 TNPSC Annual Pass) held at the same
+  // time always overrides this restriction — see ScopeAccessService.
+  restrictToScope       Boolean   @default(false)
+  // Admin-editable manual cutoff for exam-linked passes (e.g. Group IV &
+  // VAO Pass) whose real validity is "until the exam date", which is not
+  // known/fixed at purchase time. When set, this caps every active
+  // Subscription on this Plan as of this instant — read-time only, no
+  // cron/status flip needed, no hardcoded date in code. Admin sets/clears
+  // this from the admin panel once the actual exam date is confirmed.
+  manualExpiryOverride  DateTime?
+
   purposeId       String?
   purpose         ExamPurpose? @relation(fields: [purposeId], references: [id])
   authorityScopes PlanAuthorityScope[]
+  subCategoryScopes PlanSubCategoryScope[]
 
   subscriptions   Subscription[]
+}
+
+// Join table: which specific Sub-Category(ies) an exclusive/restricted Plan
+// (Plan.restrictToScope = true) covers — finer-grained than
+// PlanAuthorityScope. Only meaningful when restrictToScope is true; a
+// normal (non-restricted) Plan doesn't use this table. Many-to-many for the
+// same reasons as PlanAuthorityScope (e.g. Group IV & VAO Pass covers TWO
+// Sub-Categories: "Group IV" and "VAO", both under TNPSC's "Group
+// Examinations" Category).
+model PlanSubCategoryScope {
+  id            String          @id @default(uuid())
+  planId        String
+  plan          Plan            @relation(fields: [planId], references: [id])
+  subCategoryId String
+  subCategory   ExamSubCategory @relation(fields: [subCategoryId], references: [id])
+
+  @@unique([planId, subCategoryId])
 }
 
 // Join table: which specific Authority(ies) an exam-specific Plan covers.
@@ -724,6 +757,7 @@ model ExamSubCategory {
   notificationImports NotificationImport[]
   mockExamConfig MockExamConfig?
   mockExamAttempts MockExamAttempt[]
+  planScopes PlanSubCategoryScope[]
   // Student-facing launch visibility (finalized requirement — same
   // display/selection-only gate already used on ExamAuthority/ExamPurpose,
   // extended down to this level) — hides a Sub-Category that isn't an

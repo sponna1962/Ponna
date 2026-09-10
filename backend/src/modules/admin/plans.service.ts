@@ -10,7 +10,11 @@ export class PlansService {
   async listPlans() {
     return prisma.plan.findMany({
       orderBy: { name: 'asc' },
-      include: { purpose: true, authorityScopes: { include: { authority: true } } },
+      include: {
+        purpose: true,
+        authorityScopes: { include: { authority: true } },
+        subCategoryScopes: { include: { subCategory: { include: { category: { include: { authority: true } } } } } },
+      },
     });
   }
 
@@ -23,6 +27,16 @@ export class PlansService {
 
   async setPlanActive(planId: string, active: boolean) {
     return prisma.plan.update({ where: { id: planId }, data: { active } });
+  }
+
+  /** Sept 2026 — TNPSC Group IV & VAO Pass requirement: "validity linked
+   * to the actual exam date... admin manually decides when to expire it."
+   * Setting this instantly caps every active Subscription on the plan
+   * (read-time check in QuotaService/ScopeAccessService) — no per-
+   * subscription update, no cron. Pass null to clear it (revert to each
+   * subscription's own cycleEnd). */
+  async setPlanExpiryOverride(planId: string, manualExpiryOverride: Date | null) {
+    return prisma.plan.update({ where: { id: planId }, data: { manualExpiryOverride } });
   }
 
   async getSubscriptionsForUser(userId: string) {
@@ -46,6 +60,7 @@ export class PlansService {
         isFree: true,
         active: true,
         sortOrder: true,
+        restrictToScope: true,
         // Included so the frontend can build a "Practice X, Y, Z" description
         // straight from real scope data — never by matching on the Plan's name.
         // Only studentVisible Authorities are listed here (Sept 15 launch
@@ -56,6 +71,7 @@ export class PlansService {
         // a specific Authority is only ever active/shown for one anyway.
         purpose: { select: { name: true, authorities: { where: { studentVisible: true }, select: { name: true } } } },
         authorityScopes: { select: { authority: { select: { name: true, categories: { select: { name: true } } } } } },
+        subCategoryScopes: { select: { subCategory: { select: { name: true } } } },
       },
       orderBy: { sortOrder: 'asc' },
     });
@@ -64,14 +80,26 @@ export class PlansService {
   /** This student's currently-active (unexpired) paid Subscriptions, for
    * the "My Plans" page's Active Plans section. */
   async listActiveSubscriptionsForStudent(userId: string) {
+    const now = new Date();
     return prisma.subscription.findMany({
-      where: { userId, status: 'ACTIVE', cycleEnd: { gt: new Date() }, plan: { isFree: false } },
+      where: {
+        userId,
+        status: 'ACTIVE',
+        cycleEnd: { gt: now },
+        plan: {
+          isFree: false,
+          // Sept 2026 — exam-linked passes: admin's manual expiry cutoff.
+          OR: [{ manualExpiryOverride: null }, { manualExpiryOverride: { gt: now } }],
+        },
+      },
       include: {
         plan: {
           select: {
             id: true,
             name: true,
             nameTa: true,
+            restrictToScope: true,
+            manualExpiryOverride: true,
             // Included so the "My Plans" bottom-sheet can show the same
             // scope tags for an Active plan as it does for a purchasable
             // one — same describeScope() logic on the frontend either way.
@@ -79,6 +107,7 @@ export class PlansService {
             // listActivePlansForStudent() above.
             purpose: { select: { name: true, authorities: { where: { studentVisible: true }, select: { name: true } } } },
             authorityScopes: { select: { authority: { select: { name: true, categories: { select: { name: true } } } } } },
+            subCategoryScopes: { select: { subCategory: { select: { name: true } } } },
           },
         },
       },

@@ -11,6 +11,7 @@
 
 import { Language, QuizMode, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { scopeAccessService, ScopeRestrictedError } from '../quota/scope-access.service';
 
 
 export interface SelectionCategory {
@@ -59,7 +60,7 @@ export class PracticePreferenceService {
    *    standalone Authority (selectionGroup = null) can never be combined
    *    with anything, and two different non-null groups can never combine.
    */
-  async validateSelections(selections: Selections): Promise<void> {
+  async validateSelections(userId: string, selections: Selections): Promise<void> {
     const purpose = await prisma.examPurpose.findUnique({
       where: { id: selections.purposeId },
       include: { authorities: true },
@@ -126,8 +127,44 @@ export class PracticePreferenceService {
     }
   }
 
+  /**
+   * Sept 2026 — TNPSC Group IV & VAO Pass (BINDING, backend-enforced).
+   * A student whose only active paid coverage is a restricted plan
+   * (Plan.restrictToScope = true) may only save selections that stay
+   * entirely within that plan's Sub-Category scope — never "All", never
+   * another Category/Sub-Category. This is the single save-path gate that
+   * every subsequent read (session start, quota) trusts; see
+   * ScopeAccessService for why this alone is sufficient (Start Practice
+   * always reads the saved Preference, never a request-supplied selection).
+   * Live Exam and Cut-off Predictor accept a subCategoryId directly and so
+   * call ScopeAccessService themselves — this duplicate guard here only
+   * covers the Practice Preference save path.
+   */
+  private async enforceScopeRestriction(userId: string, selections: Selections): Promise<void> {
+    if (!(await scopeAccessService.isRestrictedOnly(userId))) return;
+
+    const deniedMessage = 'Your current plan only covers TNPSC Group IV & VAO. Upgrade to the TNPSC Annual Pass for full TNPSC access.';
+    if (selections.allAuthorities) throw new InvalidSelectionError(deniedMessage);
+
+    for (const auth of selections.authorities) {
+      if (auth.allCategories) throw new InvalidSelectionError(deniedMessage);
+      for (const cat of auth.categories) {
+        if (cat.allSubCategories) throw new InvalidSelectionError(deniedMessage);
+        for (const subCategoryId of cat.subCategoryIds) {
+          try {
+            await scopeAccessService.assertSubCategoryAllowed(userId, subCategoryId);
+          } catch (e) {
+            if (e instanceof ScopeRestrictedError) throw new InvalidSelectionError(deniedMessage);
+            throw e;
+          }
+        }
+      }
+    }
+  }
+
   async save(userId: string, language: Language, mode: QuizMode, selections: Selections) {
-    await this.validateSelections(selections);
+    await this.validateSelections(userId, selections);
+    await this.enforceScopeRestriction(userId, selections);
     return prisma.studentPracticePreference.upsert({
       where: { userId },
       create: { userId, language, mode, selections: selections as unknown as Prisma.InputJsonValue },

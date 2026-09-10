@@ -20,10 +20,21 @@ export interface QuotaCheckResult {
   code?: 'FREE_PREVIEW_PROFILE_INCOMPLETE' | 'FREE_PREVIEW_ALREADY_USED';
 }
 
+export interface AccessSelectionsCategory {
+  subCategoryIds?: string[];
+}
+export interface AccessSelectionsAuthority {
+  authorityId: string;
+  categories?: AccessSelectionsCategory[];
+}
 export interface AccessSelections {
   purposeId: string;
   allAuthorities: boolean;
-  authorities: { authorityId: string }[];
+  authorities: AccessSelectionsAuthority[];
+}
+
+function extractSubCategoryIds(selections: AccessSelections): string[] {
+  return selections.authorities.flatMap((a) => (a.categories ?? []).flatMap((c) => c.subCategoryIds ?? []));
 }
 
 export class QuotaService {
@@ -31,21 +42,43 @@ export class QuotaService {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { isTestAccount: true } });
     if (user?.isTestAccount) return true;
 
+    const now = new Date();
     const activeSubs = await prisma.subscription.findMany({
       where: {
         userId,
         status: SubscriptionStatus.ACTIVE,
-        cycleEnd: { gt: new Date() },
-        plan: { isFree: false },
+        cycleEnd: { gt: now },
+        plan: {
+          isFree: false,
+          // Sept 2026 — exam-linked passes (Group IV & VAO Pass): admin's
+          // manual cutoff, read-time only, caps every active sub on the plan.
+          OR: [{ manualExpiryOverride: null }, { manualExpiryOverride: { gt: now } }],
+        },
       },
-      include: { plan: { include: { authorityScopes: true } } },
+      include: { plan: { include: { authorityScopes: true, subCategoryScopes: true } } },
     });
     if (activeSubs.length === 0) return false;
     if (activeSubs.some((s) => s.plan.purposeId === selections.purposeId)) return true;
     if (selections.allAuthorities || selections.authorities.length === 0) return false;
 
-    const coveredAuthorityIds = new Set(activeSubs.flatMap((s) => s.plan.authorityScopes.map((a) => a.authorityId)));
-    return selections.authorities.every((a) => coveredAuthorityIds.has(a.authorityId));
+    // Full-Authority coverage — unchanged, but only from UNRESTRICTED plans;
+    // a restrictToScope plan never counts toward "covers the whole Authority".
+    const unrestrictedSubs = activeSubs.filter((s) => !s.plan.restrictToScope);
+    const coveredAuthorityIds = new Set(unrestrictedSubs.flatMap((s) => s.plan.authorityScopes.map((a) => a.authorityId)));
+    if (selections.authorities.every((a) => coveredAuthorityIds.has(a.authorityId))) return true;
+
+    // Restricted-plan (Sub-Category-level) coverage — e.g. the ₹499 TNPSC
+    // Group IV & VAO Pass. Only relevant when selections carry Sub-Category
+    // granularity, which is always true for a genuinely restricted
+    // student's saved Preference (enforced at save time).
+    const restrictedSubs = activeSubs.filter((s) => s.plan.restrictToScope);
+    if (restrictedSubs.length > 0) {
+      const allowedSubCategoryIds = new Set(restrictedSubs.flatMap((s) => s.plan.subCategoryScopes.map((sc) => sc.subCategoryId)));
+      const selectedSubCategoryIds = extractSubCategoryIds(selections);
+      if (selectedSubCategoryIds.length > 0 && selectedSubCategoryIds.every((id) => allowedSubCategoryIds.has(id))) return true;
+    }
+
+    return false;
   }
 
   async findApplicablePlan(selections: AccessSelections) {
@@ -55,10 +88,32 @@ export class QuotaService {
     if (purposePlan) return purposePlan;
     if (selections.allAuthorities || selections.authorities.length === 0) return null;
 
+    // A restricted plan (e.g. Group IV & VAO Pass) is only ever the right
+    // suggestion when the student's selection is ENTIRELY within its
+    // Sub-Category scope — never for a broader/whole-Authority selection,
+    // where only an unrestricted plan (e.g. the ₹999 Annual Pass) fits.
+    const selectedSubCategoryIds = extractSubCategoryIds(selections);
+    if (selectedSubCategoryIds.length > 0) {
+      const restrictedCandidates = await prisma.plan.findMany({
+        where: {
+          active: true,
+          isFree: false,
+          restrictToScope: true,
+          subCategoryScopes: { some: { subCategoryId: { in: selectedSubCategoryIds } } },
+        },
+        include: { subCategoryScopes: true },
+      });
+      const restrictedMatch = restrictedCandidates.find((p) =>
+        selectedSubCategoryIds.every((id) => p.subCategoryScopes.some((s) => s.subCategoryId === id)),
+      );
+      if (restrictedMatch) return restrictedMatch;
+    }
+
     const candidates = await prisma.plan.findMany({
       where: {
         active: true,
         isFree: false,
+        restrictToScope: false,
         authorityScopes: { some: { authorityId: { in: selections.authorities.map((a) => a.authorityId) } } },
       },
       include: { authorityScopes: true },

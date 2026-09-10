@@ -7,6 +7,9 @@
 // Language, Difficulty, No-Repeat) are completely untouched.
 
 import { prisma } from '../../lib/prisma';
+import { scopeAccessService } from '../quota/scope-access.service';
+
+export class SubjectPreferenceError extends Error {}
 
 export class SubjectPreferenceService {
   /** Every TNPSC exam currently visible to students (finalized
@@ -54,7 +57,14 @@ export class SubjectPreferenceService {
    * Preference should be optional"); saving empty arrays is a valid,
    * explicit "no preference, give me normal full-syllabus coverage"
    * choice, not an error. */
+  /** Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING): Subject
+   * Preference only makes sense across a full Authority's Categories, so a
+   * student whose only active paid coverage is a restricted plan cannot
+   * use it at all, even by calling this endpoint directly. */
   async savePreference(userId: string, subCategoryId: string, subjectIds: string[], topicIds: string[]) {
+    if (await scopeAccessService.isRestrictedOnly(userId)) {
+      throw new SubjectPreferenceError('Subject Preference is not available on the TNPSC Group IV & VAO Pass. Upgrade to the TNPSC Annual Pass to use it.');
+    }
     return prisma.studentSubjectTopicPreference.upsert({
       where: { userId_subCategoryId: { userId, subCategoryId } },
       create: { userId, subCategoryId, subjectIds, topicIds },

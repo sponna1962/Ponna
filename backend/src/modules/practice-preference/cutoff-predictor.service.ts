@@ -6,6 +6,7 @@
 // since PONNA tracks practice accuracy, not actual exam marks.
 
 import { prisma } from '../../lib/prisma';
+import { scopeAccessService } from '../quota/scope-access.service';
 
 export class CutoffPredictorService {
   private async hasPaidAccess(userId: string): Promise<boolean> {
@@ -21,6 +22,10 @@ export class CutoffPredictorService {
     if (!(await this.hasPaidAccess(userId))) {
       return { access: 'FREE_LOCKED' as const };
     }
+    // Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING): a
+    // restricted-only student cannot pull cut-off data for another exam,
+    // even though they hold SOME paid subscription.
+    await scopeAccessService.assertSubCategoryAllowed(userId, subCategoryId);
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { community: true } });
     if (!user.community) {

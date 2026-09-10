@@ -125,7 +125,7 @@ async function main() {
   }
 
   await seedCategory(tnpsc.id, 'Group Examinations', [
-    'Group I', 'Group I-A', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group IV',
+    'Group I', 'Group I-A', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group IV', 'VAO',
     'Group V', 'Group V-A', 'Group VI', 'Group VII', 'Group VIII',
   ]);
   await seedCategory(tnpsc.id, 'Technical Services', [
@@ -582,10 +582,51 @@ async function main() {
     return plan;
   }
 
+  // Sept 2026 — TNPSC Group IV & VAO Pass (BINDING, finalized requirement):
+  // an exclusive/restricted plan — see Plan.restrictToScope. cycleDays is
+  // just an initial validity window; the real cutoff is
+  // Plan.manualExpiryOverride, set by admin from the admin panel once the
+  // actual Group IV & VAO exam date is confirmed (see
+  // PATCH /admin/plans/:id/expiry-override) — never hardcoded here.
+  async function seedRestrictedSubCategoryPlan(
+    name: string,
+    subCategoryIds: string[],
+    regularPrice: number,
+    sortOrder: number,
+  ) {
+    const plan = await prisma.plan.upsert({
+      where: { name },
+      create: { name, cycleDays: 365, regularPrice, active: true, sortOrder, restrictToScope: true },
+      update: { cycleDays: 365, regularPrice, sortOrder, restrictToScope: true },
+    });
+    await prisma.planSubCategoryScope.deleteMany({ where: { planId: plan.id } });
+    for (const subCategoryId of subCategoryIds) {
+      await prisma.planSubCategoryScope.upsert({
+        where: { planId_subCategoryId: { planId: plan.id, subCategoryId } },
+        create: { planId: plan.id, subCategoryId },
+        update: {},
+      });
+    }
+    return plan;
+  }
+
   // Competitive / Employment — ONE plan covers the whole Purpose (TNPSC,
   // UPSC, SSC, Railway/RRB, Banking, TNUSRB, TRB, Other — including any
   // future Authority added under this Purpose, automatically).
   await seedPurposePlan('Competitive / Employment Annual Plan', employmentPurpose.id, 2999, 999, 1);
+
+  // TNPSC Group IV & VAO Pass — exam-specific, restricted plan, sortOrder 0
+  // so it shows BEFORE the TNPSC Annual Pass on the student Plans page,
+  // per the finalized requirement.
+  {
+    const groupIV = await prisma.examSubCategory.findUniqueOrThrow({
+      where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'Group IV' } },
+    });
+    const vao = await prisma.examSubCategory.findUniqueOrThrow({
+      where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'VAO' } },
+    });
+    await seedRestrictedSubCategoryPlan('TNPSC Group IV & VAO Pass', [groupIV.id, vao.id], 499, 0);
+  }
 
   // Higher Education / Entrance — exam-specific plans only (finalized
   // requirement: never a single Purpose-wide plan for this group).

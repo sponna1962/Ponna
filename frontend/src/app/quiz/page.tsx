@@ -58,6 +58,62 @@ export default function QuizStartPage() {
   // the just-saved selection isn't covered by any active paid Plan.
   const [accessPrompt, setAccessPrompt] = useState<{ applicablePlanId: string | null } | null>(null);
 
+  // Sept 2026 — TNPSC Group IV & VAO Pass (finalized requirement): a
+  // student whose only active paid coverage is this restricted plan gets
+  // NO Authority/Category/Sub-Category picker at all — locked straight to
+  // Group IV & VAO. This is a UX convenience only; the real boundary is
+  // server-side (practice-preference.service.ts's enforceScopeRestriction),
+  // so even if this state is somehow wrong/stale, the backend still rejects
+  // any other selection.
+  const [restriction, setRestriction] = useState<{ restricted: boolean; allowedSubCategoryIds: string[] } | null>(null);
+
+  useEffect(() => {
+    studentFetch('/students/me/scope-restriction')
+      .then((r) => (r.ok ? r.json() : { restricted: false, allowedSubCategoryIds: [] }))
+      .then(setRestriction)
+      .catch(() => setRestriction({ restricted: false, allowedSubCategoryIds: [] }));
+  }, []);
+
+  /** Builds the locked Selections object for a restricted student directly
+   * from the real exam-taxonomy tree + their allowed Sub-Category ids —
+   * never hardcodes TNPSC/Group Examinations ids, so it keeps working even
+   * if the taxonomy is restructured later. Returns null until both the
+   * tree and the restriction have loaded. */
+  function buildLockedSelections(): Selections | null {
+    if (!restriction?.restricted || tree.length === 0) return null;
+    for (const purpose of tree) {
+      for (const authority of purpose.authorities) {
+        const categories: CategorySelection[] = [];
+        for (const category of authority.categories) {
+          const subCategoryIds = category.subCategories
+            .map((sc) => sc.id)
+            .filter((id) => restriction.allowedSubCategoryIds.includes(id));
+          if (subCategoryIds.length > 0) categories.push({ categoryId: category.id, allSubCategories: false, subCategoryIds });
+        }
+        if (categories.length > 0) {
+          return {
+            purposeId: purpose.id,
+            allAuthorities: false,
+            authorities: [{ authorityId: authority.id, allCategories: false, categories }],
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  // Pre-fill the locked selection once the taxonomy + restriction are both
+  // loaded, for a first-time restricted student (no saved preference yet)
+  // — Mode and Language stay normal explicit steps (reusing the existing
+  // dynamic language-detection effect below), only the Authority/Category/
+  // Sub-Category picker step is skipped/replaced in the render.
+  useEffect(() => {
+    if (saved !== null || selections.purposeId) return; // only for a first-time student, and only once
+    const locked = buildLockedSelections();
+    if (locked) setSelections(locked);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restriction, tree]);
+
   useEffect(() => {
     Promise.all([
       studentFetch('/exam-taxonomy').then((r) => r.json()),
@@ -385,121 +441,141 @@ export default function QuizStartPage() {
 
         {editing && (
           <>
-            <Section title={t.practiceSetup.selectPurpose}>
-              <ChipRow>
-                {tree.map((p) => (
-                  <Chip
-                    key={p.id}
-                    label={lang === 'ta' ? (p.nameTa || p.name) : p.name}
-                    active={selections.purposeId === p.id}
-                    onClick={() => selectPurpose(p.id)}
-                  />
-                ))}
-              </ChipRow>
-            </Section>
-
-            {selectedPurpose && (
+            {restriction?.restricted ? (
+              // Sept 2026 — TNPSC Group IV & VAO Pass (finalized
+              // requirement): no picker at all, locked straight to Group
+              // IV & VAO. Real enforcement is server-side; this is just
+              // the matching UI state.
+              <Section title={t.practiceSetup.selectPurpose}>
+                <div style={{ padding: 14, borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 14, color: '#166534', fontWeight: 600 }}>
+                  {lang === 'ta' ? 'உங்கள் பாஸ்: TNPSC Group IV & VAO' : 'Your Pass: TNPSC Group IV & VAO'}
+                </div>
+              </Section>
+            ) : (
               <>
-                <Section title={t.practiceSetup.selectAuthority}>
+                <Section title={t.practiceSetup.selectPurpose}>
                   <ChipRow>
-                    {selectedPurpose.allowMultipleAuthorities && (
-                      <Chip label={t.practiceSetup.all} active={selections.allAuthorities} onClick={toggleAllAuthorities} />
-                    )}
-                    {selectedPurpose.authorities.map((a) => (
+                    {tree.map((p) => (
                       <Chip
-                        key={a.id}
-                        label={a.name}
-                        active={selections.authorities.some((sel) => sel.authorityId === a.id)}
-                        onClick={() => toggleAuthority(a)}
+                        key={p.id}
+                        label={lang === 'ta' ? (p.nameTa || p.name) : p.name}
+                        active={selections.purposeId === p.id}
+                        onClick={() => selectPurpose(p.id)}
                       />
                     ))}
                   </ChipRow>
                 </Section>
 
-                {!selections.allAuthorities &&
-                  selections.authorities.map((authSel) => {
-                    const authority = selectedPurpose.authorities.find((a) => a.id === authSel.authorityId);
-                    if (!authority) return null;
-                    return (
-                      <div key={authority.id}>
-                        <Section title={t.practiceSetup.selectCategoryFor(authority.name)}>
-                          <ChipRow>
-                            {authority.allowAllCategories && (
-                              <Chip
-                                label={t.practiceSetup.all}
-                                active={authSel.allCategories}
-                                onClick={() => toggleAllCategories(authority.id)}
-                              />
-                            )}
-                            {authority.categories.map((c) => (
-                              <Chip
-                                key={c.id}
-                                label={c.name}
-                                active={authSel.categories.some((cs) => cs.categoryId === c.id)}
-                                onClick={() => toggleCategory(authority.id, c.id)}
-                              />
-                            ))}
-                          </ChipRow>
-                        </Section>
+                {selectedPurpose && (
+                  <>
+                    <Section title={t.practiceSetup.selectAuthority}>
+                      <ChipRow>
+                        {selectedPurpose.allowMultipleAuthorities && (
+                          <Chip label={t.practiceSetup.all} active={selections.allAuthorities} onClick={toggleAllAuthorities} />
+                        )}
+                        {selectedPurpose.authorities.map((a) => (
+                          <Chip
+                            key={a.id}
+                            label={a.name}
+                            active={selections.authorities.some((sel) => sel.authorityId === a.id)}
+                            onClick={() => toggleAuthority(a)}
+                          />
+                        ))}
+                      </ChipRow>
+                    </Section>
 
-                        {!authSel.allCategories &&
-                          authSel.categories.map((catSel) => {
-                            const category = authority.categories.find((c) => c.id === catSel.categoryId);
-                            if (!category || category.subCategories.length === 0) return null;
-                            return (
-                              <Section key={category.id} title={t.practiceSetup.selectSubCategoryFor(category.name)}>
-                                <ChipRow>
+                    {!selections.allAuthorities &&
+                      selections.authorities.map((authSel) => {
+                        const authority = selectedPurpose.authorities.find((a) => a.id === authSel.authorityId);
+                        if (!authority) return null;
+                        return (
+                          <div key={authority.id}>
+                            <Section title={t.practiceSetup.selectCategoryFor(authority.name)}>
+                              <ChipRow>
+                                {authority.allowAllCategories && (
                                   <Chip
                                     label={t.practiceSetup.all}
-                                    active={catSel.allSubCategories}
-                                    onClick={() => toggleAllSubCategories(authority.id, category.id)}
+                                    active={authSel.allCategories}
+                                    onClick={() => toggleAllCategories(authority.id)}
                                   />
-                                  {category.subCategories.map((sc) => (
-                                    <Chip
-                                      key={sc.id}
-                                      label={sc.name}
-                                      active={catSel.subCategoryIds.includes(sc.id)}
-                                      onClick={() => toggleSubCategory(authority.id, category.id, sc.id)}
-                                    />
-                                  ))}
-                                </ChipRow>
-                              </Section>
-                            );
-                          })}
+                                )}
+                                {authority.categories.map((c) => (
+                                  <Chip
+                                    key={c.id}
+                                    label={c.name}
+                                    active={authSel.categories.some((cs) => cs.categoryId === c.id)}
+                                    onClick={() => toggleCategory(authority.id, c.id)}
+                                  />
+                                ))}
+                              </ChipRow>
+                            </Section>
 
-                        {/* Subject Preference (finalized requirement) — only
-                            shown once the selection resolves to exactly ONE
-                            specific exam (Sub-Category), matching Stage 2's
-                            own eligibility rule for when a preference lookup
-                            makes sense at all. Optional, underlined, no
-                            permanent screen real estate — the picker only
-                            appears in the modal on tap. */}
-                        {!authSel.allCategories &&
-                          authSel.categories.map((catSel) => {
-                            const category = authority.categories.find((c) => c.id === catSel.categoryId);
-                            if (!category || category.subCategories.length === 0) return null;
-                            if (catSel.allSubCategories || catSel.subCategoryIds.length !== 1) return null;
-                            return <SubjectPreferenceField key={catSel.categoryId} subCategoryId={catSel.subCategoryIds[0]} t={t} />;
-                          })}
-                      </div>
-                    );
-                  })}
+                            {!authSel.allCategories &&
+                              authSel.categories.map((catSel) => {
+                                const category = authority.categories.find((c) => c.id === catSel.categoryId);
+                                if (!category || category.subCategories.length === 0) return null;
+                                return (
+                                  <Section key={category.id} title={t.practiceSetup.selectSubCategoryFor(category.name)}>
+                                    <ChipRow>
+                                      <Chip
+                                        label={t.practiceSetup.all}
+                                        active={catSel.allSubCategories}
+                                        onClick={() => toggleAllSubCategories(authority.id, category.id)}
+                                      />
+                                      {category.subCategories.map((sc) => (
+                                        <Chip
+                                          key={sc.id}
+                                          label={sc.name}
+                                          active={catSel.subCategoryIds.includes(sc.id)}
+                                          onClick={() => toggleSubCategory(authority.id, category.id, sc.id)}
+                                        />
+                                      ))}
+                                    </ChipRow>
+                                  </Section>
+                                );
+                              })}
 
-                {/* Difficulty only ever shows once at least one Authority has
-                    been selected (finalized requirement) — never immediately
-                    after picking the Purpose. */}
-                {(selections.allAuthorities || selections.authorities.length > 0) && (
-                  <Section title={t.practiceSetup.difficultyQuestion}>
-                    {difficultyStepVisible ? (
-                      <ChipRow>
-                        <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
-                        <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
-                        <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
-                      </ChipRow>
-                    ) : (
-                      <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.practiceSetup.difficultyNotApplicable}</p>
+                            {/* Subject Preference (finalized requirement) — only
+                                shown once the selection resolves to exactly ONE
+                                specific exam (Sub-Category), matching Stage 2's
+                                own eligibility rule for when a preference lookup
+                                makes sense at all. Optional, underlined, no
+                                permanent screen real estate — the picker only
+                                appears in the modal on tap. Never shown at all
+                                for a restricted-only student (Sept 2026 — see
+                                the `restriction?.restricted` branch above; this
+                                nested branch is dead code for such a student
+                                anyway since they never reach this UI, but the
+                                explicit guard documents the rule here too). */}
+                            {!restriction?.restricted &&
+                              !authSel.allCategories &&
+                              authSel.categories.map((catSel) => {
+                                const category = authority.categories.find((c) => c.id === catSel.categoryId);
+                                if (!category || category.subCategories.length === 0) return null;
+                                if (catSel.allSubCategories || catSel.subCategoryIds.length !== 1) return null;
+                                return <SubjectPreferenceField key={catSel.categoryId} subCategoryId={catSel.subCategoryIds[0]} t={t} />;
+                              })}
+                          </div>
+                        );
+                      })}
+
+                    {/* Difficulty only ever shows once at least one Authority has
+                        been selected (finalized requirement) — never immediately
+                        after picking the Purpose. */}
+                    {(selections.allAuthorities || selections.authorities.length > 0) && (
+                      <Section title={t.practiceSetup.difficultyQuestion}>
+                        {difficultyStepVisible ? (
+                          <ChipRow>
+                            <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
+                            <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
+                            <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
+                          </ChipRow>
+                        ) : (
+                          <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.practiceSetup.difficultyNotApplicable}</p>
+                        )}
+                      </Section>
                     )}
-                  </Section>
+                  </>
                 )}
               </>
             )}

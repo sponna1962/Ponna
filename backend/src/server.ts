@@ -34,7 +34,7 @@ import { ShareProgressService } from './modules/practice-preference/share-progre
 import { ReferralService } from './modules/practice-preference/referral.service';
 import { MilestoneService } from './modules/practice-preference/milestone.service';
 import { getTimeAnalytics } from './modules/practice-preference/time-analytics.service';
-import { SubjectPreferenceService } from './modules/practice-preference/subject-preference.service';
+import { SubjectPreferenceService, SubjectPreferenceError } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
 import { ExamFactsService } from './modules/admin/exam-facts.service';
@@ -43,6 +43,7 @@ import { CurrentAffairsService } from './modules/admin/current-affairs.service';
 import { PonnaFaqService } from './modules/admin/ponna-faq.service';
 import { NotificationImportService } from './modules/admin/notification-import.service';
 import { CutoffPredictorService } from './modules/practice-preference/cutoff-predictor.service';
+import { ScopeRestrictedError, scopeAccessService } from './modules/quota/scope-access.service';
 import { MockExamAdminService } from './modules/admin/mock-exam-admin.service';
 import { MockExamService } from './modules/quiz/mock-exam.service';
 import { DiagnosticService } from './modules/quiz/diagnostic.service';
@@ -402,6 +403,10 @@ app.get('/cutoff-predictor/:subCategoryId', requireStudentAuth, async (req: Stud
   try {
     res.json(await cutoffPredictorService.getPrediction(req.studentUserId!, req.params.subCategoryId));
   } catch (err) {
+    if (err instanceof ScopeRestrictedError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: 'Failed to load cut-off prediction' });
   }
@@ -428,6 +433,10 @@ app.post('/subject-preference/:subCategoryId', requireStudentAuth, async (req: S
     );
     res.json(result);
   } catch (err) {
+    if (err instanceof SubjectPreferenceError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: 'Failed to save preference' });
   }
@@ -909,6 +918,18 @@ app.get('/plans', requireStudentAuth, async (_req, res) => {
 app.get('/students/me/subscriptions', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   res.set('Cache-Control', 'no-store');
   res.json(await plansService.listActiveSubscriptionsForStudent(req.studentUserId!));
+});
+
+// GET /students/me/scope-restriction — Sept 2026, TNPSC Group IV & VAO Pass.
+// Convenience for the frontend to lock Start Practice / hide Subject
+// Preference WITHOUT re-implementing the rule client-side. The actual
+// security boundary is server-side (ScopeAccessService, called from every
+// entry point that accepts a subCategoryId) — this endpoint only drives UI.
+app.get('/students/me/scope-restriction', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  res.set('Cache-Control', 'no-store');
+  const restricted = await scopeAccessService.isRestrictedOnly(req.studentUserId!);
+  const allowedSubCategoryIds = restricted ? await scopeAccessService.getRestrictedSubCategoryIds(req.studentUserId!) : [];
+  res.json({ restricted, allowedSubCategoryIds });
 });
 
 // POST /payments/create-order  { planId: string } — userId comes from the JWT
@@ -1915,6 +1936,25 @@ app.patch('/admin/plans/:id/price', requireStaffAuth, requireRole('SUPER_ADMIN')
 app.post('/admin/plans/:id/:action(activate|deactivate)', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   const active = req.params.action === 'activate';
   res.json(await plansService.setPlanActive(req.params.id, active));
+});
+
+// PATCH /admin/plans/:id/expiry-override  { manualExpiryOverride: string | null }
+// Sept 2026 — TNPSC Group IV & VAO Pass: admin sets this once the actual
+// exam date is confirmed (or the exam has happened) to cut off the pass
+// for every currently-active subscriber, instantly, without a redeploy.
+app.patch('/admin/plans/:id/expiry-override', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const { manualExpiryOverride } = req.body;
+    const date = manualExpiryOverride ? new Date(manualExpiryOverride) : null;
+    if (manualExpiryOverride && Number.isNaN(date?.getTime())) {
+      res.status(400).json({ error: 'Invalid date' });
+      return;
+    }
+    res.json(await plansService.setPlanExpiryOverride(req.params.id, date));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update expiry override' });
+  }
 });
 
 const PORT = process.env.PORT || 4000;
