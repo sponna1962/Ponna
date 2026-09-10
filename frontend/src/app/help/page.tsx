@@ -23,57 +23,49 @@ const FAQS: Faq[] = [
     id: 'start-practice',
     category: 'practice',
     question: 'How do I start practising?',
-    answer:
-      'Tap Start Practice from the menu. The first time, choose your exam, difficulty and language — PONNA saves this setup, so every session after that starts in one tap. Tap "Change" anytime to update it.',
+    answer: 'Tap Start Practice. Choose your exam, difficulty and language once — PONNA remembers it next time.',
   },
   {
     id: 'free-plan',
     category: 'pass',
     question: 'What does the Free plan include?',
-    answer:
-      'Every student gets 5 free practice questions a day, no Pass required. For unlimited daily practice on your exam, get an Annual Pass or an exam-specific Pass from My Passes.',
+    answer: '5 free questions a day, no Pass needed. Get a Pass for unlimited daily practice.',
   },
   {
     id: 'buy-pass',
     category: 'pass',
     question: 'How do I purchase a Pass?',
-    answer:
-      'Open My Passes from the menu, pick the Pass that matches your exam, and tap Buy. Payment is handled securely through Razorpay, and your Pass activates immediately once payment is confirmed.',
+    answer: 'Open My Passes, pick your exam, tap Buy. Activates right after payment.',
   },
   {
     id: 'pass-expiry',
     category: 'pass',
     question: 'When does my Pass expire?',
-    answer:
-      'An Annual Pass is valid for 12 months from the day you buy it — check your exact renewal date anytime under My Passes → Active Plans. The TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass stays valid until the exam date, which PONNA will update once TNPSC announces it.',
+    answer: 'Check My Passes → Active Plans for your exact date. Annual Passes last 12 months; the Group 4 - VAO Pass lasts until the exam.',
   },
   {
     id: 'review-mistakes',
     category: 'practice',
     question: 'How does Review Mistakes work?',
-    answer:
-      'Every question you get wrong is automatically saved to Review Mistakes, so you can revisit and re-attempt it on its own. It never counts against your daily quota, streak or ranking — it is purely for revision.',
+    answer: 'Wrong answers save here automatically for revision. Doesn\u2019t affect your quota, streak or ranking.',
   },
   {
     id: 'daily-challenge',
     category: 'practice',
     question: 'How does Daily Challenge work?',
-    answer:
-      'A new Daily Challenge is ready every day. Attempt it once to keep your streak going — Brain Challenge is a second daily set with the same idea, for extra practice.',
+    answer: 'A new set every day — attempt it once to keep your streak going.',
   },
   {
     id: 'change-language',
     category: 'account',
     question: 'How can I change Tamil/English?',
-    answer:
-      'Tap the language toggle in the top menu anytime to switch between Tamil and English. Your saved practice history, streak and performance stay exactly the same either way.',
+    answer: 'Tap the language toggle in the top menu anytime.',
   },
   {
     id: 'performance-calc',
     category: 'practice',
     question: 'How is my performance calculated?',
-    answer:
-      'Your Performance page tracks your accuracy by difficulty level, your daily streak, and time spent practising — it updates automatically after every session, no extra steps needed.',
+    answer: 'Accuracy, streak and time practised — updated after every session, automatically.',
   },
   {
     id: 'use-as-app',
@@ -82,7 +74,7 @@ const FAQS: Faq[] = [
     // Special-cased below: tapping this FAQ opens the "Use PONNA as an
     // App" guide instead of expanding this text inline — this answer is
     // a fallback only for anywhere FAQS is listed without that handling.
-    answer: 'Open ponna.in in your phone browser, then add it to your Home Screen — see the "Use PONNA as an App" guide below for step-by-step instructions.',
+    answer: 'See the "Use PONNA as an App" guide below.',
   },
 ];
 
@@ -100,31 +92,19 @@ const GUIDES: Guide[] = [
     id: 'getting-started',
     title: 'Getting Started',
     description: 'Learn how to begin your preparation',
-    steps: [
-      'Sign up with your phone number and complete your profile.',
-      'Tap Start Practice and set up your exam once — PONNA remembers it for every future session.',
-      'Answer your first question — PONNA shows the correct answer right away, so you learn as you go.',
-    ],
+    steps: ['Sign up and complete your profile.', 'Tap Start Practice, set up your exam once.', 'Answer your first question — see the answer instantly.'],
   },
   {
     id: 'choose-practice',
     title: 'Choose Your Practice',
     description: 'Understand exam, subject and difficulty selection',
-    steps: [
-      "Pick your exam type, authority and category — for TNPSC, choose the specific Group or exam you're preparing for.",
-      'Choose Mixed, Medium or Hard difficulty — Mixed gives you a bit of everything.',
-      "PONNA fills in the right language automatically, based on what's published for your exam.",
-    ],
+    steps: ['Pick your exam, category and Group.', 'Choose Mixed, Medium or Hard.', 'Language fills in automatically.'],
   },
   {
     id: 'make-the-most',
     title: 'Make the Most of PONNA',
     description: 'Learn about Review Mistakes, Performance and Daily Challenge',
-    steps: [
-      "Revisit every wrong answer anytime in Review Mistakes — it's a separate space just for revision.",
-      'Check your accuracy by difficulty and your streak on the Performance page.',
-      'Keep your streak alive with one Daily Challenge attempt a day.',
-    ],
+    steps: ['Revisit wrong answers in Review Mistakes.', 'Track accuracy and streak on Performance.', 'Keep your streak alive — one Daily Challenge a day.'],
   },
 ];
 
