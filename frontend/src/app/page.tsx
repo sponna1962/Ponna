@@ -34,7 +34,7 @@ import { apiUrl } from '../lib/api-config';
 import { studentFetch } from '../lib/student-fetch';
 import { getDeviceId, getDeviceLabel } from '../lib/device-id';
 import { StudentMenu } from '../components/StudentMenu';
-import { LogoutIcon } from '../components/icons';
+import { LogoutIcon, ProfileIcon, DevicesIcon } from '../components/icons';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../lib/brand-theme';
 import { daysRemaining, shouldShowRemainingDays, formatValidUntil } from '../lib/pass-validity';
 
@@ -295,10 +295,24 @@ export default function IndexPage() {
                   border: `1px solid ${COLORS.line}`,
                   borderRadius: 8,
                   boxShadow: '0 4px 16px rgba(26,34,56,0.12)',
-                  minWidth: 150,
+                  minWidth: 170,
                   zIndex: 10,
+                  overflow: 'hidden',
                 }}
               >
+                <a
+                  href="/profile"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', textAlign: 'left', fontSize: 14, color: COLORS.ink, textDecoration: 'none' }}
+                >
+                  <ProfileIcon size={16} color={COLORS.gold} /> {t.menu.profile}
+                </a>
+                <a
+                  href="/devices"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', textAlign: 'left', fontSize: 14, color: COLORS.ink, textDecoration: 'none' }}
+                >
+                  <DevicesIcon size={16} color={COLORS.gold} /> {t.menu.devices}
+                </a>
+                <div style={{ borderTop: `1px solid ${COLORS.line}` }} />
                 <button
                   onClick={logout}
                   style={{

@@ -3,17 +3,16 @@
 // Shared student navigation — a slide-out menu (☰) rather than a bottom tab
 // bar, per the agreed design. Used on Home, Dashboard, and Profile pages.
 //
-// Final structure (finalized requirement): Home stands alone as its own
-// top-level item (never under a "HOME" heading) — then three grouped
-// sections (PREPARATION / ACCOUNT / SUPPORT) with their own small heading
-// labels, then Logout standalone at the bottom. Labels drop the repeated
-// "My" (My Progress -> Performance, My Plans -> Plan, My Devices ->
-// Devices) and PREPARATION is a section heading, not itself a menu item
-// (avoids "Practice" appearing as both a heading and a row under it).
+// Sept 2026 finalized navigation structure (BINDING): only PREPARATION and
+// SUPPORT sections remain in the sidebar — ACCOUNT was removed entirely.
+// "Pass" (student-facing rename of the existing Plan functionality — same
+// page, same data, label only) moved from the old ACCOUNT section into
+// PREPARATION as its final item. Profile / My Devices / Log out moved OUT
+// of this sidebar to the existing top-right avatar menu on the Home page
+// ('/') — not duplicated here.
 //
-// Live Exam and Daily Quiz are nav-only placeholders for now (finalized
-// requirement — their detailed rules/functionality are a separate future
-// task); each links to a small "coming soon" page rather than 404ing.
+// Live Exam and Daily Quiz/Challenge are both fully real, built features
+// as of this pass (not nav-only placeholders) — link straight to them.
 //
 // Custom line icons in the gold/ink palette instead of emoji (which
 // render inconsistently across phones and read as unpolished for an
@@ -30,11 +29,8 @@ import {
   DailyQuizIcon,
   PlansIcon,
   ProgressIcon,
-  ProfileIcon,
-  DevicesIcon,
   AboutIcon,
   HelpIcon,
-  LogoutIcon,
   MenuIcon,
   CloseIcon,
   MistakesIcon,
@@ -58,15 +54,10 @@ export function StudentMenu() {
     setOpen(true);
   }
 
-  function logout() {
-    localStorage.removeItem('ponna_student_token');
-    window.location.href = '/';
-  }
-
-  // Logged-out visitors only see PUBLIC items (Home + Support) — the
-  // PREPARATION/ACCOUNT sections all require a session (they'd otherwise
-  // just bounce back here on a 401), and there is nothing to Logout of.
-  // Logging in itself happens from the page's own header "Login" button.
+  // Logged-out visitors only see PUBLIC items (Home + Support) — PREPARATION
+  // requires a session (it would otherwise just bounce back here on a 401).
+  // Logging in itself happens from the page's own header "Login" button;
+  // logging out happens from the Home page's avatar menu.
   const sections: { heading: string; items: NavItem[] }[] = isLoggedIn
     ? [
         {
@@ -79,14 +70,7 @@ export function StudentMenu() {
             { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
             { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
             { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
-          ],
-        },
-        {
-          heading: t.menu.sectionAccount,
-          items: [
-            { href: '/profile', label: t.menu.profile, Icon: ProfileIcon },
             { href: '/plans', label: t.menu.plans, Icon: PlansIcon },
-            { href: '/devices', label: t.menu.devices, Icon: DevicesIcon },
           ],
         },
         {
@@ -168,30 +152,6 @@ export function StudentMenu() {
                 ))}
               </div>
             ))}
-
-            {isLoggedIn && (
-              <div style={{ borderTop: `1px solid ${COLORS.line}`, marginTop: 16, paddingTop: 12 }}>
-                <button
-                  onClick={logout}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '10px 6px',
-                    background: 'none',
-                    border: 'none',
-                    color: '#B4544A',
-                    fontSize: 15,
-                    cursor: 'pointer',
-                    width: '100%',
-                    textAlign: 'left',
-                    borderRadius: 8,
-                  }}
-                >
-                  <LogoutIcon size={19} color="#B4544A" /> {t.menu.logout}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
