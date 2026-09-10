@@ -144,33 +144,6 @@ async function main() {
     where: { authorityId_name: { authorityId: tnpsc.id, name: 'Group Examinations' } },
   });
 
-  // TNPSC Group 4 – VAO Sub-Category — Sept 2026 naming correction
-  // (BINDING): student-facing name is exactly "குரூப் 4 - வி.ஏ.ஓ." — this
-  // is ONE preparation scope, never two separate exams. This finds the
-  // existing row under ANY of its earlier names and RENAMES it in place
-  // (same id, same Question mappings) — never creates a second row for a
-  // name change. Safe to re-run: once the row is already named correctly,
-  // this is a no-op every subsequent deploy.
-  async function ensureRenamedSubCategory(categoryId: string, canonicalName: string, priorNames: string[]) {
-    const alreadyCanonical = await prisma.examSubCategory.findUnique({
-      where: { categoryId_name: { categoryId, name: canonicalName } },
-    });
-    if (alreadyCanonical) return alreadyCanonical;
-    for (const priorName of priorNames) {
-      const existing = await prisma.examSubCategory.findUnique({
-        where: { categoryId_name: { categoryId, name: priorName } },
-      });
-      if (existing) {
-        return prisma.examSubCategory.update({ where: { id: existing.id }, data: { name: canonicalName } });
-      }
-    }
-    // Neither the canonical name nor any known prior name exists yet —
-    // genuinely new, safe to create.
-    return prisma.examSubCategory.create({ data: { categoryId, name: canonicalName } });
-  }
-
-  const group4Vao = await ensureRenamedSubCategory(groupExamsCategory.id, 'குரூப் 4 - வி.ஏ.ஓ.', ['VAO', 'Group 4 & VAO', 'Group IV & VAO']);
-
   async function seedSyllabusSubject(subCategoryName: string, subjectName: string, topics: string[]) {
     const subCategory = await prisma.examSubCategory.findUnique({
       where: { categoryId_name: { categoryId: groupExamsCategory.id, name: subCategoryName } },
@@ -302,6 +275,56 @@ async function main() {
     'Literature — Poetry Appreciation, Figures of Speech, Prose, Biography',
     'Authors and their Literary Works',
   ]);
+
+  // Sept 2026 (BINDING) — TNPSC itself publishes ONE combined syllabus
+  // for "Combined Civil Services Examination-IV (Group-IV and VAO)": this
+  // is ONE exam/preparation scope, never two. The "Group IV" Sub-Category
+  // above already holds the real, verified syllabus + question bank, so
+  // it is RENAMED in place to the canonical student-facing name — same
+  // id, same Questions, zero data movement. Any separate earlier
+  // VAO-lineage row (from before this correction, under any prior name)
+  // is retired: any real Question/tag data on it is reassigned onto
+  // Group IV first (never a duplicate question pool, never silently
+  // dropped), then it's hidden (studentVisible=false) rather than
+  // deleted — ExamSubCategory has many dependent relations, and this
+  // schema's own established rule is "never delete, only hide" (see the
+  // studentVisible field's own doc comment). Idempotent: safe to re-run
+  // on every deploy, whichever of these states the DB is currently in.
+  async function mergeGroup4Vao(categoryId: string) {
+    const canonicalName = 'குரூப் 4 - வி.ஏ.ஓ.';
+
+    const group4ByOldName = await prisma.examSubCategory.findUnique({
+      where: { categoryId_name: { categoryId, name: 'Group IV' } },
+    });
+
+    if (!group4ByOldName) {
+      // Already merged & renamed in an earlier successful deploy — the
+      // canonical row already exists and IS the former "Group IV" row
+      // (this function guarantees only one row ever ends up with this
+      // name). Nothing left to do.
+      return prisma.examSubCategory.findUniqueOrThrow({
+        where: { categoryId_name: { categoryId, name: canonicalName } },
+      });
+    }
+    const group4 = group4ByOldName;
+
+    const priorNames = ['VAO', 'Group 4 & VAO', 'Group IV & VAO', canonicalName];
+    for (const priorName of priorNames) {
+      const stray = await prisma.examSubCategory.findUnique({ where: { categoryId_name: { categoryId, name: priorName } } });
+      if (!stray || stray.id === group4.id) continue;
+      await prisma.question.updateMany({ where: { subCategoryId: stray.id }, data: { subCategoryId: group4.id } });
+      await prisma.questionTaxonomyTag.updateMany({ where: { subCategoryId: stray.id }, data: { subCategoryId: group4.id } });
+      await prisma.planSubCategoryScope.deleteMany({ where: { subCategoryId: stray.id } });
+      await prisma.examSubCategory.update({
+        where: { id: stray.id },
+        data: { studentVisible: false, name: `${priorName} (merged into ${canonicalName})` },
+      });
+    }
+
+    return prisma.examSubCategory.update({ where: { id: group4.id }, data: { name: canonicalName } });
+  }
+
+  const group4Vao = await mergeGroup4Vao(groupExamsCategory.id);
 
   // Group I-B, Group I-C — posts within the same Combined Civil Services
   // Examination-I (Group I) notification, sharing Group I's own Prelims
@@ -658,28 +681,21 @@ async function main() {
 
   // TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass — exam-specific, restricted plan, sortOrder 0
   // so it shows BEFORE the TNPSC Annual Pass on the student Plans page,
-  // per the finalized requirement. Scope note (Sept 2026 clarification):
-  // this is ONE preparation scope to the student (single Pass, single
-  // locked practice flow, never presented as "Group IV OR VAO") — it
-  // still technically spans two Sub-Category rows underneath (Group IV,
-  // whose real question bank/syllabus already exists, plus the renamed
-  // குரூப் 4 - வி.ஏ.ஓ. row itself) purely so students get real
-  // questions today. Official syllabus-based question mapping (which
-  // questions are actually relevant to Group 4) is a separate, not-yet-
-  // built layer — this Plan's SCOPE (which exams a student may select)
-  // is unaffected by that and unchanged here.
-  {
-    const groupIV = await prisma.examSubCategory.findUniqueOrThrow({
-      where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'Group IV' } },
-    });
-    await seedRestrictedSubCategoryPlan(
-      'TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass',
-      ['TNPSC Group IV & VAO Pass'],
-      [groupIV.id, group4Vao.id],
-      499,
-      0,
-    );
-  }
+  // per the finalized requirement. Sept 2026 (BINDING, confirmed against
+  // TNPSC's own published Scheme): ONE Sub-Category, ONE scope —
+  // group4Vao above (the merged/renamed former "Group IV" row) already IS
+  // the single preparation scope for this Pass. Official syllabus-based
+  // question mapping (which questions are actually relevant, once TNPSC's
+  // syllabus structure is entered) is a separate, not-yet-built layer —
+  // this Plan's SCOPE (which exam a student may select) is unaffected by
+  // that.
+  await seedRestrictedSubCategoryPlan(
+    'TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass',
+    ['TNPSC Group IV & VAO Pass'],
+    [group4Vao.id],
+    499,
+    0,
+  );
 
   // Higher Education / Entrance — exam-specific plans only (finalized
   // requirement: never a single Purpose-wide plan for this group).
