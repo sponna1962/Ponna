@@ -25,6 +25,8 @@ import { PaymentService, ProfileIncompleteError } from './modules/payments/payme
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
+import { questionAuditService } from './modules/audit/question-audit.service';
+import { questionAuditAdminService } from './modules/audit/question-audit-admin.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
 import { MistakeReviewService } from './modules/questions/mistake-review.service';
 import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modules/ask-ponna/ask-ponna.service';
@@ -704,6 +706,88 @@ app.post('/admin/question-reports/:id/status', requireStaffAuth, requireRole('SU
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update report status' });
+  }
+});
+
+// ── AI Question Quality Audit — Phase 1 pilot (Sept 2026, BINDING) ────────
+// Read-only of Question throughout; see question-audit.service.ts's own
+// header comment for the structural "AI never edits a question" guarantee.
+
+// POST /admin/question-audit/runs  { label?: string, sampleSize: number }
+// Selects a stratified sample (see selectStratifiedSample) and starts
+// processing it in the background — returns the run immediately so the
+// admin gets a runId to poll rather than waiting on the whole batch.
+app.post('/admin/question-audit/runs', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: AuthedRequest, res) => {
+  try {
+    const sampleSize = Number(req.body.sampleSize) || 1000;
+    const label = req.body.label || `Question audit — ${sampleSize} questions`;
+    const questionIds = await questionAuditService.selectStratifiedSample(sampleSize);
+    if (questionIds.length === 0) {
+      res.status(400).json({ error: 'No eligible questions found (PUBLISHED, Medium/Hard difficulty) to sample from.' });
+      return;
+    }
+    const run = await questionAuditService.createRun(label, questionIds, req.staff?.staffId);
+    // Fire-and-forget — a 1,000-question sequential run is far too slow to
+    // hold this request open for; processRun updates the run row as it
+    // goes, polled via GET /admin/question-audit/runs/:id.
+    questionAuditService.processRun(run.id, questionIds).catch((err) => console.error(`Question audit run ${run.id} crashed:`, err));
+    res.json(run);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to start question audit run' });
+  }
+});
+
+app.get('/admin/question-audit/runs', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await questionAuditAdminService.listRuns());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load audit runs' });
+  }
+});
+
+app.get('/admin/question-audit/runs/:id', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await questionAuditAdminService.getRun(req.params.id));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load audit run' });
+  }
+});
+
+// GET /admin/question-audit/flags?runId=&issueType=&status=&cursor=
+app.get('/admin/question-audit/flags', requireStaffAuth, async (req, res) => {
+  try {
+    const flags = await questionAuditAdminService.listFlags(
+      {
+        runId: req.query.runId as string | undefined,
+        issueType: req.query.issueType as any,
+        status: req.query.status as any,
+      },
+      req.query.cursor as string | undefined,
+    );
+    res.json(flags);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load audit flags' });
+  }
+});
+
+// POST /admin/question-audit/flags/:id/review  { status: 'CONFIRMED' | 'DISMISSED', note?: string }
+// Reviewing a flag NEVER edits the Question itself — admin uses the
+// existing question edit page separately for any actual fix.
+app.post('/admin/question-audit/flags/:id/review', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: AuthedRequest, res) => {
+  try {
+    if (!req.staff) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+    const flag = await questionAuditAdminService.reviewFlag(req.params.id, req.body.status, req.staff.staffId, req.body.note);
+    res.json(flag);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to review audit flag' });
   }
 });
 

@@ -353,6 +353,109 @@ enum QuestionReportStatus {
   DISMISSED
 }
 
+// ── AI Question Quality Audit (Sept 2026, Phase 1 pilot, BINDING) ──────────
+// Deliberately a completely separate read-only-of-Question subsystem: the
+// audit service only ever READS from Question and WRITES to the two models
+// below — it has no code path that updates/deletes/publishes/disables a
+// Question row. That separation is what makes "AI must only flag, never
+// change the question" a structural guarantee, not just a coding
+// convention. Admin fixes anything confirmed via the EXISTING question
+// edit flow — no separate AI-editing UI.
+enum AuditIssueType {
+  WRONG_ANSWER
+  MULTIPLE_CORRECT_OPTIONS
+  UNCLEAR_OR_INVALID_QUESTION
+  WRONG_EXPLANATION
+  LANGUAGE_ISSUE
+  LIKELY_DUPLICATE
+  WRONG_MAPPING
+  WRONG_DIFFICULTY
+  FACTUAL_CONCERN
+}
+
+// LIKELY_ISSUE: the AI believes this is probably a real problem.
+// CANNOT_VERIFY: the AI could not reliably confirm correctness either way
+// (mainly for FACTUAL_CONCERN — a factual claim it has no confident basis
+// to judge) — this is still a flag requiring human review, never treated
+// as "no issue found" (finalized requirement — AI must not mark something
+// verified just because it found no obvious problem).
+enum AuditVerdict {
+  LIKELY_ISSUE
+  CANNOT_VERIFY
+}
+
+enum AuditFlagStatus {
+  OPEN
+  CONFIRMED
+  DISMISSED
+}
+
+enum AuditRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model QuestionAuditRun {
+  id                 String           @id @default(uuid())
+  label              String           // e.g. "Phase 1 pilot — 1,000 questions"
+  status             AuditRunStatus   @default(RUNNING)
+  totalQuestions     Int
+  processedQuestions Int              @default(0)
+  flaggedQuestions   Int              @default(0) // questions with >=1 flag
+  totalFlags         Int              @default(0)
+  model              String           // Gemini model actually used (primary or fallback)
+  inputTokens        Int              @default(0)
+  outputTokens       Int              @default(0)
+  estimatedCostUsd   Decimal?         @db.Decimal(10, 4)
+  errorMessage       String?          // set if status = FAILED
+  startedAt          DateTime         @default(now())
+  completedAt        DateTime?
+  createdByStaffId   String?
+
+  items QuestionAuditRunItem[]
+  flags QuestionAuditFlag[]
+}
+
+// One row per (run, question) processed — recorded even when zero issues
+// were found, so admin can see full pilot coverage ("950/1000 came back
+// clean"), not just the flagged subset.
+model QuestionAuditRunItem {
+  id          String            @id @default(uuid())
+  runId       String
+  run         QuestionAuditRun  @relation(fields: [runId], references: [id])
+  questionId  String
+  question    Question          @relation(fields: [questionId], references: [id])
+  flagCount   Int               @default(0)
+  processedAt DateTime          @default(now())
+
+  @@unique([runId, questionId])
+  @@index([runId])
+}
+
+model QuestionAuditFlag {
+  id                 String            @id @default(uuid())
+  runId              String
+  run                QuestionAuditRun  @relation(fields: [runId], references: [id])
+  questionId         String
+  question           Question          @relation(fields: [questionId], references: [id])
+  issueType          AuditIssueType
+  verdict            AuditVerdict      @default(LIKELY_ISSUE)
+  confidence         Int               // 0-100 — the AI's own confidence in THIS flag, never a threshold for any automatic action
+  aiNotes            String            // AI's reasoning, shown to admin as-is
+  // For LIKELY_DUPLICATE only — the other question(s) it looks like.
+  duplicateOfQuestionIds String[]      @default([])
+  status             AuditFlagStatus   @default(OPEN)
+  reviewedByStaffId  String?
+  reviewedAt         DateTime?
+  reviewNote         String?
+  createdAt          DateTime          @default(now())
+
+  @@index([runId])
+  @@index([questionId])
+  @@index([issueType, status])
+}
+
 enum EducationStatus {
   SCHOOL_STUDENT
   COLLEGE_STUDENT
@@ -1066,6 +1169,8 @@ model Question {
   // practice-preference.service.ts's resolveTaxonomyFilter.
   authorityTags  QuestionTaxonomyTag[]
   reports        QuestionReport[]
+  auditFlags     QuestionAuditFlag[]
+  auditRunItems  QuestionAuditRunItem[]
   // Optional link to the Subject & Topic Preference master structure
   // (finalized requirement — groundwork for Stage 2, "preference-based
   // question allocation"). Nullable — the vast majority of existing
