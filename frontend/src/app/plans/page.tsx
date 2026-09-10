@@ -77,7 +77,7 @@ function scopeTags(p: Scope): string[] {
 
 /** "NEET Annual Pass" -> "NEET" — used for compact chip/box titles. */
 function shortName(name: string): string {
-  return name.replace(/ Annual (?:Plan|Pass)$/i, '').trim();
+  return name.replace(/ (?:Annual )?(?:Plan|Pass)$/i, '').trim();
 }
 
 /** Display-only override for TNPSC's card title (finalized requirement —
@@ -99,15 +99,19 @@ function displayName(name: string): string {
  * always comes from real Purpose/Authority data elsewhere on this page).
  * Returns null for any plan not TNPSC/TNTET (e.g. a future re-enabled
  * exam) rather than guessing copy for it. */
-function planFeatures(name: string): { highlight: string; bullets: string[] } | null {
-  // Sept 2026 — TNPSC Group IV & VAO Pass (finalized requirement). Checked
-  // BEFORE the generic /tnpsc/i match below, since this plan's name also
-  // contains "TNPSC" and would otherwise match that broader case first.
-  if (/group\s*iv\s*&\s*vao/i.test(name)) {
+function planFeatures(name: string, restrictToScope?: boolean): { highlight: string; bullets: string[] } | null {
+  // Sept 2026 — TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass (finalized requirement).
+  // Detected by restrictToScope (real Plan data), never by matching the
+  // Tamil name — matching this generic function's own "never guess
+  // access/scope from the name string" principle used everywhere else on
+  // this page. Checked BEFORE the generic /tnpsc/i match below, since this
+  // plan's name also contains "TNPSC" and would otherwise match that
+  // broader case first.
+  if (restrictToScope) {
     return {
-      highlight: 'Focused preparation for Group IV & VAO',
+      highlight: 'Focused preparation for Group 4 - VAO',
       bullets: [
-        'Group IV & VAO Question Bank',
+        'TNPSC Group 4 - VAO Question Bank',
         'Previous Year Exam Papers',
         'Expert-Crafted Practice',
         'Instant Answers',
@@ -387,7 +391,7 @@ function PlansPageInner() {
 
               {otherAvailablePlans.map((p) => {
                 const hasLaunch = p.launchPrice != null;
-                const features = planFeatures(p.name);
+                const features = planFeatures(p.name, p.restrictToScope);
                 return (
                   <div
                     key={p.id}

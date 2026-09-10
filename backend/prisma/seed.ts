@@ -125,7 +125,7 @@ async function main() {
   }
 
   await seedCategory(tnpsc.id, 'Group Examinations', [
-    'Group I', 'Group I-A', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group IV', 'VAO',
+    'Group I', 'Group I-A', 'Group I-B', 'Group I-C', 'Group II', 'Group IIA', 'Group III', 'Group IV',
     'Group V', 'Group V-A', 'Group VI', 'Group VII', 'Group VIII',
   ]);
   await seedCategory(tnpsc.id, 'Technical Services', [
@@ -143,6 +143,33 @@ async function main() {
   const groupExamsCategory = await prisma.examCategory.findUniqueOrThrow({
     where: { authorityId_name: { authorityId: tnpsc.id, name: 'Group Examinations' } },
   });
+
+  // TNPSC Group 4 – VAO Sub-Category — Sept 2026 naming correction
+  // (BINDING): student-facing name is exactly "குரூப் 4 - வி.ஏ.ஓ." — this
+  // is ONE preparation scope, never two separate exams. This finds the
+  // existing row under ANY of its earlier names and RENAMES it in place
+  // (same id, same Question mappings) — never creates a second row for a
+  // name change. Safe to re-run: once the row is already named correctly,
+  // this is a no-op every subsequent deploy.
+  async function ensureRenamedSubCategory(categoryId: string, canonicalName: string, priorNames: string[]) {
+    const alreadyCanonical = await prisma.examSubCategory.findUnique({
+      where: { categoryId_name: { categoryId, name: canonicalName } },
+    });
+    if (alreadyCanonical) return alreadyCanonical;
+    for (const priorName of priorNames) {
+      const existing = await prisma.examSubCategory.findUnique({
+        where: { categoryId_name: { categoryId, name: priorName } },
+      });
+      if (existing) {
+        return prisma.examSubCategory.update({ where: { id: existing.id }, data: { name: canonicalName } });
+      }
+    }
+    // Neither the canonical name nor any known prior name exists yet —
+    // genuinely new, safe to create.
+    return prisma.examSubCategory.create({ data: { categoryId, name: canonicalName } });
+  }
+
+  const group4Vao = await ensureRenamedSubCategory(groupExamsCategory.id, 'குரூப் 4 - வி.ஏ.ஓ.', ['VAO', 'Group 4 & VAO', 'Group IV & VAO']);
 
   async function seedSyllabusSubject(subCategoryName: string, subjectName: string, topics: string[]) {
     const subCategory = await prisma.examSubCategory.findUnique({
@@ -582,23 +609,37 @@ async function main() {
     return plan;
   }
 
-  // Sept 2026 — TNPSC Group IV & VAO Pass (BINDING, finalized requirement):
-  // an exclusive/restricted plan — see Plan.restrictToScope. cycleDays is
-  // just an initial validity window; the real cutoff is
+  // Sept 2026 — TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass (BINDING, finalized
+  // requirement): an exclusive/restricted plan — see Plan.restrictToScope.
+  // cycleDays is just an initial validity window; the real cutoff is
   // Plan.manualExpiryOverride, set by admin from the admin panel once the
-  // actual Group IV & VAO exam date is confirmed (see
-  // PATCH /admin/plans/:id/expiry-override) — never hardcoded here.
+  // actual exam date is confirmed (see PATCH /admin/plans/:id/expiry-override
+  // ) — never hardcoded here. Renames in place (see priorNames) rather than
+  // upserting a fresh row under a new name, so an earlier-named row (and
+  // any Subscriptions already pointing at it) is never orphaned.
   async function seedRestrictedSubCategoryPlan(
-    name: string,
+    canonicalName: string,
+    priorNames: string[],
     subCategoryIds: string[],
     regularPrice: number,
     sortOrder: number,
   ) {
-    const plan = await prisma.plan.upsert({
-      where: { name },
-      create: { name, cycleDays: 365, regularPrice, active: true, sortOrder, restrictToScope: true },
-      update: { cycleDays: 365, regularPrice, sortOrder, restrictToScope: true },
-    });
+    const data = { cycleDays: 365, regularPrice, active: true, sortOrder, restrictToScope: true };
+    let plan = await prisma.plan.findUnique({ where: { name: canonicalName } });
+    if (!plan) {
+      for (const priorName of priorNames) {
+        const existing = await prisma.plan.findUnique({ where: { name: priorName } });
+        if (existing) {
+          plan = await prisma.plan.update({ where: { id: existing.id }, data: { name: canonicalName, ...data } });
+          break;
+        }
+      }
+    }
+    if (!plan) {
+      plan = await prisma.plan.create({ data: { name: canonicalName, ...data } });
+    } else if (plan.sortOrder !== sortOrder || Number(plan.regularPrice) !== regularPrice) {
+      plan = await prisma.plan.update({ where: { id: plan.id }, data });
+    }
     await prisma.planSubCategoryScope.deleteMany({ where: { planId: plan.id } });
     for (const subCategoryId of subCategoryIds) {
       await prisma.planSubCategoryScope.upsert({
@@ -615,17 +656,30 @@ async function main() {
   // future Authority added under this Purpose, automatically).
   await seedPurposePlan('Competitive / Employment Annual Plan', employmentPurpose.id, 2999, 999, 1);
 
-  // TNPSC Group IV & VAO Pass — exam-specific, restricted plan, sortOrder 0
+  // TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass — exam-specific, restricted plan, sortOrder 0
   // so it shows BEFORE the TNPSC Annual Pass on the student Plans page,
-  // per the finalized requirement.
+  // per the finalized requirement. Scope note (Sept 2026 clarification):
+  // this is ONE preparation scope to the student (single Pass, single
+  // locked practice flow, never presented as "Group IV OR VAO") — it
+  // still technically spans two Sub-Category rows underneath (Group IV,
+  // whose real question bank/syllabus already exists, plus the renamed
+  // குரூப் 4 - வி.ஏ.ஓ. row itself) purely so students get real
+  // questions today. Official syllabus-based question mapping (which
+  // questions are actually relevant to Group 4) is a separate, not-yet-
+  // built layer — this Plan's SCOPE (which exams a student may select)
+  // is unaffected by that and unchanged here.
   {
     const groupIV = await prisma.examSubCategory.findUniqueOrThrow({
       where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'Group IV' } },
     });
-    const vao = await prisma.examSubCategory.findUniqueOrThrow({
-      where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'VAO' } },
-    });
-    await seedRestrictedSubCategoryPlan('TNPSC Group IV & VAO Pass', [groupIV.id, vao.id], 499, 0);
+    await seedRestrictedSubCategoryPlan(
+      'TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass',
+      ['TNPSC Group IV & VAO Pass'],
+      [groupIV.id, group4Vao.id],
+      499,
+      0,
+    );
+  }
   }
 
   // Higher Education / Entrance — exam-specific plans only (finalized
