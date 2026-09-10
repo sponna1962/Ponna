@@ -97,6 +97,7 @@ export default function ProfilePage() {
   const phoneConfirmationRef = useRef<ConfirmationResult | null>(null);
   const phoneRecaptchaRef = useRef<HTMLDivElement>(null);
   const [resettingHistory, setResettingHistory] = useState(false);
+  const [milestones, setMilestones] = useState<{ type: string; label: string; emoji: string; achievedAt: string }[]>([]);
 
   useEffect(() => {
     studentFetch('/students/me/profile')
@@ -120,6 +121,29 @@ export default function ProfilePage() {
       })
       .catch(() => {});
   }, []);
+
+  // Sept 2026 — Gamification badges: same /students/me/milestones data
+  // as Dashboard, shown here too so achievements are visible from the
+  // student's own profile, not only Dashboard.
+  useEffect(() => {
+    studentFetch('/students/me/milestones')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setMilestones(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  async function shareBadge(m: { label: string; emoji: string }) {
+    const text = `நான் PONNA-ல் "${m.label}" ${m.emoji} சாதனை பெற்றேன்! நீங்களும் இணையுங்க: https://ponna.in`;
+    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+      try {
+        await (navigator as any).share({ text });
+      } catch {
+        // user cancelled the native share sheet — nothing to do
+      }
+    } else if (typeof window !== 'undefined') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+  }
 
   useEffect(() => {
     if (cameFromGate && profile && !profile.phone) {
@@ -323,6 +347,27 @@ export default function ProfilePage() {
           <span style={{ position: 'absolute', top: 3, left: theme === 'dark' ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
         </button>
       </header>
+
+      {/* Sept 2026 — Gamification badges, same data as Dashboard. Tap a
+          badge to share it. Silently absent until the first badge is
+          earned. */}
+      {milestones.length > 0 && (
+        <div style={{ margin: '0 16px 16px', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', margin: '0 0 10px', letterSpacing: 0.3 }}>{t.dashboard.badgesLabel}</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {milestones.map((m) => (
+              <button
+                key={m.type}
+                onClick={() => shareBadge(m)}
+                style={{ textAlign: 'center', width: 64, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                <p style={{ fontSize: 26, margin: 0 }}>{m.emoji}</p>
+                <p style={{ fontSize: 9, color: '#94a3b8', margin: '2px 0 0', lineHeight: 1.2 }}>{m.label}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: '0 20px' }}>
         {cameFromGate && !profile.profileComplete && (

@@ -13,6 +13,7 @@
 import { prisma } from '../../lib/prisma';
 import crypto from 'crypto';
 import { isProfileComplete } from '../profile/profile.service';
+import { milestoneService } from '../practice-preference/milestone.service';
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
@@ -145,6 +146,12 @@ export class PaymentService {
         razorpayPaymentId,
       },
     });
+
+    // Sept 2026 — Gamification badges: FIRST_PASS is checked here (a
+    // successful, non-free Subscription) since this is the one place a
+    // Subscription actually gets created (see the file header comment).
+    // Never blocks/delays the payment response on failure.
+    milestoneService.checkAndAward(userId).catch((err) => console.error('Milestone check failed after payment:', err));
 
     return { status: 'created', subscriptionId: subscription.id };
   }

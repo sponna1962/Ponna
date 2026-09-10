@@ -7,6 +7,7 @@
 
 import { CorrectOption, MistakeReviewStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { milestoneService } from '../practice-preference/milestone.service';
 
 export class MistakeReviewService {
   /** Called by session.service.ts's submitAnswer whenever a normal
@@ -108,6 +109,13 @@ export class MistakeReviewService {
         lastReviewedAt: new Date(),
       },
     });
+
+    // Sept 2026 — Gamification badges: MISTAKES_FIXED_50 checked here,
+    // the one place a mistake actually gets marked CORRECTED. Never
+    // blocks/delays the answer response on failure.
+    if (isCorrect) {
+      milestoneService.checkAndAward(userId).catch((err) => console.error('Milestone check failed after mistake review:', err));
+    }
 
     return {
       isCorrect,

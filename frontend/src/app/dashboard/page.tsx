@@ -86,6 +86,22 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  // Sept 2026 — Gamification: tap-to-share a badge (Web Share API on
+  // supported devices, WhatsApp link as the fallback). Purely client-side
+  // — no new backend endpoint, no tracking of shares.
+  async function shareBadge(m: { label: string; emoji: string }) {
+    const text = `நான் PONNA-ல் "${m.label}" ${m.emoji} சாதனை பெற்றேன்! நீங்களும் இணையுங்க: https://ponna.in`;
+    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+      try {
+        await (navigator as any).share({ text });
+      } catch {
+        // user cancelled the native share sheet — nothing to do
+      }
+    } else if (typeof window !== 'undefined') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+  }
+
   async function createShareLink() {
     setSharing(true);
     const res = await studentFetch('/students/me/share-progress', { method: 'POST' });
@@ -250,16 +266,22 @@ export default function DashboardPage() {
       </div>
 
       {/* Milestone Badges (finalized requirement) — silently absent until
-          the first badge is earned, never an empty-state placeholder. */}
+          the first badge is earned, never an empty-state placeholder.
+          Sept 2026: tap a badge to share it (Web Share API, WhatsApp
+          fallback) — social proof + light viral growth. */}
       {milestones.length > 0 && (
         <div style={{ ...CARD, marginBottom: 18 }}>
           <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 10px', letterSpacing: 0.3 }}>{t.dashboard.badgesLabel}</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {milestones.map((m) => (
-              <div key={m.type} style={{ textAlign: 'center', width: 64 }}>
+              <button
+                key={m.type}
+                onClick={() => shareBadge(m)}
+                style={{ textAlign: 'center', width: 64, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
                 <p style={{ fontSize: 26, margin: 0 }}>{m.emoji}</p>
                 <p style={{ fontSize: 9, color: COLORS.inkMuted, margin: '2px 0 0', lineHeight: 1.2 }}>{m.label}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
