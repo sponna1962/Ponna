@@ -10,6 +10,7 @@ import multer from 'multer';
 import { SessionService } from './modules/quiz/session.service';
 import { PracticePreferenceService, InvalidSelectionError } from './modules/practice-preference/practice-preference.service';
 import { RankingService } from './modules/ranking/ranking.service';
+import { activitySummaryService } from './modules/students/activity-summary.service';
 import { QuotaExceededError, QuotaService } from './modules/quota/quota.service';
 import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
 import { BulkUploadService } from './modules/questions/bulk-upload.service';
@@ -944,6 +945,17 @@ app.get('/students/me/dashboard', requireStudentAuth, async (req: StudentAuthedR
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load dashboard' });
+  }
+});
+
+// GET /students/me/monthly-summary — "this month: X questions, Y
+// minutes, Z-day streak" (Sept 2026, Home + Dashboard quick-win).
+app.get('/students/me/monthly-summary', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await activitySummaryService.getMonthlySummary(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load monthly summary' });
   }
 });
 

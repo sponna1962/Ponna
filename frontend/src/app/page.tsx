@@ -66,6 +66,7 @@ export default function IndexPage() {
 
   // Logged-in extras
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
+  const [monthlySummary, setMonthlySummary] = useState<{ questionsAnswered: number; timeSpentMinutes: number; currentStreak: number } | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
   const [headerPhotoUrl, setHeaderPhotoUrl] = useState<string | null>(null);
   const [showDiagnosticPrompt, setShowDiagnosticPrompt] = useState(false);
@@ -92,6 +93,10 @@ export default function IndexPage() {
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setActiveSubs(Array.isArray(data) ? data : []))
       .catch(() => setActiveSubs([]));
+    studentFetch('/students/me/monthly-summary')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setMonthlySummary)
+      .catch(() => setMonthlySummary(null));
     studentFetch('/students/me/profile')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -175,6 +180,7 @@ export default function IndexPage() {
     localStorage.removeItem('ponna_student_token');
     setIsLoggedIn(false);
     setActiveSubs(null);
+    setMonthlySummary(null);
     setLoginMethod(null);
     setAccountMenuOpen(false);
     setView('main');
@@ -404,6 +410,25 @@ export default function IndexPage() {
               <a href="/plans" style={{ display: 'inline-block', marginTop: 4, fontSize: 12, fontWeight: 700, color: '#7A5A14', textDecoration: 'none' }}>
                 View Plan →
               </a>
+            </div>
+          )}
+
+          {/* Sept 2026 — "this month" effort summary (world-class-polish
+              quick win): makes invisible practice effort visible, so a
+              paying student can see what they're actually getting.
+              Purely a read of existing activity data — no new tracking,
+              doesn't affect quota/streak/ranking. Only shown once there's
+              something to show (avoids an empty "0 questions" card for a
+              brand-new student). */}
+          {isLoggedIn && monthlySummary && monthlySummary.questionsAnswered > 0 && (
+            <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 12, marginBottom: 20, background: COLORS.paperAlt }}>
+              <p style={{ fontSize: 11, color: COLORS.inkMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+                இந்த மாதம் / This Month
+              </p>
+              <p style={{ fontSize: 14, color: COLORS.ink, fontWeight: 600, margin: 0 }}>
+                {monthlySummary.questionsAnswered} கேள்விகள் · {monthlySummary.timeSpentMinutes} நிமிடங்கள்
+                {monthlySummary.currentStreak > 0 && <> · {monthlySummary.currentStreak} நாள் streak</>}
+              </p>
             </div>
           )}
 

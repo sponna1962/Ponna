@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [milestones, setMilestones] = useState<{ type: string; label: string; emoji: string; achievedAt: string }[]>([]);
   const [newBadge, setNewBadge] = useState<{ label: string; emoji: string } | null>(null);
   const [timeAnalytics, setTimeAnalytics] = useState<{ overallAverageSeconds: number; byDifficulty: { difficulty: string; averageSeconds: number; sampleSize: number }[] } | null>(null);
+  const [monthlySummary, setMonthlySummary] = useState<{ questionsAnswered: number; timeSpentMinutes: number; currentStreak: number } | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/dashboard')
@@ -78,6 +79,10 @@ export default function DashboardPage() {
     studentFetch('/students/me/time-analytics')
       .then((r) => (r.ok ? r.json() : null))
       .then(setTimeAnalytics)
+      .catch(() => {});
+    studentFetch('/students/me/monthly-summary')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setMonthlySummary)
       .catch(() => {});
   }, []);
 
@@ -150,6 +155,21 @@ export default function DashboardPage() {
           </span>
         )}
       </div>
+
+      {/* Sept 2026 — "this month" effort summary (world-class-polish
+          quick win). Reuses the same /students/me/monthly-summary as
+          Home — same numbers everywhere, one source of truth. */}
+      {monthlySummary && monthlySummary.questionsAnswered > 0 && (
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 12, marginBottom: 12, background: COLORS.paperAlt }}>
+          <p style={{ fontSize: 11, color: COLORS.inkMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+            இந்த மாதம் / This Month
+          </p>
+          <p style={{ fontSize: 14, color: COLORS.ink, fontWeight: 600, margin: 0 }}>
+            {monthlySummary.questionsAnswered} கேள்விகள் · {monthlySummary.timeSpentMinutes} நிமிடங்கள்
+            {monthlySummary.currentStreak > 0 && <> · {monthlySummary.currentStreak} நாள் streak</>}
+          </p>
+        </div>
+      )}
 
       {/* Overall Performance — fully vertical, centered composition: label,
           ring, then one compact stats line. No side-by-side layout, so
