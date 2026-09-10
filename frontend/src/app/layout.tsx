@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { LanguageProvider } from '../lib/language-context';
 import { ThemeProvider } from '../lib/theme-context';
 import { ThemeStyles } from '../lib/brand-theme';
+import { InstallPrompt } from '../components/InstallPrompt';
 
 export const metadata: Metadata = {
   title: 'PONNA.in — TNPSC & TNTET Exam Practice | Previous Papers, Instant Answers',
@@ -34,7 +35,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ fontFamily: "'Noto Sans Tamil', 'Noto Sans', -apple-system, sans-serif", margin: 0 }}>
         <ThemeProvider>
-          <LanguageProvider>{children}</LanguageProvider>
+          <LanguageProvider>
+            {children}
+            {/* Sept 2026 finalized requirement — global, on every page, not
+                buried in Help & Support. See InstallPrompt.tsx for the
+                real-PWA-only / no-nagging / already-installed rules. */}
+            <InstallPrompt />
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
