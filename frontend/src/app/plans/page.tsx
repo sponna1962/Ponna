@@ -7,6 +7,7 @@ import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
 import { StudentMenu } from '../../components/StudentMenu';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
+import { daysRemaining, shouldShowRemainingDays, formatValidUntil } from '../../lib/pass-validity';
 
 // My Plans — the student-facing half of the Annual Plan payment loop.
 // Redesigned for compactness (finalized requirement — the previous
@@ -53,7 +54,8 @@ type ActiveSubscription = {
   id: string;
   planId: string;
   cycleEnd: string;
-  plan: Scope & { id: string; name: string; nameTa: string | null };
+  validUntil: string;
+  plan: Scope & { id: string; name: string; nameTa: string | null; regularPrice: string | null; launchPrice: string | null };
 };
 
 /** Whole-Purpose plan (Competitive/Employment) lists the real Authorities
@@ -310,47 +312,66 @@ function PlansPageInner() {
 
       {plansLoaded && (
         <>
-          {/* Active Plans + Free — shown together in their own row only
-              once there's an Active plan to share it with (see the
-              title-row placement above for the Free-only case). */}
+          {/* Sept 2026 finalized requirement — ACCOUNT -> Plan is the
+              canonical place for full Pass validity info: Name, Active
+              badge, and "Valid until [date]" directly visible (not
+              behind a tap), "X days remaining" only in the final 30
+              days. Tapping a card still opens the existing bottom sheet
+              for the Practice Now action. */}
           {activeSubs.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingBottom: 2 }}>
-              {activeSubs.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() =>
-                    setSheet({
-                      title: displayName(s.plan.name),
-                      scopeTags: scopeTags(s.plan),
-                      activeUntil: s.cycleEnd,
-                      action: 'practice',
-                    })
-                  }
-                  style={{
-                    flex: '0 0 auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    background: COLORS.goldLight,
-                    border: `1px solid ${COLORS.gold}`,
-                    borderRadius: 20,
-                    padding: '7px 14px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: '#5C4009',
-                    whiteSpace: 'nowrap',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ✓ {shortName(s.plan.name)} · {new Date(s.cycleEnd).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
-                </button>
-              ))}
+            <div style={{ marginBottom: 20 }}>
+              {activeSubs.map((s) => {
+                const showDays = shouldShowRemainingDays(s.validUntil);
+                const days = daysRemaining(s.validUntil);
+                const price = s.plan.launchPrice ?? s.plan.regularPrice;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() =>
+                      setSheet({
+                        title: displayName(s.plan.name),
+                        scopeTags: scopeTags(s.plan),
+                        activeUntil: s.validUntil,
+                        action: 'practice',
+                      })
+                    }
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'left',
+                      background: COLORS.goldLight,
+                      border: `1px solid ${COLORS.gold}`,
+                      borderRadius: 14,
+                      padding: 14,
+                      marginBottom: 8,
+                      cursor: 'pointer',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: 700, color: COLORS.ink }}>{displayName(s.plan.name)}</span>
+                      {price != null && <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.inkMuted, flexShrink: 0, whiteSpace: 'nowrap' }}>₹{price}</span>}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#166534', background: '#DCFCE7', borderRadius: 20, padding: '2px 9px' }}>
+                        Active
+                      </span>
+                      <span style={{ fontSize: 12, color: COLORS.inkMuted }}>Valid until {formatValidUntil(s.validUntil)}</span>
+                    </div>
+                    {showDays && (
+                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: days <= 7 ? '#B91C1C' : '#92400E' }}>
+                        {days} {days === 1 ? 'day' : 'days'} remaining
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
 
               {freePlan && (
                 <a
                   href="/quiz"
                   style={{
-                    flex: '0 0 auto',
+                    display: 'inline-block',
                     background: COLORS.paperAlt,
                     border: `1px solid ${COLORS.line}`,
                     borderRadius: 20,
@@ -360,6 +381,7 @@ function PlansPageInner() {
                     color: COLORS.inkMuted,
                     whiteSpace: 'nowrap',
                     textDecoration: 'none',
+                    marginTop: 2,
                   }}
                 >
                   {t.plans.freeChipLabel}

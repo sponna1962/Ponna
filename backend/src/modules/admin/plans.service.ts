@@ -81,7 +81,7 @@ export class PlansService {
    * the "My Plans" page's Active Plans section. */
   async listActiveSubscriptionsForStudent(userId: string) {
     const now = new Date();
-    return prisma.subscription.findMany({
+    const subs = await prisma.subscription.findMany({
       where: {
         userId,
         status: 'ACTIVE',
@@ -100,6 +100,8 @@ export class PlansService {
             nameTa: true,
             restrictToScope: true,
             manualExpiryOverride: true,
+            regularPrice: true,
+            launchPrice: true,
             // Included so the "My Plans" bottom-sheet can show the same
             // scope tags for an Active plan as it does for a purchasable
             // one — same describeScope() logic on the frontend either way.
@@ -113,5 +115,19 @@ export class PlansService {
       },
       orderBy: { cycleEnd: 'asc' },
     });
+
+    // Sept 2026 (BINDING) — the student-facing "valid until" date must
+    // always be the EFFECTIVE date, factoring in the admin's
+    // manualExpiryOverride when it's earlier than the subscription's own
+    // cycleEnd (e.g. the TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass, whose real
+    // validity is "until the exam", set by admin once the date is
+    // confirmed — see PATCH /admin/plans/:id/expiry-override). Computed
+    // here, once, server-side — every caller (Plans page, Home page)
+    // just displays this field directly rather than re-deriving the same
+    // logic client-side.
+    return subs.map((s) => ({
+      ...s,
+      validUntil: s.plan.manualExpiryOverride && s.plan.manualExpiryOverride < s.cycleEnd ? s.plan.manualExpiryOverride : s.cycleEnd,
+    }));
   }
 }

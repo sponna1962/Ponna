@@ -36,9 +36,10 @@ import { getDeviceId, getDeviceLabel } from '../lib/device-id';
 import { StudentMenu } from '../components/StudentMenu';
 import { LogoutIcon } from '../components/icons';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../lib/brand-theme';
+import { daysRemaining, shouldShowRemainingDays, formatValidUntil } from '../lib/pass-validity';
 
 type View = 'main' | 'chooseMethod' | 'phone' | 'deviceLimit';
-type ActiveSubscription = { id: string; cycleEnd: string; plan: { name: string; nameTa: string | null } };
+type ActiveSubscription = { id: string; cycleEnd: string; validUntil: string; plan: { name: string; nameTa: string | null } };
 type DeviceInfo = { deviceId: string; label: string | null; lastSeenAt: string };
 
 export default function IndexPage() {
@@ -366,15 +367,29 @@ export default function IndexPage() {
 
           {isLoggedIn && activeSubs && activeSubs.length > 0 && (
             <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 12, marginBottom: 20, background: COLORS.goldLight }}>
-              <p style={{ fontSize: 11, color: '#7A5A14', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+              <p style={{ fontSize: 11, color: '#7A5A14', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
                 செயலில் உள்ள திட்டங்கள் / Active Plans
               </p>
-              {activeSubs.map((s) => (
-                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 2 }}>
-                  <span style={{ color: COLORS.ink, fontWeight: 600 }}>{s.plan.name}</span>
-                  <span style={{ color: COLORS.inkMuted }}>{new Date(s.cycleEnd).toLocaleDateString()}</span>
-                </div>
-              ))}
+              {activeSubs.map((s) => {
+                const showDays = shouldShowRemainingDays(s.validUntil);
+                const days = daysRemaining(s.validUntil);
+                return (
+                  <div key={s.id} style={{ marginBottom: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontSize: 13 }}>
+                      <span style={{ color: COLORS.ink, fontWeight: 600 }}>{s.plan.name}</span>
+                      <span style={{ color: COLORS.inkMuted, whiteSpace: 'nowrap' }}>Valid until {formatValidUntil(s.validUntil)}</span>
+                    </div>
+                    {showDays && (
+                      <div style={{ fontSize: 11, fontWeight: 700, color: days <= 7 ? '#B91C1C' : '#92400E', marginTop: 1 }}>
+                        {days} {days === 1 ? 'day' : 'days'} remaining
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <a href="/plans" style={{ display: 'inline-block', marginTop: 4, fontSize: 12, fontWeight: 700, color: '#7A5A14', textDecoration: 'none' }}>
+                View Plan →
+              </a>
             </div>
           )}
 
