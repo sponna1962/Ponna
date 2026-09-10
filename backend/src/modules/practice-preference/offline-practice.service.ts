@@ -18,7 +18,7 @@ import { PracticePreferenceService } from './practice-preference.service';
 import { backfillStreakForDates } from './streak.service';
 import { MistakeReviewService } from '../questions/mistake-review.service';
 
-const PACK_SIZE = 50;
+const PACK_SIZE = 20;
 
 const quota = new QuotaService();
 const allocation = new AllocationService();
@@ -31,8 +31,23 @@ export class OfflinePracticeService {
    * immediately (same reservation call a normal session uses), so a
    * student can't download a pack and also practice online in parallel
    * for double quota. Returns full question content, including the
-   * correct answer and explanation, for offline use. */
+   * correct answer and explanation, for offline use.
+   *
+   * Idempotent: if this student already has an ACTIVE (unsynced) pack,
+   * that SAME pack is returned — quota is never deducted twice for a
+   * duplicate/retried download request. A student gets a genuinely new
+   * pack only after fully syncing (or the pack is otherwise cleared) —
+   * one active pack at a time, matching the frontend's own IndexedDB
+   * design. */
   async createPack(userId: string) {
+    const existing = await prisma.offlinePack.findFirst({
+      where: { userId, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) {
+      return this.formatPackResponse(existing.id);
+    }
+
     const preference = await preferenceService.get(userId);
     if (!preference) {
       throw new Error('No practice preference saved yet — complete Practice Setup first.');
@@ -79,29 +94,40 @@ export class OfflinePracticeService {
       },
     });
 
-    // Full content, unlike a normal in-progress session's response —
-    // there's no server to ask "was that right?" once offline.
-    const questions = await prisma.question.findMany({
-      where: { id: { in: questionIds } },
+    return this.formatPackResponse(pack.id);
+  }
+
+  /** Full question content for a pack's items, keyed by their existing
+   * sequenceNumber — shared by both the freshly-created path and the
+   * idempotent "already have an active pack" path above, so both return
+   * identically-shaped data. */
+  private async formatPackResponse(packId: string) {
+    const items = await prisma.offlinePackItem.findMany({
+      where: { packId },
+      orderBy: { sequenceNumber: 'asc' },
       select: {
-        id: true,
-        questionText: true,
-        optionA: true,
-        optionB: true,
-        optionC: true,
-        optionD: true,
-        correctOption: true,
-        explanationTa: true,
-        explanationEn: true,
-        language: true,
-        difficulty: true,
+        sequenceNumber: true,
+        question: {
+          select: {
+            id: true,
+            questionText: true,
+            optionA: true,
+            optionB: true,
+            optionC: true,
+            optionD: true,
+            correctOption: true,
+            explanationTa: true,
+            explanationEn: true,
+            language: true,
+            difficulty: true,
+          },
+        },
       },
     });
-    const byId = new Map(questions.map((q) => [q.id, q]));
 
     return {
-      packId: pack.id,
-      questions: questionIds.map((id, i) => ({ sequenceNumber: i + 1, ...byId.get(id) })),
+      packId,
+      questions: items.map((item) => ({ sequenceNumber: item.sequenceNumber, ...item.question })),
     };
   }
 
@@ -114,6 +140,21 @@ export class OfflinePracticeService {
    * untouched here. Safe to call multiple times for the same pack (e.g.
    * a partial sync that got interrupted) — already-synced items are
    * skipped. */
+  /** Sept 2026 (BINDING) — server-side validation of a claimed offline
+   * answer time. Never blindly trusts the device's clock: a valid
+   * answeredAt must fall between this pack's own download time
+   * (createdAt — can't have answered before downloading) and the moment
+   * of this sync call (can't claim a future date). Anything outside that
+   * window is clamped to the nearer boundary rather than trusted as-is —
+   * this is what closes the "change my phone's clock to fake a longer
+   * streak" gap. */
+  private clampAnsweredAt(claimed: Date, packCreatedAt: Date, syncTime: Date): Date {
+    if (Number.isNaN(claimed.getTime())) return syncTime;
+    if (claimed < packCreatedAt) return packCreatedAt;
+    if (claimed > syncTime) return syncTime;
+    return claimed;
+  }
+
   async syncPack(userId: string, packId: string, answers: { questionId: string; selectedOption: CorrectOption; answeredAt: string }[]) {
     const pack = await prisma.offlinePack.findUniqueOrThrow({
       where: { id: packId },
@@ -121,6 +162,7 @@ export class OfflinePracticeService {
     });
     if (pack.userId !== userId) throw new Error('This offline pack does not belong to you.');
 
+    const syncTime = new Date();
     const itemByQuestionId = new Map(pack.items.map((i) => [i.questionId, i]));
     const activityDates: Date[] = [];
 
@@ -130,7 +172,7 @@ export class OfflinePracticeService {
 
       const question = await prisma.question.findUniqueOrThrow({ where: { id: answer.questionId }, select: { correctOption: true, difficulty: true } });
       const isCorrect = question.correctOption === answer.selectedOption;
-      const answeredAtClient = new Date(answer.answeredAt);
+      const answeredAtClient = this.clampAnsweredAt(new Date(answer.answeredAt), pack.createdAt, syncTime);
 
       await prisma.offlinePackItem.update({
         where: { id: item.id },
