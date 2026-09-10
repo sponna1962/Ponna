@@ -9,7 +9,7 @@
 // (brand-theme.tsx) throughout, matching Plans/Profile/Quiz — never a new
 // visual identity for one page.
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
@@ -75,6 +75,15 @@ const FAQS: Faq[] = [
     answer:
       'Your Performance page tracks your accuracy by difficulty level, your daily streak, and time spent practising — it updates automatically after every session, no extra steps needed.',
   },
+  {
+    id: 'use-as-app',
+    category: 'account',
+    question: 'How do I use PONNA as an app?',
+    // Special-cased below: tapping this FAQ opens the "Use PONNA as an
+    // App" guide instead of expanding this text inline — this answer is
+    // a fallback only for anywhere FAQS is listed without that handling.
+    answer: 'Open ponna.in in your phone browser, then add it to your Home Screen — see the "Use PONNA as an App" guide below for step-by-step instructions.',
+  },
 ];
 
 const CATEGORIES: { id: Category; title: string; description: string; icon: string }[] = [
@@ -129,6 +138,18 @@ export default function HelpPage() {
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [openFaqId, setOpenFaqId] = useState<string | null>(null);
   const [openGuideId, setOpenGuideId] = useState<string | null>(null);
+  const [showAppGuide, setShowAppGuide] = useState(false);
+
+  // "How do I use PONNA as an app?" opens the visual App Guide instead of
+  // expanding inline text — one guide serves both the FAQ entry and the
+  // Quick Guide card, per the spec (no duplicate content/pages).
+  function handleFaqToggle(id: string) {
+    if (id === 'use-as-app') {
+      setShowAppGuide(true);
+      return;
+    }
+    setOpenFaqId((cur) => (cur === id ? null : id));
+  }
 
   const q = normalize(query);
   const searching = q.length > 0;
@@ -190,7 +211,7 @@ export default function HelpPage() {
               No matching answers yet — try different keywords, or contact support below.
             </div>
           ) : (
-            <FaqAccordion faqs={visibleFaqs} openId={openFaqId} onToggle={(id) => setOpenFaqId((cur) => (cur === id ? null : id))} />
+            <FaqAccordion faqs={visibleFaqs} openId={openFaqId} onToggle={handleFaqToggle} />
           )}
         </section>
       ) : (
@@ -244,7 +265,7 @@ export default function HelpPage() {
                 Loading or error issues are usually fixed by refreshing the page or checking your internet connection. Still stuck? Contact support below.
               </div>
             ) : (
-              <FaqAccordion faqs={visibleFaqs} openId={openFaqId} onToggle={(id) => setOpenFaqId((cur) => (cur === id ? null : id))} />
+              <FaqAccordion faqs={visibleFaqs} openId={openFaqId} onToggle={handleFaqToggle} />
             )}
           </section>
 
@@ -275,9 +296,26 @@ export default function HelpPage() {
                 </div>
               );
             })}
+
+            {/* "Use PONNA as an App" is a visual, multi-screen guide
+                (Start Screen -> Android/iPhone steps with mockups), not
+                an inline accordion like the guides above — opens the
+                same modal the FAQ entry above uses. */}
+            <button
+              onClick={() => setShowAppGuide(true)}
+              style={{ width: '100%', textAlign: 'left', background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
+            >
+              <span>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 2 }}>Use PONNA as an App</span>
+                <span style={{ display: 'block', fontSize: 12, color: COLORS.inkMuted }}>Add PONNA to your phone's Home Screen for quick access</span>
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.gold, flexShrink: 0 }}>→</span>
+            </button>
           </section>
         </>
       )}
+
+      {showAppGuide && <AppGuideModal onClose={() => setShowAppGuide(false)} />}
 
       {/* Contact Support */}
       <section style={{ background: COLORS.paperAlt, border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: 20, textAlign: 'center' }}>
@@ -327,5 +365,176 @@ function FaqAccordion({ faqs, openId, onToggle }: { faqs: Faq[]; openId: string 
         );
       })}
     </div>
+  );
+}
+
+/** "Use PONNA as an App" — a visual, multi-screen guide (not a text FAQ):
+ * a Start Screen, then step-by-step Android/Chrome and iPhone/Safari
+ * sections, each with a small phone mockup showing exactly where to tap.
+ * Opened from both the Quick Guide card and the matching FAQ entry — one
+ * guide, no duplicate content. */
+function AppGuideModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<'start' | 'platforms'>('start');
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(26,34,56,0.45)', zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: 480,
+          background: COLORS.paper,
+          borderRadius: '16px 16px 0 0',
+          padding: 20,
+          maxHeight: '88vh',
+          overflowY: 'auto',
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: COLORS.inkMuted, cursor: 'pointer', lineHeight: 1, padding: 4 }}>
+            ×
+          </button>
+        </div>
+
+        {step === 'start' ? (
+          <div style={{ textAlign: 'center', padding: '8px 8px 4px' }}>
+            <div style={{ marginBottom: 18 }}>
+              <PhoneHomeIcon />
+            </div>
+            <h3 style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 800, color: COLORS.ink, margin: '0 0 10px' }}>Use PONNA Like an App</h3>
+            <p style={{ fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.6, margin: '0 0 4px' }}>First, open ponna.in on your phone.</p>
+            <p style={{ fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.6, margin: '0 0 22px' }}>
+              Follow a few simple steps to add PONNA to your Home Screen for quick access.
+            </p>
+            <button
+              onClick={() => setStep('platforms')}
+              style={{ width: '100%', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}
+            >
+              Get Started →
+            </button>
+          </div>
+        ) : (
+          <div>
+            <button
+              onClick={() => setStep('start')}
+              style={{ background: 'none', border: 'none', padding: 0, marginBottom: 14, fontSize: 12, fontWeight: 700, color: COLORS.gold, cursor: 'pointer' }}
+            >
+              ← Back
+            </button>
+
+            <PlatformGuideSection
+              title="Android / Chrome — Install PONNA"
+              mockup={<ChromeMockup />}
+              steps={[
+                'Open Chrome.',
+                'Go to ponna.in.',
+                'Tap the ⋮ (three-dot menu) at the top-right.',
+                'Select "Install and shortcut".',
+                'Complete the installation.',
+                'PONNA will appear on the Home Screen.',
+              ]}
+            />
+
+            <PlatformGuideSection
+              title="iPhone / Safari — Add PONNA to Home Screen"
+              mockup={<SafariMockup />}
+              steps={[
+                'Open Safari.',
+                'Go to ponna.in.',
+                'Tap the Share (↑) button.',
+                'Select "Add to Home Screen".',
+                'Tap Add.',
+                'PONNA will appear on the Home Screen.',
+              ]}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PlatformGuideSection({ title, mockup, steps }: { title: string; mockup: ReactNode; steps: string[] }) {
+  return (
+    <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+      <h4 style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: 700, color: COLORS.ink, margin: '0 0 12px' }}>{title}</h4>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>{mockup}</div>
+      <ol style={{ margin: 0, padding: '0 0 0 20px', fontSize: 13, color: COLORS.ink, lineHeight: 1.7 }}>
+        {steps.map((s, i) => (
+          <li key={i}>{s}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** Simple abstract phone-with-Home-Screen glyph for the Start Screen —
+ * not tied to a platform, just sets the visual tone before the two
+ * platform-specific mockups below. */
+function PhoneHomeIcon() {
+  return (
+    <svg width="72" height="96" viewBox="0 0 72 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="64" height="88" rx="10" stroke={COLORS.gold} strokeWidth="3" fill={COLORS.paperAlt} />
+      <circle cx="36" cy="80" r="4" stroke={COLORS.gold} strokeWidth="2" fill="none" />
+      <rect x="16" y="18" width="16" height="16" rx="4" fill={COLORS.goldLight} stroke={COLORS.gold} strokeWidth="1.5" />
+      <rect x="40" y="18" width="16" height="16" rx="4" fill={COLORS.goldLight} stroke={COLORS.gold} strokeWidth="1.5" />
+      <rect x="16" y="42" width="16" height="16" rx="4" fill={COLORS.goldLight} stroke={COLORS.gold} strokeWidth="1.5" />
+      <rect x="40" y="42" width="16" height="16" rx="4" fill={COLORS.gold} />
+    </svg>
+  );
+}
+
+/** Chrome/Android mockup — highlights the ⋮ three-dot menu at the
+ * top-right of the address bar, which is where "Install and shortcut"
+ * lives. */
+function ChromeMockup() {
+  return (
+    <svg width="150" height="220" viewBox="0 0 150 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="144" height="214" rx="16" fill={COLORS.paper} stroke={COLORS.line} strokeWidth="2" />
+      <rect x="14" y="18" width="122" height="28" rx="8" fill={COLORS.paperAlt} stroke={COLORS.line} strokeWidth="1.5" />
+      <text x="24" y="36" fontSize="10" fill={COLORS.inkMuted} fontFamily="sans-serif">ponna.in</text>
+      <text x="118" y="37" fontSize="14" fill={COLORS.ink} fontFamily="sans-serif">⋮</text>
+      <circle cx="122" cy="32" r="14" fill="none" stroke={COLORS.gold} strokeWidth="2" strokeDasharray="3 3" />
+      <path d="M108 60 C 96 56, 90 48, 96 40" stroke={COLORS.gold} strokeWidth="2" fill="none" markerEnd="url(#arrowGold)" />
+      <text x="46" y="72" fontSize="11" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">Tap here</text>
+      <rect x="14" y="90" width="122" height="10" rx="3" fill={COLORS.paperAlt} />
+      <rect x="14" y="106" width="90" height="10" rx="3" fill={COLORS.paperAlt} />
+      <rect x="14" y="122" width="110" height="10" rx="3" fill={COLORS.paperAlt} />
+      <defs>
+        <marker id="arrowGold" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill={COLORS.gold} />
+        </marker>
+      </defs>
+    </svg>
+  );
+}
+
+/** Safari/iPhone mockup — highlights the Share (box with an up arrow)
+ * icon in the bottom toolbar, which is where "Add to Home Screen" lives. */
+function SafariMockup() {
+  return (
+    <svg width="150" height="220" viewBox="0 0 150 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="144" height="214" rx="16" fill={COLORS.paper} stroke={COLORS.line} strokeWidth="2" />
+      <rect x="14" y="18" width="122" height="20" rx="6" fill={COLORS.paperAlt} stroke={COLORS.line} strokeWidth="1.5" />
+      <text x="52" y="32" fontSize="10" fill={COLORS.inkMuted} fontFamily="sans-serif">ponna.in</text>
+      <rect x="14" y="60" width="122" height="10" rx="3" fill={COLORS.paperAlt} />
+      <rect x="14" y="76" width="90" height="10" rx="3" fill={COLORS.paperAlt} />
+      <rect x="14" y="92" width="110" height="10" rx="3" fill={COLORS.paperAlt} />
+      <rect x="14" y="182" width="122" height="26" rx="8" fill={COLORS.paperAlt} stroke={COLORS.line} strokeWidth="1.5" />
+      <path d="M74 189 v10 M69 194 l5 -5 l5 5" stroke={COLORS.ink} strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="68" y="187" width="12" height="10" rx="2" fill="none" stroke={COLORS.ink} strokeWidth="1.3" />
+      <circle cx="74" cy="195" r="16" fill="none" stroke={COLORS.gold} strokeWidth="2" strokeDasharray="3 3" />
+      <path d="M96 172 C 106 168, 112 176, 108 184" stroke={COLORS.gold} strokeWidth="2" fill="none" markerEnd="url(#arrowGold2)" />
+      <text x="98" y="160" fontSize="11" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">Tap here</text>
+      <defs>
+        <marker id="arrowGold2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill={COLORS.gold} />
+        </marker>
+      </defs>
+    </svg>
   );
 }
