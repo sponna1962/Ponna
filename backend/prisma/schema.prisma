@@ -1458,7 +1458,16 @@ model MockExamAttempt {
   status        MockExamAttemptStatus @default(IN_PROGRESS)
   score         Float?                // computed at completion, includes negative marking
   totalMarks    Float?                // questionCount * marksPerQuestion, snapshot at start (config could change later)
+  // Weekly Live Exam cycle (Sept 2026, BINDING) — the Saturday IST-calendar-
+  // date (as a UTC-midnight label, same convention as streak.service.ts's
+  // todayIstAsDate()) identifying which Sat-Sun weekend this attempt
+  // belongs to. One attempt per (student, exam, weekend) — not lifetime-
+  // once anymore. Results for a weekStart are withheld until Monday 00:00
+  // IST of that same cycle (see getResultsReleaseAt in mock-exam.service.ts).
+  weekStart     DateTime
   questions     MockExamQuestion[]
+
+  @@unique([userId, subCategoryId, weekStart])
 }
 
 model MockExamQuestion {

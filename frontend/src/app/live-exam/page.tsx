@@ -20,8 +20,10 @@ type Config = { questionCount: number; durationMinutes: number; marksPerQuestion
 type State =
   | { access: 'FREE_LOCKED' }
   | { access: 'NOT_CONFIGURED' }
+  | { access: 'WINDOW_CLOSED'; nextOpensAt: string }
   | { access: 'READY'; config: Config }
   | { access: 'IN_PROGRESS'; attemptId: string; expiresAt: string; config: Config }
+  | { access: 'AWAITING_RESULTS'; attemptId: string; resultsReleaseAt: string }
   | { access: 'COMPLETED'; attemptId: string; score: number; totalMarks: number; wasExpired: boolean };
 
 type ExamQuestion = {
@@ -168,6 +170,28 @@ export default function LiveExamPage() {
       {state?.access === 'NOT_CONFIGURED' && (
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.liveExamPage.notConfigured}</p>
+        </div>
+      )}
+
+      {/* Sept 2026 (BINDING) — Live Exam only opens Saturday-Sunday IST. */}
+      {state?.access === 'WINDOW_CLOSED' && (
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🗓️ Live Exam திறக்கும் சனி-ஞாயிறு மட்டும்</p>
+          <p style={{ fontSize: 13, color: COLORS.inkMuted }}>
+            அடுத்த வாய்ப்பு: {new Date(state.nextOpensAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+          </p>
+        </div>
+      )}
+
+      {/* Sept 2026 (BINDING) — results withheld from EVERYONE until Monday
+          00:00 IST, regardless of when within the weekend a student
+          finished, so no one gets an early look. */}
+      {state?.access === 'AWAITING_RESULTS' && (
+        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 28, textAlign: 'center', background: COLORS.goldLight }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>✅ Submit ஆகிடுச்சு!</p>
+          <p style={{ fontSize: 13, color: '#5C4009' }}>
+            இந்த வார Live Exam-ல் பங்கேற்ற அனைவருக்கும் ஒரே நேரத்தில், <strong>திங்கள் அன்று</strong> result வெளியாகும்.
+          </p>
         </div>
       )}
 

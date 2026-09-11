@@ -15,6 +15,7 @@ const navItems = [
   { href: '/admin/question-reports', label: 'Question Reports' },
   { href: '/admin/question-audit', label: 'AI Question Audit' },
   { href: '/admin/daily-quiz', label: 'Daily Quiz' },
+  { href: '/admin/live-exam', label: 'Live Exam' },
   { href: '/admin/current-affairs', label: 'Current Affairs' },
   { href: '/admin/exam-taxonomy', label: 'Exam Taxonomy' },
   { href: '/admin/syllabus', label: 'Subject & Topic' },

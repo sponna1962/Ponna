@@ -89,6 +89,21 @@ export function startScheduledJobs() {
     }
   });
 
+  // Live Exam weekend reminder (Sept 2026) — Friday 18:00 IST (12:30
+  // UTC), once a week: "the weekly Live Exam window opens tomorrow,
+  // don't miss it" — the exam is only open Sat-Sun IST with no catch-up
+  // for a missed weekend, so this reminder matters more than a daily one.
+  cron.schedule('30 12 * * 5', async () => {
+    try {
+      const result = await pushNotificationService.notifyLiveExamWeekendReminder();
+      if (result.sent > 0) {
+        console.log(`[cron] Live Exam weekend reminder: sent ${result.sent}`);
+      }
+    } catch (err) {
+      console.error('[cron] Live Exam weekend reminder failed:', err);
+    }
+  });
+
   // WhatsApp Daily Reminder sweep (finalized requirement) — once daily.
   // No-ops entirely (returns zeros) if whatsappReminderEnabled is false
   // or WHATSAPP_ACCESS_TOKEN/WHATSAPP_PHONE_NUMBER_ID aren't set yet, so
@@ -109,5 +124,5 @@ export function startScheduledJobs() {
     }
   });
 
-  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute), WhatsApp reminder sweep (daily), push practice reminder sweep (daily)');
+  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute), WhatsApp reminder sweep (daily), push practice reminder sweep (daily), Live Exam weekend reminder (weekly, Friday)');
 }

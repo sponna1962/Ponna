@@ -102,6 +102,19 @@ export class PushNotificationService {
     });
   }
 
+  /** Live Exam weekly weekend reminder (Sept 2026) — every subscribed
+   * device, once a week (Friday evening, per scheduled-jobs.ts). Live
+   * Exam only opens Saturday-Sunday IST with no catch-up for a missed
+   * weekend, so this reminder is broadcast rather than gated on any
+   * per-student condition — every subscriber benefits from the heads-up. */
+  async notifyLiveExamWeekendReminder(): Promise<{ sent: number }> {
+    return this.broadcastToAll({
+      title: 'இந்த வார Live Exam நாளை தொடங்குது! 📝',
+      body: 'சனி/ஞாயிறு மட்டும் — miss பண்ணிடாதீங்க, அடுத்த வாரம் வரை காத்திருக்க வேண்டியிருக்கும்.',
+      url: '/live-exam',
+    });
+  }
+
   /** Practice/streak reminder — own opt-in list (subscribed students
    * only), own simple "at risk" rule: has a live streak, hasn't
    * practiced yet today. Deliberately a separate, simpler query from the

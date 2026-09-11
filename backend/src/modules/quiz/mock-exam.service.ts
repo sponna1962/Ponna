@@ -6,12 +6,66 @@
 // difficulty filtering by mode -- exactly like the real exam draws from
 // the whole syllabus. Completely separate from normal Practice: no
 // quota, no UserQuestionHistory, no effect on ranking or no-repeat.
+//
+// Sept 2026 (BINDING) — Weekly cycle: the exam only OPENS Saturday
+// 00:00 IST through Sunday 23:59:59 IST each week (student's choice of
+// either day, one attempt per exam per weekend). Results are withheld
+// from EVERYONE until Monday 00:00 IST of that same weekend, regardless
+// of when within the window a student finished — so no student who
+// finishes early sees their score (or can infer anything from it)
+// before anyone else. A missed weekend is simply lost -- no catch-up,
+// matching how a real exam works.
 
 import { CorrectOption, MockExamAttemptStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { scopeAccessService, ScopeRestrictedError } from '../quota/scope-access.service';
 
 export class MockExamError extends Error {}
+
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** IST calendar-date LABEL for `now` — a UTC-midnight Date standing in
+ * for that IST calendar date, same convention as streak.service.ts's
+ * todayIstAsDate(). Day-arithmetic (+/- N days) on this label is exact
+ * and DST-free since India has no DST. */
+function istDateLabel(now: Date): Date {
+  const nowIst = new Date(now.getTime() + IST_OFFSET_MS);
+  return new Date(Date.UTC(nowIst.getUTCFullYear(), nowIst.getUTCMonth(), nowIst.getUTCDate()));
+}
+
+/** The reverse of istDateLabel: the real UTC instant that "00:00 IST on
+ * this labeled date" actually occurs at. */
+function istLabelToRealInstant(label: Date): Date {
+  return new Date(label.getTime() - IST_OFFSET_MS);
+}
+
+/** Returns the Saturday IST-date LABEL identifying the CURRENT weekend
+ * cycle if `now` falls within the Sat 00:00 IST – Sun 23:59:59.999 IST
+ * window, or null if the window is currently closed (a weekday). */
+export function getCurrentExamWeekStart(now: Date = new Date()): Date | null {
+  const todayLabel = istDateLabel(now);
+  const dayOfWeek = new Date(now.getTime() + IST_OFFSET_MS).getUTCDay(); // 0=Sun..6=Sat, on the IST-shifted instant
+  if (dayOfWeek === 6) return todayLabel; // it IS Saturday
+  if (dayOfWeek === 0) return new Date(todayLabel.getTime() - DAY_MS); // Sunday -> the weekend's Saturday was yesterday
+  return null; // weekday — window closed
+}
+
+/** The real UTC instant results for a given weekStart become visible at
+ * — Monday 00:00 IST of that same weekend (weekStart + 2 days). */
+export function getResultsReleaseAt(weekStart: Date): Date {
+  const mondayLabel = new Date(weekStart.getTime() + 2 * DAY_MS);
+  return istLabelToRealInstant(mondayLabel);
+}
+
+/** The Saturday IST-date LABEL of the NEXT upcoming weekend window, for
+ * a "next opens on <date>" hint when the window is currently closed. */
+export function getNextExamWeekStart(now: Date = new Date()): Date {
+  const todayLabel = istDateLabel(now);
+  const dayOfWeek = new Date(now.getTime() + IST_OFFSET_MS).getUTCDay();
+  const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7; // if today IS Saturday, "next" is 7 days away, not 0
+  return new Date(todayLabel.getTime() + daysUntilSaturday * DAY_MS);
+}
 
 export class MockExamService {
   private async hasPaidAccess(userId: string): Promise<boolean> {
@@ -66,17 +120,36 @@ export class MockExamService {
     const config = await prisma.mockExamConfig.findUnique({ where: { subCategoryId } });
     if (!config) return { access: 'NOT_CONFIGURED' as const };
 
-    const existing = await prisma.mockExamAttempt.findFirst({
+    const now = new Date();
+    const currentWeekStart = getCurrentExamWeekStart(now);
+
+    const latest = await prisma.mockExamAttempt.findFirst({
       where: { userId, subCategoryId },
       orderBy: { startedAt: 'desc' },
     });
 
-    if (existing) {
-      await this.expireIfNeeded(existing.id);
-      const fresh = await prisma.mockExamAttempt.findUniqueOrThrow({ where: { id: existing.id } });
+    if (latest) {
+      await this.expireIfNeeded(latest.id);
+      const fresh = await prisma.mockExamAttempt.findUniqueOrThrow({ where: { id: latest.id } });
+
       if (fresh.status === 'IN_PROGRESS') {
         return { access: 'IN_PROGRESS' as const, attemptId: fresh.id, expiresAt: fresh.expiresAt, config };
       }
+
+      // Completed or Expired — withheld until Monday 00:00 IST of ITS OWN weekend cycle.
+      const releaseAt = getResultsReleaseAt(fresh.weekStart);
+      if (now < releaseAt) {
+        return { access: 'AWAITING_RESULTS' as const, attemptId: fresh.id, resultsReleaseAt: releaseAt };
+      }
+
+      // Results are out. If we're now inside a LATER open window than the
+      // one this attempt belongs to, let the student start fresh for the
+      // new weekend instead of showing last cycle's result forever.
+      const isThisWeeksAttempt = currentWeekStart !== null && fresh.weekStart.getTime() === currentWeekStart.getTime();
+      if (currentWeekStart !== null && !isThisWeeksAttempt) {
+        return { access: 'READY' as const, config };
+      }
+
       return {
         access: 'COMPLETED' as const,
         attemptId: fresh.id,
@@ -86,6 +159,9 @@ export class MockExamService {
       };
     }
 
+    if (currentWeekStart === null) {
+      return { access: 'WINDOW_CLOSED' as const, nextOpensAt: istLabelToRealInstant(getNextExamWeekStart(now)) };
+    }
     return { access: 'READY' as const, config };
   }
 
@@ -103,8 +179,15 @@ export class MockExamService {
     const config = await prisma.mockExamConfig.findUnique({ where: { subCategoryId } });
     if (!config) throw new MockExamError('Live Exam is not configured for this exam yet.');
 
-    const existing = await prisma.mockExamAttempt.findFirst({ where: { userId, subCategoryId } });
-    if (existing) throw new MockExamError('You have already attempted this Live Exam.'); // one attempt, like the real exam
+    const weekStart = getCurrentExamWeekStart();
+    if (weekStart === null) {
+      throw new MockExamError('Live Exam is open only on Saturdays and Sundays (IST). Come back this weekend.');
+    }
+
+    const existing = await prisma.mockExamAttempt.findUnique({
+      where: { userId_subCategoryId_weekStart: { userId, subCategoryId, weekStart } },
+    });
+    if (existing) throw new MockExamError('You have already attempted this exam this weekend — one attempt per weekend, like the real exam.');
 
     const questions = await prisma.question.findMany({
       where: { status: 'PUBLISHED', authorityTags: { some: { subCategoryId } } },
@@ -124,6 +207,7 @@ export class MockExamService {
         subCategoryId,
         startedAt,
         expiresAt,
+        weekStart,
         totalMarks: config.questionCount * config.marksPerQuestion,
         questions: {
           create: questions.map((q, i) => ({ questionId: q.id, sequenceNumber: i + 1 })),
@@ -136,7 +220,8 @@ export class MockExamService {
 
   /** Returns question content WITHOUT correctOption/explanation while the
    * attempt is still in progress — a real exam never tells you if you're
-   * right as you go. Only once completed does this reveal everything. */
+   * right as you go. Only once completed AND results have been released
+   * (Monday 00:00 IST) does this reveal everything. */
   async getQuestions(userId: string, attemptId: string) {
     await this.expireIfNeeded(attemptId);
     const attempt = await prisma.mockExamAttempt.findUniqueOrThrow({
@@ -145,11 +230,12 @@ export class MockExamService {
     });
     if (attempt.userId !== userId) throw new MockExamError('Not your attempt.');
 
-    const isCompleted = attempt.status !== 'IN_PROGRESS';
+    const resultsReleased = attempt.status !== 'IN_PROGRESS' && new Date() >= getResultsReleaseAt(attempt.weekStart);
 
     return {
       status: attempt.status,
       expiresAt: attempt.expiresAt,
+      resultsReleaseAt: getResultsReleaseAt(attempt.weekStart),
       questions: attempt.questions.map((mq) => ({
         id: mq.questionId,
         sequenceNumber: mq.sequenceNumber,
@@ -159,9 +245,10 @@ export class MockExamService {
         optionC: mq.question.optionC,
         optionD: mq.question.optionD,
         selectedOption: mq.selectedOption,
-        // Only revealed once the whole attempt is completed — never per-question mid-exam.
-        correctOption: isCompleted ? mq.question.correctOption : null,
-        explanation: isCompleted ? (mq.question.language === 'TA' ? mq.question.explanationTa : mq.question.explanationEn) : null,
+        // Only revealed once the attempt is completed AND Monday 00:00 IST
+        // has passed for its weekend — never mid-exam, never early.
+        correctOption: resultsReleased ? mq.question.correctOption : null,
+        explanation: resultsReleased ? (mq.question.language === 'TA' ? mq.question.explanationTa : mq.question.explanationEn) : null,
       })),
     };
   }
@@ -192,7 +279,10 @@ export class MockExamService {
     if (attempt.status !== 'IN_PROGRESS') throw new MockExamError('This Live Exam has already ended.');
 
     await this.finalizeScore(attemptId, MockExamAttemptStatus.COMPLETED);
-    const final = await prisma.mockExamAttempt.findUniqueOrThrow({ where: { id: attemptId } });
-    return { score: final.score, totalMarks: final.totalMarks };
+    // Deliberately does NOT return score/totalMarks here anymore -- Sept
+    // 2026 (BINDING): results are withheld until Monday 00:00 IST for
+    // EVERY student who attempted this weekend, regardless of when they
+    // personally finished. The student sees "submitted" + the release time.
+    return { submitted: true, resultsReleaseAt: getResultsReleaseAt(attempt.weekStart) };
   }
 }
