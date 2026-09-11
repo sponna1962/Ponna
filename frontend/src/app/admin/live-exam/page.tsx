@@ -46,7 +46,7 @@ export default function LiveExamAdminPage() {
             for (const category of authority.categories ?? []) {
               for (const sub of category.subCategories ?? []) {
                 if (sub.studentVisible === false) continue;
-                flat.push({ id: sub.id, label: `${authority.name} \u2192 ${category.name} \u2192 ${sub.name}` });
+                flat.push({ id: sub.id, label: `${authority.name} → ${category.name} → ${sub.name}` });
               }
             }
           }
@@ -123,9 +123,9 @@ export default function LiveExamAdminPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Live Exam \u2014 Exam Pattern Config</h1>
+      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Live Exam — Exam Pattern Config</h1>
       <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16, maxWidth: 640, lineHeight: 1.6 }}>
-        Live Exam draws questions from the existing Question bank for the selected exam \u2014 no separate upload needed here. Set the
+        Live Exam draws questions from the existing Question bank for the selected exam — no separate upload needed here. Set the
         REAL exam pattern (question count, duration, marking) verified against the official notification. Sept 2026: opens only
         Saturday-Sunday IST, one attempt per weekend, results released Monday 00:00 IST for everyone who attempted that weekend.
       </p>
@@ -135,7 +135,7 @@ export default function LiveExamAdminPage() {
         onChange={(e) => setSubCategoryId(e.target.value)}
         style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, marginBottom: 20, minWidth: 320 }}
       >
-        <option value="">Select an exam\u2026</option>
+        <option value="">Select an exam…</option>
         {options.map((o) => (
           <option key={o.id} value={o.id}>
             {o.label}
@@ -146,7 +146,7 @@ export default function LiveExamAdminPage() {
       {subCategoryId && loaded && (
         <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, maxWidth: 420 }}>
           <div style={{ marginBottom: 6, fontSize: 12, fontWeight: 700, color: config ? '#166534' : '#B4544A' }}>
-            {config ? '\u25CF Live Exam is ON for this exam' : '\u25CB Not configured yet \u2014 Live Exam is OFF'}
+            {config ? '● Live Exam is ON for this exam' : '○ Not configured yet — Live Exam is OFF'}
           </div>
 
           <label style={{ display: 'block', fontSize: 12, color: '#475569', marginTop: 12 }}>Question count</label>
@@ -168,7 +168,7 @@ export default function LiveExamAdminPage() {
 
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <button onClick={save} disabled={saving} style={{ flex: 1, padding: 10, borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              {saving ? 'Saving\u2026' : config ? 'Update' : 'Turn ON Live Exam'}
+              {saving ? 'Saving…' : config ? 'Update' : 'Turn ON Live Exam'}
             </button>
             {config && (
               <button onClick={removeConfig} style={{ padding: '10px 16px', borderRadius: 6, background: '#fff', color: '#b91c1c', border: '1px solid #b91c1c', fontSize: 13, cursor: 'pointer' }}>
