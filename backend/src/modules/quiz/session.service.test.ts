@@ -197,6 +197,9 @@ describe('SessionService', () => {
         correctOption: isCorrect ? 'A' : 'B',
         difficulty: 'MEDIUM',
       } as any);
+      // Idempotency guard's own lookup — "not yet answered" by default;
+      // individual tests override this for the already-answered case.
+      prismaMock.quizSessionQuestion.findUniqueOrThrow.mockResolvedValue({ answered: false, isCorrect: null } as any);
     }
 
     it('rejects answering into a session that is not IN_PROGRESS', async () => {
@@ -251,16 +254,72 @@ describe('SessionService', () => {
       });
     });
 
-    describe('Duplicate submission / idempotency — BUG FOUND, documented as current behaviour, NOT fixed here', () => {
-      it('DOCUMENTS A REAL BUG: submitAnswer has no duplicate-submission guard — calling it twice for the SAME question double-invokes updateSummaryAfterAnswer, which itself unconditionally does questionsAnswered += 1 with no existing-answer check (see ranking.service.ts). Two submits for one question therefore double-counts that question in UserPerformanceSummary. Reported separately per review instructions -- NOT fixed in this test file.', async () => {
+    describe('Duplicate submission / idempotency — FIX VERIFIED (Sept 2026)', () => {
+      it('first submission for a question processes normally and records the answer', async () => {
         wireHappyPathAnswer({ isCorrect: true });
+        // findUniqueOrThrow returns "not yet answered" -> the guard lets it through.
+        prismaMock.quizSessionQuestion.findUniqueOrThrow.mockResolvedValueOnce({ answered: false, isCorrect: null } as any);
 
-        await service.submitAnswer(SESSION_ID, QUESTION_ID, 'A');
-        await service.submitAnswer(SESSION_ID, QUESTION_ID, 'A'); // duplicate/retried submission, same question
+        const result = await service.submitAnswer(SESSION_ID, QUESTION_ID, 'A');
 
-        // Current (buggy) behaviour: called twice, not once/skipped-on-repeat.
-        expect(rankingInstance.updateSummaryAfterAnswer).toHaveBeenCalledTimes(2);
-        expect(recordStreakActivity).toHaveBeenCalledTimes(2); // harmless here (streak has its own same-day guard) but still runs twice
+        expect(result).toEqual({ isCorrect: true, correctOption: 'A' });
+        expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+        expect(rankingInstance.updateSummaryAfterAnswer).toHaveBeenCalledTimes(1);
+      });
+
+      it('an IDENTICAL duplicate submission (e.g. accidental double-tap) is detected and skipped BEFORE any write — same result returned, zero re-processing', async () => {
+        wireHappyPathAnswer({ isCorrect: true });
+        // The guard's own lookup now reports "already answered, correctly".
+        prismaMock.quizSessionQuestion.findUniqueOrThrow.mockResolvedValue({ answered: true, isCorrect: true } as any);
+
+        const result = await service.submitAnswer(SESSION_ID, QUESTION_ID, 'A');
+
+        expect(result).toEqual({ isCorrect: true, correctOption: 'A' });
+        // Nothing below the guard ran at all.
+        expect(prismaMock.$transaction).not.toHaveBeenCalled();
+        expect(prismaMock.userQuestionHistory.upsert).not.toHaveBeenCalled();
+        expect(rankingInstance.updateSummaryAfterAnswer).not.toHaveBeenCalled();
+        expect(mistakeReviewInstance.recordMistake).not.toHaveBeenCalled();
+        expect(recordStreakActivity).not.toHaveBeenCalled();
+      });
+
+      it('a duplicate submission after a NETWORK RETRY (first request actually succeeded server-side, client just never saw the response and retried) is handled exactly as the double-tap case — idempotent, no double-counting', async () => {
+        wireHappyPathAnswer({ isCorrect: false }); // correctOption is 'B' in this setup
+        // First request: not yet answered -> processes normally.
+        prismaMock.quizSessionQuestion.findUniqueOrThrow.mockResolvedValueOnce({ answered: false, isCorrect: null } as any);
+        // The "network retry": by the time this second identical request
+        // arrives, the first one already completed and recorded the answer.
+        prismaMock.quizSessionQuestion.findUniqueOrThrow.mockResolvedValueOnce({ answered: true, isCorrect: false } as any);
+
+        const first = await service.submitAnswer(SESSION_ID, QUESTION_ID, 'A');
+        const retried = await service.submitAnswer(SESSION_ID, QUESTION_ID, 'A');
+
+        expect(first).toEqual({ isCorrect: false, correctOption: 'B' });
+        expect(retried).toEqual({ isCorrect: false, correctOption: 'B' }); // same result, not reprocessed
+
+        // Confirm nothing was double-counted (Performance/ranking/quota/mistakes):
+        expect(rankingInstance.updateSummaryAfterAnswer).toHaveBeenCalledTimes(1); // NOT 2 -> accuracy not double-updated
+        expect(prismaMock.userQuestionHistory.upsert).toHaveBeenCalledTimes(1); // NOT 2 -> questionsAnswered not double-counted
+        expect(mistakeReviewInstance.recordMistake).toHaveBeenCalledTimes(1); // NOT 2 -> no duplicate mistake record
+        expect(recordStreakActivity).toHaveBeenCalledTimes(1); // NOT 2
+        // Quota is consumed once per SESSION at startSession() time, never
+        // per-answer -- submitAnswer never touches quota at all, so there is
+        // nothing here to double-consume by construction (not just by this fix).
+      });
+
+      it('a duplicate submission with a DIFFERENT selectedOption than the original is still idempotent — the ORIGINAL recorded answer wins, never overwritten by a later duplicate', async () => {
+        wireHappyPathAnswer({ isCorrect: true }); // correctOption is 'A'
+        // Already answered with 'A' (correct) on the first, real submission.
+        prismaMock.quizSessionQuestion.findUniqueOrThrow.mockResolvedValue({ answered: true, isCorrect: true } as any);
+
+        // A duplicate request arrives claiming a different option ('B') --
+        // e.g. a retried request racing with a UI state change. The guard
+        // fires purely on "already answered", before selectedOption is even
+        // compared against anything.
+        const result = await service.submitAnswer(SESSION_ID, QUESTION_ID, 'B');
+
+        expect(result).toEqual({ isCorrect: true, correctOption: 'A' }); // the ORIGINAL result, not re-evaluated against 'B'
+        expect(prismaMock.$transaction).not.toHaveBeenCalled();
       });
     });
   });

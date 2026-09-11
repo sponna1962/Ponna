@@ -142,6 +142,21 @@ export class SessionService {
       throw new Error('Cannot answer into a session that is not in progress');
     }
 
+    // Idempotency guard (Sept 2026, BINDING) — a question already
+    // successfully answered in THIS session must never be re-processed.
+    // Covers double-tap, a network retry, or any duplicate submitAnswer
+    // request for the same (session, question): all return the SAME
+    // already-recorded result, with none of the writes below (quiz
+    // history, ranking/performance, Review Mistakes, streak, milestones)
+    // running a second time. Checked before any write in this method.
+    const existingAnswer = await prisma.quizSessionQuestion.findUniqueOrThrow({
+      where: { sessionId_questionId: { sessionId, questionId } },
+    });
+    if (existingAnswer.answered) {
+      const answeredQuestion = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
+      return { isCorrect: existingAnswer.isCorrect ?? false, correctOption: answeredQuestion.correctOption };
+    }
+
     const question = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
     const isCorrect = question.correctOption === selectedOption;
 
