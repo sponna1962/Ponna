@@ -22,6 +22,9 @@ const clientModule = require('@prisma/client');
 
 const ENUM_PATCHES: Record<string, Record<string, string>> = {
   SubscriptionStatus: { ACTIVE: 'ACTIVE', EXPIRED: 'EXPIRED', CANCELLED: 'CANCELLED' },
+  Difficulty: { MEDIUM: 'MEDIUM', HARD: 'HARD' },
+  QuestionCategory: { STANDARD: 'STANDARD', CURRENT_AFFAIRS: 'CURRENT_AFFAIRS' },
+  SessionStatus: { IN_PROGRESS: 'IN_PROGRESS', COMPLETED: 'COMPLETED', ABANDONED: 'ABANDONED' },
 };
 
 for (const [name, values] of Object.entries(ENUM_PATCHES)) {
