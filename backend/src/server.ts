@@ -12,6 +12,7 @@ import { PracticePreferenceService, InvalidSelectionError } from './modules/prac
 import { RankingService } from './modules/ranking/ranking.service';
 import { activitySummaryService } from './modules/students/activity-summary.service';
 import { weakAreaService } from './modules/practice-preference/weak-area.service';
+import { runIdempotencyDiagnostic } from './modules/diagnostics/idempotency-diagnostic.service';
 import { examCountdownService } from './modules/practice-preference/exam-countdown.service';
 import { offlinePracticeService } from './modules/practice-preference/offline-practice.service';
 import { pushNotificationService } from './modules/notifications/push-notification.service';
@@ -985,6 +986,21 @@ app.get('/students/me/exam-countdown', requireStudentAuth, async (req: StudentAu
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load exam countdown' });
+  }
+});
+
+// TEMPORARY (Sept 2026) — real-DB validation of the submitAnswer
+// idempotency fix (commit 5661d53). Admin/SUPER_ADMIN only. Refuses to
+// run against any account that isn't isTestAccount=true — see
+// idempotency-diagnostic.service.ts. Safe to delete this route (and
+// that file) once the validation is confirmed.
+app.post('/admin/diagnostics/idempotency-test', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const result = await runIdempotencyDiagnostic({ testUserId: req.body.testUserId, testPhone: req.body.testPhone });
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Diagnostic failed' });
   }
 });
 
