@@ -237,6 +237,17 @@ export default function SyllabusImportPage() {
           >
             {applying ? 'Saving…' : !subCategoryId ? 'Select an exam above first' : 'Approve & Save'}
           </button>
+
+          {/* Sept 2026 — duplicated here (not just at the top of the
+              page) so feedback is visible without scrolling back up —
+              this form can be very long (many subjects/topics), and the
+              button is at the bottom. */}
+          {error && <p style={{ color: '#b91c1c', fontSize: 13, marginTop: 12 }}>{error}</p>}
+          {savedResult && (
+            <div style={{ padding: 14, borderRadius: 8, background: '#DCFCE7', color: '#166534', fontSize: 13, marginTop: 12 }}>
+              ✅ Saved: {savedResult.subjectsCreated} subject(s), {savedResult.topicsCreated} topic(s).
+            </div>
+          )}
         </div>
       )}
     </div>
