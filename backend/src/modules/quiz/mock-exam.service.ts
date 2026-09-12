@@ -19,8 +19,11 @@
 import { CorrectOption, MockExamAttemptStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { scopeAccessService, ScopeRestrictedError } from '../quota/scope-access.service';
+import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
 
 export class MockExamError extends Error {}
+
+const preferenceService = new PracticePreferenceService();
 
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -189,9 +192,22 @@ export class MockExamService {
     });
     if (existing) throw new MockExamError('You have already attempted this exam this weekend — one attempt per weekend, like the real exam.');
 
+    // Sept 2026 (BUG FIX) — Live Exam previously had NO language filter
+    // at all, mixing Tamil and English questions together regardless of
+    // the student's own preference. Uses the SAME saved Practice
+    // Preference language every other part of the app already respects
+    // — no separate language step needed here, matching how Live Exam
+    // otherwise reuses the student's existing setup (Sub-Category access,
+    // paid plan) rather than asking again.
+    const preference = await preferenceService.get(userId);
+    if (!preference) {
+      throw new MockExamError('Please complete Practice Setup first — Live Exam uses the same language preference.');
+    }
+
     const questions = await prisma.question.findMany({
       where: {
         status: 'PUBLISHED',
+        language: preference.language,
         // Sept 2026 (BUG FIX) — was authorityTags-only, missing the
         // DIRECT subCategoryId a question is normally tagged with (the
         // primary tag every Bulk Upload/Question edit sets). authorityTags

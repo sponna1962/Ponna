@@ -46,6 +46,7 @@ export default function LiveExamPage() {
   const [state, setState] = useState<State | null>(null);
   const [questions, setQuestions] = useState<ExamQuestion[] | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [starting, setStarting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -269,26 +270,44 @@ export default function LiveExamPage() {
             )}
           </div>
 
-          {/* Question number grid for quick navigation */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 20 }}>
-            {questions.map((q, i) => (
-              <button
-                key={q.id}
-                onClick={() => setCurrentIndex(i)}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 6,
-                  border: `1px solid ${i === currentIndex ? COLORS.ink : COLORS.line}`,
-                  background: q.selectedOption ? COLORS.goldLight : COLORS.paper,
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
+          {/* Sept 2026 — collapsible Question Navigator (student
+              request): closed by default so the current question stays
+              the focus; a tap expands the full grid. Answered/unanswered
+              is now a clear green vs default, separate from the current-
+              question border highlight. */}
+          <button
+            onClick={() => setNavigatorOpen((v) => !v)}
+            style={{ marginTop: 20, width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.line}`, background: COLORS.paperAlt, fontSize: 13, fontWeight: 600, color: COLORS.ink, cursor: 'pointer' }}
+          >
+            {navigatorOpen ? '▾' : '▸'} Question Navigator ({questions.filter((q) => q.selectedOption).length}/{questions.length} answered)
+          </button>
+
+          {navigatorOpen && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+              {questions.map((q, i) => (
+                <button
+                  key={q.id}
+                  onClick={() => {
+                    setCurrentIndex(i);
+                    setNavigatorOpen(false);
+                  }}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 6,
+                    border: `2px solid ${i === currentIndex ? COLORS.ink : q.selectedOption ? '#166534' : COLORS.line}`,
+                    background: q.selectedOption ? '#DCFCE7' : COLORS.paper,
+                    color: q.selectedOption ? '#166534' : COLORS.ink,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
