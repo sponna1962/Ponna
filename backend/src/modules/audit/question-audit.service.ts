@@ -37,6 +37,8 @@ interface RawFlag {
   notes: string;
   duplicateOfIndex?: number; // index into the candidates list passed in the prompt
   resolvedDuplicateId?: string;
+  crossExamIndex?: number; // index into the cross-exam candidates list, for CROSS_EXAM_APPLICABLE only
+  resolvedCrossExamSubCategoryId?: string;
 }
 
 interface AuditCallResult {
@@ -104,6 +106,7 @@ export class QuestionAuditService {
       subCategory?: { name: string } | null;
     },
     candidates: { index: number; questionText: string }[],
+    crossExamCandidates: { index: number; name: string; topics: string[] }[] = [],
   ): string {
     const examContext = question.authority
       ? `Exam mapping: ${question.authority.name}${question.examCategory ? ' — ' + question.examCategory.name : ''}${question.subCategory ? ' — ' + question.subCategory.name : ''}`
@@ -112,6 +115,17 @@ export class QuestionAuditService {
     const candidateBlock =
       candidates.length > 0
         ? `\n\nPossible near-duplicate candidates (same exam scope, textually similar) — check if the question is a near-duplicate of any of these:\n${candidates.map((c) => `[${c.index}] ${c.questionText}`).join('\n')}`
+        : '';
+
+    // Sept 2026 — Phase 1, admin-approved, low-risk scope: only ever
+    // compares against OTHER exams sharing the SAME admin-set
+    // standardGroup as this question's own exam (e.g. both "SSLC") —
+    // comparing across different standards risks a difficulty mismatch
+    // even when the topic matches, so that's deliberately never offered
+    // as a candidate here at all (filtered before this prompt is built).
+    const crossExamBlock =
+      crossExamCandidates.length > 0
+        ? `\n\nOther exams at the SAME qualification standard as this question's own exam, with their syllabus topics — check if this question's content would ALSO genuinely fit any of these (same subject matter AND same difficulty level, not just a loosely related topic):\n${crossExamCandidates.map((c) => `[${c.index}] ${c.name} — topics: ${c.topics.join(', ') || '(no topics listed)'}`).join('\n')}`
         : '';
 
     return `You are auditing ONE competitive-exam practice question for quality issues. You are a careful reviewer, NOT an editor — you only report problems, you never rewrite or correct anything.
@@ -127,7 +141,7 @@ C. ${question.optionC}
 D. ${question.optionD}
 Marked correct answer: ${question.correctOption}
 Explanation (Tamil): ${question.explanationTa ?? '(none provided)'}
-Explanation (English): ${question.explanationEn ?? '(none provided)'}${candidateBlock}
+Explanation (English): ${question.explanationEn ?? '(none provided)'}${candidateBlock}${crossExamBlock}
 
 Check for ALL of the following, independently — a question can have zero, one, or several genuine issues:
 - WRONG_ANSWER: the marked correct option is actually wrong
@@ -136,9 +150,10 @@ Check for ALL of the following, independently — a question can have zero, one,
 - WRONG_EXPLANATION: the explanation is incorrect, contradicts the marked answer, or is missing when it shouldn't be
 - LANGUAGE_ISSUE: a genuine Tamil/English grammar, spelling, or translation error (not just an awkward-but-correct phrasing)
 - LIKELY_DUPLICATE: only if candidates were given above and this question is substantially the same as one of them — reference it by its [index]
-- WRONG_MAPPING: the exam/category/sub-category mapping above looks wrong for this question's actual content
+- WRONG_MAPPING: the exam/category/sub-category mapping above looks wrong for this question's actual content (this is a claim the CURRENT tag is a mistake — different from CROSS_EXAM_APPLICABLE below)
 - WRONG_DIFFICULTY: the difficulty level set is clearly miscalibrated for the stated exam
 - FACTUAL_CONCERN: a factual claim in the question, options, or explanation may be incorrect. If you cannot reliably verify this either way from your own knowledge, still report it — use verdict "CANNOT_VERIFY" rather than staying silent. Do NOT skip this category just because you found nothing else wrong.
+- CROSS_EXAM_APPLICABLE: only if cross-exam candidates were given above and this question's content genuinely fits one of them (same topic AND same standard/level) — this is ADDITIVE, never a claim the existing tag is wrong. Reference the exam by its [index]. Be conservative — only flag this when you're genuinely confident the fit is good, not just topically adjacent.
 
 Rules:
 - Report EACH issue you find as its OWN separate entry — never combine multiple issues into one entry.
@@ -147,7 +162,7 @@ Rules:
 - verdict is "LIKELY_ISSUE" for a problem you believe is real, or "CANNOT_VERIFY" ONLY for FACTUAL_CONCERN cases you cannot confidently resolve.
 
 Respond with ONLY a JSON object, no other text, no markdown fences:
-{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>}]}
+{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN, CROSS_EXAM_APPLICABLE>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>, "crossExamIndex": <only for CROSS_EXAM_APPLICABLE, the [index] number from the cross-exam candidates list above>}]}
 If there are no concerns at all, respond with {"flags": []}.`;
   }
 
@@ -170,7 +185,31 @@ If there are no concerns at all, respond with {"flags": []}.`;
     });
     const candidates = candidateRows.map((c, i) => ({ index: i, questionText: c.questionText, id: c.id }));
 
-    const prompt = this.buildPrompt(question, candidates);
+    // Sept 2026 — Cross-Exam Question Tagging (Phase 1, admin-approved,
+    // low-risk scope). Only ever compares within the SAME admin-set
+    // standardGroup — a null standardGroup on this question's own
+    // Sub-Category means it hasn't been classified yet, so no cross-exam
+    // comparison is offered at all (safer to skip than guess).
+    let crossExamCandidates: { index: number; name: string; topics: string[]; subCategoryId: string }[] = [];
+    if (question.subCategory?.standardGroup) {
+      const otherSubCategories = await prisma.examSubCategory.findMany({
+        where: {
+          standardGroup: question.subCategory.standardGroup,
+          id: { not: question.subCategory.id },
+          studentVisible: true,
+        },
+        include: { syllabusSubjects: { include: { topics: { select: { name: true }, take: 15 } } } },
+        take: 10, // keep the prompt bounded even if a standardGroup ends up with many Sub-Categories
+      });
+      crossExamCandidates = otherSubCategories.map((sc, i) => ({
+        index: i,
+        name: sc.name,
+        topics: sc.syllabusSubjects.flatMap((s) => s.topics.map((t) => t.name)).slice(0, 20),
+        subCategoryId: sc.id,
+      }));
+    }
+
+    const prompt = this.buildPrompt(question, candidates, crossExamCandidates);
     const { response, model } = await this.fetchWithFallback(prompt);
 
     if (!response.ok) {
@@ -193,12 +232,17 @@ If there are no concerns at all, respond with {"flags": []}.`;
       throw new Error(`Could not parse AI audit response${hint}: ${text.slice(0, 200)}`);
     }
 
-    // Resolve duplicateOfIndex back to real Question ids before returning —
-    // keeps the candidate-index indirection entirely inside this function.
+    // Resolve duplicateOfIndex / crossExamIndex back to real ids before
+    // returning — keeps the candidate-index indirection entirely inside
+    // this function.
     const flags = (parsed.flags ?? []).map((f) => {
       if (f.issueType === 'LIKELY_DUPLICATE' && typeof f.duplicateOfIndex === 'number') {
         const match = candidates.find((c) => c.index === f.duplicateOfIndex);
         return { ...f, duplicateOfIndex: undefined, resolvedDuplicateId: match?.id };
+      }
+      if (f.issueType === 'CROSS_EXAM_APPLICABLE' && typeof f.crossExamIndex === 'number') {
+        const match = crossExamCandidates.find((c) => c.index === f.crossExamIndex);
+        return { ...f, crossExamIndex: undefined, resolvedCrossExamSubCategoryId: match?.subCategoryId };
       }
       return f;
     });
@@ -289,6 +333,7 @@ If there are no concerns at all, respond with {"flags": []}.`;
                   confidence: Math.max(0, Math.min(100, Math.round(f.confidence))),
                   aiNotes: f.notes,
                   duplicateOfQuestionIds: f.resolvedDuplicateId ? [f.resolvedDuplicateId] : [],
+                  suggestedAdditionalSubCategoryId: f.resolvedCrossExamSubCategoryId ?? null,
                 },
               }),
             ),

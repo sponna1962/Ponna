@@ -2056,6 +2056,19 @@ app.patch('/admin/exam-taxonomy/sub-categories/:id/exam-date', requireStaffAuth,
   }
 });
 
+// PATCH /admin/exam-taxonomy/sub-categories/:id/standard-group  { standardGroup: string | null }
+// Sept 2026 — Cross-Exam Question Tagging (Phase 1). Free-text label
+// ("SSLC", "Degree") — AI Question Audit only compares Sub-Categories
+// sharing the same non-null value.
+app.patch('/admin/exam-taxonomy/sub-categories/:id/standard-group', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    res.json(await examTaxonomyService.setSubCategoryStandardGroup(req.params.id, req.body.standardGroup || null));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update standard group' });
+  }
+});
+
 // ── Syllabus PDF Import (Sept 2026) ────────────────────────────────────
 
 // POST /admin/syllabus-import/extract  { pdfBase64: "data:application/pdf;base64,..." }

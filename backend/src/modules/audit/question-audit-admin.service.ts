@@ -36,6 +36,7 @@ export class QuestionAuditAdminService {
         ...(filters.status ? { status: filters.status } : {}),
       },
       include: {
+        suggestedAdditionalSubCategory: { select: { name: true } },
         question: {
           select: {
             id: true,
@@ -63,11 +64,40 @@ export class QuestionAuditAdminService {
     return flags;
   }
 
+  /** Confirm/Dismiss a flag. For CROSS_EXAM_APPLICABLE specifically,
+   * CONFIRMED additionally creates a QuestionTaxonomyTag row for the
+   * suggested Sub-Category — the ONE exception to this file's "never
+   * edits the Question" rule, and deliberately narrow: it only ever ADDS
+   * a tag (a separate join-table row), never touches the question's
+   * existing tag(s) or any Question field itself. Skips creating a
+   * duplicate if that tag somehow already exists (e.g. a re-review). */
   async reviewFlag(flagId: string, status: 'CONFIRMED' | 'DISMISSED', staffId: string, note?: string) {
-    return prisma.questionAuditFlag.update({
+    const updated = await prisma.questionAuditFlag.update({
       where: { id: flagId },
       data: { status: status as AuditFlagStatus, reviewedByStaffId: staffId, reviewedAt: new Date(), reviewNote: note ?? null },
     });
+
+    if (status === 'CONFIRMED' && updated.issueType === 'CROSS_EXAM_APPLICABLE' && updated.suggestedAdditionalSubCategoryId) {
+      const subCategory = await prisma.examSubCategory.findUniqueOrThrow({
+        where: { id: updated.suggestedAdditionalSubCategoryId },
+        include: { category: true },
+      });
+      const alreadyTagged = await prisma.questionTaxonomyTag.findFirst({
+        where: { questionId: updated.questionId, subCategoryId: subCategory.id },
+      });
+      if (!alreadyTagged) {
+        await prisma.questionTaxonomyTag.create({
+          data: {
+            questionId: updated.questionId,
+            authorityId: subCategory.category.authorityId,
+            categoryId: subCategory.categoryId,
+            subCategoryId: subCategory.id,
+          },
+        });
+      }
+    }
+
+    return updated;
   }
 }
 

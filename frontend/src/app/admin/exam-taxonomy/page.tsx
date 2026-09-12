@@ -8,7 +8,7 @@ import { adminFetch } from '../../../lib/admin-fetch';
 // structure is hardcoded beyond the initial seed data, so growth into new
 // exam families never requires a schema change or a deploy.
 
-type SubCategory = { id: string; name: string; examDate: string | null; _count: { questions: number } };
+type SubCategory = { id: string; name: string; examDate: string | null; standardGroup: string | null; _count: { questions: number } };
 type Category = { id: string; name: string; subCategories: SubCategory[]; _count: { questions: number } };
 type Authority = {
   id: string;
@@ -140,6 +140,16 @@ export default function ExamTaxonomyPage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ examDate: value || null }),
+    });
+    load();
+  }
+
+  // Sept 2026 — Cross-Exam Question Tagging (Phase 1).
+  async function setSubCategoryStandardGroup(subCategoryId: string, value: string) {
+    await adminFetch(`/admin/exam-taxonomy/sub-categories/${subCategoryId}/standard-group`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ standardGroup: value || null }),
     });
     load();
   }
@@ -285,6 +295,18 @@ export default function ExamTaxonomyPage() {
                             onBlur={(e) => setSubCategoryExamDate(sub.id, e.target.value)}
                             title="Exam date (drives student countdown)"
                             style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, border: '1px solid #cbd5e1' }}
+                          />
+                          {/* Sept 2026 — Cross-Exam Question Tagging (Phase 1):
+                              a free-text standard label ("SSLC", "Degree").
+                              AI Question Audit only ever compares
+                              Sub-Categories sharing the same value. */}
+                          <input
+                            type="text"
+                            defaultValue={sub.standardGroup ?? ''}
+                            onBlur={(e) => setSubCategoryStandardGroup(sub.id, e.target.value)}
+                            placeholder="Standard (e.g. SSLC)"
+                            title="Qualification standard group — used for cross-exam question tagging suggestions"
+                            style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, border: '1px solid #cbd5e1', width: 110 }}
                           />
                         </li>
                       ))}

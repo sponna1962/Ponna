@@ -120,6 +120,13 @@ export class ExamTaxonomyService {
     return prisma.examSubCategory.update({ where: { id: subCategoryId }, data: { examDate } });
   }
 
+  /** Cross-Exam Question Tagging (Sept 2026, Phase 1) — admin-set
+   * qualification-standard label ("SSLC", "Degree"). AI Question Audit
+   * only ever compares Sub-Categories sharing the same non-null value. */
+  async setSubCategoryStandardGroup(subCategoryId: string, standardGroup: string | null) {
+    return prisma.examSubCategory.update({ where: { id: subCategoryId }, data: { standardGroup } });
+  }
+
   async createSubCategory(categoryId: string, name: string) {
     return prisma.examSubCategory.create({ data: { categoryId, name } });
   }

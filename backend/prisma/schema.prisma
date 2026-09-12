@@ -373,6 +373,12 @@ enum AuditIssueType {
   WRONG_MAPPING
   WRONG_DIFFICULTY
   FACTUAL_CONCERN
+  // Sept 2026 — Phase 1, admin-approved. Distinct from WRONG_MAPPING:
+  // this is ADDITIVE ("this question could ALSO serve another exam's
+  // syllabus, same standard"), never a claim the current tag is wrong.
+  // Confirming this flag ADDS a QuestionTaxonomyTag row; it never
+  // removes or changes the existing one.
+  CROSS_EXAM_APPLICABLE
 }
 
 // LIKELY_ISSUE: the AI believes this is probably a real problem.
@@ -447,6 +453,12 @@ model QuestionAuditFlag {
   aiNotes            String            // AI's reasoning, shown to admin as-is
   // For LIKELY_DUPLICATE only — the other question(s) it looks like.
   duplicateOfQuestionIds String[]      @default([])
+  // Sept 2026 — for CROSS_EXAM_APPLICABLE only: the specific OTHER
+  // Sub-Category the AI suggests this question could also serve.
+  // Confirming the flag creates a QuestionTaxonomyTag row for this
+  // Sub-Category (never touches the question's existing tag(s)).
+  suggestedAdditionalSubCategoryId String?
+  suggestedAdditionalSubCategory   ExamSubCategory? @relation(fields: [suggestedAdditionalSubCategoryId], references: [id])
   status             AuditFlagStatus   @default(OPEN)
   reviewedByStaffId  String?
   reviewedAt         DateTime?
@@ -863,6 +875,7 @@ model ExamSubCategory {
   mockExamConfig MockExamConfig?
   mockExamAttempts MockExamAttempt[]
   planScopes PlanSubCategoryScope[]
+  crossExamAuditSuggestions QuestionAuditFlag[]
   // Student-facing launch visibility (finalized requirement — same
   // display/selection-only gate already used on ExamAuthority/ExamPurpose,
   // extended down to this level) — hides a Sub-Category that isn't an
@@ -871,6 +884,17 @@ model ExamSubCategory {
   // Setup, while the admin panel keeps showing and managing it normally.
   // Never a deletion — data stays intact for whenever it's confirmed.
   studentVisible Boolean @default(true)
+
+  // Sept 2026 — Cross-Exam Question Tagging (Phase 1, admin-approved,
+  // low-risk scope). Admin-set label ("SSLC", "Degree") grouping
+  // Sub-Categories that share the same qualification standard. AI
+  // Question Audit only ever suggests an ADDITIONAL tag between two
+  // Sub-Categories sharing the SAME non-null standardGroup — comparing
+  // across different standards (e.g. SSLC vs Degree) risks a
+  // difficulty/level mismatch even when the topic matches, so that
+  // comparison is deliberately never attempted. Null means "not yet
+  // classified" -- excluded from cross-tagging until an admin sets it.
+  standardGroup String?
 
   // Exam Countdown (Sept 2026, Priority — Personalization) — admin-set,
   // structured date, distinct from VerifiedExamFact's free-text EXAM_DATE

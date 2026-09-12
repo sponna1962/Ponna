@@ -17,7 +17,8 @@ type IssueType =
   | 'LIKELY_DUPLICATE'
   | 'WRONG_MAPPING'
   | 'WRONG_DIFFICULTY'
-  | 'FACTUAL_CONCERN';
+  | 'FACTUAL_CONCERN'
+  | 'CROSS_EXAM_APPLICABLE';
 
 const ISSUE_LABELS: Record<IssueType, string> = {
   WRONG_ANSWER: 'Wrong answer',
@@ -29,6 +30,7 @@ const ISSUE_LABELS: Record<IssueType, string> = {
   WRONG_MAPPING: 'Wrong exam mapping',
   WRONG_DIFFICULTY: 'Wrong difficulty',
   FACTUAL_CONCERN: 'Factual concern',
+  CROSS_EXAM_APPLICABLE: 'Could also fit another exam',
 };
 
 type Run = {
@@ -55,6 +57,7 @@ type Flag = {
   confidence: number;
   aiNotes: string;
   duplicateOfQuestionIds: string[];
+  suggestedAdditionalSubCategory: { name: string } | null;
   status: 'OPEN' | 'CONFIRMED' | 'DISMISSED';
   createdAt: string;
   question: {
@@ -323,6 +326,12 @@ export default function QuestionAuditPage() {
                 <strong>AI notes:</strong> {f.aiNotes}
               </p>
 
+              {f.issueType === 'CROSS_EXAM_APPLICABLE' && f.suggestedAdditionalSubCategory && (
+                <p style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', padding: 10, borderRadius: 6, marginBottom: 10 }}>
+                  <strong>Suggested additional exam:</strong> {f.suggestedAdditionalSubCategory.name} — confirming ADDS this tag, the existing mapping is kept as-is.
+                </p>
+              )}
+
               <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 10 }}>
                 Question status: {f.question.status} · Language: {f.question.language} · Difficulty: {f.question.difficulty ?? 'not set'}
               </p>
@@ -336,7 +345,7 @@ export default function QuestionAuditPage() {
                 </a>
                 {f.status !== 'CONFIRMED' && (
                   <button onClick={() => reviewFlag(f.id, 'CONFIRMED')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #16a34a', color: '#16a34a', background: '#fff', cursor: 'pointer' }}>
-                    Confirm — real issue
+                    {f.issueType === 'CROSS_EXAM_APPLICABLE' ? 'Confirm — add this tag' : 'Confirm — real issue'}
                   </button>
                 )}
                 {f.status !== 'DISMISSED' && (
