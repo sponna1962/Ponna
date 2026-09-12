@@ -746,6 +746,32 @@ app.post('/admin/question-audit/runs', requireStaffAuth, requireRole('SUPER_ADMI
   }
 });
 
+// POST /admin/question-audit/runs/:id/re-audit
+// Sept 2026 — re-runs the EXACT SAME question set as an earlier run,
+// bypassing selectStratifiedSample()'s "exclude already-audited
+// questions" exclusion (7e34652) on purpose: those questions being
+// already-audited is exactly why this exists. For runs from before a
+// prompt change (e.g. structured suggestedCorrectOption capture,
+// a24e44b) that predates their original run, so the admin can get the
+// newer structured output for those same questions without losing
+// coverage progress on the rest of the bank.
+app.post('/admin/question-audit/runs/:id/re-audit', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: AuthedRequest, res) => {
+  try {
+    const questionIds = await questionAuditService.getRunQuestionIds(req.params.id);
+    if (questionIds.length === 0) {
+      res.status(400).json({ error: 'That run has no stored question list to re-audit (older runs from before this feature existed have none).' });
+      return;
+    }
+    const originalRun = await questionAuditAdminService.getRun(req.params.id);
+    const run = await questionAuditService.createRun(`Re-audit: ${originalRun.run.label}`, questionIds, req.staff?.staffId);
+    questionAuditService.processRun(run.id).catch((err) => console.error(`Question audit re-audit run ${run.id} crashed:`, err));
+    res.json(run);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to start re-audit run' });
+  }
+});
+
 app.get('/admin/question-audit/runs', requireStaffAuth, async (_req, res) => {
   try {
     res.json(await questionAuditAdminService.listRuns());

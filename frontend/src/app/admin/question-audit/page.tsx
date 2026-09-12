@@ -83,6 +83,7 @@ type Flag = {
 export default function QuestionAuditPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [runsLoaded, setRunsLoaded] = useState(false);
+  const [reAuditingRunId, setReAuditingRunId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   // Sept 2026 — inline edit, right on this page, instead of navigating
   // to the Questions page and hunting for the same question there.
@@ -113,6 +114,21 @@ export default function QuestionAuditPage() {
       .then((data) => setRuns(Array.isArray(data) ? data : []))
       .catch(() => setRuns([]))
       .finally(() => setRunsLoaded(true));
+  }
+
+  async function reAuditRun(runId: string) {
+    setReAuditingRunId(runId);
+    try {
+      const res = await adminFetch(`/admin/question-audit/runs/${runId}/re-audit`, { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error ?? 'Failed to start re-audit');
+        return;
+      }
+      loadRuns();
+    } finally {
+      setReAuditingRunId(null);
+    }
   }
 
   useEffect(() => {
@@ -273,9 +289,11 @@ export default function QuestionAuditPage() {
       {!runsLoaded && <p style={{ color: '#94a3b8' }}>Loading…</p>}
       {runsLoaded && runs.length === 0 && <p style={{ color: '#94a3b8' }}>No audit runs yet.</p>}
       {runs.map((r) => (
-        <button
+        <div
           key={r.id}
           onClick={() => setSelectedRunId(r.id)}
+          role="button"
+          tabIndex={0}
           style={{
             display: 'block',
             width: '100%',
@@ -311,7 +329,24 @@ export default function QuestionAuditPage() {
             {r.inputTokens.toLocaleString()} in / {r.outputTokens.toLocaleString()} out tokens
           </p>
           {r.errorMessage && <p style={{ fontSize: 12, color: '#b91c1c', margin: '4px 0 0' }}>{r.errorMessage}</p>}
-        </button>
+          {/* Sept 2026 — re-runs the SAME question set with the current
+              (possibly newer) prompt, e.g. to backfill structured
+              suggestedCorrectOption on flags from before that field
+              existed. Bypasses the "exclude already-audited" sampling
+              rule on purpose (that's the whole point here). */}
+          {r.status === 'COMPLETED' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                reAuditRun(r.id);
+              }}
+              disabled={reAuditingRunId === r.id}
+              style={{ marginTop: 8, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #7c3aed', color: '#7c3aed', background: '#fff', cursor: 'pointer' }}
+            >
+              {reAuditingRunId === r.id ? 'Starting…' : 'Re-audit this run (same questions, current prompt)'}
+            </button>
+          )}
+        </div>
       ))}
 
       {/* Selected run — issue-type breakdown + flags */}

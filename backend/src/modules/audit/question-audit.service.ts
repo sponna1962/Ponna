@@ -322,6 +322,21 @@ If there are no concerns at all, respond with {"flags": []}.`;
     });
   }
 
+  /** Sept 2026 — re-audits the EXACT same questions a past run covered,
+   * with whatever the CURRENT prompt/schema captures (e.g. the
+   * structured suggestedCorrectOption added after the original pilot
+   * run predated it). Deliberately bypasses selectStratifiedSample()'s
+   * own "exclude already-audited" exclusion (7e34652) -- that exclusion
+   * is for fresh sampling making forward progress through the bank;
+   * this is an intentional, explicit re-audit of a SPECIFIC prior batch,
+   * not random sampling. Old flags from the original run are left
+   * untouched (both sets simply coexist); the new run's flags are what
+   * carry the newer structured data going forward. */
+  async createReRunFromPastRun(previousRunId: string, label: string, createdByStaffId?: string) {
+    const previousRun = await prisma.questionAuditRun.findUniqueOrThrow({ where: { id: previousRunId } });
+    return this.createRun(label, previousRun.questionIds, createdByStaffId);
+  }
+
   /** Sequential by design (mirrors classification.service.ts's own bulk
    * job) — a 1,000-question pilot run doesn't need to be fast, and
    * sequential calls are far gentler on Gemini's rate limits than firing
@@ -412,6 +427,23 @@ If there are no concerns at all, respond with {"flags": []}.`;
    * (and re-billing) work already done. Fire-and-forget per run, exactly
    * like a fresh run's own kickoff — this function itself returns as
    * soon as resumption has been kicked off, not when it completes. */
+  /** Sept 2026 — used only by the re-audit route (bypasses the
+   * questionIds-excluded-from-admin-API bandwidth optimization in
+   * question-audit-admin.service.ts, since this genuinely needs the
+   * full list). Falls back to reconstructing the list from
+   * QuestionAuditRunItem when questionIds is empty (default [] on the
+   * column) -- this covers every run created BEFORE the resumability
+   * fix (e1a6e3a) started populating questionIds at creation time,
+   * including the original 700-question pilot: QuestionAuditRunItem
+   * rows existed independently of that column from the very start,
+   * since processRun() has always created one per processed question. */
+  async getRunQuestionIds(runId: string): Promise<string[]> {
+    const run = await prisma.questionAuditRun.findUniqueOrThrow({ where: { id: runId }, select: { questionIds: true } });
+    if (run.questionIds.length > 0) return run.questionIds;
+    const items = await prisma.questionAuditRunItem.findMany({ where: { runId }, select: { questionId: true } });
+    return items.map((i) => i.questionId);
+  }
+
   async resumeStaleRuns(): Promise<void> {
     const staleRuns = await prisma.questionAuditRun.findMany({ where: { status: 'RUNNING' as AuditRunStatus } });
     for (const run of staleRuns) {
