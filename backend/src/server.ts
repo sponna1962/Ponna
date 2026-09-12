@@ -2073,10 +2073,10 @@ app.post('/admin/syllabus-import/extract', requireStaffAuth, requireRole('SUPER_
 // POST /admin/syllabus-import/apply  { subCategoryId, draft, pdfUrl }
 // Step 2 — saves whatever the admin actually approved (possibly edited
 // from the AI's first draft) into the real Syllabus Subject/Topic tables.
-app.post('/admin/syllabus-import/apply', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+app.post('/admin/syllabus-import/apply', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: AuthedRequest, res) => {
   try {
     const { subCategoryId, draft, pdfUrl } = req.body;
-    const result = await syllabusImportService.applyDraft(subCategoryId, draft, pdfUrl, req.staff?.staffId);
+    const result = await syllabusImportService.applyDraft(subCategoryId, draft, pdfUrl);
     res.json(result);
   } catch (err: any) {
     console.error(err);

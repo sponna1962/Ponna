@@ -183,7 +183,6 @@ ${trimmed}
     subCategoryId: string,
     draft: SyllabusDraft,
     pdfUrl: string,
-    staffId?: string,
   ): Promise<{ subjectsCreated: number; topicsCreated: number }> {
     let subjectsCreated = 0;
     let topicsCreated = 0;
@@ -227,7 +226,6 @@ ${trimmed}
           sourceUrl: pdfUrl,
           verifiedAt: new Date(),
           isOfficialConfirmed: true, // admin explicitly approved this draft before it reached here
-          verifiedByStaffId: staffId,
         },
       });
     }
