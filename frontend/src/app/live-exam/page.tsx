@@ -47,6 +47,11 @@ export default function LiveExamPage() {
   const [questions, setQuestions] = useState<ExamQuestion[] | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const questionShownAt = useRef<number>(Date.now());
+
+  useEffect(() => {
+    questionShownAt.current = Date.now();
+  }, [currentIndex]);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [starting, setStarting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -118,7 +123,7 @@ export default function LiveExamPage() {
     await studentFetch(`/live-exam/attempts/${(state as any).attemptId}/answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId, selectedOption: option }),
+      body: JSON.stringify({ questionId, selectedOption: option, timeSpentSeconds: Math.round((Date.now() - questionShownAt.current) / 1000) }),
     });
     // Deliberately no correctness feedback here — a real exam gives none.
   }

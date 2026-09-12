@@ -1942,7 +1942,7 @@ app.get('/live-exam/attempts/:attemptId/questions', requireStudentAuth, async (r
 
 app.post('/live-exam/attempts/:attemptId/answer', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    res.json(await mockExamService.submitAnswer(req.studentUserId!, req.params.attemptId, req.body.questionId, req.body.selectedOption));
+    res.json(await mockExamService.submitAnswer(req.studentUserId!, req.params.attemptId, req.body.questionId, req.body.selectedOption, req.body.timeSpentSeconds));
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to save answer' });

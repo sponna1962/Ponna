@@ -280,7 +280,7 @@ export class MockExamService {
     };
   }
 
-  async submitAnswer(userId: string, attemptId: string, questionId: string, selectedOption: CorrectOption) {
+  async submitAnswer(userId: string, attemptId: string, questionId: string, selectedOption: CorrectOption, timeSpentSeconds?: number) {
     await this.expireIfNeeded(attemptId);
     const attempt = await prisma.mockExamAttempt.findUniqueOrThrow({ where: { id: attemptId } });
     if (attempt.userId !== userId) throw new MockExamError('Not your attempt.');
@@ -292,7 +292,7 @@ export class MockExamService {
 
     await prisma.mockExamQuestion.update({
       where: { id: mockQuestion.id },
-      data: { selectedOption, isCorrect, answeredAt: new Date() },
+      data: { selectedOption, isCorrect, answeredAt: new Date(), timeSpentSeconds },
     });
 
     // Deliberately does NOT return isCorrect/correctOption to the caller
