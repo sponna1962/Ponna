@@ -454,7 +454,7 @@ export default function QuizStartPage() {
               // the matching UI state.
               <Section title={t.practiceSetup.selectPurpose}>
                 <div style={{ padding: 14, borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 14, color: '#166534', fontWeight: 600 }}>
-                  {lang === 'ta' ? 'உங்கள் பாஸ்: TNPSC குரூப் 4 - வி.ஏ.ஓ.' : 'Your Pass: TNPSC Group 4 - VAO'}
+                  {lang === 'ta' ? 'உங்கள் பாஸ்: TNPSC குரூப்-4' : 'Your Pass: TNPSC Group - IV'}
                 </div>
               </Section>
             ) : (

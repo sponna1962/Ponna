@@ -154,10 +154,20 @@ async function main() {
   // categoryId+name, since the canonical name is already taken by the
   // real, question-holding row). Only create 'Group IV' here if the
   // canonical row doesn't exist yet — i.e. the merge hasn't run yet.
-  const group4VaoCanonicalName = 'குரூப் 4 - வி.ஏ.ஓ.';
-  const group4VaoAlreadyMerged = await prisma.examSubCategory.findUnique({
-    where: { categoryId_name: { categoryId: groupExamsCategory.id, name: group4VaoCanonicalName } },
-  });
+  // Sept 2026 (BINDING, bugfix) — checks BOTH the current canonical name
+  // ('Group - IV') and the old one ('குரூப் 4 - வி.ஏ.ஓ.', renamed away by
+  // the correction further below on its first post-rename run) — either
+  // one existing means the merge has already happened, so don't
+  // recreate an empty 'Group IV' row (see the long-standing P2002
+  // collision this guards against, explained in the merge function
+  // itself further below).
+  const group4VaoAlreadyMerged =
+    (await prisma.examSubCategory.findUnique({
+      where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'Group - IV' } },
+    })) ??
+    (await prisma.examSubCategory.findUnique({
+      where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'குரூப் 4 - வி.ஏ.ஓ.' } },
+    }));
   if (!group4VaoAlreadyMerged) {
     await prisma.examSubCategory.upsert({
       where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'Group IV' } },
@@ -365,6 +375,19 @@ async function main() {
   }
 
   const group4Vao = await mergeGroup4Vao(groupExamsCategory.id);
+
+  // Sept 2026 (correction) — the merge above canonically named this row
+  // 'குரூப் 4 - வி.ஏ.ஓ.' (Tamil), inconsistent with every sibling Group's
+  // English canonical name ('Group I', 'Group II', ...). Renamed in
+  // place to match that sibling convention -- same id, same Questions,
+  // zero data movement. Idempotent: a no-op once already renamed (the
+  // old-named row no longer exists to find).
+  const staleVaoNamedRow = await prisma.examSubCategory.findUnique({
+    where: { categoryId_name: { categoryId: groupExamsCategory.id, name: 'குரூப் 4 - வி.ஏ.ஓ.' } },
+  });
+  if (staleVaoNamedRow) {
+    await prisma.examSubCategory.update({ where: { id: staleVaoNamedRow.id }, data: { name: 'Group - IV' } });
+  }
 
   // Group I-B, Group I-C — posts within the same Combined Civil Services
   // Examination-I (Group I) notification, sharing Group I's own Prelims
@@ -730,8 +753,8 @@ async function main() {
   // this Plan's SCOPE (which exam a student may select) is unaffected by
   // that.
   await seedRestrictedSubCategoryPlan(
-    'TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass',
-    ['TNPSC Group IV & VAO Pass'],
+    'TNPSC குரூப்-4 Pass',
+    ['TNPSC Group IV & VAO Pass', 'TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass'],
     [group4Vao.id],
     499,
     0,

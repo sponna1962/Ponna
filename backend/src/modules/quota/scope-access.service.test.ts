@@ -1,4 +1,4 @@
-// Unit tests for ScopeAccessService (Sept 2026 — TNPSC Group 4 - VAO Pass
+// Unit tests for ScopeAccessService (Sept 2026 — TNPSC Group - IV Pass
 // restriction). Mocked Prisma client — no real database. These tests
 // verify the CURRENT business rules as implemented in
 // scope-access.service.ts; they do not introduce new behaviour.
@@ -62,12 +62,12 @@ describe('ScopeAccessService', () => {
   });
 
   describe('assertSubCategoryAllowed', () => {
-    it('allows a Group 4 - VAO restricted student to access their own scoped Sub-Category', async () => {
+    it('allows a Group - IV restricted student to access their own scoped Sub-Category', async () => {
       prismaMock.subscription.findMany.mockResolvedValue([restrictedSub()] as any);
       await expect(service.assertSubCategoryAllowed(USER_ID, RESTRICTED_SUBCAT)).resolves.toBeUndefined();
     });
 
-    it('denies a Group 4 - VAO restricted student access to a different exam (unauthorized scope access must be denied)', async () => {
+    it('denies a Group - IV restricted student access to a different exam (unauthorized scope access must be denied)', async () => {
       prismaMock.subscription.findMany.mockResolvedValue([restrictedSub()] as any);
       await expect(service.assertSubCategoryAllowed(USER_ID, OTHER_SUBCAT)).rejects.toBeInstanceOf(ScopeRestrictedError);
     });

@@ -63,7 +63,7 @@ export class SubjectPreferenceService {
    * use it at all, even by calling this endpoint directly. */
   async savePreference(userId: string, subCategoryId: string, subjectIds: string[], topicIds: string[]) {
     if (await scopeAccessService.isRestrictedOnly(userId)) {
-      throw new SubjectPreferenceError('Subject Preference is not available on the TNPSC Group IV & VAO Pass. Upgrade to the TNPSC Annual Pass to use it.');
+      throw new SubjectPreferenceError('Subject Preference is not available on the TNPSC Group - IV Pass. Upgrade to the TNPSC Annual Pass to use it.');
     }
     return prisma.studentSubjectTopicPreference.upsert({
       where: { userId_subCategoryId: { userId, subCategoryId } },

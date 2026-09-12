@@ -143,7 +143,7 @@ export class PracticePreferenceService {
   private async enforceScopeRestriction(userId: string, selections: Selections): Promise<void> {
     if (!(await scopeAccessService.isRestrictedOnly(userId))) return;
 
-    const deniedMessage = 'Your current plan only covers TNPSC Group IV & VAO. Upgrade to the TNPSC Annual Pass for full TNPSC access.';
+    const deniedMessage = 'Your current plan only covers TNPSC Group - IV. Upgrade to the TNPSC Annual Pass for full TNPSC access.';
     if (selections.allAuthorities) throw new InvalidSelectionError(deniedMessage);
 
     for (const auth of selections.authorities) {

@@ -41,7 +41,7 @@ const FAQS: Faq[] = [
     id: 'pass-expiry',
     category: 'pass',
     question: 'When does my Pass expire?',
-    answer: 'Check My Passes → Active Plans for your exact date. Annual Passes last 12 months; the Group 4 - VAO Pass lasts until the exam.',
+    answer: 'Check My Passes → Active Plans for your exact date. Annual Passes last 12 months; the Group - IV Pass lasts until the exam.',
   },
   {
     id: 'review-mistakes',

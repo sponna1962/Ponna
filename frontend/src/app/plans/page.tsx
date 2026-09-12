@@ -116,9 +116,9 @@ function planFeatures(name: string, restrictToScope?: boolean): { description: s
   // broader case first.
   if (restrictToScope) {
     return {
-      description: 'குரூப் 4 - வி.ஏ.ஓ. தேர்வுக்கான சிறப்பு பயிற்சி',
-      mainBullets: ['குரூப் 4 - வி.ஏ.ஓ. கேள்வி வங்கி', 'அதிகாரப்பூர்வ பாடத்திட்டத்தின் அடிப்படையிலான பயிற்சி'],
-      buttonLabel: 'Get TNPSC குரூப் 4 - வி.ஏ.ஓ. Pass',
+      description: 'குரூப்-4 தேர்வுக்கான சிறப்பு பயிற்சி',
+      mainBullets: ['குரூப்-4 கேள்வி வங்கி', 'அதிகாரப்பூர்வ பாடத்திட்டத்தின் அடிப்படையிலான பயிற்சி'],
+      buttonLabel: 'Get TNPSC குரூப்-4 Pass',
     };
   }
   // "Competitive / Employment Annual Plan" is TNPSC's real Plan name (a
