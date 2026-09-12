@@ -28,7 +28,11 @@ type DraftExamPattern = {
   papers: DraftPaper[];
   totalQuestions: number | null;
   totalMarks: number | null;
-  subCategoryId: string | null;
+  // Sept 2026 — an array, not a single id: some PDF rows genuinely
+  // apply to several exams at once (e.g. a combined Preliminary stage
+  // shared by Group IA/IB/IC/VI, even though their Main exams differ).
+  // Approve & Save creates the SAME fact for every checked Sub-Category.
+  subCategoryIds: string[];
 };
 type ExamPatternDraft = { exams: DraftExamPattern[] };
 
@@ -130,7 +134,7 @@ export default function ExamPatternImportPage() {
     }
   }
 
-  const matchedCount = draft?.exams.filter((e) => e.subCategoryId).length ?? 0;
+  const matchedCount = draft?.exams.filter((e) => e.subCategoryIds.length > 0).length ?? 0;
 
   return (
     <div>
@@ -167,7 +171,7 @@ export default function ExamPatternImportPage() {
           </p>
 
           {draft.exams.map((exam, ei) => (
-            <div key={ei} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginBottom: 12, background: exam.subCategoryId ? '#f0fdf4' : '#fff' }}>
+            <div key={ei} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginBottom: 12, background: exam.subCategoryIds.length > 0 ? '#f0fdf4' : '#fff' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                 <input
                   value={exam.examName}
@@ -179,18 +183,27 @@ export default function ExamPatternImportPage() {
                 </button>
               </div>
 
-              <select
-                value={exam.subCategoryId ?? ''}
-                onChange={(e) => updateExam(ei, { subCategoryId: e.target.value || null })}
-                style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, marginBottom: 10 }}
-              >
-                <option value="">Not matched — will be skipped</option>
+              {/* Sept 2026 — checkboxes, not a single dropdown: a Preliminary-
+                  stage pattern is often genuinely shared by several exams
+                  at once (e.g. Group IA/IB/IC/VI). Check every Sub-Category
+                  this exact pattern actually applies to. */}
+              <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: 6, padding: 8, marginBottom: 10, fontSize: 12 }}>
+                {exam.subCategoryIds.length === 0 && <p style={{ color: '#94a3b8', margin: '0 0 6px' }}>Not matched — will be skipped</p>}
                 {options.map((o) => (
-                  <option key={o.id} value={o.id}>
+                  <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={exam.subCategoryIds.includes(o.id)}
+                      onChange={(e) =>
+                        updateExam(ei, {
+                          subCategoryIds: e.target.checked ? [...exam.subCategoryIds, o.id] : exam.subCategoryIds.filter((id) => id !== o.id),
+                        })
+                      }
+                    />
                     {o.label}
-                  </option>
+                  </label>
                 ))}
-              </select>
+              </div>
 
               <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
                 <thead>

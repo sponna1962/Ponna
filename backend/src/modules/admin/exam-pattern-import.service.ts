@@ -18,7 +18,7 @@
 // call the AI cannot make reliably (PDF exam names like "Combined Civil
 // Services Examination (Group IV)" don't literally match internal
 // names like "குரூப் 4 - வி.ஏ.ஓ்."), so extract() never guesses a
-// subCategoryId -- the frontend presents a dropdown (the same taxonomy
+// subCategoryIds -- the frontend presents checkboxes (the same taxonomy
 // list every other admin picker uses) for the admin to confirm or skip
 // each row.
 
@@ -59,7 +59,12 @@ export interface DraftExamPattern {
   papers: DraftPaper[];
   totalQuestions: number | null;
   totalMarks: number | null;
-  subCategoryId: string | null; // admin fills this in — extract() always leaves it null
+  // Sept 2026 — an array, not a single id: some PDF rows genuinely apply
+  // to several exams at once (e.g. a combined Preliminary stage shared
+  // by Group IA/IB/IC/VI, even though their Main exams differ). The
+  // admin checks every Sub-Category this pattern actually applies to;
+  // extract() always leaves this empty — the admin fills it in.
+  subCategoryIds: string[];
 }
 export interface ExamPatternDraft {
   exams: DraftExamPattern[];
@@ -134,7 +139,7 @@ ${trimmed}
   }
 
   /** Step 1 — upload the PDF and AI-extract the table into a DRAFT.
-   * subCategoryId is always null on every extracted exam — the admin
+   * subCategoryIds is always empty on every extracted exam — the admin
    * matches each one explicitly before anything is saved. */
   async extract(pdfBase64: string): Promise<{ pdfUrl: string; draft: ExamPatternDraft }> {
     if (!pdfBase64.startsWith('data:application/pdf')) {
@@ -170,7 +175,7 @@ ${trimmed}
 
     const aiText = await this.callGemini(this.buildPrompt(rawText));
     const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-    let parsed: { exams: Omit<DraftExamPattern, 'subCategoryId'>[] };
+    let parsed: { exams: Omit<DraftExamPattern, 'subCategoryIds'>[] };
     try {
       parsed = JSON.parse(jsonMatch ? jsonMatch[0] : aiText);
     } catch {
@@ -178,7 +183,7 @@ ${trimmed}
     }
 
     const draft: ExamPatternDraft = {
-      exams: parsed.exams.map((e) => ({ ...e, subCategoryId: null })),
+      exams: parsed.exams.map((e) => ({ ...e, subCategoryIds: [] })),
     };
     return { pdfUrl: upload.secure_url, draft };
   }
@@ -198,29 +203,34 @@ ${trimmed}
     return `${exam.papers.length} Paper(s) — ${paperLines}.${totals ? ` Total: ${totals}.` : ''}`;
   }
 
-  /** Step 2 — saves only the exams the admin explicitly matched to a
-   * real Sub-Category (subCategoryId set) and kept in the approved
-   * draft. Each becomes one PAPER_STRUCTURE VerifiedExamFact. */
+  /** Step 2 — saves one PAPER_STRUCTURE VerifiedExamFact per Sub-Category
+   * the admin checked for each exam (subCategoryIds), so a pattern
+   * shared by several exams (e.g. a combined Preliminary stage) creates
+   * the same fact for each of them. Exams left with zero checked
+   * Sub-Categories are skipped entirely. */
   async applyDraft(draft: ExamPatternDraft, pdfUrl: string): Promise<{ factsCreated: number; skipped: number }> {
     let factsCreated = 0;
     let skipped = 0;
 
     for (const exam of draft.exams) {
-      if (!exam.subCategoryId) {
+      if (!exam.subCategoryIds || exam.subCategoryIds.length === 0) {
         skipped++;
         continue;
       }
-      await prisma.verifiedExamFact.create({
-        data: {
-          subCategoryId: exam.subCategoryId,
-          factType: 'PAPER_STRUCTURE',
-          value: this.formatFactValue(exam),
-          sourceUrl: pdfUrl,
-          verifiedAt: new Date(),
-          isOfficialConfirmed: true,
-        },
-      });
-      factsCreated++;
+      const value = this.formatFactValue(exam);
+      for (const subCategoryId of exam.subCategoryIds) {
+        await prisma.verifiedExamFact.create({
+          data: {
+            subCategoryId,
+            factType: 'PAPER_STRUCTURE',
+            value,
+            sourceUrl: pdfUrl,
+            verifiedAt: new Date(),
+            isOfficialConfirmed: true,
+          },
+        });
+        factsCreated++;
+      }
     }
 
     return { factsCreated, skipped };
