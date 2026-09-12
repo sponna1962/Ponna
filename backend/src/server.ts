@@ -738,7 +738,7 @@ app.post('/admin/question-audit/runs', requireStaffAuth, requireRole('SUPER_ADMI
     // Fire-and-forget — a 1,000-question sequential run is far too slow to
     // hold this request open for; processRun updates the run row as it
     // goes, polled via GET /admin/question-audit/runs/:id.
-    questionAuditService.processRun(run.id, questionIds).catch((err) => console.error(`Question audit run ${run.id} crashed:`, err));
+    questionAuditService.processRun(run.id).catch((err) => console.error(`Question audit run ${run.id} crashed:`, err));
     res.json(run);
   } catch (err) {
     console.error(err);

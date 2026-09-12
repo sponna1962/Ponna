@@ -9,12 +9,37 @@ import { AuditFlagStatus, AuditIssueType } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 
 export class QuestionAuditAdminService {
+  // Sept 2026 — questionIds (up to several thousand UUIDs, persisted for
+  // resumability — see question-audit.service.ts's own comment) is
+  // deliberately excluded here: the admin UI only ever shows counts/
+  // labels/status, never the raw id list, so including it would bloat
+  // every list/detail response for no reason. processRun()/
+  // resumeStaleRuns() fetch it themselves via their own unrestricted
+  // findUniqueOrThrow, where it's actually needed.
+  private static readonly RUN_SELECT = {
+    id: true,
+    label: true,
+    status: true,
+    totalQuestions: true,
+    processedQuestions: true,
+    flaggedQuestions: true,
+    totalFlags: true,
+    model: true,
+    inputTokens: true,
+    outputTokens: true,
+    estimatedCostUsd: true,
+    errorMessage: true,
+    startedAt: true,
+    completedAt: true,
+    createdByStaffId: true,
+  } as const;
+
   async listRuns() {
-    return prisma.questionAuditRun.findMany({ orderBy: { startedAt: 'desc' } });
+    return prisma.questionAuditRun.findMany({ orderBy: { startedAt: 'desc' }, select: QuestionAuditAdminService.RUN_SELECT });
   }
 
   async getRun(runId: string) {
-    const run = await prisma.questionAuditRun.findUniqueOrThrow({ where: { id: runId } });
+    const run = await prisma.questionAuditRun.findUniqueOrThrow({ where: { id: runId }, select: QuestionAuditAdminService.RUN_SELECT });
     const byIssueType = await prisma.questionAuditFlag.groupBy({
       by: ['issueType'],
       where: { runId },

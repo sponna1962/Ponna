@@ -304,6 +304,7 @@ If there are no concerns at all, respond with {"flags": []}.`;
         totalQuestions: questionIds.length,
         model: GEMINI_MODEL,
         createdByStaffId,
+        questionIds,
       },
     });
   }
@@ -312,10 +313,23 @@ If there are no concerns at all, respond with {"flags": []}.`;
    * job) — a 1,000-question pilot run doesn't need to be fast, and
    * sequential calls are far gentler on Gemini's rate limits than firing
    * all 1,000 at once. A single question's failure is logged and skipped,
-   * never aborts the whole run. */
-  async processRun(runId: string, questionIds: string[]): Promise<void> {
+   * never aborts the whole run.
+   *
+   * Sept 2026 (resilience) — now only takes runId. Recomputes the
+   * REMAINING question ids itself (run.questionIds minus whatever
+   * QuestionAuditRunItem rows already exist for this run) rather than
+   * being handed a fixed list — this is what makes resumeStaleRuns()
+   * safe to call blindly on every server startup: calling this again for
+   * an already-fully-processed run just finds zero remaining and
+   * completes immediately, a harmless no-op. */
+  async processRun(runId: string): Promise<void> {
     try {
-      for (const questionId of questionIds) {
+      const runRecord = await prisma.questionAuditRun.findUniqueOrThrow({ where: { id: runId } });
+      const alreadyProcessed = await prisma.questionAuditRunItem.findMany({ where: { runId }, select: { questionId: true } });
+      const alreadyProcessedIds = new Set(alreadyProcessed.map((i) => i.questionId));
+      const remainingQuestionIds = runRecord.questionIds.filter((id) => !alreadyProcessedIds.has(id));
+
+      for (const questionId of remainingQuestionIds) {
         try {
           const result = await this.callAudit(questionId);
 
@@ -371,6 +385,24 @@ If there are no concerns at all, respond with {"flags": []}.`;
         where: { id: runId },
         data: { status: 'FAILED' as AuditRunStatus, completedAt: new Date(), errorMessage: (err as Error).message },
       });
+    }
+  }
+
+  /** Sept 2026 (resilience) — called once on every server startup (see
+   * scheduled-jobs.ts). Finds any run still marked RUNNING (meaning the
+   * server process died mid-run last time — e.g. a deploy restarting the
+   * dyno — before it ever reached the COMPLETED/FAILED update) and
+   * resumes each one via the SAME processRun(), which itself recomputes
+   * "remaining" from questionIds minus already-processed items — so this
+   * genuinely continues from exactly where it left off, never re-doing
+   * (and re-billing) work already done. Fire-and-forget per run, exactly
+   * like a fresh run's own kickoff — this function itself returns as
+   * soon as resumption has been kicked off, not when it completes. */
+  async resumeStaleRuns(): Promise<void> {
+    const staleRuns = await prisma.questionAuditRun.findMany({ where: { status: 'RUNNING' as AuditRunStatus } });
+    for (const run of staleRuns) {
+      console.log(`[startup] Resuming interrupted AI Question Audit run "${run.label}" (${run.processedQuestions}/${run.totalQuestions} already done)`);
+      this.processRun(run.id).catch((err) => console.error(`[startup] Failed to resume audit run ${run.id}:`, err));
     }
   }
 }

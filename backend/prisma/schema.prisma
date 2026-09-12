@@ -420,6 +420,15 @@ model QuestionAuditRun {
   startedAt          DateTime         @default(now())
   completedAt        DateTime?
   createdByStaffId   String?
+  // Sept 2026 (resilience) — the FULL originally-sampled question id list,
+  // persisted at creation time (previously only ever held in-memory,
+  // lost entirely if the server process died mid-run — e.g. a deploy
+  // restarting the dyno). With this stored, a run interrupted this way
+  // is auto-resumable: recompute remaining = questionIds minus whatever
+  // QuestionAuditRunItem rows already exist for this run, and continue
+  // from exactly there — see resumeStaleRuns() and its call from
+  // scheduled-jobs.ts on every server startup.
+  questionIds        String[]         @default([])
 
   items QuestionAuditRunItem[]
   flags QuestionAuditFlag[]

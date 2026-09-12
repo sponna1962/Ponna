@@ -9,6 +9,7 @@ import { AntiAbuseService } from './anti-abuse/anti-abuse.service';
 import { DailyQuizService } from './daily-quiz/daily-quiz.service';
 import { runWhatsAppReminderSweep } from './notifications/whatsapp-reminder.service';
 import { pushNotificationService } from './notifications/push-notification.service';
+import { questionAuditService } from './audit/question-audit.service';
 
 const sessionService = new SessionService();
 const rankingService = new RankingService();
@@ -16,6 +17,12 @@ const antiAbuseService = new AntiAbuseService();
 const dailyQuizService = new DailyQuizService();
 
 export function startScheduledJobs() {
+  // Sept 2026 (resilience) — resume any AI Question Audit run left
+  // RUNNING from before this server process started (a deploy restarting
+  // the dyno mid-run is the normal way this happens). Fire-and-forget;
+  // does not delay the rest of this function or any other startup work.
+  questionAuditService.resumeStaleRuns().catch((err) => console.error('[startup] resumeStaleRuns failed:', err));
+
   // Every 15 minutes: mark stale in-progress sessions as Abandoned, release
   // their questions back to the pool, and (per §4.3/§5) do NOT refund quota.
   cron.schedule('*/15 * * * *', async () => {
