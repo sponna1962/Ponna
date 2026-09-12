@@ -173,11 +173,23 @@ export default function SyllabusImportPage() {
 
       {draft && (
         <div style={{ maxWidth: 720 }}>
-          {draft.eligibilityStandard && (
-            <p style={{ fontSize: 12, color: '#475569', marginBottom: 16 }}>
-              Detected eligibility standard: <strong>{draft.eligibilityStandard}</strong> (will be saved as a verified ELIGIBILITY fact)
-            </p>
-          )}
+          {/* Sept 2026 — was read-only display, now editable like every
+              other field here: AI may miss it entirely (shows blank,
+              admin fills it in) or get it wrong (admin corrects it) —
+              never saved without the admin seeing/approving the exact
+              value. */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 12, color: '#475569', marginBottom: 4 }}>
+              Eligibility / Qualification standard (e.g. &quot;SSLC Standard&quot;, &quot;Degree Standard&quot;) — saved as a verified ELIGIBILITY fact
+            </label>
+            <input
+              type="text"
+              value={draft.eligibilityStandard ?? ''}
+              onChange={(e) => setDraft({ ...draft, eligibilityStandard: e.target.value || null })}
+              placeholder="Not detected — add it manually if known"
+              style={{ width: '100%', maxWidth: 360, padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+            />
+          </div>
 
           {draft.subjects.map((subject, si) => (
             <div key={si} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16 }}>
