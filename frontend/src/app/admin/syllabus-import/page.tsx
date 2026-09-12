@@ -37,7 +37,7 @@ export default function SyllabusImportPage() {
             for (const category of authority.categories ?? []) {
               for (const sub of category.subCategories ?? []) {
                 if (sub.studentVisible === false) continue;
-                flat.push({ id: sub.id, label: `${authority.name} \u2192 ${category.name} \u2192 ${sub.name}` });
+                flat.push({ id: sub.id, label: `${authority.name} → ${category.name} → ${sub.name}` });
               }
             }
           }
@@ -135,9 +135,9 @@ export default function SyllabusImportPage() {
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 8 }}>Syllabus PDF Import</h1>
       <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16, maxWidth: 680, lineHeight: 1.6 }}>
-        Upload an official syllabus PDF \u2014 it gets AI-structured into Subject \u2192 Topic below for your review. Edit anything
+        Upload an official syllabus PDF — it gets AI-structured into Subject → Topic below for your review. Edit anything
         that needs fixing, remove anything wrong, then Approve &amp; Save. Nothing is saved to the real syllabus until you approve.
-        Unit-wise question counts are deliberately not extracted \u2014 official syllabi call that distribution &quot;indicative only&quot;.
+        Unit-wise question counts are deliberately not extracted — official syllabi call that distribution &quot;indicative only&quot;.
       </p>
 
       <select
@@ -145,7 +145,7 @@ export default function SyllabusImportPage() {
         onChange={(e) => setSubCategoryId(e.target.value)}
         style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, marginBottom: 12, minWidth: 320, display: 'block' }}
       >
-        <option value="">Select the exam this syllabus belongs to\u2026</option>
+        <option value="">Select the exam this syllabus belongs to…</option>
         {options.map((o) => (
           <option key={o.id} value={o.id}>
             {o.label}
@@ -160,7 +160,7 @@ export default function SyllabusImportPage() {
         disabled={!file || extracting}
         style={{ padding: '10px 20px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20 }}
       >
-        {extracting ? 'Extracting\u2026 (may take a minute)' : 'Extract Draft'}
+        {extracting ? 'Extracting… (may take a minute)' : 'Extract Draft'}
       </button>
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13, marginBottom: 16 }}>{error}</p>}
@@ -235,7 +235,7 @@ export default function SyllabusImportPage() {
             disabled={applying || !subCategoryId}
             style={{ padding: '12px 24px', borderRadius: 8, background: '#166534', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
           >
-            {applying ? 'Saving\u2026' : !subCategoryId ? 'Select an exam above first' : 'Approve & Save'}
+            {applying ? 'Saving…' : !subCategoryId ? 'Select an exam above first' : 'Approve & Save'}
           </button>
         </div>
       )}

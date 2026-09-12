@@ -86,7 +86,7 @@ export class SyllabusImportService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 8000 },
+          generationConfig: { temperature: 0.1, maxOutputTokens: 16000 },
         }),
       } satisfies RequestInit,
     });
@@ -99,7 +99,13 @@ export class SyllabusImportService {
     }
     if (!response.ok) throw new SyllabusImportError(`Gemini API error: ${response.status} ${await response.text()}`);
 
-    const data = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const data = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[] };
+    const finishReason = data.candidates?.[0]?.finishReason;
+    if (finishReason === 'MAX_TOKENS') {
+      throw new SyllabusImportError(
+        'The AI response was cut off before finishing — this syllabus PDF has too much content for one pass. Try a shorter/single-paper PDF, or contact support to raise the output limit.',
+      );
+    }
     return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   }
 
@@ -107,7 +113,7 @@ export class SyllabusImportService {
     // Syllabus PDFs can be long and often repeat the same content in both
     // English and Tamil — truncate defensively so a single call stays
     // within a reasonable token budget rather than failing outright.
-    const trimmed = rawText.length > 40000 ? rawText.slice(0, 40000) : rawText;
+    const trimmed = rawText.length > 60000 ? rawText.slice(0, 60000) : rawText;
 
     return `You are structuring an official TNPSC (or similar Indian state PSC) exam syllabus PDF's extracted text into JSON, for a student exam-prep app.
 
