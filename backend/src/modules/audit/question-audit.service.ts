@@ -260,6 +260,14 @@ If there are no concerns at all, respond with {"flags": []}.`;
    * 10% other visible authorities, per the approved Phase 1 plan; each
    * bucket is a true Postgres-side random sample (ORDER BY random()), not
    * a JS-side shuffle of a huge fetched list. */
+  /** Sept 2026 (fix — real progress across repeated runs, not random
+   * overlap) — every question ALREADY covered by any past run (any
+   * status) is excluded here, so calling this repeatedly (e.g. "5,000
+   * now, another 5,000 once this finishes") genuinely advances through
+   * the whole bank instead of the pure `ORDER BY random()` this
+   * previously was, which had no memory of what was already sampled and
+   * could re-pick the same questions indefinitely while others were
+   * never reached at all. */
   async selectStratifiedSample(targetSize: number): Promise<string[]> {
     const tnpsc = await prisma.examAuthority.findFirst({ where: { name: 'TNPSC' } });
     const tntet = await prisma.examAuthority.findFirst({ where: { name: 'TNTET' } });
@@ -270,16 +278,20 @@ If there are no concerns at all, respond with {"flags": []}.`;
 
     const excludeIds = [tnpsc?.id, tntet?.id].filter((x): x is string => !!x);
 
+    const alreadyAuditedRows = await prisma.questionAuditRunItem.findMany({ select: { questionId: true }, distinct: ['questionId'] });
+    const alreadyAuditedIds = alreadyAuditedRows.map((r) => r.questionId);
+    const excludeAuditedSql = alreadyAuditedIds.length > 0 ? Prisma.sql`AND id NOT IN (${Prisma.join(alreadyAuditedIds)})` : Prisma.empty;
+
     const randomIds = async (authorityId: string | null, limit: number): Promise<string[]> => {
       if (limit <= 0) return [];
       const rows = authorityId
         ? await prisma.$queryRaw<{ id: string }[]>(
-            Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') AND "authorityId" = ${authorityId} ORDER BY random() LIMIT ${limit}`,
+            Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') AND "authorityId" = ${authorityId} ${excludeAuditedSql} ORDER BY random() LIMIT ${limit}`,
           )
         : await prisma.$queryRaw<{ id: string }[]>(
             excludeIds.length > 0
-              ? Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') AND ("authorityId" IS NULL OR "authorityId" NOT IN (${Prisma.join(excludeIds)})) ORDER BY random() LIMIT ${limit}`
-              : Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') ORDER BY random() LIMIT ${limit}`,
+              ? Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') AND ("authorityId" IS NULL OR "authorityId" NOT IN (${Prisma.join(excludeIds)})) ${excludeAuditedSql} ORDER BY random() LIMIT ${limit}`
+              : Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') ${excludeAuditedSql} ORDER BY random() LIMIT ${limit}`,
           );
       return rows.map((r) => r.id);
     };
