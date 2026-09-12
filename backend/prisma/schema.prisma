@@ -903,6 +903,7 @@ model SyllabusSubject {
   subCategoryId String
   subCategory   ExamSubCategory  @relation(fields: [subCategoryId], references: [id])
   name          String           // e.g. "General Studies", "General Tamil / General English", "Aptitude & Mental Ability"
+  nameTa        String?          // Sept 2026 — Tamil label, optional (PDF Import feature can populate this)
   sortOrder     Int              @default(0)
   topics        SyllabusTopic[]
 
@@ -910,12 +911,21 @@ model SyllabusSubject {
 }
 
 model SyllabusTopic {
-  id        String          @id @default(uuid())
-  subjectId String
-  subject   SyllabusSubject @relation(fields: [subjectId], references: [id])
-  name      String          // e.g. "Modern History of India", "Geography of Tamil Nadu"
-  sortOrder Int             @default(0)
-  questions Question[]
+  id          String          @id @default(uuid())
+  subjectId   String
+  subject     SyllabusSubject @relation(fields: [subjectId], references: [id])
+  name        String          // e.g. "Modern History of India", "Geography of Tamil Nadu"
+  nameTa      String?         // Sept 2026 — Tamil label, optional
+  // Sept 2026 — the detailed within-unit topic list from an official
+  // syllabus PDF (e.g. "Nature of Universe - Measurement of physical
+  // quantities - ..."), for Ask Ponna to answer specific syllabus
+  // questions with real detail, not just the short unit name. Never a
+  // question-count constraint — TNPSC's own syllabus PDFs explicitly
+  // call unit-wise question distribution "only indicative", so that
+  // number is deliberately NOT stored/enforced anywhere in this schema.
+  description String?
+  sortOrder   Int             @default(0)
+  questions   Question[]
 
   @@unique([subjectId, name])
 }

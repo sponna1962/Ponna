@@ -15,6 +15,7 @@ import { weakAreaService } from './modules/practice-preference/weak-area.service
 import { runIdempotencyDiagnostic } from './modules/diagnostics/idempotency-diagnostic.service';
 import { examCountdownService } from './modules/practice-preference/exam-countdown.service';
 import { offlinePracticeService } from './modules/practice-preference/offline-practice.service';
+import { syllabusImportService } from './modules/admin/syllabus-import.service';
 import { pushNotificationService } from './modules/notifications/push-notification.service';
 import { QuotaExceededError, QuotaService } from './modules/quota/quota.service';
 import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
@@ -2051,6 +2052,35 @@ app.patch('/admin/exam-taxonomy/sub-categories/:id/exam-date', requireStaffAuth,
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update exam date' });
+  }
+});
+
+// ── Syllabus PDF Import (Sept 2026) ────────────────────────────────────
+
+// POST /admin/syllabus-import/extract  { pdfBase64: "data:application/pdf;base64,..." }
+// Step 1 only — uploads the PDF and returns an AI-structured DRAFT.
+// Never touches SyllabusSubject/SyllabusTopic.
+app.post('/admin/syllabus-import/extract', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const result = await syllabusImportService.extract(req.body.pdfBase64);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to extract syllabus' });
+  }
+});
+
+// POST /admin/syllabus-import/apply  { subCategoryId, draft, pdfUrl }
+// Step 2 — saves whatever the admin actually approved (possibly edited
+// from the AI's first draft) into the real Syllabus Subject/Topic tables.
+app.post('/admin/syllabus-import/apply', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const { subCategoryId, draft, pdfUrl } = req.body;
+    const result = await syllabusImportService.applyDraft(subCategoryId, draft, pdfUrl, req.staff?.staffId);
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to apply syllabus draft' });
   }
 });
 
