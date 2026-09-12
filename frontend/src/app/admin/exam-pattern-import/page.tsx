@@ -36,6 +36,16 @@ type DraftExamPattern = {
 };
 type ExamPatternDraft = { exams: DraftExamPattern[] };
 
+// Sept 2026 — mirrors the backend's own detectStage() (used when
+// composing the saved fact text) so the admin sees the SAME stage
+// distinction here, as a clear visual badge, before saving.
+function detectStage(examName: string): { label: string; color: string } | null {
+  if (/preliminary/i.test(examName)) return { label: 'Preliminary', color: '#2563eb' };
+  if (/\bmain\b/i.test(examName)) return { label: 'Main', color: '#7c3aed' };
+  if (/interview/i.test(examName)) return { label: 'Interview', color: '#ea580c' };
+  return null;
+}
+
 export default function ExamPatternImportPage() {
   const [options, setOptions] = useState<SubCategoryOption[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -170,9 +180,16 @@ export default function ExamPatternImportPage() {
             {draft.exams.length} exam(s) extracted — {matchedCount} matched to a Sub-Category so far.
           </p>
 
-          {draft.exams.map((exam, ei) => (
+          {draft.exams.map((exam, ei) => {
+            const stage = detectStage(exam.examName);
+            return (
             <div key={ei} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 14, marginBottom: 12, background: exam.subCategoryIds.length > 0 ? '#f0fdf4' : '#fff' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                {stage && (
+                  <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, color: '#fff', background: stage.color, padding: '3px 10px', borderRadius: 999 }}>
+                    {stage.label}
+                  </span>
+                )}
                 <input
                   value={exam.examName}
                   onChange={(e) => updateExam(ei, { examName: e.target.value })}
@@ -235,7 +252,8 @@ export default function ExamPatternImportPage() {
                 Total: {exam.totalQuestions ?? '—'} Questions, {exam.totalMarks ?? '—'} Marks
               </p>
             </div>
-          ))}
+            );
+          })}
 
           <button
             onClick={approveAndSave}
