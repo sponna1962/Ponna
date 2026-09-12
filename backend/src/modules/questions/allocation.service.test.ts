@@ -298,7 +298,7 @@ describe('AllocationService.buildSessionQuestionIds', () => {
 
       for (const call of prismaMock.question.findMany.mock.calls) {
         const where = call[0]?.where as any;
-        expect(where.auditFlags).toEqual({ none: { status: 'OPEN' } });
+        expect(where.auditFlags).toEqual({ none: { status: { not: 'DISMISSED' } } });
       }
     });
 
@@ -313,8 +313,8 @@ describe('AllocationService.buildSessionQuestionIds', () => {
 
       const preferredWhere = prismaMock.question.findMany.mock.calls[1][0]?.where as any;
       const generalWhere = prismaMock.question.findMany.mock.calls[2][0]?.where as any;
-      expect(preferredWhere.auditFlags).toEqual({ none: { status: 'OPEN' } });
-      expect(generalWhere.auditFlags).toEqual({ none: { status: 'OPEN' } });
+      expect(preferredWhere.auditFlags).toEqual({ none: { status: { not: 'DISMISSED' } } });
+      expect(generalWhere.auditFlags).toEqual({ none: { status: { not: 'DISMISSED' } } });
     });
   });
 });

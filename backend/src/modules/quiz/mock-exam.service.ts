@@ -250,10 +250,10 @@ export class MockExamService {
     const questions = await prisma.question.findMany({
       where: {
         status: 'PUBLISHED',
-        // Sept 2026 (BINDING, data-quality safety) — a question with an
-        // unreviewed (OPEN) AI Question Audit flag must never be served
-        // in Live Exam until an admin has reviewed it.
-        auditFlags: { none: { status: 'OPEN' } },
+        // Sept 2026 (BINDING, data-quality safety) — any unresolved
+        // audit flag (OPEN or CONFIRMED-but-not-yet-fixed) keeps a
+        // question out of Live Exam too; only DISMISSED clears it.
+        auditFlags: { none: { status: { not: 'DISMISSED' } } },
         language: preference.language,
         // Sept 2026 (BUG FIX) — was authorityTags-only, missing the
         // DIRECT subCategoryId a question is normally tagged with (the

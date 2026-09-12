@@ -44,7 +44,16 @@ import { prisma } from '../../lib/prisma';
 // the admin decided there's no real issue, so the question becomes
 // eligible again immediately. Spread into every question-fetch query in
 // this file, right alongside status: 'PUBLISHED'.
-const NOT_PENDING_AUDIT_REVIEW = { auditFlags: { none: { status: 'OPEN' as const } } };
+// Sept 2026 (BINDING, data-quality safety) — a question with any
+// unresolved audit flag (OPEN: not yet reviewed, or CONFIRMED: admin
+// agreed it's a real issue but hasn't fixed the question yet) must
+// never be served to a student in Practice or Live Exam. Only DISMISSED
+// (admin decided there's no real issue, OR the question was actually
+// edited -- see questionService.update()'s own auto-dismiss step,
+// which is what lets a CONFIRMED-then-fixed question become eligible
+// again) clears this. Spread into every question-fetch query in this
+// file, right alongside status: 'PUBLISHED'.
+const NOT_PENDING_AUDIT_REVIEW = { auditFlags: { none: { status: { not: 'DISMISSED' as const } } } };
 
 /** A student's saved Subject/Topic Preference for the exam they're
  * currently practicing (Stage 1 storage, resolved by session.service.ts

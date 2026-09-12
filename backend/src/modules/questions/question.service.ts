@@ -170,10 +170,26 @@ export class QuestionService {
     const { subjectName, ...rest } = input;
     const subjectId = subjectName !== undefined ? await this.resolveSubjectId(subjectName) : undefined;
 
-    return prisma.question.update({
+    const updated = await prisma.question.update({
       where: { id },
       data: { ...rest, ...(subjectId !== undefined ? { subjectId } : {}), contentHash, updatedAt: new Date() },
     });
+
+    // Sept 2026 (BINDING, data-quality safety) — editing a question's
+    // content is treated as "this has now been addressed": every
+    // still-open (OPEN or CONFIRMED) AI Question Audit flag on it is
+    // auto-DISMISSED, which is what lets it become eligible for Practice/
+    // Live Exam again (see allocation.service.ts's/mock-exam.service.ts's
+    // own NOT DISMISSED exclusion). This applies to every edit path that
+    // goes through this one update() method (the Questions page's own
+    // edit form, and the AI Question Audit page's inline edit) — never
+    // touches flags on any OTHER question.
+    await prisma.questionAuditFlag.updateMany({
+      where: { questionId: id, status: { not: 'DISMISSED' } },
+      data: { status: 'DISMISSED', reviewNote: 'Auto-dismissed: question was edited.', reviewedAt: new Date() },
+    });
+
+    return updated;
   }
 
   async setStatus(id: string, status: QuestionStatus) {
