@@ -14,7 +14,7 @@
 // abstraction with that file, matching this codebase's "provider-specific
 // logic isolated per concern" convention elsewhere (see gemini-adapter.ts).
 
-import { Prisma, AuditIssueType, AuditVerdict, AuditRunStatus } from '@prisma/client';
+import { Prisma, AuditIssueType, AuditVerdict, AuditRunStatus, CorrectOption } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { findDuplicateCandidates } from './duplicate-prefilter';
 
@@ -39,6 +39,7 @@ interface RawFlag {
   resolvedDuplicateId?: string;
   crossExamIndex?: number; // index into the cross-exam candidates list, for CROSS_EXAM_APPLICABLE only
   resolvedCrossExamSubCategoryId?: string;
+  suggestedCorrectOption?: string; // only for WRONG_ANSWER
 }
 
 interface AuditCallResult {
@@ -144,7 +145,7 @@ Explanation (Tamil): ${question.explanationTa ?? '(none provided)'}
 Explanation (English): ${question.explanationEn ?? '(none provided)'}${candidateBlock}${crossExamBlock}
 
 Check for ALL of the following, independently — a question can have zero, one, or several genuine issues:
-- WRONG_ANSWER: the marked correct option is actually wrong
+- WRONG_ANSWER: the marked correct option is actually wrong — always include "suggestedCorrectOption" with the letter you believe is actually correct
 - MULTIPLE_CORRECT_OPTIONS: more than one option could be defended as correct
 - UNCLEAR_OR_INVALID_QUESTION: the question is ambiguous, malformed, or unanswerable as written
 - WRONG_EXPLANATION: the explanation is incorrect, contradicts the marked answer, or is missing when it shouldn't be
@@ -162,7 +163,7 @@ Rules:
 - verdict is "LIKELY_ISSUE" for a problem you believe is real, or "CANNOT_VERIFY" ONLY for FACTUAL_CONCERN cases you cannot confidently resolve.
 
 Respond with ONLY a JSON object, no other text, no markdown fences:
-{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN, CROSS_EXAM_APPLICABLE>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>, "crossExamIndex": <only for CROSS_EXAM_APPLICABLE, the [index] number from the cross-exam candidates list above>}]}
+{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN, CROSS_EXAM_APPLICABLE>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>, "crossExamIndex": <only for CROSS_EXAM_APPLICABLE, the [index] number from the cross-exam candidates list above>, "suggestedCorrectOption": "<only for WRONG_ANSWER, the single letter A, B, C, or D you believe is actually correct>"}]}
 If there are no concerns at all, respond with {"flags": []}.`;
   }
 
@@ -360,6 +361,7 @@ If there are no concerns at all, respond with {"flags": []}.`;
                   aiNotes: f.notes,
                   duplicateOfQuestionIds: f.resolvedDuplicateId ? [f.resolvedDuplicateId] : [],
                   suggestedAdditionalSubCategoryId: f.resolvedCrossExamSubCategoryId ?? null,
+                  suggestedCorrectOption: ['A', 'B', 'C', 'D'].includes(f.suggestedCorrectOption ?? '') ? (f.suggestedCorrectOption as CorrectOption) : null,
                 },
               }),
             ),

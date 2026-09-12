@@ -468,6 +468,13 @@ model QuestionAuditFlag {
   // Sub-Category (never touches the question's existing tag(s)).
   suggestedAdditionalSubCategoryId String?
   suggestedAdditionalSubCategory   ExamSubCategory? @relation(fields: [suggestedAdditionalSubCategoryId], references: [id])
+  // Sept 2026 — for WRONG_ANSWER only: the AI's suggested correct option
+  // (A/B/C/D), captured as STRUCTURED data (not parsed out of aiNotes'
+  // free text) so the admin review UI can render it distinctly (bold/
+  // colored) rather than making the admin hunt for it in prose. Purely
+  // informational -- confirming a flag still never touches the Question
+  // itself (see this file's own header comment on that guarantee).
+  suggestedCorrectOption CorrectOption?
   status             AuditFlagStatus   @default(OPEN)
   reviewedByStaffId  String?
   reviewedAt         DateTime?

@@ -57,6 +57,7 @@ type Flag = {
   confidence: number;
   aiNotes: string;
   duplicateOfQuestionIds: string[];
+  suggestedCorrectOption: 'A' | 'B' | 'C' | 'D' | null;
   suggestedAdditionalSubCategory: { name: string } | null;
   status: 'OPEN' | 'CONFIRMED' | 'DISMISSED';
   createdAt: string;
@@ -167,6 +168,18 @@ export default function QuestionAuditPage() {
     if (selectedRunId) loadFlags(selectedRunId);
   }
 
+  // Sept 2026 — admin-initiated shortcut (the AI itself still never
+  // touches a Question — this is a human clicking a real button, same
+  // guarantee as everywhere else). Reuses the existing
+  // POST /admin/questions/:id/disable endpoint (the same one the
+  // Questions page's own Disable action calls) — pulls this question out
+  // of circulation immediately, without navigating away to edit it.
+  async function disableQuestion(questionId: string) {
+    if (!confirm('Disable this question? It will no longer be shown to any student (Practice, Live Exam, etc.) until re-published from the Questions page.')) return;
+    await adminFetch(`/admin/questions/${questionId}/disable`, { method: 'POST' });
+    if (selectedRunId) loadFlags(selectedRunId);
+  }
+
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 8 }}>AI Question Quality Audit</h1>
@@ -176,7 +189,7 @@ export default function QuestionAuditPage() {
         <a href="/admin/questions" style={{ color: '#0f172a' }}>
           Questions
         </a>{' '}
-        page, separately.
+        page, or disable it directly below (a real fix still needs editing separately).
       </p>
 
       {/* Start a new pilot run */}
@@ -314,9 +327,19 @@ export default function QuestionAuditPage() {
                 {(['A', 'B', 'C', 'D'] as const).map((letter) => {
                   const text = { A: f.question.optionA, B: f.question.optionB, C: f.question.optionC, D: f.question.optionD }[letter];
                   const isCorrect = f.question.correctOption === letter;
+                  const isAiSuggested = f.suggestedCorrectOption === letter;
                   return (
-                    <div key={letter} style={{ color: isCorrect ? '#16a34a' : '#475569', fontWeight: isCorrect ? 700 : 400 }}>
-                      {letter}. {text} {isCorrect && '✓'}
+                    <div
+                      key={letter}
+                      style={{
+                        color: isCorrect ? '#16a34a' : isAiSuggested ? '#b45309' : '#475569',
+                        fontWeight: isCorrect || isAiSuggested ? 700 : 400,
+                        background: isAiSuggested && !isCorrect ? '#fffbeb' : 'transparent',
+                        borderRadius: 4,
+                        padding: isAiSuggested && !isCorrect ? '2px 6px' : 0,
+                      }}
+                    >
+                      {letter}. {text} {isCorrect && '✓ (marked correct)'} {isAiSuggested && !isCorrect && '← AI suggests this'}
                     </div>
                   );
                 })}
@@ -343,6 +366,14 @@ export default function QuestionAuditPage() {
                 >
                   Edit Question
                 </a>
+                {f.question.status !== 'DISABLED' && (
+                  <button
+                    onClick={() => disableQuestion(f.question.id)}
+                    style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #b91c1c', color: '#b91c1c', background: '#fff', cursor: 'pointer' }}
+                  >
+                    Disable Question
+                  </button>
+                )}
                 {f.status !== 'CONFIRMED' && (
                   <button onClick={() => reviewFlag(f.id, 'CONFIRMED')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #16a34a', color: '#16a34a', background: '#fff', cursor: 'pointer' }}>
                     {f.issueType === 'CROSS_EXAM_APPLICABLE' ? 'Confirm — add this tag' : 'Confirm — real issue'}
