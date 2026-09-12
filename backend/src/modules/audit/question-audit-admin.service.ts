@@ -96,7 +96,35 @@ export class QuestionAuditAdminService {
    * a tag (a separate join-table row), never touches the question's
    * existing tag(s) or any Question field itself. Skips creating a
    * duplicate if that tag somehow already exists (e.g. a re-review). */
-  async reviewFlag(flagId: string, status: 'CONFIRMED' | 'DISMISSED', staffId: string, note?: string) {
+  /** Sept 2026 — applyAiAnswer is an explicit ADMIN choice (a human
+   * clicking a button that says exactly what it will do), never the AI
+   * acting on its own -- the same guarantee this whole file already
+   * keeps everywhere else, just with one more admin-triggered exception
+   * (matching the CROSS_EXAM_APPLICABLE tag-adding branch below). Only
+   * valid for a WRONG_ANSWER flag that actually has a
+   * suggestedCorrectOption; updates Question.correctOption directly to
+   * that letter, then auto-dismisses every still-open flag on this
+   * question (it's now actually fixed, not just agreed-as-an-issue --
+   * same principle as question.service.ts's own auto-dismiss-on-edit,
+   * applied here since this path updates the question directly rather
+   * than going through that method). */
+  async reviewFlag(flagId: string, status: 'CONFIRMED' | 'DISMISSED', staffId: string, note?: string, applyAiAnswer?: boolean) {
+    if (applyAiAnswer) {
+      const flag = await prisma.questionAuditFlag.findUniqueOrThrow({ where: { id: flagId } });
+      if (flag.issueType !== 'WRONG_ANSWER' || !flag.suggestedCorrectOption) {
+        throw new Error('applyAiAnswer is only valid for a WRONG_ANSWER flag that has a suggestedCorrectOption.');
+      }
+      await prisma.question.update({
+        where: { id: flag.questionId },
+        data: { correctOption: flag.suggestedCorrectOption, updatedAt: new Date() },
+      });
+      await prisma.questionAuditFlag.updateMany({
+        where: { questionId: flag.questionId, status: { not: 'DISMISSED' } },
+        data: { status: 'DISMISSED', reviewedByStaffId: staffId, reviewedAt: new Date(), reviewNote: note ?? "Auto-dismissed: admin applied the AI's suggested answer." },
+      });
+      return prisma.questionAuditFlag.findUniqueOrThrow({ where: { id: flagId } });
+    }
+
     const updated = await prisma.questionAuditFlag.update({
       where: { id: flagId },
       data: { status: status as AuditFlagStatus, reviewedByStaffId: staffId, reviewedAt: new Date(), reviewNote: note ?? null },

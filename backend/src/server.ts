@@ -782,20 +782,22 @@ app.get('/admin/question-audit/flags', requireStaffAuth, async (req, res) => {
   }
 });
 
-// POST /admin/question-audit/flags/:id/review  { status: 'CONFIRMED' | 'DISMISSED', note?: string }
-// Reviewing a flag NEVER edits the Question itself — admin uses the
-// existing question edit page separately for any actual fix.
+// POST /admin/question-audit/flags/:id/review  { status: 'CONFIRMED' | 'DISMISSED', note?: string, applyAiAnswer?: boolean }
+// Reviewing a flag NEVER edits the Question itself, UNLESS the admin
+// explicitly sets applyAiAnswer=true on a WRONG_ANSWER flag (a human
+// choosing to apply the AI's suggested correctOption) -- see
+// question-audit-admin.service.ts's own comment on this one exception.
 app.post('/admin/question-audit/flags/:id/review', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: AuthedRequest, res) => {
   try {
     if (!req.staff) {
       res.status(401).json({ error: 'Not authenticated' });
       return;
     }
-    const flag = await questionAuditAdminService.reviewFlag(req.params.id, req.body.status, req.staff.staffId, req.body.note);
+    const flag = await questionAuditAdminService.reviewFlag(req.params.id, req.body.status, req.staff.staffId, req.body.note, req.body.applyAiAnswer);
     res.json(flag);
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to review audit flag' });
+    res.status(500).json({ error: err.message ?? 'Failed to review audit flag' });
   }
 });
 

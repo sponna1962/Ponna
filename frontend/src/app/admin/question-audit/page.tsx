@@ -173,11 +173,11 @@ export default function QuestionAuditPage() {
     }
   }
 
-  async function reviewFlag(id: string, status: 'CONFIRMED' | 'DISMISSED') {
+  async function reviewFlag(id: string, status: 'CONFIRMED' | 'DISMISSED', applyAiAnswer?: boolean) {
     await adminFetch(`/admin/question-audit/flags/${id}/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, applyAiAnswer }),
     });
     if (selectedRunId) loadFlags(selectedRunId);
   }
@@ -427,6 +427,19 @@ export default function QuestionAuditPage() {
                 {f.status !== 'CONFIRMED' && (
                   <button onClick={() => reviewFlag(f.id, 'CONFIRMED')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #16a34a', color: '#16a34a', background: '#fff', cursor: 'pointer' }}>
                     {f.issueType === 'CROSS_EXAM_APPLICABLE' ? 'Confirm — add this tag' : 'Confirm — real issue'}
+                  </button>
+                )}
+                {/* Sept 2026 — a distinct, explicit admin action: applies
+                    the AI's suggested option directly (correctOption
+                    update), then auto-dismisses this question's flags —
+                    separate from plain Confirm, which only marks the
+                    flag reviewed without changing the question. */}
+                {f.issueType === 'WRONG_ANSWER' && f.suggestedCorrectOption && f.status !== 'DISMISSED' && (
+                  <button
+                    onClick={() => reviewFlag(f.id, 'CONFIRMED', true)}
+                    style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #b45309', color: '#b45309', background: '#fffbeb', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Confirm &amp; Apply AI&apos;s Answer ({f.suggestedCorrectOption})
                   </button>
                 )}
                 {f.status !== 'DISMISSED' && (
