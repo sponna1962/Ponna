@@ -19,6 +19,7 @@ const navItems = [
   { href: '/admin/current-affairs', label: 'Current Affairs' },
   { href: '/admin/exam-taxonomy', label: 'Exam Taxonomy' },
   { href: '/admin/syllabus-import', label: 'Syllabus PDF Import' },
+  { href: '/admin/exam-pattern-import', label: 'Exam Pattern Import' },
   { href: '/admin/syllabus', label: 'Subject & Topic' },
   { href: '/admin/students', label: 'Students' },
   { href: '/admin/plans', label: 'Plans' },
