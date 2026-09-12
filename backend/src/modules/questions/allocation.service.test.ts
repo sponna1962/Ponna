@@ -286,4 +286,35 @@ describe('AllocationService.buildSessionQuestionIds', () => {
       expect(prismaMock.question.findMany).toHaveBeenCalledTimes(1); // unseen step only, no CA call at all
     });
   });
+
+  describe('Pending AI Question Audit review — data-quality safety (Sept 2026, BINDING)', () => {
+    it('every query excludes questions with an unreviewed (OPEN) audit flag, at every tier including the broadened Step 3', async () => {
+      prismaMock.question.findMany
+        .mockResolvedValueOnce([]) // CA
+        .mockResolvedValueOnce([questionRow('q1')]) // unseen
+        .mockResolvedValueOnce([questionRow('q2')]); // Step 3 broadened
+
+      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
+
+      for (const call of prismaMock.question.findMany.mock.calls) {
+        const where = call[0]?.where as any;
+        expect(where.auditFlags).toEqual({ none: { status: 'OPEN' } });
+      }
+    });
+
+    it('applies the same exclusion in the Preferred and General pools too (Subject Preference path)', async () => {
+      prismaMock.question.findMany
+        .mockResolvedValueOnce([]) // CA
+        .mockResolvedValueOnce(Array.from({ length: 15 }, (_, i) => questionRow(`p${i}`))) // Preferred fills its target
+        .mockResolvedValueOnce(Array.from({ length: 5 }, (_, i) => questionRow(`g${i}`))); // General fills the rest
+
+      const preference = { subjectIds: ['subject-1'], topicIds: [] };
+      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 20, 'EN', TAXONOMY_FILTER, preference);
+
+      const preferredWhere = prismaMock.question.findMany.mock.calls[1][0]?.where as any;
+      const generalWhere = prismaMock.question.findMany.mock.calls[2][0]?.where as any;
+      expect(preferredWhere.auditFlags).toEqual({ none: { status: 'OPEN' } });
+      expect(generalWhere.auditFlags).toEqual({ none: { status: 'OPEN' } });
+    });
+  });
 });

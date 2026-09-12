@@ -35,6 +35,17 @@
 import { Difficulty, QuizMode, QuestionCategory, Language, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 
+// Sept 2026 (BINDING, data-quality safety) — a question with an
+// unreviewed (OPEN) AI Question Audit flag must NEVER be served to a
+// student in Practice or Live Exam until an admin has reviewed it
+// (CONFIRMED or DISMISSED, via the existing Question Audit review page).
+// A CONFIRMED flag means the admin still needs to go fix the question
+// separately (this exclusion doesn't un-flag it) — a DISMISSED one means
+// the admin decided there's no real issue, so the question becomes
+// eligible again immediately. Spread into every question-fetch query in
+// this file, right alongside status: 'PUBLISHED'.
+const NOT_PENDING_AUDIT_REVIEW = { auditFlags: { none: { status: 'OPEN' as const } } };
+
 /** A student's saved Subject/Topic Preference for the exam they're
  * currently practicing (Stage 1 storage, resolved by session.service.ts
  * before calling buildSessionQuestionIds — see
@@ -71,6 +82,7 @@ export class AllocationService {
       const caQuestions = await prisma.question.findMany({
         where: {
           status: 'PUBLISHED',
+          ...NOT_PENDING_AUDIT_REVIEW,
           category: QuestionCategory.CURRENT_AFFAIRS,
           difficulty: { in: difficulties },
           language,
@@ -96,6 +108,7 @@ export class AllocationService {
       const unseen = await prisma.question.findMany({
         where: {
           status: 'PUBLISHED',
+          ...NOT_PENDING_AUDIT_REVIEW,
           difficulty: { in: difficulties },
           language,
           id: { notIn: selected },
@@ -119,6 +132,7 @@ export class AllocationService {
       const preferredQuestions = await prisma.question.findMany({
         where: {
           status: 'PUBLISHED',
+          ...NOT_PENDING_AUDIT_REVIEW,
           difficulty: { in: difficulties },
           language,
           id: { notIn: selected },
@@ -149,6 +163,7 @@ export class AllocationService {
         const generalQuestions = await prisma.question.findMany({
           where: {
             status: 'PUBLISHED',
+          ...NOT_PENDING_AUDIT_REVIEW,
             difficulty: { in: difficulties },
             language,
             id: { notIn: selected },
@@ -178,6 +193,7 @@ export class AllocationService {
     const broadened = await prisma.question.findMany({
       where: {
         status: 'PUBLISHED',
+          ...NOT_PENDING_AUDIT_REVIEW,
         language,
         id: { notIn: selected },
         history: { none: { userId } },
