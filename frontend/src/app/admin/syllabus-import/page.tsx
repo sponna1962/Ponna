@@ -167,7 +167,7 @@ export default function SyllabusImportPage() {
 
       {savedResult && (
         <div style={{ padding: 14, borderRadius: 8, background: '#DCFCE7', color: '#166534', fontSize: 13, marginBottom: 20 }}>
-          \u2705 Saved: {savedResult.subjectsCreated} subject(s), {savedResult.topicsCreated} topic(s).
+          ✅ Saved: {savedResult.subjectsCreated} subject(s), {savedResult.topicsCreated} topic(s).
         </div>
       )}
 
@@ -195,7 +195,7 @@ export default function SyllabusImportPage() {
                   style={{ flex: 1, padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }}
                 />
                 <button onClick={() => removeSubject(si)} style={{ padding: '0 10px', borderRadius: 6, border: '1px solid #b91c1c', color: '#b91c1c', background: '#fff', cursor: 'pointer' }}>
-                  \u2715
+                  ✕
                 </button>
               </div>
 
@@ -215,7 +215,7 @@ export default function SyllabusImportPage() {
                       style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
                     />
                     <button onClick={() => removeTopic(si, ti)} style={{ padding: '0 8px', borderRadius: 6, border: '1px solid #94a3b8', color: '#64748b', background: '#fff', cursor: 'pointer', fontSize: 12 }}>
-                      \u2715
+                      ✕
                     </button>
                   </div>
                   <textarea
