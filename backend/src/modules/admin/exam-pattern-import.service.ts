@@ -190,7 +190,23 @@ ${trimmed}
 
   /** Deterministic, code-composed fact text — never an AI paraphrase of
    * the official numbers. */
+  /** Detects which exam STAGE this row is (Preliminary/Main/Interview/
+   * unspecified) from its own examName text, e.g. "Combined Civil
+   * Services (Preliminary) Examination (Group I)" -> "Preliminary". This
+   * matters because the SAME Sub-Category (e.g. Group I-A) legitimately
+   * gets multiple PAPER_STRUCTURE facts -- one per stage, with genuinely
+   * different patterns (Preliminary: 1 objective paper; Main: several
+   * descriptive papers) -- so every saved fact must say which stage it
+   * describes, or they become indistinguishable to Ask Ponna. */
+  private detectStage(examName: string): string | null {
+    if (/preliminary/i.test(examName)) return 'Preliminary';
+    if (/\bmain\b/i.test(examName)) return 'Main';
+    if (/interview/i.test(examName)) return 'Interview';
+    return null;
+  }
+
   private formatFactValue(exam: DraftExamPattern): string {
+    const stage = this.detectStage(exam.examName);
     const paperLines = exam.papers
       .map((p) => {
         const bits = [p.standard, p.type, p.qualifyingOrScoring, p.questionCount != null ? `${p.questionCount} Questions` : null, p.marks != null ? `${p.marks} Marks` : null]
@@ -200,7 +216,8 @@ ${trimmed}
       })
       .join('; ');
     const totals = [exam.totalQuestions != null ? `${exam.totalQuestions} Questions` : null, exam.totalMarks != null ? `${exam.totalMarks} Marks` : null].filter(Boolean).join(', ');
-    return `${exam.papers.length} Paper(s) — ${paperLines}.${totals ? ` Total: ${totals}.` : ''}`;
+    const stagePrefix = stage ? `[${stage} Stage] ` : '';
+    return `${stagePrefix}${exam.papers.length} Paper(s) — ${paperLines}.${totals ? ` Total: ${totals}.` : ''} (Source: "${exam.examName}")`;
   }
 
   /** Step 2 — saves one PAPER_STRUCTURE VerifiedExamFact per Sub-Category
