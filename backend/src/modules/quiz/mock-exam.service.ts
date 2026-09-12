@@ -190,7 +190,18 @@ export class MockExamService {
     if (existing) throw new MockExamError('You have already attempted this exam this weekend — one attempt per weekend, like the real exam.');
 
     const questions = await prisma.question.findMany({
-      where: { status: 'PUBLISHED', authorityTags: { some: { subCategoryId } } },
+      where: {
+        status: 'PUBLISHED',
+        // Sept 2026 (BUG FIX) — was authorityTags-only, missing the
+        // DIRECT subCategoryId a question is normally tagged with (the
+        // primary tag every Bulk Upload/Question edit sets). authorityTags
+        // (QuestionTaxonomyTag) is for ADDITIONAL tags on top of that —
+        // e.g. Cross-Exam Question Tagging — never the only path. Same
+        // OR pattern practice-preference.service.ts's own
+        // resolveTaxonomyFilter() already uses everywhere else; Live
+        // Exam had fallen out of sync with it.
+        OR: [{ subCategoryId }, { authorityTags: { some: { subCategoryId } } }],
+      },
       take: config.questionCount,
       orderBy: { createdAt: 'asc' },
     });
