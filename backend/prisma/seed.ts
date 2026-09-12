@@ -323,6 +323,22 @@ async function main() {
   // studentVisible field's own doc comment). Idempotent: safe to re-run
   // on every deploy, whichever of these states the DB is currently in.
   async function mergeGroup4Vao(categoryId: string) {
+    // Sept 2026 (URGENT FIX) — this row was later renamed a SECOND time,
+    // from this function's own canonicalName ('குரூப் 4 - வி.ஏ.ஓ.') to the
+    // real final name 'Group - IV' (the separate rename step right after
+    // this function's call site, further below). This function itself
+    // was never updated to know about that -- so once the row no longer
+    // has EITHER old name, every subsequent deploy crashed at
+    // findUniqueOrThrow('Group IV') below (P2025, confirmed from a real
+    // Render deploy log). This check makes that final state -- the one
+    // that will be true on every deploy from now on -- an immediate,
+    // safe no-op, exactly like the pre-existing steady-state check just
+    // below it.
+    const finalRow = await prisma.examSubCategory.findUnique({
+      where: { categoryId_name: { categoryId, name: 'Group - IV' } },
+    });
+    if (finalRow) return finalRow;
+
     const canonicalName = 'குரூப் 4 - வி.ஏ.ஓ.';
 
     const canonicalRow = await prisma.examSubCategory.findUnique({
