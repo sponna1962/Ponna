@@ -1913,6 +1913,19 @@ app.delete('/admin/mock-exam/:subCategoryId', requireStaffAuth, requireRole('SUP
 
 // ── Live Exam / Mock Exam — student-facing (finalized requirement) ────────
 
+// GET /live-exam/available-exams — Sept 2026 (student-requested): every
+// exam that ACTUALLY has Live Exam configured, so the student picks
+// directly instead of navigating the full Authority/Category/
+// Sub-Category taxonomy tree to find out which ones even have it.
+app.get('/live-exam/available-exams', requireStudentAuth, async (_req, res) => {
+  try {
+    res.json(await mockExamService.listAvailableExams());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load available exams' });
+  }
+});
+
 app.get('/live-exam/:subCategoryId/state', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
     res.json(await mockExamService.getState(req.studentUserId!, req.params.subCategoryId));

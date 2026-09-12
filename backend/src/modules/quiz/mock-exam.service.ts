@@ -110,6 +110,23 @@ export class MockExamService {
     });
   }
 
+  /** Sept 2026 (student-requested) — every exam that actually has Live
+   * Exam configured, so students pick directly rather than navigating
+   * the full taxonomy tree to find out which ones even have it. */
+  async listAvailableExams(): Promise<{ subCategoryId: string; name: string; authorityName: string; categoryName: string }[]> {
+    const configs = await prisma.mockExamConfig.findMany({
+      include: { subCategory: { include: { category: { include: { authority: true } } } } },
+    });
+    return configs
+      .filter((c) => c.subCategory.studentVisible)
+      .map((c) => ({
+        subCategoryId: c.subCategoryId,
+        name: c.subCategory.name,
+        authorityName: c.subCategory.category.authority.name,
+        categoryName: c.subCategory.category.name,
+      }));
+  }
+
   async getState(userId: string, subCategoryId: string) {
     if (!(await this.hasPaidAccess(userId))) return { access: 'FREE_LOCKED' as const };
     // Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING).
@@ -125,6 +142,7 @@ export class MockExamService {
 
     const now = new Date();
     const currentWeekStart = getCurrentExamWeekStart(now);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { isTestAccount: true } });
 
     const latest = await prisma.mockExamAttempt.findFirst({
       where: { userId, subCategoryId },
@@ -137,6 +155,14 @@ export class MockExamService {
 
       if (fresh.status === 'IN_PROGRESS') {
         return { access: 'IN_PROGRESS' as const, attemptId: fresh.id, expiresAt: fresh.expiresAt, config };
+      }
+
+      // Sept 2026 — Test Accounts skip the weekend-cycle/results-withholding
+      // gating entirely (retry as many times as needed for QA); a real
+      // student's actual weekly cycle behavior below is completely
+      // unaffected by this.
+      if (user.isTestAccount) {
+        return { access: 'READY' as const, config };
       }
 
       // Completed or Expired — withheld until Monday 00:00 IST of ITS OWN weekend cycle.
@@ -162,7 +188,7 @@ export class MockExamService {
       };
     }
 
-    if (currentWeekStart === null) {
+    if (currentWeekStart === null && !user.isTestAccount) {
       return { access: 'WINDOW_CLOSED' as const, nextOpensAt: istLabelToRealInstant(getNextExamWeekStart(now)) };
     }
     return { access: 'READY' as const, config };
@@ -183,14 +209,31 @@ export class MockExamService {
     if (!config) throw new MockExamError('Live Exam is not configured for this exam yet.');
 
     const weekStart = getCurrentExamWeekStart();
-    if (weekStart === null) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { isTestAccount: true } });
+
+    if (weekStart === null && !user.isTestAccount) {
       throw new MockExamError('Live Exam is open only on Saturdays and Sundays (IST). Come back this weekend.');
     }
+    // Sept 2026 — Test Accounts (isTestAccount=true) bypass BOTH the
+    // weekday window and the one-attempt-per-weekend restriction, so QA
+    // can retry the same exam repeatedly without waiting for a real
+    // weekend. Falls back to today's IST date as a synthetic weekStart
+    // on a weekday, purely so the attempt record still has a value for
+    // that (required) column -- never used for any real student.
+    const effectiveWeekStart = weekStart ?? istDateLabel(new Date());
 
     const existing = await prisma.mockExamAttempt.findUnique({
-      where: { userId_subCategoryId_weekStart: { userId, subCategoryId, weekStart } },
+      where: { userId_subCategoryId_weekStart: { userId, subCategoryId, weekStart: effectiveWeekStart } },
     });
-    if (existing) throw new MockExamError('You have already attempted this exam this weekend — one attempt per weekend, like the real exam.');
+    if (existing) {
+      if (!user.isTestAccount) {
+        throw new MockExamError('You have already attempted this exam this weekend — one attempt per weekend, like the real exam.');
+      }
+      // Test Account retry: clear the prior attempt for this exact
+      // weekStart so a fresh one can be created below.
+      await prisma.mockExamQuestion.deleteMany({ where: { attemptId: existing.id } });
+      await prisma.mockExamAttempt.delete({ where: { id: existing.id } });
+    }
 
     // Sept 2026 (BUG FIX) — Live Exam previously had NO language filter
     // at all, mixing Tamil and English questions together regardless of
@@ -234,7 +277,7 @@ export class MockExamService {
         subCategoryId,
         startedAt,
         expiresAt,
-        weekStart,
+        weekStart: effectiveWeekStart,
         totalMarks: config.questionCount * config.marksPerQuestion,
         questions: {
           create: questions.map((q, i) => ({ questionId: q.id, sequenceNumber: i + 1 })),

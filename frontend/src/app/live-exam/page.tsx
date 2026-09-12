@@ -13,7 +13,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
 import { StudentMenu } from '../../components/StudentMenu';
-import { ExamHierarchyPicker } from '../../components/ExamHierarchyPicker';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
 type Config = { questionCount: number; durationMinutes: number; marksPerQuestion: number; negativeMarkingFraction: number };
@@ -55,6 +54,17 @@ export default function LiveExamPage() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [starting, setStarting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Sept 2026 (student-requested) — every exam that actually has Live
+  // Exam configured, fetched once, shown directly — no hierarchy
+  // navigation needed to find out which exams even have this.
+  const [availableExams, setAvailableExams] = useState<{ subCategoryId: string; name: string; authorityName: string; categoryName: string }[] | null>(null);
+  useEffect(() => {
+    studentFetch('/live-exam/available-exams')
+      .then((r) => r.json())
+      .then(setAvailableExams)
+      .catch(() => setAvailableExams([]));
+  }, []);
 
   function handleSelect(subCategoryId: string, subCategoryName: string) {
     setSelectedExamId(subCategoryId);
@@ -156,7 +166,31 @@ export default function LiveExamPage() {
 
       {state?.access !== 'IN_PROGRESS' && (
         <div style={{ marginBottom: 20 }}>
-          <ExamHierarchyPicker onSelect={handleSelect} selectedName={selectedExamName} />
+          {availableExams === null && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
+          {availableExams?.length === 0 && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>No exams have Live Exam set up yet.</p>}
+          {availableExams && availableExams.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {availableExams.map((e) => (
+                <button
+                  key={e.subCategoryId}
+                  onClick={() => handleSelect(e.subCategoryId, e.name)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    borderRadius: 8,
+                    border: `1px solid ${selectedExamId === e.subCategoryId ? COLORS.ink : COLORS.line}`,
+                    background: selectedExamId === e.subCategoryId ? COLORS.paperAlt : COLORS.paper,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <p style={{ fontWeight: 700, fontSize: 14, color: COLORS.ink, margin: 0 }}>{e.name}</p>
+                  <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: '2px 0 0' }}>
+                    {e.authorityName} → {e.categoryName}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
