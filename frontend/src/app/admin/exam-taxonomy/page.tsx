@@ -290,14 +290,16 @@ export default function ExamTaxonomyPage() {
                       ))}
                     </ul>
                   )}
-                  <div style={{ marginLeft: 16, display: 'flex', gap: 6 }}>
+                  <div style={{ marginLeft: 16, display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>New Sub-Category:</span>
                     <input
-                      placeholder="+ Sub-Category"
+                      placeholder="Type name here…"
                       value={newSubCategoryName[cat.id] ?? ''}
                       onChange={(e) => setNewSubCategoryName({ ...newSubCategoryName, [cat.id]: e.target.value })}
-                      style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+                      onKeyDown={(e) => e.key === 'Enter' && addSubCategory(cat.id)}
+                      style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, minWidth: 220 }}
                     />
-                    <button onClick={() => addSubCategory(cat.id)} style={{ fontSize: 12, padding: '4px 10px' }}>Add</button>
+                    <button onClick={() => addSubCategory(cat.id)} style={{ fontSize: 12, padding: '4px 10px', fontWeight: 600, cursor: 'pointer' }}>+ Add</button>
                   </div>
                 </div>
               ))}
