@@ -16,7 +16,7 @@ import { runIdempotencyDiagnostic } from './modules/diagnostics/idempotency-diag
 import { examCountdownService } from './modules/practice-preference/exam-countdown.service';
 import { offlinePracticeService } from './modules/practice-preference/offline-practice.service';
 import { syllabusImportService } from './modules/admin/syllabus-import.service';
-import { examPatternImportService } from './modules/admin/exam-pattern-import.service';
+import { examDataImportService } from './modules/admin/exam-data-import.service';
 import { pushNotificationService } from './modules/notifications/push-notification.service';
 import { QuotaExceededError, QuotaService } from './modules/quota/quota.service';
 import { QuestionService, NoDifficultySetError } from './modules/questions/question.service';
@@ -2085,32 +2085,36 @@ app.post('/admin/syllabus-import/apply', requireStaffAuth, requireRole('SUPER_AD
   }
 });
 
-// POST /admin/exam-pattern-import/extract  { pdfBase64 }
-// Sept 2026 — a "Scheme of Examination" style table (many exams at
-// once), distinct from Syllabus PDF Import. Never touches
-// SyllabusSubject/SyllabusTopic; the draft's subCategoryId per exam is
-// always null coming out of extract() — the admin matches each row.
-app.post('/admin/exam-pattern-import/extract', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+// POST /admin/exam-data-import/extract  { documentType, pdfBase64 }
+// Sept 2026 — ONE generalized tool for three multi-exam TABLE documents
+// (Scheme of Examination, Annual Planner, Selection Schedule) — see
+// exam-data-import.service.ts's own header comment for why this is
+// deliberately kept to a single {label, value} shape rather than a
+// different form per document type. Never touches SyllabusSubject/
+// SyllabusTopic; every exam's subCategoryIds is always empty coming out
+// of extract() — the admin matches each row.
+app.post('/admin/exam-data-import/extract', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
   try {
-    const result = await examPatternImportService.extract(req.body.pdfBase64);
+    const result = await examDataImportService.extract(req.body.documentType, req.body.pdfBase64);
     res.json(result);
   } catch (err: any) {
     console.error(err);
-    res.status(400).json({ error: err.message ?? 'Failed to extract exam pattern' });
+    res.status(400).json({ error: err.message ?? 'Failed to extract exam data' });
   }
 });
 
-// POST /admin/exam-pattern-import/apply  { draft, pdfUrl }
-// Saves a PAPER_STRUCTURE VerifiedExamFact for every exam the admin
-// matched to a real Sub-Category (subCategoryId set); skips the rest.
-app.post('/admin/exam-pattern-import/apply', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+// POST /admin/exam-data-import/apply  { draft, pdfUrl }
+// Saves one VerifiedExamFact per Sub-Category the admin checked for
+// each exam (factType/isOfficialConfirmed determined by the draft's
+// documentType); exams with zero checked boxes are skipped.
+app.post('/admin/exam-data-import/apply', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
   try {
     const { draft, pdfUrl } = req.body;
-    const result = await examPatternImportService.applyDraft(draft, pdfUrl);
+    const result = await examDataImportService.applyDraft(draft, pdfUrl);
     res.json(result);
   } catch (err: any) {
     console.error(err);
-    res.status(400).json({ error: err.message ?? 'Failed to apply exam pattern draft' });
+    res.status(400).json({ error: err.message ?? 'Failed to apply exam data draft' });
   }
 });
 

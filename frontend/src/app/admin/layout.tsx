@@ -5,6 +5,7 @@
 // must be usable by non-technical staff, not a showcase of UI polish.
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useRequireStaffAuth } from '../../lib/use-require-staff-auth';
 
@@ -17,19 +18,31 @@ const navItems = [
   { href: '/admin/daily-quiz', label: 'Daily Quiz' },
   { href: '/admin/live-exam', label: 'Live Exam' },
   { href: '/admin/current-affairs', label: 'Current Affairs' },
-  { href: '/admin/exam-taxonomy', label: 'Exam Taxonomy' },
-  { href: '/admin/syllabus-import', label: 'Syllabus PDF Import' },
-  { href: '/admin/exam-pattern-import', label: 'Exam Pattern Import' },
-  { href: '/admin/syllabus', label: 'Subject & Topic' },
   { href: '/admin/students', label: 'Students' },
   { href: '/admin/plans', label: 'Plans' },
   { href: '/admin/staff', label: 'Staff' },
   { href: '/admin/settings', label: 'Settings' },
 ];
 
+// Sept 2026 — grouped under one "TNPSC ▾" menu: these are all official-
+// data authoring tools FOR A SPECIFIC EXAM AUTHORITY (taxonomy structure,
+// syllabus, exam pattern/dates), as opposed to the day-to-day operational
+// tools above (Questions, Daily Quiz, Live Exam etc.) which apply the
+// same way regardless of authority. Kept as its own array so a future
+// "TRB ▾" or "UPSC ▾" group can sit alongside this one without touching
+// the top-level items — same tools, same code, once that Authority
+// exists in Exam Taxonomy (nothing here is TNPSC-hardcoded).
+const tnpscNavItems = [
+  { href: '/admin/exam-taxonomy', label: 'Exam Taxonomy' },
+  { href: '/admin/syllabus', label: 'Subject & Topic' },
+  { href: '/admin/syllabus-import', label: 'Syllabus PDF Import' },
+  { href: '/admin/exam-data-import', label: 'Exam Data Import' },
+];
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
+  const [tnpscMenuOpen, setTnpscMenuOpen] = useState(false);
 
   // Hooks must run unconditionally — `skip` tells it to no-op on the login page
   // itself, avoiding a redirect-to-self reload loop (see hook's comment).
@@ -43,6 +56,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isLoginPage) return <div style={{ fontFamily: 'sans-serif' }}>{children}</div>;
   if (!checked) return null; // brief blank frame while the redirect (if any) kicks in
+
+  const tnpscActive = tnpscNavItems.some((item) => pathname?.startsWith(item.href));
 
   return (
     <div style={{ fontFamily: 'sans-serif', minHeight: '100vh', background: '#f8fafc' }}>
@@ -62,6 +77,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {item.label}
             </Link>
           ))}
+
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setTnpscMenuOpen((v) => !v)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: tnpscActive ? '#fff' : '#cbd5e1',
+                fontSize: 14,
+                fontWeight: tnpscActive ? 700 : 400,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              TNPSC ▾
+            </button>
+            {tnpscMenuOpen && (
+              <>
+                {/* click-outside overlay */}
+                <div onClick={() => setTnpscMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    marginTop: 8,
+                    background: '#fff',
+                    borderRadius: 8,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                    minWidth: 200,
+                    zIndex: 20,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {tnpscNavItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setTnpscMenuOpen(false)}
+                      style={{ display: 'block', padding: '10px 14px', color: '#0f172a', fontSize: 13, textDecoration: 'none', borderBottom: '1px solid #f1f5f9' }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <button
           onClick={logout}
