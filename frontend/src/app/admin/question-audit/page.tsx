@@ -84,6 +84,20 @@ export default function QuestionAuditPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [runsLoaded, setRunsLoaded] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  // Sept 2026 — inline edit, right on this page, instead of navigating
+  // to the Questions page and hunting for the same question there.
+  const [editingFlagId, setEditingFlagId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{
+    questionText: string;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    correctOption: 'A' | 'B' | 'C' | 'D';
+    explanationTa: string;
+    explanationEn: string;
+  } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [runDetail, setRunDetail] = useState<{ byIssueType: { issueType: IssueType; _count: { _all: number } }[] } | null>(null);
   const [flags, setFlags] = useState<Flag[]>([]);
   const [flagsLoaded, setFlagsLoaded] = useState(false);
@@ -178,6 +192,42 @@ export default function QuestionAuditPage() {
     if (!confirm('Disable this question? It will no longer be shown to any student (Practice, Live Exam, etc.) until re-published from the Questions page.')) return;
     await adminFetch(`/admin/questions/${questionId}/disable`, { method: 'POST' });
     if (selectedRunId) loadFlags(selectedRunId);
+  }
+
+  function openInlineEdit(f: Flag) {
+    setEditingFlagId(f.id);
+    setEditForm({
+      questionText: f.question.questionText,
+      optionA: f.question.optionA,
+      optionB: f.question.optionB,
+      optionC: f.question.optionC,
+      optionD: f.question.optionD,
+      correctOption: f.question.correctOption as 'A' | 'B' | 'C' | 'D',
+      explanationTa: f.question.explanationTa ?? '',
+      explanationEn: f.question.explanationEn ?? '',
+    });
+  }
+
+  function cancelInlineEdit() {
+    setEditingFlagId(null);
+    setEditForm(null);
+  }
+
+  async function saveInlineEdit(questionId: string) {
+    if (!editForm) return;
+    setSavingEdit(true);
+    try {
+      await adminFetch(`/admin/questions/${questionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      setEditingFlagId(null);
+      setEditForm(null);
+      if (selectedRunId) loadFlags(selectedRunId);
+    } finally {
+      setSavingEdit(false);
+    }
   }
 
   return (
@@ -360,12 +410,12 @@ export default function QuestionAuditPage() {
               </p>
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <a
-                  href={`/admin/questions?status=${f.question.status}&search=${encodeURIComponent(f.question.questionText.slice(0, 40))}`}
-                  style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', color: '#0f172a', textDecoration: 'none' }}
+                <button
+                  onClick={() => (editingFlagId === f.id ? cancelInlineEdit() : openInlineEdit(f))}
+                  style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', color: '#0f172a', background: editingFlagId === f.id ? '#f1f5f9' : '#fff', cursor: 'pointer' }}
                 >
-                  Edit Question
-                </a>
+                  {editingFlagId === f.id ? 'Close Edit' : 'Edit Question'}
+                </button>
                 {f.question.status !== 'DISABLED' && (
                   <button
                     onClick={() => disableQuestion(f.question.id)}
@@ -390,6 +440,67 @@ export default function QuestionAuditPage() {
                   </span>
                 )}
               </div>
+
+              {editingFlagId === f.id && editForm && (
+                <div style={{ marginTop: 12, padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc' }}>
+                  <label style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 2 }}>Question text</label>
+                  <textarea
+                    value={editForm.questionText}
+                    onChange={(e) => setEditForm({ ...editForm, questionText: e.target.value })}
+                    rows={2}
+                    style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, marginBottom: 8, resize: 'vertical' }}
+                  />
+
+                  {(['A', 'B', 'C', 'D'] as const).map((letter) => (
+                    <div key={letter} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <input
+                        type="radio"
+                        name={`correct-${f.id}`}
+                        checked={editForm.correctOption === letter}
+                        onChange={() => setEditForm({ ...editForm, correctOption: letter })}
+                        title="Mark as correct answer"
+                      />
+                      <span style={{ fontSize: 12, width: 14 }}>{letter}.</span>
+                      <input
+                        value={editForm[({ A: 'optionA', B: 'optionB', C: 'optionC', D: 'optionD' } as const)[letter]]}
+                        onChange={(e) => setEditForm({ ...editForm, [({ A: 'optionA', B: 'optionB', C: 'optionC', D: 'optionD' } as const)[letter]]: e.target.value })}
+                        style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+                      />
+                    </div>
+                  ))}
+
+                  <label style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 2, marginTop: 6 }}>Explanation (Tamil)</label>
+                  <textarea
+                    value={editForm.explanationTa}
+                    onChange={(e) => setEditForm({ ...editForm, explanationTa: e.target.value })}
+                    rows={2}
+                    style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, marginBottom: 8, resize: 'vertical' }}
+                  />
+                  <label style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 2 }}>Explanation (English)</label>
+                  <textarea
+                    value={editForm.explanationEn}
+                    onChange={(e) => setEditForm({ ...editForm, explanationEn: e.target.value })}
+                    rows={2}
+                    style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, marginBottom: 10, resize: 'vertical' }}
+                  />
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => saveInlineEdit(f.question.id)}
+                      disabled={savingEdit}
+                      style={{ fontSize: 12, padding: '8px 16px', borderRadius: 6, border: 'none', background: '#166534', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      {savingEdit ? 'Saving…' : 'Save Changes'}
+                    </button>
+                    <button
+                      onClick={cancelInlineEdit}
+                      style={{ fontSize: 12, padding: '8px 16px', borderRadius: 6, border: '1px solid #94a3b8', color: '#64748b', background: '#fff', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
