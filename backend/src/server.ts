@@ -773,6 +773,21 @@ app.post('/admin/question-audit/runs/:id/re-audit', requireStaffAuth, requireRol
   }
 });
 
+// POST /admin/question-audit/runs/:id/cancel — admin-triggered stop for
+// a run stuck failing repeatedly (e.g. Gemini billing depleted, a real
+// production case). Sets status to FAILED; the running loop (if the
+// same server process is still alive) notices and stops at its next
+// per-question check.
+app.post('/admin/question-audit/runs/:id/cancel', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await questionAuditService.cancelRun(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to cancel run' });
+  }
+});
+
 // ── HTML Entity Cleanup (Sept 2026) ────────────────────────────────────
 // Deterministic, non-AI fix for literal undecoded HTML entity codes
 // (e.g. "&deg;" instead of "°") found in question content -- see

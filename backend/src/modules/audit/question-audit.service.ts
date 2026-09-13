@@ -389,6 +389,16 @@ If there are no concerns at all, respond with {"flags": []}.`;
       const remainingQuestionIds = runRecord.questionIds.filter((id) => !alreadyProcessedIds.has(id));
 
       for (const questionId of remainingQuestionIds) {
+        // Sept 2026 — Cancel Run: check the run's own current status
+        // before each question, so a run stuck failing repeatedly (e.g.
+        // Gemini billing depleted, confirmed from a real Render log) can
+        // actually be stopped mid-loop by an admin action, not just left
+        // to burn through the rest of the sample uselessly.
+        const stillRunning = await prisma.questionAuditRun.findUnique({ where: { id: runId }, select: { status: true } });
+        if (stillRunning?.status !== 'RUNNING') {
+          console.log(`Question audit run ${runId} stopped mid-loop (status is now ${stillRunning?.status}).`);
+          return;
+        }
         try {
           const result = await this.callAudit(questionId);
 
@@ -495,6 +505,20 @@ If there are no concerns at all, respond with {"flags": []}.`;
     if (run.questionIds.length > 0) return run.questionIds;
     const items = await prisma.questionAuditRunItem.findMany({ where: { runId }, select: { questionId: true } });
     return items.map((i) => i.questionId);
+  }
+
+  /** Sept 2026 — admin-triggered stop for a run that's stuck failing
+   * repeatedly (e.g. Gemini billing depleted, confirmed from a real
+   * production case). Sets status to FAILED with a clear note; the
+   * in-flight processRun() loop (if the same server process is still
+   * alive) notices this at its next per-question check and returns
+   * immediately. Also prevents resumeStaleRuns() from picking this run
+   * back up on a future server restart, since it's no longer RUNNING. */
+  async cancelRun(runId: string): Promise<void> {
+    await prisma.questionAuditRun.update({
+      where: { id: runId },
+      data: { status: 'FAILED' as AuditRunStatus, completedAt: new Date(), errorMessage: 'Cancelled by admin.' },
+    });
   }
 
   async resumeStaleRuns(): Promise<void> {

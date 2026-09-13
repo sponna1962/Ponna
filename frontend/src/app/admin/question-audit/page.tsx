@@ -94,6 +94,7 @@ export default function QuestionAuditPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [runsLoaded, setRunsLoaded] = useState(false);
   const [reAuditingRunId, setReAuditingRunId] = useState<string | null>(null);
+  const [cancellingRunId, setCancellingRunId] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
   const [summary, setSummary] = useState<{ date: string; autoApplied: number; pendingReview: number }[] | null>(null);
@@ -174,6 +175,22 @@ export default function QuestionAuditPage() {
     }
   }
 
+  async function cancelRun(runId: string) {
+    if (!confirm('Stop this run? Questions already processed keep their flags; the rest will be left unprocessed.')) return;
+    setCancellingRunId(runId);
+    try {
+      const res = await adminFetch(`/admin/question-audit/runs/${runId}/cancel`, { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error ?? 'Failed to cancel run');
+        return;
+      }
+      loadRuns();
+    } finally {
+      setCancellingRunId(null);
+    }
+  }
+
   // Sept 2026 — admin-requested, deliberately hard to trigger by
   // accident: this deletes ALL audit runs/flags AND resets which
   // questions count as "already audited" for future sampling. Never
@@ -238,7 +255,14 @@ export default function QuestionAuditPage() {
       const res = await adminFetch('/admin/question-audit/runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sampleSize, label: `Phase 1 pilot — ${sampleSize} questions` }),
+        body: JSON.stringify({
+          sampleSize,
+          // Sept 2026 — was hardcoded "Phase 1 pilot" every time, making
+          // every run in the list look identical apart from its stats.
+          // Now includes a timestamp so runs are actually distinguishable
+          // at a glance.
+          label: `Audit run — ${sampleSize} questions (${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })})`,
+        }),
       });
       if (!res.ok) {
         const body = await res.json();
@@ -443,6 +467,22 @@ export default function QuestionAuditPage() {
               style={{ marginTop: 8, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #7c3aed', color: '#7c3aed', background: '#fff', cursor: 'pointer' }}
             >
               {reAuditingRunId === r.id ? 'Starting…' : 'Re-audit this run (same questions, current prompt)'}
+            </button>
+          )}
+          {/* Sept 2026 — stops a run stuck failing repeatedly (e.g. the
+              real Gemini-billing-depleted case this was built for): 0
+              tokens/flags but processedQuestions still climbing means
+              every call is failing and being silently skipped. */}
+          {r.status === 'RUNNING' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                cancelRun(r.id);
+              }}
+              disabled={cancellingRunId === r.id}
+              style={{ marginTop: 8, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #b91c1c', color: '#b91c1c', background: '#fff', cursor: 'pointer' }}
+            >
+              {cancellingRunId === r.id ? 'Cancelling…' : 'Cancel Run'}
             </button>
           )}
         </div>
