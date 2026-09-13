@@ -151,7 +151,12 @@ export default function QuestionAuditPage() {
     if (!confirm('Really sure? Type OK on the next prompt to proceed, or Cancel to back out.')) return;
     setDeletingAll(true);
     try {
-      await adminFetch('/admin/question-audit/runs', { method: 'DELETE' });
+      const res = await adminFetch('/admin/question-audit/runs', { method: 'DELETE' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error ?? `Failed to delete runs (HTTP ${res.status}). Your account may not have the SUPER_ADMIN role this action requires.`);
+        return;
+      }
       setSelectedRunId(null);
       loadRuns();
     } finally {
