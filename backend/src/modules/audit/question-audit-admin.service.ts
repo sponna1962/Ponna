@@ -126,6 +126,7 @@ export class QuestionAuditAdminService {
       if (flag.suggestedQuestionText) data.questionText = flag.suggestedQuestionText;
       if (flag.suggestedExplanationTa) data.explanationTa = flag.suggestedExplanationTa;
       if (flag.suggestedExplanationEn) data.explanationEn = flag.suggestedExplanationEn;
+      if (flag.suggestedDifficulty) data.difficulty = flag.suggestedDifficulty;
       if (Object.keys(data).length === 0) {
         throw new Error('This flag has no suggested fix to apply.');
       }

@@ -488,6 +488,13 @@ model QuestionAuditFlag {
   suggestedQuestionText  String?
   suggestedExplanationTa String?
   suggestedExplanationEn String?
+  // Sept 2026 — for WRONG_DIFFICULTY only. Constrained to this app's
+  // actual Difficulty enum (MEDIUM/HARD only -- there is no EASY value
+  // in this system, even though the AI's free-text notes sometimes
+  // mention "EASY" as a description; the prompt maps that down to
+  // MEDIUM, the closest real option, rather than ever proposing a value
+  // this schema can't store).
+  suggestedDifficulty    Difficulty?
   status             AuditFlagStatus   @default(OPEN)
   reviewedByStaffId  String?
   reviewedAt         DateTime?

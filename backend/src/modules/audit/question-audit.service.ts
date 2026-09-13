@@ -14,7 +14,7 @@
 // abstraction with that file, matching this codebase's "provider-specific
 // logic isolated per concern" convention elsewhere (see gemini-adapter.ts).
 
-import { Prisma, AuditIssueType, AuditVerdict, AuditRunStatus, CorrectOption } from '@prisma/client';
+import { Prisma, AuditIssueType, AuditVerdict, AuditRunStatus, CorrectOption, Difficulty } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { findDuplicateCandidates } from './duplicate-prefilter';
 
@@ -43,6 +43,7 @@ interface RawFlag {
   suggestedQuestionText?: string;
   suggestedExplanationTa?: string;
   suggestedExplanationEn?: string;
+  suggestedDifficulty?: string;
 }
 
 interface AuditCallResult {
@@ -155,7 +156,7 @@ Check for ALL of the following, independently — a question can have zero, one,
 - LANGUAGE_ISSUE: a genuine Tamil/English grammar, spelling, or translation error (not just an awkward-but-correct phrasing) — if confident, include the corrected text in "suggestedQuestionText" and/or "suggestedExplanationTa"/"suggestedExplanationEn", whichever field(s) actually have the error
 - LIKELY_DUPLICATE: only if candidates were given above and this question is substantially the same as one of them — reference it by its [index]
 - WRONG_MAPPING: the exam/category/sub-category mapping above looks wrong for this question's actual content (this is a claim the CURRENT tag is a mistake — different from CROSS_EXAM_APPLICABLE below)
-- WRONG_DIFFICULTY: the difficulty level set is clearly miscalibrated for the stated exam
+- WRONG_DIFFICULTY: the difficulty level set is clearly miscalibrated for the stated exam — this app only has two difficulty levels, MEDIUM and HARD (no EASY); if you believe a question is easier than either, still choose MEDIUM as the closest available level. Always include "suggestedDifficulty" as exactly "MEDIUM" or "HARD"
 - FACTUAL_CONCERN: a factual claim in the question, options, or explanation may be incorrect. If you cannot reliably verify this either way from your own knowledge, still report it — use verdict "CANNOT_VERIFY" rather than staying silent. Do NOT skip this category just because you found nothing else wrong.
 - CROSS_EXAM_APPLICABLE: only if cross-exam candidates were given above and this question's content genuinely fits one of them (same topic AND same standard/level) — this is ADDITIVE, never a claim the existing tag is wrong. Reference the exam by its [index]. Be conservative — only flag this when you're genuinely confident the fit is good, not just topically adjacent.
 
@@ -166,7 +167,7 @@ Rules:
 - verdict is "LIKELY_ISSUE" for a problem you believe is real, or "CANNOT_VERIFY" ONLY for FACTUAL_CONCERN cases you cannot confidently resolve.
 
 Respond with ONLY a JSON object, no other text, no markdown fences:
-{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN, CROSS_EXAM_APPLICABLE>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>, "crossExamIndex": <only for CROSS_EXAM_APPLICABLE, the [index] number from the cross-exam candidates list above>, "suggestedCorrectOption": "<only for WRONG_ANSWER, the single letter A, B, C, or D you believe is actually correct>", "suggestedQuestionText": "<only when confident, for UNCLEAR_OR_INVALID_QUESTION or LANGUAGE_ISSUE, a corrected version of the full question text>", "suggestedExplanationTa": "<only when confident, for WRONG_EXPLANATION or LANGUAGE_ISSUE, a corrected Tamil explanation>", "suggestedExplanationEn": "<only when confident, for WRONG_EXPLANATION or LANGUAGE_ISSUE, a corrected English explanation>"}]}
+{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN, CROSS_EXAM_APPLICABLE>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>, "crossExamIndex": <only for CROSS_EXAM_APPLICABLE, the [index] number from the cross-exam candidates list above>, "suggestedCorrectOption": "<only for WRONG_ANSWER, the single letter A, B, C, or D you believe is actually correct>", "suggestedQuestionText": "<only when confident, for UNCLEAR_OR_INVALID_QUESTION or LANGUAGE_ISSUE, a corrected version of the full question text>", "suggestedExplanationTa": "<only when confident, for WRONG_EXPLANATION or LANGUAGE_ISSUE, a corrected Tamil explanation>", "suggestedExplanationEn": "<only when confident, for WRONG_EXPLANATION or LANGUAGE_ISSUE, a corrected English explanation>", "suggestedDifficulty": "<only for WRONG_DIFFICULTY, exactly MEDIUM or HARD>"}]}
 Never fabricate a suggested* field just to fill it in — leave it out entirely whenever you are not genuinely confident in the exact replacement text.
 If there are no concerns at all, respond with {"flags": []}.`;
   }
@@ -384,6 +385,7 @@ If there are no concerns at all, respond with {"flags": []}.`;
                   suggestedQuestionText: f.suggestedQuestionText ?? null,
                   suggestedExplanationTa: f.suggestedExplanationTa ?? null,
                   suggestedExplanationEn: f.suggestedExplanationEn ?? null,
+                  suggestedDifficulty: ['MEDIUM', 'HARD'].includes(f.suggestedDifficulty ?? '') ? (f.suggestedDifficulty as Difficulty) : null,
                 },
               }),
             ),

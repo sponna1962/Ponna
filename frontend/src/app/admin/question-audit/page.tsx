@@ -61,6 +61,7 @@ type Flag = {
   suggestedQuestionText: string | null;
   suggestedExplanationTa: string | null;
   suggestedExplanationEn: string | null;
+  suggestedDifficulty: 'MEDIUM' | 'HARD' | null;
   suggestedAdditionalSubCategory: { name: string } | null;
   status: 'OPEN' | 'CONFIRMED' | 'DISMISSED';
   createdAt: string;
@@ -84,7 +85,7 @@ type Flag = {
 };
 
 function hasSuggestedFix(f: Flag): boolean {
-  return !!(f.suggestedCorrectOption || f.suggestedQuestionText || f.suggestedExplanationTa || f.suggestedExplanationEn);
+  return !!(f.suggestedCorrectOption || f.suggestedQuestionText || f.suggestedExplanationTa || f.suggestedExplanationEn || f.suggestedDifficulty);
 }
 
 export default function QuestionAuditPage() {
@@ -459,6 +460,11 @@ export default function QuestionAuditPage() {
                   {f.suggestedExplanationEn && (
                     <p style={{ margin: '4px 0 0' }}>
                       <em>Explanation (English) →</em> {f.suggestedExplanationEn}
+                    </p>
+                  )}
+                  {f.suggestedDifficulty && (
+                    <p style={{ margin: '4px 0 0' }}>
+                      <em>Difficulty →</em> {f.suggestedDifficulty}
                     </p>
                   )}
                 </div>
