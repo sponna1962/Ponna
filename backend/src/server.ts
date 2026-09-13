@@ -35,6 +35,7 @@ import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { questionAuditService } from './modules/audit/question-audit.service';
 import { questionAuditAdminService } from './modules/audit/question-audit-admin.service';
+import { htmlEntityCleanupService } from './modules/admin/html-entity-cleanup.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
 import { MistakeReviewService } from './modules/questions/mistake-review.service';
 import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modules/ask-ponna/ask-ponna.service';
@@ -769,6 +770,37 @@ app.post('/admin/question-audit/runs/:id/re-audit', requireStaffAuth, requireRol
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to start re-audit run' });
+  }
+});
+
+// ── HTML Entity Cleanup (Sept 2026) ────────────────────────────────────
+// Deterministic, non-AI fix for literal undecoded HTML entity codes
+// (e.g. "&deg;" instead of "°") found in question content -- see
+// html-entity-cleanup.service.ts's own header comment for why this is
+// deliberately separate from AI Question Audit.
+
+// GET /admin/html-entity-cleanup/scan — read-only, lists every affected
+// field across the WHOLE question bank (not a sample).
+app.get('/admin/html-entity-cleanup/scan', requireStaffAuth, async (_req, res) => {
+  try {
+    const issues = await htmlEntityCleanupService.scan();
+    res.json({ count: issues.length, questionsAffected: new Set(issues.map((i) => i.questionId)).size, issues });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to scan for HTML entity issues' });
+  }
+});
+
+// POST /admin/html-entity-cleanup/fix-all — applies the decode to every
+// affected field found by scan(). Deterministic and lossless (a fixed
+// entity->character table); no per-question admin review needed the way
+// an AI suggestion requires.
+app.post('/admin/html-entity-cleanup/fix-all', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (_req, res) => {
+  try {
+    res.json(await htmlEntityCleanupService.fixAll());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to apply HTML entity fixes' });
   }
 });
 
