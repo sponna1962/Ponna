@@ -475,6 +475,19 @@ model QuestionAuditFlag {
   // informational -- confirming a flag still never touches the Question
   // itself (see this file's own header comment on that guarantee).
   suggestedCorrectOption CorrectOption?
+  // Sept 2026 — same principle, extended to more issue types: a clean,
+  // confident corrected version of the question text and/or explanation,
+  // captured as STRUCTURED data whenever the AI is confident enough to
+  // propose one (never forced -- left null when there's no single clean
+  // fix, e.g. a question that should really just be disabled instead).
+  // Used by WRONG_EXPLANATION, LANGUAGE_ISSUE, and
+  // UNCLEAR_OR_INVALID_QUESTION. The admin sees the exact proposed text
+  // before choosing to apply it -- this is never written without an
+  // explicit "Confirm & Apply" click, same guarantee as
+  // suggestedCorrectOption above.
+  suggestedQuestionText  String?
+  suggestedExplanationTa String?
+  suggestedExplanationEn String?
   status             AuditFlagStatus   @default(OPEN)
   reviewedByStaffId  String?
   reviewedAt         DateTime?

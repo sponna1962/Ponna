@@ -808,10 +808,10 @@ app.get('/admin/question-audit/flags', requireStaffAuth, async (req, res) => {
   }
 });
 
-// POST /admin/question-audit/flags/:id/review  { status: 'CONFIRMED' | 'DISMISSED', note?: string, applyAiAnswer?: boolean }
+// POST /admin/question-audit/flags/:id/review  { status: 'CONFIRMED' | 'DISMISSED', note?: string, applyAiFix?: boolean }
 // Reviewing a flag NEVER edits the Question itself, UNLESS the admin
-// explicitly sets applyAiAnswer=true on a WRONG_ANSWER flag (a human
-// choosing to apply the AI's suggested correctOption) -- see
+// explicitly sets applyAiFix=true (a human choosing to apply whichever
+// suggested* fields the AI captured for this flag) -- see
 // question-audit-admin.service.ts's own comment on this one exception.
 app.post('/admin/question-audit/flags/:id/review', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: AuthedRequest, res) => {
   try {
@@ -819,7 +819,7 @@ app.post('/admin/question-audit/flags/:id/review', requireStaffAuth, requireRole
       res.status(401).json({ error: 'Not authenticated' });
       return;
     }
-    const flag = await questionAuditAdminService.reviewFlag(req.params.id, req.body.status, req.staff.staffId, req.body.note, req.body.applyAiAnswer);
+    const flag = await questionAuditAdminService.reviewFlag(req.params.id, req.body.status, req.staff.staffId, req.body.note, req.body.applyAiFix);
     res.json(flag);
   } catch (err: any) {
     console.error(err);

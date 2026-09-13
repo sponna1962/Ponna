@@ -108,19 +108,31 @@ export class QuestionAuditAdminService {
    * same principle as question.service.ts's own auto-dismiss-on-edit,
    * applied here since this path updates the question directly rather
    * than going through that method). */
-  async reviewFlag(flagId: string, status: 'CONFIRMED' | 'DISMISSED', staffId: string, note?: string, applyAiAnswer?: boolean) {
-    if (applyAiAnswer) {
+  /** Sept 2026 — applyAiFix is an explicit ADMIN choice (a human clicking
+   * a button that shows exactly what will change and says exactly what
+   * it will do), never the AI acting on its own -- the same guarantee
+   * this whole file keeps everywhere else. Applies WHATEVER suggested*
+   * fields are actually present on the flag (correctOption, question
+   * text, and/or either explanation -- any combination, since a flag may
+   * have only some of them depending on issueType and how confident the
+   * AI was), in one update, then auto-dismisses every still-open flag on
+   * this question (it's now actually fixed -- same principle as
+   * question.service.ts's own auto-dismiss-on-edit). */
+  async reviewFlag(flagId: string, status: 'CONFIRMED' | 'DISMISSED', staffId: string, note?: string, applyAiFix?: boolean) {
+    if (applyAiFix) {
       const flag = await prisma.questionAuditFlag.findUniqueOrThrow({ where: { id: flagId } });
-      if (flag.issueType !== 'WRONG_ANSWER' || !flag.suggestedCorrectOption) {
-        throw new Error('applyAiAnswer is only valid for a WRONG_ANSWER flag that has a suggestedCorrectOption.');
+      const data: Record<string, unknown> = {};
+      if (flag.suggestedCorrectOption) data.correctOption = flag.suggestedCorrectOption;
+      if (flag.suggestedQuestionText) data.questionText = flag.suggestedQuestionText;
+      if (flag.suggestedExplanationTa) data.explanationTa = flag.suggestedExplanationTa;
+      if (flag.suggestedExplanationEn) data.explanationEn = flag.suggestedExplanationEn;
+      if (Object.keys(data).length === 0) {
+        throw new Error('This flag has no suggested fix to apply.');
       }
-      await prisma.question.update({
-        where: { id: flag.questionId },
-        data: { correctOption: flag.suggestedCorrectOption, updatedAt: new Date() },
-      });
+      await prisma.question.update({ where: { id: flag.questionId }, data: { ...data, updatedAt: new Date() } });
       await prisma.questionAuditFlag.updateMany({
         where: { questionId: flag.questionId, status: { not: 'DISMISSED' } },
-        data: { status: 'DISMISSED', reviewedByStaffId: staffId, reviewedAt: new Date(), reviewNote: note ?? "Auto-dismissed: admin applied the AI's suggested answer." },
+        data: { status: 'DISMISSED', reviewedByStaffId: staffId, reviewedAt: new Date(), reviewNote: note ?? "Auto-dismissed: admin applied the AI's suggested fix." },
       });
       return prisma.questionAuditFlag.findUniqueOrThrow({ where: { id: flagId } });
     }

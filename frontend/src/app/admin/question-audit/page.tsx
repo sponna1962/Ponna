@@ -58,6 +58,9 @@ type Flag = {
   aiNotes: string;
   duplicateOfQuestionIds: string[];
   suggestedCorrectOption: 'A' | 'B' | 'C' | 'D' | null;
+  suggestedQuestionText: string | null;
+  suggestedExplanationTa: string | null;
+  suggestedExplanationEn: string | null;
   suggestedAdditionalSubCategory: { name: string } | null;
   status: 'OPEN' | 'CONFIRMED' | 'DISMISSED';
   createdAt: string;
@@ -79,6 +82,10 @@ type Flag = {
     subCategory: { name: string } | null;
   };
 };
+
+function hasSuggestedFix(f: Flag): boolean {
+  return !!(f.suggestedCorrectOption || f.suggestedQuestionText || f.suggestedExplanationTa || f.suggestedExplanationEn);
+}
 
 export default function QuestionAuditPage() {
   const [runs, setRuns] = useState<Run[]>([]);
@@ -189,11 +196,11 @@ export default function QuestionAuditPage() {
     }
   }
 
-  async function reviewFlag(id: string, status: 'CONFIRMED' | 'DISMISSED', applyAiAnswer?: boolean) {
+  async function reviewFlag(id: string, status: 'CONFIRMED' | 'DISMISSED', applyAiFix?: boolean) {
     await adminFetch(`/admin/question-audit/flags/${id}/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, applyAiAnswer }),
+      body: JSON.stringify({ status, applyAiFix }),
     });
     if (selectedRunId) loadFlags(selectedRunId);
   }
@@ -434,6 +441,29 @@ export default function QuestionAuditPage() {
                 <strong>AI notes:</strong> {f.aiNotes}
               </p>
 
+              {/* Sept 2026 — shows exactly what "Confirm & Apply AI's Fix"
+                  will write, before the admin clicks it. */}
+              {hasSuggestedFix(f) && (
+                <div style={{ fontSize: 13, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: 10, marginBottom: 10 }}>
+                  <strong style={{ color: '#b45309' }}>AI's suggested fix:</strong>
+                  {f.suggestedQuestionText && (
+                    <p style={{ margin: '4px 0 0' }}>
+                      <em>Question text →</em> {f.suggestedQuestionText}
+                    </p>
+                  )}
+                  {f.suggestedExplanationTa && (
+                    <p style={{ margin: '4px 0 0' }}>
+                      <em>Explanation (Tamil) →</em> {f.suggestedExplanationTa}
+                    </p>
+                  )}
+                  {f.suggestedExplanationEn && (
+                    <p style={{ margin: '4px 0 0' }}>
+                      <em>Explanation (English) →</em> {f.suggestedExplanationEn}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {f.issueType === 'CROSS_EXAM_APPLICABLE' && f.suggestedAdditionalSubCategory && (
                 <p style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', padding: 10, borderRadius: 6, marginBottom: 10 }}>
                   <strong>Suggested additional exam:</strong> {f.suggestedAdditionalSubCategory.name} — confirming ADDS this tag, the existing mapping is kept as-is.
@@ -465,16 +495,17 @@ export default function QuestionAuditPage() {
                   </button>
                 )}
                 {/* Sept 2026 — a distinct, explicit admin action: applies
-                    the AI's suggested option directly (correctOption
-                    update), then auto-dismisses this question's flags —
-                    separate from plain Confirm, which only marks the
-                    flag reviewed without changing the question. */}
-                {f.issueType === 'WRONG_ANSWER' && f.suggestedCorrectOption && f.status !== 'DISMISSED' && (
+                    WHATEVER suggested* fields this flag has (answer,
+                    question text, and/or either explanation) directly,
+                    then auto-dismisses this question's flags — separate
+                    from plain Confirm, which only marks the flag
+                    reviewed without changing the question. */}
+                {hasSuggestedFix(f) && f.status !== 'DISMISSED' && (
                   <button
                     onClick={() => reviewFlag(f.id, 'CONFIRMED', true)}
                     style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #b45309', color: '#b45309', background: '#fffbeb', cursor: 'pointer', fontWeight: 600 }}
                   >
-                    Confirm &amp; Apply AI&apos;s Answer ({f.suggestedCorrectOption})
+                    Confirm &amp; Apply AI&apos;s Fix
                   </button>
                 )}
                 {f.status !== 'DISMISSED' && (

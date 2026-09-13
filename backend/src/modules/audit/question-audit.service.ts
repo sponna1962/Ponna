@@ -40,6 +40,9 @@ interface RawFlag {
   crossExamIndex?: number; // index into the cross-exam candidates list, for CROSS_EXAM_APPLICABLE only
   resolvedCrossExamSubCategoryId?: string;
   suggestedCorrectOption?: string; // only for WRONG_ANSWER
+  suggestedQuestionText?: string;
+  suggestedExplanationTa?: string;
+  suggestedExplanationEn?: string;
 }
 
 interface AuditCallResult {
@@ -147,9 +150,9 @@ Explanation (English): ${question.explanationEn ?? '(none provided)'}${candidate
 Check for ALL of the following, independently — a question can have zero, one, or several genuine issues:
 - WRONG_ANSWER: the marked correct option is actually wrong — always include "suggestedCorrectOption" with the letter you believe is actually correct
 - MULTIPLE_CORRECT_OPTIONS: more than one option could be defended as correct
-- UNCLEAR_OR_INVALID_QUESTION: the question is ambiguous, malformed, or unanswerable as written
-- WRONG_EXPLANATION: the explanation is incorrect, contradicts the marked answer, or is missing when it shouldn't be
-- LANGUAGE_ISSUE: a genuine Tamil/English grammar, spelling, or translation error (not just an awkward-but-correct phrasing)
+- UNCLEAR_OR_INVALID_QUESTION: the question is ambiguous, malformed, or unanswerable as written — if you can confidently rewrite the question text to fix it while preserving its intent, include "suggestedQuestionText"; if the question is too broken to salvage this way (should really just be disabled instead), leave it out
+- WRONG_EXPLANATION: the explanation is incorrect, contradicts the marked answer, or is missing when it shouldn't be — if confident, include a corrected "suggestedExplanationTa" and/or "suggestedExplanationEn" (whichever language(s) the source used)
+- LANGUAGE_ISSUE: a genuine Tamil/English grammar, spelling, or translation error (not just an awkward-but-correct phrasing) — if confident, include the corrected text in "suggestedQuestionText" and/or "suggestedExplanationTa"/"suggestedExplanationEn", whichever field(s) actually have the error
 - LIKELY_DUPLICATE: only if candidates were given above and this question is substantially the same as one of them — reference it by its [index]
 - WRONG_MAPPING: the exam/category/sub-category mapping above looks wrong for this question's actual content (this is a claim the CURRENT tag is a mistake — different from CROSS_EXAM_APPLICABLE below)
 - WRONG_DIFFICULTY: the difficulty level set is clearly miscalibrated for the stated exam
@@ -163,7 +166,8 @@ Rules:
 - verdict is "LIKELY_ISSUE" for a problem you believe is real, or "CANNOT_VERIFY" ONLY for FACTUAL_CONCERN cases you cannot confidently resolve.
 
 Respond with ONLY a JSON object, no other text, no markdown fences:
-{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN, CROSS_EXAM_APPLICABLE>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>, "crossExamIndex": <only for CROSS_EXAM_APPLICABLE, the [index] number from the cross-exam candidates list above>, "suggestedCorrectOption": "<only for WRONG_ANSWER, the single letter A, B, C, or D you believe is actually correct>"}]}
+{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN, CROSS_EXAM_APPLICABLE>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>, "crossExamIndex": <only for CROSS_EXAM_APPLICABLE, the [index] number from the cross-exam candidates list above>, "suggestedCorrectOption": "<only for WRONG_ANSWER, the single letter A, B, C, or D you believe is actually correct>", "suggestedQuestionText": "<only when confident, for UNCLEAR_OR_INVALID_QUESTION or LANGUAGE_ISSUE, a corrected version of the full question text>", "suggestedExplanationTa": "<only when confident, for WRONG_EXPLANATION or LANGUAGE_ISSUE, a corrected Tamil explanation>", "suggestedExplanationEn": "<only when confident, for WRONG_EXPLANATION or LANGUAGE_ISSUE, a corrected English explanation>"}]}
+Never fabricate a suggested* field just to fill it in — leave it out entirely whenever you are not genuinely confident in the exact replacement text.
 If there are no concerns at all, respond with {"flags": []}.`;
   }
 
@@ -377,6 +381,9 @@ If there are no concerns at all, respond with {"flags": []}.`;
                   duplicateOfQuestionIds: f.resolvedDuplicateId ? [f.resolvedDuplicateId] : [],
                   suggestedAdditionalSubCategoryId: f.resolvedCrossExamSubCategoryId ?? null,
                   suggestedCorrectOption: ['A', 'B', 'C', 'D'].includes(f.suggestedCorrectOption ?? '') ? (f.suggestedCorrectOption as CorrectOption) : null,
+                  suggestedQuestionText: f.suggestedQuestionText ?? null,
+                  suggestedExplanationTa: f.suggestedExplanationTa ?? null,
+                  suggestedExplanationEn: f.suggestedExplanationEn ?? null,
                 },
               }),
             ),
