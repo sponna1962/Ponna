@@ -286,27 +286,43 @@ If there are no concerns at all, respond with {"flags": []}.`;
 
     const alreadyAuditedRows = await prisma.questionAuditRunItem.findMany({ select: { questionId: true }, distinct: ['questionId'] });
     const alreadyAuditedIds = alreadyAuditedRows.map((r) => r.questionId);
-    const excludeAuditedSql = alreadyAuditedIds.length > 0 ? Prisma.sql`AND id NOT IN (${Prisma.join(alreadyAuditedIds)})` : Prisma.empty;
+    const excludeAuditedSql = (extra: string[]) => {
+      const all = [...alreadyAuditedIds, ...extra];
+      return all.length > 0 ? Prisma.sql`AND id NOT IN (${Prisma.join(all)})` : Prisma.empty;
+    };
 
-    const randomIds = async (authorityId: string | null, limit: number): Promise<string[]> => {
+    const randomIds = async (authorityId: string | null, limit: number, extraExclude: string[] = []): Promise<string[]> => {
       if (limit <= 0) return [];
       const rows = authorityId
         ? await prisma.$queryRaw<{ id: string }[]>(
-            Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') AND "authorityId" = ${authorityId} ${excludeAuditedSql} ORDER BY random() LIMIT ${limit}`,
+            Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') AND "authorityId" = ${authorityId} ${excludeAuditedSql(extraExclude)} ORDER BY random() LIMIT ${limit}`,
           )
         : await prisma.$queryRaw<{ id: string }[]>(
             excludeIds.length > 0
-              ? Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') AND ("authorityId" IS NULL OR "authorityId" NOT IN (${Prisma.join(excludeIds)})) ${excludeAuditedSql} ORDER BY random() LIMIT ${limit}`
-              : Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') ${excludeAuditedSql} ORDER BY random() LIMIT ${limit}`,
+              ? Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') AND ("authorityId" IS NULL OR "authorityId" NOT IN (${Prisma.join(excludeIds)})) ${excludeAuditedSql(extraExclude)} ORDER BY random() LIMIT ${limit}`
+              : Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' AND difficulty IN ('MEDIUM','HARD') ${excludeAuditedSql(extraExclude)} ORDER BY random() LIMIT ${limit}`,
           );
       return rows.map((r) => r.id);
     };
 
-    const ids = [
-      ...(await randomIds(tnpsc?.id ?? null, tnpscCount)),
-      ...(await randomIds(tntet?.id ?? null, tntetCount)),
-      ...(await randomIds(null, otherCount)),
-    ];
+    const tnpscIds = await randomIds(tnpsc?.id ?? null, tnpscCount);
+    const tntetIds = await randomIds(tntet?.id ?? null, tntetCount);
+    const otherIds = await randomIds(null, otherCount);
+
+    // Sept 2026 (fix — backfill short buckets from TNPSC) — a smaller
+    // exam's authority (TNTET, or "Other") can run out of eligible,
+    // not-yet-audited questions well before TNPSC does, since TNPSC's own
+    // bank is far larger. Previously a bucket coming up short just meant
+    // fewer total questions than requested (e.g. asking for 10 with a
+    // 70/20/10 split returned only 7 if TNTET and Other had nothing
+    // left). Any shortfall is now backfilled from TNPSC (excluding the
+    // TNPSC ids already picked above), so the returned count matches
+    // targetSize whenever the OVERALL bank still has that many eligible,
+    // not-yet-audited questions somewhere.
+    const shortfall = tnpscCount - tnpscIds.length + (tntetCount - tntetIds.length) + (otherCount - otherIds.length);
+    const backfillIds = tnpsc && shortfall > 0 ? await randomIds(tnpsc.id, shortfall, tnpscIds) : [];
+
+    const ids = [...tnpscIds, ...tntetIds, ...otherIds, ...backfillIds];
 
     return [...new Set(ids)];
   }
