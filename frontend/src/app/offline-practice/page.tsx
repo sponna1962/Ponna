@@ -150,7 +150,7 @@ export default function OfflinePracticePage() {
           {pack.questions[currentIndex] && (
             <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
               <p style={{ fontSize: 12, color: COLORS.inkMuted, marginBottom: 6 }}>Q{pack.questions[currentIndex].sequenceNumber}</p>
-              <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, lineHeight: 1.5 }}>{pack.questions[currentIndex].questionText}</p>
+              <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{pack.questions[currentIndex].questionText}</p>
               {(['A', 'B', 'C', 'D'] as const).map((letter) => {
                 const q = pack.questions[currentIndex];
                 const text = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }[letter];

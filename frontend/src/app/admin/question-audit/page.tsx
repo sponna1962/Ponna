@@ -18,7 +18,8 @@ type IssueType =
   | 'WRONG_MAPPING'
   | 'WRONG_DIFFICULTY'
   | 'FACTUAL_CONCERN'
-  | 'CROSS_EXAM_APPLICABLE';
+  | 'CROSS_EXAM_APPLICABLE'
+  | 'POOR_READABILITY';
 
 const ISSUE_LABELS: Record<IssueType, string> = {
   WRONG_ANSWER: 'Wrong answer',
@@ -31,6 +32,7 @@ const ISSUE_LABELS: Record<IssueType, string> = {
   WRONG_DIFFICULTY: 'Wrong difficulty',
   FACTUAL_CONCERN: 'Factual concern',
   CROSS_EXAM_APPLICABLE: 'Could also fit another exam',
+  POOR_READABILITY: 'Poor readability (formatting)',
 };
 
 type Run = {
@@ -415,7 +417,7 @@ export default function QuestionAuditPage() {
                 </span>
               </div>
 
-              <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>{f.question.questionText}</p>
+              <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, whiteSpace: 'pre-wrap' }}>{f.question.questionText}</p>
               <div style={{ fontSize: 13, color: '#475569', marginBottom: 8, lineHeight: 1.6 }}>
                 {(['A', 'B', 'C', 'D'] as const).map((letter) => {
                   const text = { A: f.question.optionA, B: f.question.optionB, C: f.question.optionC, D: f.question.optionD }[letter];
@@ -448,7 +450,7 @@ export default function QuestionAuditPage() {
                 <div style={{ fontSize: 13, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: 10, marginBottom: 10 }}>
                   <strong style={{ color: '#b45309' }}>AI's suggested fix:</strong>
                   {f.suggestedQuestionText && (
-                    <p style={{ margin: '4px 0 0' }}>
+                    <p style={{ margin: '4px 0 0', whiteSpace: 'pre-wrap' }}>
                       <em>Question text →</em> {f.suggestedQuestionText}
                     </p>
                   )}

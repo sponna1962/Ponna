@@ -83,7 +83,7 @@ export default function ReviewQueuePage() {
       ) : (
         queue.map((q) => (
           <div key={q.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 12, maxWidth: 600 }}>
-            <p style={{ fontSize: 15, fontWeight: 600, color: '#0f172a', marginBottom: 8 }}>{q.questionText}</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: '#0f172a', marginBottom: 8, whiteSpace: 'pre-wrap' }}>{q.questionText}</p>
             <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12, lineHeight: 1.6 }}>
               A. {q.optionA} &nbsp; B. {q.optionB} &nbsp; C. {q.optionC} &nbsp; D. {q.optionD}
               <br />

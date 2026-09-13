@@ -182,7 +182,7 @@ function MistakeCard({
     <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
       <button onClick={onOpen} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', width: '100%', cursor: 'pointer' }}>
         {item.subjectName && <span style={{ fontSize: 11, color: COLORS.gold, fontWeight: 700 }}>{item.subjectName}</span>}
-        <p style={{ fontSize: 14, color: COLORS.ink, margin: '4px 0 0', lineHeight: 1.4 }}>{item.questionText}</p>
+        <p style={{ fontSize: 14, color: COLORS.ink, margin: '4px 0 0', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{item.questionText}</p>
       </button>
 
       {isOpen && (

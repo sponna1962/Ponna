@@ -104,7 +104,7 @@ export default function QuestionReportsPage() {
             <span style={{ fontSize: 12, color: '#94a3b8' }}>{new Date(r.createdAt).toLocaleString()}</span>
           </div>
 
-          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>{r.question.questionText}</p>
+          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, whiteSpace: 'pre-wrap' }}>{r.question.questionText}</p>
           <div style={{ fontSize: 13, color: '#475569', marginBottom: 8, lineHeight: 1.6 }}>
             {(['A', 'B', 'C', 'D'] as const).map((letter) => {
               const text = { A: r.question.optionA, B: r.question.optionB, C: r.question.optionC, D: r.question.optionD }[letter];

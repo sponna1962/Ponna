@@ -230,7 +230,7 @@ export default function QuizSessionPage() {
       </div>
 
       <div style={{ padding: '16px 20px 8px 20px' }}>
-        <p style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', lineHeight: 1.5, margin: 0 }}>{display.questionText}</p>
+        <p style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{display.questionText}</p>
         <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
           <button
             onClick={openReport}

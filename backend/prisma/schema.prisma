@@ -379,6 +379,13 @@ enum AuditIssueType {
   // Confirming this flag ADDS a QuestionTaxonomyTag row; it never
   // removes or changes the existing one.
   CROSS_EXAM_APPLICABLE
+  // Sept 2026 — a question is answerable and correct as written, but
+  // several numbered/lettered sub-items ((i)/(ii)/(iii)/(iv),
+  // (a)/(b)/(c)/(d), etc.) are run together in one continuous line with
+  // no line breaks, making it harder to read and compare than it needs
+  // to be. Distinct from UNCLEAR_OR_INVALID_QUESTION -- purely a
+  // presentation fix, never a correctness claim.
+  POOR_READABILITY
 }
 
 // LIKELY_ISSUE: the AI believes this is probably a real problem.

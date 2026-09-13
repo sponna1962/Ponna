@@ -353,7 +353,7 @@ function QuestionView({
       <p style={{ fontSize: 13, color: COLORS.inkMuted, fontWeight: 600, marginBottom: 12 }}>
         {index + 1} / {total}
       </p>
-      <p style={{ fontSize: 17, fontWeight: 600, color: COLORS.ink, lineHeight: 1.5, marginBottom: 16 }}>{question.questionText}</p>
+      <p style={{ fontSize: 17, fontWeight: 600, color: COLORS.ink, lineHeight: 1.5, marginBottom: 16, whiteSpace: 'pre-wrap' }}>{question.questionText}</p>
 
       {(['A', 'B', 'C', 'D'] as const).map((letter) => {
         const text = { A: question.optionA, B: question.optionB, C: question.optionC, D: question.optionD }[letter];

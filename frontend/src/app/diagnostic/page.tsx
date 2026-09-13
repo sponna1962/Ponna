@@ -129,7 +129,7 @@ export default function DiagnosticPage() {
           <p style={{ fontSize: 13, color: COLORS.inkMuted, fontWeight: 600, marginBottom: 12 }}>
             {currentIndex + 1} / {questions.length}
           </p>
-          <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, lineHeight: 1.5, marginBottom: 16 }}>{questions[currentIndex].questionText}</p>
+          <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, lineHeight: 1.5, marginBottom: 16, whiteSpace: 'pre-wrap' }}>{questions[currentIndex].questionText}</p>
 
           {(['A', 'B', 'C', 'D'] as const).map((letter) => {
             const q = questions[currentIndex];
