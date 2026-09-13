@@ -1,21 +1,38 @@
 // Admin-facing reads/actions for the AI Question Audit (Sept 2026 pilot).
 // Deliberately separate from question-audit.service.ts (which does the
 // actual AI calls) — this file only ever touches QuestionAuditRun/
-// RunItem/Flag rows, plus READS Question for display. Reviewing a flag
-// here (Confirm/Dismiss) never edits the Question itself — the admin uses
-// the existing question edit flow for that, separately.
+// RunItem/Flag rows, plus READS/writes Question for the two explicit
+// exceptions below.
+//
+// Sept 2026 — Confidence-Threshold Auto-Apply (admin-approved, locked
+// design after reviewing 5,000 real flagged questions). A flag with a
+// structured fix (suggestedCorrectOption/QuestionText/ExplanationTa/En/
+// Difficulty, or a CROSS_EXAM_APPLICABLE tag) is now applied WITHOUT a
+// human clicking anything, the moment it's created, PROVIDED:
+//   - its issueType is not UNCLEAR_OR_INVALID_QUESTION (never
+//     auto-applies, regardless of confidence -- a full question rewrite
+//     can change the question's intent far more than a single-field fix,
+//     so this always requires manual review), AND
+//   - confidence >= AUTO_APPLY_CONFIDENCE_THRESHOLD (85), OR the
+//     issueType is CROSS_EXAM_APPLICABLE (always eligible regardless of
+//     confidence -- additive, never touches the question itself).
+// Every automatic field change is logged to AutoApplyLog (before/after,
+// per field) before being written, so any pattern of AI error found
+// later can be traced and manually undone. This is the ONE deliberate,
+// admin-approved exception to "AI Question Audit never touches a
+// Question on its own" -- reviewFlag()'s explicit human-click paths
+// (Confirm & Apply, CROSS_EXAM_APPLICABLE Confirm) are the other two,
+// both unchanged by this addition.
 
-import { AuditFlagStatus, AuditIssueType } from '@prisma/client';
+import { AuditFlagStatus, AuditIssueType, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 
+const AUTO_APPLY_CONFIDENCE_THRESHOLD = 85;
+
+// issueTypes that NEVER auto-apply regardless of confidence.
+const NEVER_AUTO_APPLY: AuditIssueType[] = ['UNCLEAR_OR_INVALID_QUESTION'];
+
 export class QuestionAuditAdminService {
-  // Sept 2026 — questionIds (up to several thousand UUIDs, persisted for
-  // resumability — see question-audit.service.ts's own comment) is
-  // deliberately excluded here: the admin UI only ever shows counts/
-  // labels/status, never the raw id list, so including it would bloat
-  // every list/detail response for no reason. processRun()/
-  // resumeStaleRuns() fetch it themselves via their own unrestricted
-  // findUniqueOrThrow, where it's actually needed.
   private static readonly RUN_SELECT = {
     id: true,
     label: true,
@@ -40,21 +57,13 @@ export class QuestionAuditAdminService {
 
   async getRun(runId: string) {
     const run = await prisma.questionAuditRun.findUniqueOrThrow({ where: { id: runId }, select: QuestionAuditAdminService.RUN_SELECT });
-    const byIssueType = await prisma.questionAuditFlag.groupBy({
-      by: ['issueType'],
-      where: { runId },
-      _count: { _all: true },
-    });
-    const byStatus = await prisma.questionAuditFlag.groupBy({
-      by: ['status'],
-      where: { runId },
-      _count: { _all: true },
-    });
+    const byIssueType = await prisma.questionAuditFlag.groupBy({ by: ['issueType'], where: { runId }, _count: { _all: true } });
+    const byStatus = await prisma.questionAuditFlag.groupBy({ by: ['status'], where: { runId }, _count: { _all: true } });
     return { run, byIssueType, byStatus };
   }
 
   async listFlags(filters: { runId?: string; issueType?: AuditIssueType; status?: AuditFlagStatus }, cursor?: string, take = 30) {
-    const flags = await prisma.questionAuditFlag.findMany({
+    return prisma.questionAuditFlag.findMany({
       where: {
         ...(filters.runId ? { runId: filters.runId } : {}),
         ...(filters.issueType ? { issueType: filters.issueType } : {}),
@@ -86,50 +95,44 @@ export class QuestionAuditAdminService {
       take,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
-    return flags;
   }
 
-  /** Confirm/Dismiss a flag. For CROSS_EXAM_APPLICABLE specifically,
-   * CONFIRMED additionally creates a QuestionTaxonomyTag row for the
-   * suggested Sub-Category — the ONE exception to this file's "never
-   * edits the Question" rule, and deliberately narrow: it only ever ADDS
-   * a tag (a separate join-table row), never touches the question's
-   * existing tag(s) or any Question field itself. Skips creating a
-   * duplicate if that tag somehow already exists (e.g. a re-review). */
-  /** Sept 2026 — applyAiAnswer is an explicit ADMIN choice (a human
-   * clicking a button that says exactly what it will do), never the AI
-   * acting on its own -- the same guarantee this whole file already
-   * keeps everywhere else, just with one more admin-triggered exception
-   * (matching the CROSS_EXAM_APPLICABLE tag-adding branch below). Only
-   * valid for a WRONG_ANSWER flag that actually has a
-   * suggestedCorrectOption; updates Question.correctOption directly to
-   * that letter, then auto-dismisses every still-open flag on this
-   * question (it's now actually fixed, not just agreed-as-an-issue --
-   * same principle as question.service.ts's own auto-dismiss-on-edit,
-   * applied here since this path updates the question directly rather
-   * than going through that method). */
-  /** Sept 2026 — applyAiFix is an explicit ADMIN choice (a human clicking
-   * a button that shows exactly what will change and says exactly what
-   * it will do), never the AI acting on its own -- the same guarantee
-   * this whole file keeps everywhere else. Applies WHATEVER suggested*
-   * fields are actually present on the flag (correctOption, question
-   * text, and/or either explanation -- any combination, since a flag may
-   * have only some of them depending on issueType and how confident the
-   * AI was), in one update, then auto-dismisses every still-open flag on
-   * this question (it's now actually fixed -- same principle as
-   * question.service.ts's own auto-dismiss-on-edit). */
+  /** The field-name -> Question-column mapping every apply path (manual
+   * or automatic) uses. Returns null if the flag has nothing to apply. */
+  private collectFieldChanges(flag: {
+    suggestedCorrectOption: string | null;
+    suggestedQuestionText: string | null;
+    suggestedExplanationTa: string | null;
+    suggestedExplanationEn: string | null;
+    suggestedDifficulty: string | null;
+  }): Record<string, string> | null {
+    const data: Record<string, string> = {};
+    if (flag.suggestedCorrectOption) data.correctOption = flag.suggestedCorrectOption;
+    if (flag.suggestedQuestionText) data.questionText = flag.suggestedQuestionText;
+    if (flag.suggestedExplanationTa) data.explanationTa = flag.suggestedExplanationTa;
+    if (flag.suggestedExplanationEn) data.explanationEn = flag.suggestedExplanationEn;
+    if (flag.suggestedDifficulty) data.difficulty = flag.suggestedDifficulty;
+    return Object.keys(data).length > 0 ? data : null;
+  }
+
+  private async addAdditionalExamTag(subCategoryId: string, questionId: string) {
+    const subCategory = await prisma.examSubCategory.findUniqueOrThrow({ where: { id: subCategoryId }, include: { category: true } });
+    const alreadyTagged = await prisma.questionTaxonomyTag.findFirst({ where: { questionId, subCategoryId } });
+    if (!alreadyTagged) {
+      await prisma.questionTaxonomyTag.create({
+        data: { questionId, authorityId: subCategory.category.authorityId, categoryId: subCategory.categoryId, subCategoryId },
+      });
+    }
+  }
+
+  /** Confirm/Dismiss a flag -- the human-click paths. applyAiFix is an
+   * explicit ADMIN choice (clicking a button that shows exactly what
+   * will change), never the AI acting on its own. */
   async reviewFlag(flagId: string, status: 'CONFIRMED' | 'DISMISSED', staffId: string, note?: string, applyAiFix?: boolean) {
     if (applyAiFix) {
       const flag = await prisma.questionAuditFlag.findUniqueOrThrow({ where: { id: flagId } });
-      const data: Record<string, unknown> = {};
-      if (flag.suggestedCorrectOption) data.correctOption = flag.suggestedCorrectOption;
-      if (flag.suggestedQuestionText) data.questionText = flag.suggestedQuestionText;
-      if (flag.suggestedExplanationTa) data.explanationTa = flag.suggestedExplanationTa;
-      if (flag.suggestedExplanationEn) data.explanationEn = flag.suggestedExplanationEn;
-      if (flag.suggestedDifficulty) data.difficulty = flag.suggestedDifficulty;
-      if (Object.keys(data).length === 0) {
-        throw new Error('This flag has no suggested fix to apply.');
-      }
+      const data = this.collectFieldChanges(flag);
+      if (!data) throw new Error('This flag has no suggested fix to apply.');
       await prisma.question.update({ where: { id: flag.questionId }, data: { ...data, updatedAt: new Date() } });
       await prisma.questionAuditFlag.updateMany({
         where: { questionId: flag.questionId, status: { not: 'DISMISSED' } },
@@ -144,45 +147,107 @@ export class QuestionAuditAdminService {
     });
 
     if (status === 'CONFIRMED' && updated.issueType === 'CROSS_EXAM_APPLICABLE' && updated.suggestedAdditionalSubCategoryId) {
-      const subCategory = await prisma.examSubCategory.findUniqueOrThrow({
-        where: { id: updated.suggestedAdditionalSubCategoryId },
-        include: { category: true },
-      });
-      const alreadyTagged = await prisma.questionTaxonomyTag.findFirst({
-        where: { questionId: updated.questionId, subCategoryId: subCategory.id },
-      });
-      if (!alreadyTagged) {
-        await prisma.questionTaxonomyTag.create({
-          data: {
-            questionId: updated.questionId,
-            authorityId: subCategory.category.authorityId,
-            categoryId: subCategory.categoryId,
-            subCategoryId: subCategory.id,
-          },
-        });
-      }
+      await this.addAdditionalExamTag(updated.suggestedAdditionalSubCategoryId, updated.questionId);
     }
 
     return updated;
   }
 
+  /** Sept 2026 — the automatic path. Called right after a flag is
+   * created (question-audit.service.ts's processRun()) AND available for
+   * one-time backfill against already-pending flags
+   * (backfillAutoApplyPendingFlags() below). Returns true if it applied
+   * something, false if the flag wasn't eligible (left OPEN for manual
+   * review) -- never throws for an ineligible flag, that's the normal
+   * case for most flags. */
+  async tryAutoApply(flagId: string): Promise<boolean> {
+    const flag = await prisma.questionAuditFlag.findUniqueOrThrow({ where: { id: flagId } });
+    if (flag.status !== 'OPEN') return false;
+    if (NEVER_AUTO_APPLY.includes(flag.issueType)) return false;
+
+    const isCrossExam = flag.issueType === 'CROSS_EXAM_APPLICABLE' && !!flag.suggestedAdditionalSubCategoryId;
+    const fieldChanges = this.collectFieldChanges(flag);
+    const eligible = isCrossExam || (fieldChanges !== null && flag.confidence >= AUTO_APPLY_CONFIDENCE_THRESHOLD);
+    if (!eligible) return false;
+
+    if (fieldChanges) {
+      const before = await prisma.question.findUniqueOrThrow({
+        where: { id: flag.questionId },
+        select: { correctOption: true, questionText: true, explanationTa: true, explanationEn: true, difficulty: true },
+      });
+      await prisma.$transaction([
+        prisma.question.update({ where: { id: flag.questionId }, data: { ...fieldChanges, updatedAt: new Date() } }),
+        ...Object.keys(fieldChanges).map((field) =>
+          prisma.autoApplyLog.create({
+            data: {
+              flagId: flag.id,
+              questionId: flag.questionId,
+              field,
+              beforeValue: (before as Record<string, unknown>)[field] != null ? String((before as Record<string, unknown>)[field]) : null,
+              afterValue: fieldChanges[field],
+            },
+          }),
+        ),
+      ]);
+    }
+    if (isCrossExam) {
+      await this.addAdditionalExamTag(flag.suggestedAdditionalSubCategoryId as string, flag.questionId);
+    }
+
+    await prisma.questionAuditFlag.update({
+      where: { id: flag.id },
+      data: { status: 'AUTO_APPLIED', reviewedAt: new Date(), reviewNote: `Auto-applied (confidence ${flag.confidence}% >= ${AUTO_APPLY_CONFIDENCE_THRESHOLD}%).` },
+    });
+    return true;
+  }
+
+  /** Sept 2026 — one-time backfill for flags that were already OPEN
+   * before this feature existed (per the admin's explicit "apply to
+   * currently-pending flags too" decision). Safe to call repeatedly --
+   * tryAutoApply() is itself a no-op for anything not OPEN. */
+  async backfillAutoApplyPendingFlags(): Promise<{ checked: number; applied: number }> {
+    const pending = await prisma.questionAuditFlag.findMany({ where: { status: 'OPEN' }, select: { id: true } });
+    let applied = 0;
+    for (const { id } of pending) {
+      if (await this.tryAutoApply(id)) applied++;
+    }
+    return { checked: pending.length, applied };
+  }
+
+  /** Sept 2026 — admin-requested daily/weekly visibility: how much is
+   * being auto-fixed vs still needing a human, at a glance. */
+  async getAutoApplySummary(days = 14): Promise<{ date: string; autoApplied: number; pendingReview: number }[]> {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const rows = await prisma.$queryRaw<{ day: Date; auto_applied: bigint; pending: bigint }[]>(
+      Prisma.sql`
+        SELECT
+          date_trunc('day', "createdAt") AS day,
+          COUNT(*) FILTER (WHERE status = 'AUTO_APPLIED') AS auto_applied,
+          COUNT(*) FILTER (WHERE status = 'OPEN') AS pending
+        FROM "QuestionAuditFlag"
+        WHERE "createdAt" >= ${since}
+        GROUP BY day
+        ORDER BY day DESC
+      `,
+    );
+    return rows.map((r) => ({ date: r.day.toISOString().slice(0, 10), autoApplied: Number(r.auto_applied), pendingReview: Number(r.pending) }));
+  }
+
   /** Sept 2026 — admin-requested full reset before a large fresh run.
-   * Deletes every QuestionAuditFlag, QuestionAuditRunItem, and
-   * QuestionAuditRun row (in that order, since neither child table has
-   * ON DELETE CASCADE — a direct QuestionAuditRun delete would fail on
-   * the FK otherwise). NEVER touches the Question rows those flags/items
-   * point to -- only this app's own audit-tracking metadata. This also
-   * resets selectStratifiedSample()'s "exclude already-audited
-   * questions" memory entirely (it reads from QuestionAuditRunItem), so
-   * every question in the bank becomes eligible for sampling again --
-   * an explicit, understood tradeoff the admin confirmed before calling
-   * this, not a side effect to work around. */
-  async deleteAllRuns(): Promise<{ flagsDeleted: number; itemsDeleted: number; runsDeleted: number }> {
+   * Deletes AutoApplyLog, QuestionAuditFlag, QuestionAuditRunItem, and
+   * QuestionAuditRun (in that order — none of these have ON DELETE
+   * CASCADE). NEVER touches Question rows -- only this app's own
+   * audit-tracking metadata. Also resets selectStratifiedSample()'s
+   * "exclude already-audited questions" memory entirely (it reads from
+   * QuestionAuditRunItem) -- an explicit, understood tradeoff the admin
+   * confirms before calling this. */
+  async deleteAllRuns(): Promise<{ logsDeleted: number; flagsDeleted: number; itemsDeleted: number; runsDeleted: number }> {
     return prisma.$transaction(async (tx) => {
+      const logs = await tx.autoApplyLog.deleteMany({});
       const flags = await tx.questionAuditFlag.deleteMany({});
       const items = await tx.questionAuditRunItem.deleteMany({});
       const runs = await tx.questionAuditRun.deleteMany({});
-      return { flagsDeleted: flags.count, itemsDeleted: items.count, runsDeleted: runs.count };
+      return { logsDeleted: logs.count, flagsDeleted: flags.count, itemsDeleted: items.count, runsDeleted: runs.count };
     });
   }
 }

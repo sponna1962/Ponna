@@ -403,6 +403,31 @@ enum AuditFlagStatus {
   OPEN
   CONFIRMED
   DISMISSED
+  // Sept 2026 — admin-approved auto-apply (see AutoApplyLog): the system
+  // applied the AI's structured fix itself, without a human clicking
+  // anything, because the flag met the confidence threshold the admin
+  // set. Distinct from DISMISSED (which always means either a human
+  // explicitly decided no fix was needed, or a human explicitly clicked
+  // Confirm & Apply) -- kept separate so admin-driven and system-driven
+  // actions are never conflated in reporting or history.
+  AUTO_APPLIED
+}
+
+// Sept 2026 — one row per FIELD the auto-apply system changed (a single
+// flag's fix can touch more than one field, e.g. both Tamil and English
+// explanations), so every automatic change has a durable before/after
+// record for later inspection or manual undo. Never written for a
+// human-initiated Confirm & Apply — only for the confidence-threshold
+// auto-apply path (see question-audit.service.ts's tryAutoApply()).
+model AutoApplyLog {
+  id         String            @id @default(uuid())
+  flagId     String
+  flag       QuestionAuditFlag @relation(fields: [flagId], references: [id])
+  questionId String
+  field      String // e.g. "correctOption", "questionText", "explanationTa", "explanationEn", "difficulty"
+  beforeValue String?
+  afterValue  String?
+  appliedAt  DateTime          @default(now())
 }
 
 enum AuditRunStatus {
@@ -465,7 +490,7 @@ model QuestionAuditFlag {
   question           Question          @relation(fields: [questionId], references: [id])
   issueType          AuditIssueType
   verdict            AuditVerdict      @default(LIKELY_ISSUE)
-  confidence         Int               // 0-100 — the AI's own confidence in THIS flag, never a threshold for any automatic action
+  confidence         Int               // 0-100 — the AI's own confidence in THIS flag. Sept 2026: now ALSO used as an automatic-apply threshold (see question-audit.service.ts's tryAutoApply()) for admin-approved issue types/fields, per an explicit admin-set threshold -- no longer purely informational.
   aiNotes            String            // AI's reasoning, shown to admin as-is
   // For LIKELY_DUPLICATE only — the other question(s) it looks like.
   duplicateOfQuestionIds String[]      @default([])
@@ -489,9 +514,13 @@ model QuestionAuditFlag {
   // fix, e.g. a question that should really just be disabled instead).
   // Used by WRONG_EXPLANATION, LANGUAGE_ISSUE, and
   // UNCLEAR_OR_INVALID_QUESTION. The admin sees the exact proposed text
-  // before choosing to apply it -- this is never written without an
-  // explicit "Confirm & Apply" click, same guarantee as
-  // suggestedCorrectOption above.
+  // before choosing to apply it manually -- OR, for confidence at or
+  // above an admin-set threshold, the system applies it automatically
+  // (see tryAutoApply()); UNCLEAR_OR_INVALID_QUESTION is explicitly
+  // EXCLUDED from ever auto-applying regardless of confidence, per an
+  // explicit admin decision (Sept 2026) -- always requires a human to
+  // manually review and fix, given how much a full question rewrite can
+  // change the question's intent compared to a single-field fix.
   suggestedQuestionText  String?
   suggestedExplanationTa String?
   suggestedExplanationEn String?
@@ -507,6 +536,7 @@ model QuestionAuditFlag {
   reviewedAt         DateTime?
   reviewNote         String?
   createdAt          DateTime          @default(now())
+  autoApplyLogs      AutoApplyLog[]
 
   @@index([runId])
   @@index([questionId])

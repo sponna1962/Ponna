@@ -809,6 +809,30 @@ app.post('/admin/html-entity-cleanup/fix-all', requireStaffAuth, requireRole('SU
 // this does and does not touch (never Question rows, only audit
 // metadata) and the "already-audited" tracking reset this deliberately
 // causes.
+// POST /admin/question-audit/auto-apply-pending — one-time backfill for
+// flags that were already OPEN before Confidence-Threshold Auto-Apply
+// existed (per the admin's explicit "apply to currently-pending flags
+// too" decision). Safe to call repeatedly.
+app.post('/admin/question-audit/auto-apply-pending', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (_req, res) => {
+  try {
+    res.json(await questionAuditAdminService.backfillAutoApplyPendingFlags());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to backfill auto-apply' });
+  }
+});
+
+// GET /admin/question-audit/auto-apply-summary — daily counts of
+// auto-applied vs still-pending flags.
+app.get('/admin/question-audit/auto-apply-summary', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await questionAuditAdminService.getAutoApplySummary());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load auto-apply summary' });
+  }
+});
+
 app.delete('/admin/question-audit/runs', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
   try {
     res.json(await questionAuditAdminService.deleteAllRuns());

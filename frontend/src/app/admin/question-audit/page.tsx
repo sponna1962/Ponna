@@ -65,7 +65,7 @@ type Flag = {
   suggestedExplanationEn: string | null;
   suggestedDifficulty: 'MEDIUM' | 'HARD' | null;
   suggestedAdditionalSubCategory: { name: string } | null;
-  status: 'OPEN' | 'CONFIRMED' | 'DISMISSED';
+  status: 'OPEN' | 'CONFIRMED' | 'DISMISSED' | 'AUTO_APPLIED';
   createdAt: string;
   question: {
     id: string;
@@ -95,6 +95,38 @@ export default function QuestionAuditPage() {
   const [runsLoaded, setRunsLoaded] = useState(false);
   const [reAuditingRunId, setReAuditingRunId] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+  const [summary, setSummary] = useState<{ date: string; autoApplied: number; pendingReview: number }[] | null>(null);
+
+  async function backfillAutoApply() {
+    setBackfilling(true);
+    try {
+      const res = await adminFetch('/admin/question-audit/auto-apply-pending', { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error ?? `Backfill failed (HTTP ${res.status}).`);
+        return;
+      }
+      const result = await res.json();
+      alert(`Checked ${result.checked} pending flag(s), auto-applied ${result.applied}.`);
+      if (selectedRunId) loadFlags(selectedRunId);
+      loadSummary();
+    } finally {
+      setBackfilling(false);
+    }
+  }
+
+  function loadSummary() {
+    adminFetch('/admin/question-audit/auto-apply-summary')
+      .then((r) => r.json())
+      .then((data) => setSummary(Array.isArray(data) ? data : []))
+      .catch(() => setSummary([]));
+  }
+
+  useEffect(() => {
+    loadSummary();
+  }, []);
+
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   // Sept 2026 — inline edit, right on this page, instead of navigating
   // to the Questions page and hunting for the same question there.
@@ -114,7 +146,7 @@ export default function QuestionAuditPage() {
   const [flags, setFlags] = useState<Flag[]>([]);
   const [flagsLoaded, setFlagsLoaded] = useState(false);
   const [issueFilter, setIssueFilter] = useState<IssueType | ''>('');
-  const [statusFilter, setStatusFilter] = useState<'OPEN' | 'CONFIRMED' | 'DISMISSED' | ''>('OPEN');
+  const [statusFilter, setStatusFilter] = useState<'OPEN' | 'CONFIRMED' | 'DISMISSED' | 'AUTO_APPLIED' | ''>('OPEN');
   const [starting, setStarting] = useState(false);
   const [sampleSize, setSampleSize] = useState(1000);
   const [error, setError] = useState<string | null>(null);
@@ -283,13 +315,36 @@ export default function QuestionAuditPage() {
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 8 }}>AI Question Quality Audit</h1>
       <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16, maxWidth: 640, lineHeight: 1.6 }}>
-        The AI only IDENTIFIES possible problems here — it never edits, disables, publishes, or deletes a question. Confirming or
-        dismissing a flag below doesn&apos;t change the question either; fix anything confirmed via the existing{' '}
+        For flag types with a clean, structured fix (Wrong Answer, Wrong Explanation, Language Issue, Wrong Difficulty,
+        Poor Readability at confidence ≥ 85%, and Cross-Exam Applicable at any confidence), the system now applies the
+        fix automatically — no click needed — and logs a before/after record. Unclear/Invalid Question and anything
+        below the confidence threshold always waits for a human here; use{' '}
         <a href="/admin/questions" style={{ color: '#0f172a' }}>
           Questions
         </a>{' '}
-        page, or disable it directly below (a real fix still needs editing separately).
+        to edit, or Disable below, for anything not auto-applied.
       </p>
+
+      {summary && summary.length > 0 && (
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginBottom: 16, background: '#fff' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Auto-Apply summary (last 14 days)</p>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#475569' }}>
+            {summary.map((s) => (
+              <span key={s.date}>
+                <strong>{s.date}</strong>: ⚡ {s.autoApplied} auto-applied · {s.pendingReview} pending review
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={backfillAutoApply}
+        disabled={backfilling}
+        style={{ fontSize: 12, padding: '8px 14px', borderRadius: 6, border: '1px solid #b45309', color: '#b45309', background: '#fffbeb', cursor: 'pointer', marginBottom: 16 }}
+      >
+        {backfilling ? 'Checking…' : 'Auto-Apply Eligible Pending Flags Now'}
+      </button>
 
       {/* Start a new pilot run */}
       <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 24, background: '#f8fafc' }}>
@@ -417,7 +472,7 @@ export default function QuestionAuditPage() {
                 </option>
               ))}
             </select>
-            {(['OPEN', 'CONFIRMED', 'DISMISSED', ''] as const).map((s) => (
+            {(['OPEN', 'CONFIRMED', 'DISMISSED', 'AUTO_APPLIED', ''] as const).map((s) => (
               <button
                 key={s || 'all'}
                 onClick={() => setStatusFilter(s)}
@@ -531,7 +586,7 @@ export default function QuestionAuditPage() {
                     Disable Question
                   </button>
                 )}
-                {f.status !== 'CONFIRMED' && (
+                {f.status === 'OPEN' && (
                   <button onClick={() => reviewFlag(f.id, 'CONFIRMED')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #16a34a', color: '#16a34a', background: '#fff', cursor: 'pointer' }}>
                     {f.issueType === 'CROSS_EXAM_APPLICABLE' ? 'Confirm — add this tag' : 'Confirm — real issue'}
                   </button>
@@ -541,8 +596,11 @@ export default function QuestionAuditPage() {
                     question text, and/or either explanation) directly,
                     then auto-dismisses this question's flags — separate
                     from plain Confirm, which only marks the flag
-                    reviewed without changing the question. */}
-                {hasSuggestedFix(f) && f.status !== 'DISMISSED' && (
+                    reviewed without changing the question. Hidden once a
+                    flag has already left OPEN status (including
+                    AUTO_APPLIED -- the same fix this button would apply
+                    has already been applied automatically). */}
+                {hasSuggestedFix(f) && f.status === 'OPEN' && (
                   <button
                     onClick={() => reviewFlag(f.id, 'CONFIRMED', true)}
                     style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #b45309', color: '#b45309', background: '#fffbeb', cursor: 'pointer', fontWeight: 600 }}
@@ -550,14 +608,14 @@ export default function QuestionAuditPage() {
                     Confirm &amp; Apply AI&apos;s Fix
                   </button>
                 )}
-                {f.status !== 'DISMISSED' && (
+                {f.status === 'OPEN' && (
                   <button onClick={() => reviewFlag(f.id, 'DISMISSED')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #94a3b8', color: '#64748b', background: '#fff', cursor: 'pointer' }}>
                     Dismiss — false positive
                   </button>
                 )}
                 {f.status !== 'OPEN' && (
-                  <span style={{ fontSize: 12, padding: '6px 4px', color: '#94a3b8' }}>
-                    {f.status === 'CONFIRMED' ? '✓ Confirmed' : '✕ Dismissed'}
+                  <span style={{ fontSize: 12, padding: '6px 4px', color: f.status === 'AUTO_APPLIED' ? '#b45309' : '#94a3b8' }}>
+                    {f.status === 'CONFIRMED' ? '✓ Confirmed' : f.status === 'AUTO_APPLIED' ? '⚡ Auto-Applied' : '✕ Dismissed'}
                   </span>
                 )}
               </div>

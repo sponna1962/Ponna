@@ -1,12 +1,20 @@
 // AI Question Quality Audit — Phase 1 pilot (Sept 2026, BINDING).
 //
-// Structural safety guarantee: this file NEVER calls prisma.question.update
-// / updateMany / delete on the Question model. It only reads Question and
-// writes to QuestionAuditRun / QuestionAuditRunItem / QuestionAuditFlag.
-// "AI must only identify and flag possible problems, never change/delete/
-// disable/publish a question" is therefore enforced by what this service
-// literally has no code path to do, not just by convention. Admin acts on
-// confirmed flags through the EXISTING question edit flow.
+// Structural guarantee (UPDATED Sept 2026 — Confidence-Threshold
+// Auto-Apply, admin-approved after reviewing 5,000 real flagged
+// questions): this file itself NEVER calls prisma.question.update
+// directly — it only ever writes to QuestionAuditRun / RunItem / Flag.
+// The one deliberate exception is delegated entirely to
+// question-audit-admin.service.ts's tryAutoApply(), called right after
+// each flag is created below: a flag with a structured fix, above an
+// admin-set confidence threshold (or any confidence for the additive
+// CROSS_EXAM_APPLICABLE tag), is applied automatically, with a
+// before/after audit trail (AutoApplyLog) for every field changed.
+// UNCLEAR_OR_INVALID_QUESTION never auto-applies regardless of
+// confidence — always requires a human, since a full question rewrite
+// can change intent far more than a single-field fix. Everything else
+// (no structured fix, or below threshold) is left OPEN for the admin's
+// existing manual review flow, unchanged.
 //
 // Reuses the Gemini REST-API + retry/fallback pattern already established
 // in ai/classification.service.ts (same GEMINI_API_KEY, same 503/429
@@ -17,6 +25,7 @@
 import { Prisma, AuditIssueType, AuditVerdict, AuditRunStatus, CorrectOption, Difficulty } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { findDuplicateCandidates } from './duplicate-prefilter';
+import { questionAuditAdminService } from './question-audit-admin.service';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.7-flash';
@@ -383,7 +392,7 @@ If there are no concerns at all, respond with {"flags": []}.`;
         try {
           const result = await this.callAudit(questionId);
 
-          await prisma.$transaction([
+          const txResults = await prisma.$transaction([
             prisma.questionAuditRunItem.create({
               data: { runId, questionId, flagCount: result.flags.length },
             }),
@@ -418,6 +427,24 @@ If there are no concerns at all, respond with {"flags": []}.`;
               },
             }),
           ]);
+
+          // Sept 2026 — Confidence-Threshold Auto-Apply (admin-approved):
+          // right after each flag is safely created, immediately check
+          // whether it's eligible to apply itself (see
+          // question-audit-admin.service.ts's tryAutoApply() for the
+          // exact rule). Deliberately a SEPARATE step after the create
+          // transaction commits, not inside it -- keeps the create logic
+          // and the apply logic independently readable, and a failure
+          // here (e.g. one flag's field update erroring) never rolls
+          // back the flags/run-item that were already safely recorded.
+          const createdFlagIds = (txResults.slice(1, 1 + result.flags.length) as { id: string }[]).map((f) => f.id);
+          for (const flagId of createdFlagIds) {
+            try {
+              await questionAuditAdminService.tryAutoApply(flagId);
+            } catch (err) {
+              console.error(`Auto-apply failed for flag ${flagId}:`, err);
+            }
+          }
         } catch (err) {
           console.error(`Question audit failed for ${questionId}:`, err);
           await prisma.questionAuditRun.update({
