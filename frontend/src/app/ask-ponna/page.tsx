@@ -150,7 +150,6 @@ export default function AskPonnaPage() {
                 // English-only UI language, unlike every other string on
                 // this page which still goes through t.askPonna.* as usual.
                 { key: 'learnExam', label: '🎯 தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்', prompt: '🎯 தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்' },
-                { key: 'suitableExam', label: '👤 உங்களுக்கு ஏற்ற தேர்வைக் கண்டறியுங்கள்', prompt: '👤 உங்களுக்கு ஏற்ற தேர்வைக் கண்டறியுங்கள்' },
                 { key: 'howToPrepare', label: '📚 எப்படி தயாராக வேண்டும்?', prompt: '📚 எப்படி தயாராக வேண்டும்?' },
                 { key: 'askAnything', label: '💬 உங்கள் கேள்வியைக் கேளுங்கள்', prompt: '💬 உங்கள் கேள்வியைக் கேளுங்கள்' },
               ].map((flow) => (

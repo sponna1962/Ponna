@@ -36,6 +36,7 @@ import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLi
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { questionAuditService } from './modules/audit/question-audit.service';
+import { bulkExplanationService } from './modules/questions/bulk-explanation.service';
 import { questionAuditAdminService } from './modules/audit/question-audit-admin.service';
 import { htmlEntityCleanupService } from './modules/admin/html-entity-cleanup.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
@@ -805,6 +806,51 @@ app.post('/admin/question-audit/runs/:id/re-audit', requireStaffAuth, requireRol
 app.post('/admin/question-audit/runs/:id/cancel', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
   try {
     await questionAuditService.cancelRun(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to cancel run' });
+  }
+});
+
+// ── Bulk Explanation Generator (Sept 2026, Group IV first) ─────────────
+// See schema.prisma's own header comment on ExplanationGenerationRun.
+
+app.post('/admin/bulk-explanation/runs', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const sampleSize = Number(req.body.sampleSize) || 500;
+    const subCategoryId = req.body.subCategoryId as string;
+    if (!subCategoryId) {
+      res.status(400).json({ error: 'subCategoryId is required' });
+      return;
+    }
+    const questionIds = await bulkExplanationService.selectMissingExplanationQuestions(subCategoryId, sampleSize);
+    if (questionIds.length === 0) {
+      res.status(400).json({ error: 'No published questions missing an explanation were found for this exam.' });
+      return;
+    }
+    const label = req.body.label || `Explanation run — ${questionIds.length} questions (${new Date().toLocaleString('en-IN')})`;
+    const run = await bulkExplanationService.createRun(label, subCategoryId, questionIds);
+    bulkExplanationService.processRun(run.id).catch((err) => console.error(`Bulk explanation run ${run.id} crashed:`, err));
+    res.json(run);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to start explanation generation run' });
+  }
+});
+
+app.get('/admin/bulk-explanation/runs', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await bulkExplanationService.listRuns());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load explanation generation runs' });
+  }
+});
+
+app.post('/admin/bulk-explanation/runs/:id/cancel', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await bulkExplanationService.cancelRun(req.params.id);
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -2538,6 +2584,14 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`PONNA API listening on :${PORT}`);
   startScheduledJobs();
+  // Sept 2026 (real bug found while building Bulk Explanation Generator) —
+  // resumeStaleRuns() existed on QuestionAuditService but was never
+  // actually called anywhere, meaning a run interrupted by a server
+  // restart (deploy, crash) would sit stuck at RUNNING forever unless an
+  // admin noticed and used Cancel Run. Wiring both audit and the new
+  // bulk-explanation runs' resume here, at the same startup point.
+  questionAuditService.resumeStaleRuns().catch((err) => console.error('Failed to resume stale audit runs:', err));
+  bulkExplanationService.resumeStaleRuns().catch((err) => console.error('Failed to resume stale explanation-generation runs:', err));
 });
 
 // Last-resort error handler (Express requires exactly 4 params to recognize
