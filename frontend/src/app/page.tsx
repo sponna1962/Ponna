@@ -409,18 +409,15 @@ export default function IndexPage() {
               {t.login.sessionInvalidated}
             </div>
           )}
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 27, fontWeight: 800, lineHeight: 1.3, marginBottom: 4, whiteSpace: 'pre-line', color: COLORS.ink }}>
-            வெற்றியின்{'\n'}முதல் படி.
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: 800, lineHeight: 1.25, marginBottom: 6, whiteSpace: 'pre-line', color: COLORS.ink, letterSpacing: -0.3 }}>
+            குரூப்-4 வெற்றிக்கு{'\n'}முதல் படி.
           </h1>
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 700, lineHeight: 1.3, marginBottom: 16, whiteSpace: 'pre-line', color: COLORS.gold }}>
-            The first step{'\n'}to success.
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 700, lineHeight: 1.3, marginBottom: 18, color: COLORS.gold }}>
+            Your first step to a TNPSC Group - IV pass.
           </h1>
 
-          <p style={{ fontSize: 15, color: COLORS.inkMuted, marginBottom: 4, lineHeight: 1.5 }}>
-            போட்டித் தேர்வுகள் மற்றும் நுழைவுத் தேர்வுகளுக்கான பயிற்சி இணையதளம்.
-          </p>
-          <p style={{ fontSize: 14, color: COLORS.inkMuted, marginBottom: 20, lineHeight: 1.5 }}>
-            A practice platform for competitive and entrance exam aspirants.
+          <p style={{ fontSize: 14, color: COLORS.inkMuted, marginBottom: 20, lineHeight: 1.6, maxWidth: 380 }}>
+            TNPSC குரூப்-4 தேர்வுக்காகவே கவனமாக வடிவமைக்கப்பட்ட, AI-verified கேள்வி வங்கியுடன் கூடிய பயிற்சி தளம்.
           </p>
 
           {/* Sept 2026 — Quality-Verified Bank badge (differentiated
@@ -429,8 +426,8 @@ export default function IndexPage() {
               stats have actually loaded (never a placeholder/fake
               number while loading). */}
           {verificationStats && verificationStats.verifiedPercent > 0 && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, background: '#DCFCE7', color: '#166534', fontSize: 12, fontWeight: 700, marginBottom: 20 }}>
-              ✓ {verificationStats.verifiedPercent}% of our question bank is AI-verified for quality
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 999, background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', fontSize: 12, fontWeight: 700, marginBottom: 24 }}>
+              <span style={{ fontSize: 13 }}>✓</span> {verificationStats.verifiedPercent}% of our Group - IV question bank is AI-verified
             </div>
           )}
 
@@ -475,13 +472,20 @@ export default function IndexPage() {
           {/* Sept 2026 — Exam Countdown (Personalization). Only shown once
               admin has confirmed the actual exam date for the student's
               selected exam — see exam-countdown.service.ts's own comment
-              on why VerifiedExamFact's free-text date isn't used here. */}
+              on why VerifiedExamFact's free-text date isn't used here.
+              Redesigned into the unified card system below: a colored
+              icon badge instead of a full-background color block, for a
+              calmer, more cohesive page instead of a row of differently-
+              tinted boxes. */}
           {isLoggedIn && examCountdown && (
-            <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 12, marginBottom: 20, background: COLORS.goldLight, textAlign: 'center' }}>
-              <p style={{ fontSize: 12, color: '#7A5A14', margin: '0 0 2px', fontWeight: 600 }}>{examCountdown.subCategoryName}</p>
-              <p style={{ fontSize: 22, fontWeight: 800, color: '#5C4009', margin: 0, fontFamily: FONT_FAMILY }}>
-                இன்னும் {examCountdown.daysRemaining} நாட்கள்
-              </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '16px 18px', marginBottom: 14, background: COLORS.paper, boxShadow: '0 1px 3px rgba(26,34,56,0.06)' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: COLORS.goldLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🗓️</div>
+              <div>
+                <p style={{ fontSize: 11, color: COLORS.inkMuted, margin: '0 0 2px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{examCountdown.subCategoryName}</p>
+                <p style={{ fontSize: 20, fontWeight: 800, color: COLORS.ink, margin: 0, fontFamily: FONT_FAMILY }}>
+                  இன்னும் {examCountdown.daysRemaining} நாட்கள்
+                </p>
+              </div>
             </div>
           )}
 
@@ -493,14 +497,15 @@ export default function IndexPage() {
               something to show (avoids an empty "0 questions" card for a
               brand-new student). */}
           {isLoggedIn && monthlySummary && monthlySummary.questionsAnswered > 0 && (
-            <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 12, marginBottom: 20, background: COLORS.paperAlt }}>
-              <p style={{ fontSize: 11, color: COLORS.inkMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
-                இந்த மாதம் / This Month
-              </p>
-              <p style={{ fontSize: 14, color: COLORS.ink, fontWeight: 600, margin: 0 }}>
-                {monthlySummary.questionsAnswered} கேள்விகள் · {monthlySummary.timeSpentMinutes} நிமிடங்கள்
-                {monthlySummary.currentStreak > 0 && <> · {monthlySummary.currentStreak} நாள் streak</>}
-              </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '16px 18px', marginBottom: 14, background: COLORS.paper, boxShadow: '0 1px 3px rgba(26,34,56,0.06)' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: COLORS.paperAlt, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>📊</div>
+              <div>
+                <p style={{ fontSize: 11, color: COLORS.inkMuted, margin: '0 0 2px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>இந்த மாதம் / This Month</p>
+                <p style={{ fontSize: 14, color: COLORS.ink, fontWeight: 700, margin: 0 }}>
+                  {monthlySummary.questionsAnswered} கேள்விகள் · {monthlySummary.timeSpentMinutes} நிமிடங்கள்
+                  {monthlySummary.currentStreak > 0 && <> · 🔥 {monthlySummary.currentStreak} நாள் streak</>}
+                </p>
+              </div>
             </div>
           )}
 
@@ -512,20 +517,23 @@ export default function IndexPage() {
               (reusing the existing feature, not a new mechanism), then
               goes straight to Start Practice. */}
           {isLoggedIn && weakArea && (
-            <div style={{ border: '1px solid #F3D9A8', borderRadius: 10, padding: 12, marginBottom: 20, background: '#FFF8EC' }}>
-              <p style={{ fontSize: 11, color: '#92400E', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
-                கவனிக்க வேண்டிய பகுதி / Weak Area
-              </p>
-              <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 8px', lineHeight: 1.5 }}>
-                <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
-              </p>
+            <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '16px 18px', marginBottom: 14, background: COLORS.paper, boxShadow: '0 1px 3px rgba(26,34,56,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 10 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FFF3E0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🎯</div>
+                <div>
+                  <p style={{ fontSize: 11, color: COLORS.inkMuted, margin: '0 0 2px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>கவனிக்க வேண்டிய பகுதி / Weak Area</p>
+                  <p style={{ fontSize: 14, color: COLORS.ink, margin: 0, lineHeight: 1.5 }}>
+                    <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
+                  </p>
+                </div>
+              </div>
               {/* Sept 2026 — Verified Progress Coach: adds REAL exam-
                   pattern context only when a genuine textual match
                   exists in an official Scheme-of-Examination fact for
                   this exam — never a fabricated per-subject weightage
                   (see progress-coach.service.ts's own header comment). */}
               {progressCoach?.relatedPaperFact && (
-                <p style={{ fontSize: 12, color: '#78350F', margin: '0 0 10px', lineHeight: 1.5, fontStyle: 'italic' }}>
+                <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: '0 0 10px', marginLeft: 58, lineHeight: 1.5, fontStyle: 'italic' }}>
                   ✓ Verified exam pattern: {progressCoach.relatedPaperFact.value}
                 </p>
               )}
@@ -555,17 +563,24 @@ export default function IndexPage() {
               coverage percentage, not a made-up projection. Only
               appears once syllabus data exists for the student's exam. */}
           {isLoggedIn && gapAnalysis && (
-            <div style={{ border: '1px solid #C7D2FE', borderRadius: 10, padding: 12, marginBottom: 20, background: '#EEF2FF' }}>
-              <p style={{ fontSize: 11, color: '#3730A3', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
-                உண்மையான Syllabus Coverage / Smart Gap Analysis
-              </p>
-              <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 8px', lineHeight: 1.5 }}>
-                {gapAnalysis.subCategoryName} syllabus-ன் <strong>{gapAnalysis.coveragePercent}%</strong> ஆரம்பிச்சிருக்கீங்க
-                ({gapAnalysis.coveredSubjects}/{gapAnalysis.totalSubjects} subjects).
-              </p>
+            <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '16px 18px', marginBottom: 20, background: COLORS.paper, boxShadow: '0 1px 3px rgba(26,34,56,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 10 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>📘</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 11, color: COLORS.inkMuted, margin: '0 0 2px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    உண்மையான Syllabus Coverage
+                  </p>
+                  <p style={{ fontSize: 14, color: COLORS.ink, margin: 0, lineHeight: 1.5 }}>
+                    <strong>{gapAnalysis.coveragePercent}%</strong> ஆரம்பிச்சிருக்கீங்க ({gapAnalysis.coveredSubjects}/{gapAnalysis.totalSubjects} subjects)
+                  </p>
+                </div>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: COLORS.paperAlt, overflow: 'hidden', marginBottom: gapAnalysis.remaining.length > 0 ? 10 : 0, marginLeft: 58 }}>
+                <div style={{ height: '100%', width: `${gapAnalysis.coveragePercent}%`, background: COLORS.gold, borderRadius: 3 }} />
+              </div>
               {gapAnalysis.remaining.length > 0 && (
-                <p style={{ fontSize: 13, color: '#4338CA', margin: 0, lineHeight: 1.5 }}>
-                  <strong>மீதி:</strong> {gapAnalysis.remaining.map((s) => s.nameTa ?? s.name).join(', ')}
+                <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0, marginLeft: 58, lineHeight: 1.5 }}>
+                  <strong style={{ color: COLORS.ink }}>மீதி:</strong> {gapAnalysis.remaining.map((s) => s.nameTa ?? s.name).join(', ')}
                 </p>
               )}
             </div>
@@ -573,7 +588,7 @@ export default function IndexPage() {
 
           <button
             onClick={handleStartPractising}
-            style={{ display: 'block', width: '100%', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
+            style={{ display: 'block', width: '100%', textAlign: 'center', padding: 17, borderRadius: 14, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 700, fontSize: 16, cursor: 'pointer', marginTop: 4, boxShadow: '0 2px 8px rgba(26,34,56,0.18)' }}
           >
             பயிற்சியைத் தொடங்குங்கள் / Start Practising
           </button>
