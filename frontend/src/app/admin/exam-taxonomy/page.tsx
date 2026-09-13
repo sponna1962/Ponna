@@ -8,7 +8,7 @@ import { adminFetch } from '../../../lib/admin-fetch';
 // structure is hardcoded beyond the initial seed data, so growth into new
 // exam families never requires a schema change or a deploy.
 
-type SubCategory = { id: string; name: string; examDate: string | null; standardGroup: string | null; _count: { questions: number } };
+type SubCategory = { id: string; name: string; examDate: string | null; standardGroup: string | null; studentVisible: boolean; _count: { questions: number } };
 type Category = { id: string; name: string; subCategories: SubCategory[]; _count: { questions: number } };
 type Authority = {
   id: string;
@@ -150,6 +150,20 @@ export default function ExamTaxonomyPage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ standardGroup: value || null }),
+    });
+    load();
+  }
+
+  // Sept 2026 — Phased Launch (Group IV first, others hidden until
+  // audited). The backend route already existed
+  // (PATCH .../sub-categories/:id { studentVisible }) -- only the UI
+  // toggle was missing, unlike the existing Purpose/Authority-level
+  // toggles above.
+  async function toggleSubCategoryVisible(sub: SubCategory) {
+    await adminFetch(`/admin/exam-taxonomy/sub-categories/${sub.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentVisible: !sub.studentVisible }),
     });
     load();
   }
@@ -308,6 +322,28 @@ export default function ExamTaxonomyPage() {
                             title="Qualification standard group — used for cross-exam question tagging suggestions"
                             style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, border: '1px solid #cbd5e1', width: 110 }}
                           />
+                          {/* Sept 2026 — Phased Launch: hide this exam
+                              from students (Practice/Live Exam/Plans/
+                              Ask Ponna already all respect this same
+                              flag, per plans.service.ts's own Sept 15
+                              launch precedent) while keeping every
+                              record in the database untouched. */}
+                          <button
+                            onClick={() => toggleSubCategoryVisible(sub)}
+                            title="Toggle student visibility (Phased Launch)"
+                            style={{
+                              fontSize: 11,
+                              padding: '2px 8px',
+                              borderRadius: 10,
+                              border: 'none',
+                              cursor: 'pointer',
+                              background: sub.studentVisible ? '#dcfce7' : '#fee2e2',
+                              color: sub.studentVisible ? '#166534' : '#991b1b',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {sub.studentVisible ? 'Visible' : 'Hidden'}
+                          </button>
                         </li>
                       ))}
                     </ul>

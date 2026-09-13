@@ -11,7 +11,9 @@ import { SessionService } from './modules/quiz/session.service';
 import { PracticePreferenceService, InvalidSelectionError } from './modules/practice-preference/practice-preference.service';
 import { RankingService } from './modules/ranking/ranking.service';
 import { activitySummaryService } from './modules/students/activity-summary.service';
+import { gapAnalysisService } from './modules/practice-preference/gap-analysis.service';
 import { weakAreaService } from './modules/practice-preference/weak-area.service';
+import { progressCoachService } from './modules/practice-preference/progress-coach.service';
 import { runIdempotencyDiagnostic } from './modules/diagnostics/idempotency-diagnostic.service';
 import { examCountdownService } from './modules/practice-preference/exam-countdown.service';
 import { offlinePracticeService } from './modules/practice-preference/offline-practice.service';
@@ -38,6 +40,7 @@ import { questionAuditAdminService } from './modules/audit/question-audit-admin.
 import { htmlEntityCleanupService } from './modules/admin/html-entity-cleanup.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
 import { MistakeReviewService } from './modules/questions/mistake-review.service';
+import { smartRevisionService } from './modules/questions/smart-revision.service';
 import { AskPonnaService, AskPonnaAccessError, AskPonnaLimitError } from './modules/ask-ponna/ask-ponna.service';
 import { getNudge as getAskPonnaNudge } from './modules/ask-ponna/nudge';
 import { getStreakDisplay } from './modules/practice-preference/streak.service';
@@ -57,6 +60,7 @@ import { CutoffPredictorService } from './modules/practice-preference/cutoff-pre
 import { ScopeRestrictedError, scopeAccessService } from './modules/quota/scope-access.service';
 import { MockExamAdminService } from './modules/admin/mock-exam-admin.service';
 import { MockExamService } from './modules/quiz/mock-exam.service';
+import { adaptiveMockService } from './modules/quiz/adaptive-mock.service';
 import { DiagnosticService } from './modules/quiz/diagnostic.service';
 import { DailyQuizType } from '@prisma/client';
 import { ProfileService } from './modules/profile/profile.service';
@@ -204,6 +208,19 @@ app.get('/students/me/mistakes', requireStudentAuth, async (req: StudentAuthedRe
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load Review Mistakes' });
+  }
+});
+
+// POST /students/me/smart-revision — Sept 2026, Mistake-Driven Smart
+// Revision (differentiated feature): on-demand, per-student, generated
+// from the student's own actual pending mistakes -- see
+// smart-revision.service.ts's own header comment.
+app.post('/students/me/smart-revision', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await smartRevisionService.generate(req.studentUserId!));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to generate revision summary' });
   }
 });
 
@@ -1079,7 +1096,49 @@ app.get('/students/me/monthly-summary', requireStudentAuth, async (req: StudentA
   }
 });
 
-// GET /students/me/weak-area — Sept 2026, single weakest-Subject alert,
+// GET /students/me/gap-analysis — Sept 2026, Smart Gap Analysis
+// (differentiated feature): real syllabus coverage from verified
+// Syllabus PDF Import data, matched against actual question-attempt
+// history. Not an estimated score -- an honest, subject-level "here's
+// what you've started, here's what's left" using this exam's own real
+// syllabus structure. Resolves the relevant exam the same way
+// weak-area.service.ts does (the student's own saved Practice
+// Preference) -- no separate selection needed.
+app.get('/students/me/gap-analysis', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await gapAnalysisService.getGapAnalysis(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load gap analysis' });
+  }
+});
+
+// GET /students/me/progress-coach — Sept 2026, Verified Progress Coach
+// (differentiated feature): the same Weak-Area Alert data, plus real
+// paper-structure context from Exam Data Import when a genuine textual
+// match exists -- never a fabricated per-subject weightage. See
+// progress-coach.service.ts's own header comment.
+app.get('/students/me/progress-coach', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await progressCoachService.getInsight(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load progress coach insight' });
+  }
+});
+
+// GET /public/verification-stats — Sept 2026, Quality-Verified Bank
+// badge (differentiated feature, student-facing, no auth needed --
+// shown even on marketing/home surfaces). Real numbers only, see
+// question-audit-admin.service.ts's own getPublicVerificationStats().
+app.get('/public/verification-stats', async (_req, res) => {
+  try {
+    res.json(await questionAuditAdminService.getPublicVerificationStats());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load verification stats' });
+  }
+});
 // scoped to the student's current Practice Preference Sub-Category.
 // Returns null (200, empty body semantics via null) if there's nothing
 // reliable to flag yet — never an error for that case.
@@ -2036,6 +2095,66 @@ app.get('/live-exam/available-exams', requireStudentAuth, async (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load available exams' });
+  }
+});
+
+// ── Adaptive Mock Test (Sept 2026, differentiated feature — Item 5) ────
+// See schema.prisma's own header comment on AdaptiveMockAttempt for why
+// this is a separate system, not a Live Exam mode.
+
+app.get('/adaptive-mock/state', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await adaptiveMockService.getState(req.studentUserId!));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load Adaptive Mock state' });
+  }
+});
+
+app.post('/adaptive-mock/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const attempt = await adaptiveMockService.startAttempt(req.studentUserId!, req.body.questionCount);
+    res.json(attempt);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to start Adaptive Mock Test' });
+  }
+});
+
+app.get('/adaptive-mock/attempts/:attemptId/questions', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await adaptiveMockService.getQuestions(req.studentUserId!, req.params.attemptId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to load questions' });
+  }
+});
+
+app.post('/adaptive-mock/attempts/:attemptId/answer', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const { questionId, selectedOption, timeSpentSeconds } = req.body;
+    res.json(await adaptiveMockService.submitAnswer(req.studentUserId!, req.params.attemptId, questionId, selectedOption, timeSpentSeconds));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to save answer' });
+  }
+});
+
+app.post('/adaptive-mock/attempts/:attemptId/complete', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await adaptiveMockService.completeAttempt(req.params.attemptId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to complete attempt' });
+  }
+});
+
+app.get('/adaptive-mock/attempts/:attemptId/result', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await adaptiveMockService.getResult(req.studentUserId!, req.params.attemptId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to load result' });
   }
 });
 

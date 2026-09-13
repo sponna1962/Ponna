@@ -68,6 +68,7 @@ export function StudentMenu() {
             { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
             { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
             { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
+            { href: '/adaptive-mock', label: t.menu.adaptiveMock, Icon: PracticeIcon },
             { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
             { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
             { href: '/plans', label: t.menu.plans, Icon: PlansIcon },

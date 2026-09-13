@@ -36,8 +36,13 @@ const GEMINI_MODEL_FALLBACK = 'gemini-3.6-flash';
 // Google AI Studio / Cloud Billing console. Update if Google's published
 // pricing changes; this is deliberately a loose estimate, not a billing
 // source of truth.
-const EST_INPUT_COST_PER_1M = 0.075;
-const EST_OUTPUT_COST_PER_1M = 0.3;
+// Sept 2026 (BUG FIX) — was $0.075/$0.30 per 1M tokens, roughly 10x
+// too low. Real Gemini 3.7 Flash pricing (verified against Google's
+// own pricing page, Sept 2026): $0.75/M input, $3.75/M output, through
+// the introductory period ending Dec 31, 2026 (standard rate $1.50/$7.50
+// applies from Jan 1, 2027 -- update these constants again then).
+const EST_INPUT_COST_PER_1M = 0.75;
+const EST_OUTPUT_COST_PER_1M = 3.75;
 
 interface RawFlag {
   issueType: string;

@@ -35,6 +35,27 @@ export default function MistakesPage() {
   const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
   const [result, setResult] = useState<{ isCorrect: boolean; correctOption: string; explanation: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Sept 2026 — Mistake-Driven Smart Revision (differentiated feature):
+  // on-demand, generated from THIS student's own pending mistakes.
+  const [revisionSummary, setRevisionSummary] = useState<{ summary: string; questionCount: number; subjectCount: number } | null>(null);
+  const [generatingRevision, setGeneratingRevision] = useState(false);
+  const [revisionError, setRevisionError] = useState<string | null>(null);
+
+  async function generateSmartRevision() {
+    setGeneratingRevision(true);
+    setRevisionError(null);
+    try {
+      const res = await studentFetch('/students/me/smart-revision', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) {
+        setRevisionError(body.error ?? 'Failed to generate revision summary');
+        return;
+      }
+      setRevisionSummary(body);
+    } finally {
+      setGeneratingRevision(false);
+    }
+  }
 
   function load() {
     studentFetch(`/students/me/mistakes?filter=${filter}`)
@@ -87,6 +108,26 @@ export default function MistakesPage() {
       >
         {t.askPonna.analyzeMyMistakes}
       </a>
+
+      {/* Sept 2026 — Mistake-Driven Smart Revision (differentiated
+          feature): on-demand, generated from THIS student's own pending
+          mistakes -- never a static, same-for-everyone note. */}
+      <button
+        onClick={generateSmartRevision}
+        disabled={generatingRevision}
+        style={{ display: 'block', width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${COLORS.gold}`, background: COLORS.goldLight, color: COLORS.ink, fontWeight: 700, fontSize: 14, cursor: 'pointer', marginBottom: 16 }}
+      >
+        {generatingRevision ? 'உங்க mistakes-ஐ படிச்சு revision notes தயார் பண்றேன்…' : '✨ என் Mistakes-க்கான Smart Revision Notes'}
+      </button>
+      {revisionError && <p style={{ fontSize: 13, color: '#b91c1c', marginBottom: 16 }}>{revisionError}</p>}
+      {revisionSummary && (
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 14, marginBottom: 16, background: '#fff', whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 11, color: COLORS.inkMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+            உங்க {revisionSummary.questionCount} mistakes-லிருந்து ({revisionSummary.subjectCount} subjects)
+          </p>
+          {revisionSummary.summary}
+        </div>
+      )}
 
       {!data && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 

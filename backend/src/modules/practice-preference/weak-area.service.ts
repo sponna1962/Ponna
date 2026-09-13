@@ -34,7 +34,7 @@ export interface WeakAreaAlert {
   sampleSize: number;
 }
 
-function extractFirstSubCategoryId(selections: any): string | null {
+export function extractFirstSubCategoryId(selections: any): string | null {
   for (const auth of selections?.authorities ?? []) {
     for (const cat of auth?.categories ?? []) {
       for (const id of cat?.subCategoryIds ?? []) {

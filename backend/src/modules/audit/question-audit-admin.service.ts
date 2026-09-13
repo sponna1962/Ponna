@@ -250,6 +250,22 @@ export class QuestionAuditAdminService {
       return { logsDeleted: logs.count, flagsDeleted: flags.count, itemsDeleted: items.count, runsDeleted: runs.count };
     });
   }
+  /** Sept 2026 — Quality-Verified Bank badge (student-facing,
+   * differentiated feature): real coverage numbers, never a marketing
+   * guess. Distinct questions ever covered by any audit run (regardless
+   * of whether they were flagged) vs the total PUBLISHED bank. */
+  async getPublicVerificationStats(): Promise<{ questionsVerified: number; totalPublished: number; verifiedPercent: number }> {
+    const [verifiedRows, totalPublished] = await Promise.all([
+      prisma.questionAuditRunItem.findMany({ select: { questionId: true }, distinct: ['questionId'] }),
+      prisma.question.count({ where: { status: 'PUBLISHED' } }),
+    ]);
+    const questionsVerified = verifiedRows.length;
+    return {
+      questionsVerified,
+      totalPublished,
+      verifiedPercent: totalPublished > 0 ? Math.round((questionsVerified / totalPublished) * 100) : 0,
+    };
+  }
 }
 
 export const questionAuditAdminService = new QuestionAuditAdminService();

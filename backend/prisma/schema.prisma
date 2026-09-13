@@ -166,6 +166,7 @@ model User {
   dailyQuizAttempts   DailyQuizAttempt[]
   mistakeReviews      MistakeReview[]
   mockExamAttempts    MockExamAttempt[]
+  adaptiveMockAttempts AdaptiveMockAttempt[]
   diagnosticAttempt   DiagnosticAttempt?
   shareToken          ShareToken?
   // Referral Program (finalized requirement — world-class growth item 3;
@@ -947,6 +948,7 @@ model ExamSubCategory {
   notificationImports NotificationImport[]
   mockExamConfig MockExamConfig?
   mockExamAttempts MockExamAttempt[]
+  adaptiveMockAttempts AdaptiveMockAttempt[]
   planScopes PlanSubCategoryScope[]
   crossExamAuditSuggestions QuestionAuditFlag[]
   // Student-facing launch visibility (finalized requirement — same
@@ -1331,6 +1333,7 @@ model Question {
   sessionQuestions QuizSessionQuestion[]
   mistakeReviews   MistakeReview[]
   mockExamQuestions MockExamQuestion[]
+  adaptiveMockQuestions AdaptiveMockQuestion[]
   diagnosticAnswers DiagnosticAnswer[]
 
   @@index([status, difficulty, category])
@@ -1588,6 +1591,62 @@ model MockExamQuestion {
   isCorrect      Boolean?
   answeredAt     DateTime?
   timeSpentSeconds Int? // Time-Management Analytics (finalized requirement) -- same purely-additive field as QuizSessionQuestion
+
+  @@unique([attemptId, questionId])
+}
+
+// ── Adaptive Mock Test (Sept 2026, differentiated feature — Item 5 of
+// the "world-class, verified-data" roadmap) ─────────────────────────────
+// Deliberately a SEPARATE system from Live Exam, not a mode bolted onto
+// it: Live Exam exists to simulate the REAL exam exactly (full syllabus,
+// fixed weekly cycle, one attempt per weekend) -- adaptive difficulty
+// would contradict that purpose. Adaptive Mock exists for ongoing skill-
+// building instead: repeatable any time, and its question mix (MEDIUM
+// vs HARD ratio) is computed per attempt from the student's own recent
+// accuracy (see adaptive-mock.service.ts's computeAdaptiveRatio()) --
+// struggling students get more MEDIUM to build confidence, strong
+// students get more HARD to keep growing. No weekly-cycle restriction;
+// no results-withholding; scored and shown immediately on completion.
+enum AdaptiveMockAttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED
+}
+
+model AdaptiveMockAttempt {
+  id            String                    @id @default(uuid())
+  userId        String
+  user          User                      @relation(fields: [userId], references: [id])
+  subCategoryId String
+  subCategory   ExamSubCategory           @relation(fields: [subCategoryId], references: [id])
+  startedAt     DateTime                  @default(now())
+  expiresAt     DateTime
+  completedAt   DateTime?
+  status        AdaptiveMockAttemptStatus @default(IN_PROGRESS)
+  score         Float?
+  totalMarks    Float?
+  // The MEDIUM:HARD split actually used for this attempt (e.g. "70:30"),
+  // snapshotted at creation time so a completed attempt's own record
+  // always shows what was actually served, even if the student's
+  // accuracy (and therefore the ratio a NEW attempt would get) changes
+  // later.
+  mediumCount   Int
+  hardCount     Int
+  questions     AdaptiveMockQuestion[]
+}
+
+model AdaptiveMockQuestion {
+  id               String               @id @default(uuid())
+  attemptId        String
+  attempt          AdaptiveMockAttempt  @relation(fields: [attemptId], references: [id])
+  questionId       String
+  question         Question             @relation(fields: [questionId], references: [id])
+  sequenceNumber   Int
+  difficulty       Difficulty           // snapshot of the question's difficulty at selection time
+  selectedOption   CorrectOption?
+  isCorrect        Boolean?
+  answeredAt       DateTime?
+  timeSpentSeconds Int?
 
   @@unique([attemptId, questionId])
 }

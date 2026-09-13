@@ -69,12 +69,39 @@ export default function IndexPage() {
   const [monthlySummary, setMonthlySummary] = useState<{ questionsAnswered: number; timeSpentMinutes: number; currentStreak: number } | null>(null);
   const [weakArea, setWeakArea] = useState<{ subCategoryId: string; subjectId: string; subjectName: string; accuracy: number; overallAccuracy: number; sampleSize: number } | null>(null);
   const [settingWeakAreaPractice, setSettingWeakAreaPractice] = useState(false);
+  const [gapAnalysis, setGapAnalysis] = useState<{
+    subCategoryName: string;
+    totalSubjects: number;
+    coveredSubjects: number;
+    coveragePercent: number;
+    covered: { name: string; nameTa: string | null; questionsAttempted: number }[];
+    remaining: { name: string; nameTa: string | null }[];
+  } | null>(null);
+  const [progressCoach, setProgressCoach] = useState<{
+    subjectName: string;
+    accuracy: number;
+    overallAccuracy: number;
+    subCategoryId: string;
+    subjectId: string;
+    relatedPaperFact: { value: string; sourceUrl: string | null } | null;
+  } | null>(null);
   const [examCountdown, setExamCountdown] = useState<{ subCategoryId: string; subCategoryName: string; examDate: string; daysRemaining: number } | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'google' | null>(null);
   const [headerPhotoUrl, setHeaderPhotoUrl] = useState<string | null>(null);
   const [showDiagnosticPrompt, setShowDiagnosticPrompt] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [loggedOutElsewhere, setLoggedOutElsewhere] = useState(false);
+  // Sept 2026 — Quality-Verified Bank badge (differentiated feature):
+  // real numbers, public endpoint (no login needed), shown to every
+  // visitor including on the logged-out home screen.
+  const [verificationStats, setVerificationStats] = useState<{ questionsVerified: number; totalPublished: number; verifiedPercent: number } | null>(null);
+
+  useEffect(() => {
+    fetch(apiUrl('/public/verification-stats'))
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setVerificationStats)
+      .catch(() => setVerificationStats(null));
+  }, []);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('ponna_student_token') : null;
@@ -104,6 +131,14 @@ export default function IndexPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setWeakArea)
       .catch(() => setWeakArea(null));
+    studentFetch('/students/me/gap-analysis')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setGapAnalysis)
+      .catch(() => setGapAnalysis(null));
+    studentFetch('/students/me/progress-coach')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setProgressCoach)
+      .catch(() => setProgressCoach(null));
     studentFetch('/students/me/exam-countdown')
       .then((r) => (r.ok ? r.json() : null))
       .then(setExamCountdown)
@@ -388,6 +423,17 @@ export default function IndexPage() {
             A practice platform for competitive and entrance exam aspirants.
           </p>
 
+          {/* Sept 2026 — Quality-Verified Bank badge (differentiated
+              feature): real numbers from AI Question Audit's own
+              coverage, never a marketing guess. Only shown once the
+              stats have actually loaded (never a placeholder/fake
+              number while loading). */}
+          {verificationStats && verificationStats.verifiedPercent > 0 && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, background: '#DCFCE7', color: '#166534', fontSize: 12, fontWeight: 700, marginBottom: 20 }}>
+              ✓ {verificationStats.verifiedPercent}% of our question bank is AI-verified for quality
+            </div>
+          )}
+
           {isLoggedIn && showDiagnosticPrompt && (
             <a
               href="/ask-ponna"
@@ -470,9 +516,19 @@ export default function IndexPage() {
               <p style={{ fontSize: 11, color: '#92400E', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
                 கவனிக்க வேண்டிய பகுதி / Weak Area
               </p>
-              <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 10px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 8px', lineHeight: 1.5 }}>
                 <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
               </p>
+              {/* Sept 2026 — Verified Progress Coach: adds REAL exam-
+                  pattern context only when a genuine textual match
+                  exists in an official Scheme-of-Examination fact for
+                  this exam — never a fabricated per-subject weightage
+                  (see progress-coach.service.ts's own header comment). */}
+              {progressCoach?.relatedPaperFact && (
+                <p style={{ fontSize: 12, color: '#78350F', margin: '0 0 10px', lineHeight: 1.5, fontStyle: 'italic' }}>
+                  ✓ Verified exam pattern: {progressCoach.relatedPaperFact.value}
+                </p>
+              )}
               <button
                 disabled={settingWeakAreaPractice}
                 onClick={async () => {
@@ -488,6 +544,30 @@ export default function IndexPage() {
               >
                 {settingWeakAreaPractice ? '...' : 'இப்போ Practice பண்ணுங்க'}
               </button>
+            </div>
+          )}
+
+          {/* Sept 2026 — Smart Gap Analysis: PONNA's differentiated
+              alternative to a generic "estimated score" gauge (see
+              gap-analysis.service.ts's own header comment). Real
+              syllabus-subject names from verified Syllabus PDF Import
+              data, matched against actual attempt history -- an honest
+              coverage percentage, not a made-up projection. Only
+              appears once syllabus data exists for the student's exam. */}
+          {isLoggedIn && gapAnalysis && (
+            <div style={{ border: '1px solid #C7D2FE', borderRadius: 10, padding: 12, marginBottom: 20, background: '#EEF2FF' }}>
+              <p style={{ fontSize: 11, color: '#3730A3', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+                உண்மையான Syllabus Coverage / Smart Gap Analysis
+              </p>
+              <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 8px', lineHeight: 1.5 }}>
+                {gapAnalysis.subCategoryName} syllabus-ன் <strong>{gapAnalysis.coveragePercent}%</strong> ஆரம்பிச்சிருக்கீங்க
+                ({gapAnalysis.coveredSubjects}/{gapAnalysis.totalSubjects} subjects).
+              </p>
+              {gapAnalysis.remaining.length > 0 && (
+                <p style={{ fontSize: 13, color: '#4338CA', margin: 0, lineHeight: 1.5 }}>
+                  <strong>மீதி:</strong> {gapAnalysis.remaining.map((s) => s.nameTa ?? s.name).join(', ')}
+                </p>
+              )}
             </div>
           )}
 
