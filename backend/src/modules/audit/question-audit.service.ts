@@ -289,6 +289,36 @@ If there are no concerns at all, respond with {"flags": []}.`;
    * previously was, which had no memory of what was already sampled and
    * could re-pick the same questions indefinitely while others were
    * never reached at all. */
+  /** Sept 2026 (Phased Launch, admin-requested) — scopes the sample to
+   * ONE specific Sub-Category (e.g. Group IV) instead of the usual
+   * TNPSC/TNTET/Other stratification, for when the priority is
+   * thoroughly auditing exactly what's about to launch rather than
+   * spreading coverage across the whole bank. Same "exclude already-
+   * audited" and PUBLISHED+Medium/Hard filters as the stratified
+   * method; no cross-authority backfill needed here since there's only
+   * one target scope. Same OR pattern (direct subCategoryId OR
+   * authorityTags) allocation.service.ts/mock-exam.service.ts already
+   * use, so this picks up the same question set Practice/Live Exam
+   * would actually serve for this exam. */
+  async selectSampleForSubCategory(subCategoryId: string, targetSize: number): Promise<string[]> {
+    const alreadyAuditedRows = await prisma.questionAuditRunItem.findMany({ select: { questionId: true }, distinct: ['questionId'] });
+    const alreadyAuditedIds = alreadyAuditedRows.map((r) => r.questionId);
+    const excludeAuditedSql = alreadyAuditedIds.length > 0 ? Prisma.sql`AND q.id NOT IN (${Prisma.join(alreadyAuditedIds)})` : Prisma.empty;
+
+    const rows = await prisma.$queryRaw<{ id: string }[]>(
+      Prisma.sql`
+        SELECT DISTINCT q.id FROM "Question" q
+        LEFT JOIN "QuestionTaxonomyTag" t ON t."questionId" = q.id
+        WHERE q.status = 'PUBLISHED' AND q.difficulty IN ('MEDIUM','HARD')
+          AND (q."subCategoryId" = ${subCategoryId} OR t."subCategoryId" = ${subCategoryId})
+          ${excludeAuditedSql}
+        ORDER BY random()
+        LIMIT ${targetSize}
+      `,
+    );
+    return rows.map((r) => r.id);
+  }
+
   async selectStratifiedSample(targetSize: number): Promise<string[]> {
     const tnpsc = await prisma.examAuthority.findFirst({ where: { name: 'TNPSC' } });
     const tntet = await prisma.examAuthority.findFirst({ where: { name: 'TNTET' } });

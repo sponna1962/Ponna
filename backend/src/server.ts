@@ -746,8 +746,15 @@ app.post('/admin/question-reports/:id/status', requireStaffAuth, requireRole('SU
 app.post('/admin/question-audit/runs', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: AuthedRequest, res) => {
   try {
     const sampleSize = Number(req.body.sampleSize) || 1000;
+    // Sept 2026 (Phased Launch) — optional: scope to ONE Sub-Category
+    // (e.g. Group IV) instead of the usual TNPSC/TNTET/Other
+    // stratification, when the priority is thoroughly auditing exactly
+    // what's about to launch.
+    const subCategoryId = req.body.subCategoryId as string | undefined;
     const label = req.body.label || `Question audit — ${sampleSize} questions`;
-    const questionIds = await questionAuditService.selectStratifiedSample(sampleSize);
+    const questionIds = subCategoryId
+      ? await questionAuditService.selectSampleForSubCategory(subCategoryId, sampleSize)
+      : await questionAuditService.selectStratifiedSample(sampleSize);
     if (questionIds.length === 0) {
       res.status(400).json({ error: 'No eligible questions found (PUBLISHED, Medium/Hard difficulty) to sample from.' });
       return;

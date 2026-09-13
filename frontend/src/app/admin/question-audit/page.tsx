@@ -150,6 +150,27 @@ export default function QuestionAuditPage() {
   const [statusFilter, setStatusFilter] = useState<'OPEN' | 'CONFIRMED' | 'DISMISSED' | 'AUTO_APPLIED' | ''>('OPEN');
   const [starting, setStarting] = useState(false);
   const [sampleSize, setSampleSize] = useState(1000);
+  // Sept 2026 (Phased Launch) — optional scope-to-one-exam picker.
+  const [scopeSubCategoryId, setScopeSubCategoryId] = useState('');
+  const [subCategoryOptions, setSubCategoryOptions] = useState<{ id: string; label: string }[]>([]);
+  useEffect(() => {
+    adminFetch('/admin/exam-taxonomy')
+      .then((r) => r.json())
+      .then((tree: any[]) => {
+        const flat: { id: string; label: string }[] = [];
+        for (const purpose of tree) {
+          for (const authority of purpose.authorities ?? []) {
+            for (const category of authority.categories ?? []) {
+              for (const sub of category.subCategories ?? []) {
+                flat.push({ id: sub.id, label: `${authority.name} → ${category.name} → ${sub.name}` });
+              }
+            }
+          }
+        }
+        setSubCategoryOptions(flat);
+      })
+      .catch(() => setSubCategoryOptions([]));
+  }, []);
   const [error, setError] = useState<string | null>(null);
 
   function loadRuns() {
@@ -257,11 +278,14 @@ export default function QuestionAuditPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sampleSize,
+          subCategoryId: scopeSubCategoryId || undefined,
           // Sept 2026 — was hardcoded "Phase 1 pilot" every time, making
           // every run in the list look identical apart from its stats.
           // Now includes a timestamp so runs are actually distinguishable
           // at a glance.
-          label: `Audit run — ${sampleSize} questions (${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })})`,
+          label: scopeSubCategoryId
+            ? `Audit run — ${subCategoryOptions.find((o) => o.id === scopeSubCategoryId)?.label ?? 'scoped'} — ${sampleSize} questions (${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })})`
+            : `Audit run — ${sampleSize} questions (${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })})`,
         }),
       });
       if (!res.ok) {
@@ -372,6 +396,24 @@ export default function QuestionAuditPage() {
 
       {/* Start a new pilot run */}
       <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 24, background: '#f8fafc' }}>
+        {/* Sept 2026 (Phased Launch) — optional: scope to ONE exam
+            instead of the usual TNPSC/TNTET/Other stratification, e.g.
+            to thoroughly audit exactly what's launching first. */}
+        <div style={{ marginBottom: 10 }}>
+          <label style={{ fontSize: 13, color: '#334155', display: 'block', marginBottom: 4 }}>Scope (optional):</label>
+          <select
+            value={scopeSubCategoryId}
+            onChange={(e) => setScopeSubCategoryId(e.target.value)}
+            style={{ width: '100%', maxWidth: 420, padding: '6px 8px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          >
+            <option value="">All exams (stratified: 70% TNPSC / 20% TNTET / 10% other)</option>
+            {subCategoryOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <label style={{ fontSize: 13, color: '#334155' }}>
             Sample size:{' '}
