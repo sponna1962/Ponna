@@ -307,11 +307,13 @@ If there are no concerns at all, respond with {"flags": []}.`;
 
     const rows = await prisma.$queryRaw<{ id: string }[]>(
       Prisma.sql`
-        SELECT DISTINCT q.id FROM "Question" q
-        LEFT JOIN "QuestionTaxonomyTag" t ON t."questionId" = q.id
-        WHERE q.status = 'PUBLISHED' AND q.difficulty IN ('MEDIUM','HARD')
-          AND (q."subCategoryId" = ${subCategoryId} OR t."subCategoryId" = ${subCategoryId})
-          ${excludeAuditedSql}
+        SELECT id FROM (
+          SELECT DISTINCT q.id FROM "Question" q
+          LEFT JOIN "QuestionTaxonomyTag" t ON t."questionId" = q.id
+          WHERE q.status = 'PUBLISHED' AND q.difficulty IN ('MEDIUM','HARD')
+            AND (q."subCategoryId" = ${subCategoryId} OR t."subCategoryId" = ${subCategoryId})
+            ${excludeAuditedSql}
+        ) matched
         ORDER BY random()
         LIMIT ${targetSize}
       `,
