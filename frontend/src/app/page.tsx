@@ -423,17 +423,6 @@ export default function IndexPage() {
             A practice platform for competitive and entrance exam aspirants.
           </p>
 
-          {/* Sept 2026 — Quality-Verified Bank badge (differentiated
-              feature): real numbers from AI Question Audit's own
-              coverage, never a marketing guess. Only shown once the
-              stats have actually loaded (never a placeholder/fake
-              number while loading). */}
-          {verificationStats && verificationStats.verifiedPercent > 0 && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, background: '#DCFCE7', color: '#166534', fontSize: 12, fontWeight: 700, marginBottom: 20 }}>
-              ✓ {verificationStats.verifiedPercent}% of our question bank is AI-verified for quality
-            </div>
-          )}
-
           {isLoggedIn && showDiagnosticPrompt && (
             <a
               href="/ask-ponna"
