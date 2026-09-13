@@ -154,7 +154,11 @@ export class SessionService {
     });
     if (existingAnswer.answered) {
       const answeredQuestion = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
-      return { isCorrect: existingAnswer.isCorrect ?? false, correctOption: answeredQuestion.correctOption };
+      return {
+        isCorrect: existingAnswer.isCorrect ?? false,
+        correctOption: answeredQuestion.correctOption,
+        explanation: answeredQuestion.language === 'TA' ? answeredQuestion.explanationTa : answeredQuestion.explanationEn,
+      };
     }
 
     const question = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
@@ -216,7 +220,14 @@ export class SessionService {
     // awarding here is just the side-effect write.
     await milestoneService.checkAndAward(session.userId);
 
-    return { isCorrect, correctOption: question.correctOption };
+    return {
+      isCorrect,
+      correctOption: question.correctOption,
+      // Sept 2026 (Tap-to-Reveal Explanation) — plain field, no "AI"
+      // labeling anywhere near this per explicit design decision; null
+      // when the question has no explanation generated yet.
+      explanation: question.language === 'TA' ? question.explanationTa : question.explanationEn,
+    };
   }
 
   async completeSession(sessionId: string) {
@@ -270,6 +281,13 @@ export class SessionService {
           category: sq.question.category,
           // correctOption intentionally omitted until answered=true
           correctOption: sq.answered ? sq.question.correctOption : null,
+          // Sept 2026 (Tap-to-Reveal Explanation) — same "never before
+          // answered" guard as correctOption above: an explanation would
+          // otherwise give the answer away before the student commits.
+          // Null when the question genuinely has none yet (Bulk
+          // Explanation Generator hasn't reached it) -- the frontend
+          // simply doesn't show the reveal link in that case.
+          explanation: sq.answered ? (sq.question.language === 'TA' ? sq.question.explanationTa : sq.question.explanationEn) : null,
           // Only ever the ONE language this question was allocated in — see
           // the method docstring for why the linked translation is
           // deliberately NOT included here.

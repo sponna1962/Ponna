@@ -15,6 +15,7 @@ type SessionQuestion = {
   selectedOption: string | null;
   isCorrect: boolean | null;
   correctOption: string | null;
+  explanation: string | null;
   difficulty: 'MEDIUM' | 'HARD';
   category: 'STANDARD' | 'CURRENT_AFFAIRS';
   content: Partial<Record<'TA' | 'EN', LangContent>>;
@@ -50,6 +51,12 @@ export default function QuizSessionPage() {
 
   const [selected, setSelected] = useState<string | null>(null);
   const [correctOption, setCorrectOption] = useState<string | null>(null);
+  // Sept 2026 (Tap-to-Reveal Explanation) — collapsed by default, never
+  // auto-shown, so it never interrupts practice flow for students who
+  // don't need it. No "AI" labeling anywhere near this per explicit
+  // design decision — plain "காரணம் பார்க்க" wording only.
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<Results | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -83,6 +90,7 @@ export default function QuizSessionPage() {
     if (q?.answered) {
       setSelected(q.selectedOption);
       setCorrectOption(q.correctOption);
+      setExplanation(q.explanation);
     }
   }
 
@@ -96,6 +104,7 @@ export default function QuizSessionPage() {
     if (!isOnline) return;
     setSelected(letter);
     setSubmitting(true);
+    setShowExplanation(false);
 
     const question = session.questions[currentIndex];
     const res = await studentFetch(`/quiz/${sessionId}/answer`, {
@@ -107,8 +116,9 @@ export default function QuizSessionPage() {
         timeSpentSeconds: Math.round((Date.now() - questionShownAt.current) / 1000),
       }),
     });
-    const { correctOption: correct } = await res.json();
+    const { correctOption: correct, explanation: exp } = await res.json();
     setCorrectOption(correct);
+    setExplanation(exp ?? null);
     setSubmitting(false);
   }
 
@@ -146,6 +156,8 @@ export default function QuizSessionPage() {
     const nextQ = session.questions[nextIndex];
     setSelected(nextQ.answered ? nextQ.selectedOption : null);
     setCorrectOption(nextQ.answered ? nextQ.correctOption : null);
+    setExplanation(nextQ.answered ? nextQ.explanation : null);
+    setShowExplanation(false);
   }
 
   function openReport() {
@@ -291,6 +303,28 @@ export default function QuizSessionPage() {
           );
         })}
       </div>
+
+      {/* Sept 2026 (Tap-to-Reveal Explanation) — collapsed by default,
+          a small neutral link, never auto-shown or interruptive. No
+          "AI" labeling anywhere here per explicit design decision.
+          Absent entirely when this question has no explanation yet
+          (Bulk Explanation Generator hasn't reached it). */}
+      {answered && explanation && (
+        <div style={{ padding: '0 20px 8px 20px' }}>
+          {!showExplanation ? (
+            <button
+              onClick={() => setShowExplanation(true)}
+              style={{ background: 'none', border: 'none', padding: 0, color: '#64748b', fontSize: 13, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              ஏன் இது சரி?
+            </button>
+          ) : (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: '#334155', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+              {explanation}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ padding: '8px 20px 24px 20px' }}>
         {answered && (
