@@ -207,8 +207,17 @@ export async function executeTool(userId: string, toolName: string, args: Record
       if (existing) return { status: 'resumed' }; // in-progress, unanswered questions already exist -- just continue with get_diagnostic_next_question
 
       const subCategoryId = args.subCategoryId as string | undefined;
+      // Sept 2026 (Phased Launch) — same defensive studentVisible check
+      // as get_exam_info/get_exam_syllabus/get_exam_full_info above: a
+      // hidden exam's id reaching this tool should never scope real
+      // questions to it, even if find_exam already filters when
+      // SEARCHING (this diagnostic id could come from earlier in the
+      // same conversation, before an exam was hidden).
+      const scopeVisible = subCategoryId
+        ? (await prisma.examSubCategory.findUnique({ where: { id: subCategoryId }, select: { studentVisible: true } }))?.studentVisible
+        : true;
       const questions = await prisma.question.findMany({
-        where: subCategoryId ? { status: 'PUBLISHED', authorityTags: { some: { subCategoryId } } } : { status: 'PUBLISHED' },
+        where: subCategoryId && scopeVisible ? { status: 'PUBLISHED', authorityTags: { some: { subCategoryId } } } : { status: 'PUBLISHED' },
         take: 12,
         orderBy: { createdAt: 'asc' },
       });
@@ -298,6 +307,18 @@ export async function executeTool(userId: string, toolName: string, args: Record
     case 'get_exam_info': {
       const subCategoryId = args.subCategoryId as string;
       if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
+      // Sept 2026 (Phased Launch) — this tool (and get_exam_syllabus/
+      // get_exam_full_info below) takes a subCategoryId directly, unlike
+      // find_exam/suitable_exam_finder above which already filter by
+      // studentVisible when SEARCHING for an exam. Without this same
+      // check here, a hidden exam's id reaching this tool any other way
+      // (e.g. from earlier in the same conversation, before it was
+      // hidden) would still return its full details, defeating the
+      // point of hiding it.
+      const subCategory = await prisma.examSubCategory.findUnique({ where: { id: subCategoryId }, select: { studentVisible: true } });
+      if (!subCategory || !subCategory.studentVisible) {
+        return { hasVerifiedInfo: false, message: 'This exam is not currently available on PONNA.' };
+      }
       const facts = await prisma.verifiedExamFact.findMany({
         where: { subCategoryId },
         select: { factType: true, value: true, sourceUrl: true, verifiedAt: true },
@@ -312,6 +333,10 @@ export async function executeTool(userId: string, toolName: string, args: Record
     case 'get_exam_syllabus': {
       const subCategoryId = args.subCategoryId as string;
       if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
+      const subCategory = await prisma.examSubCategory.findUnique({ where: { id: subCategoryId }, select: { studentVisible: true } });
+      if (!subCategory || !subCategory.studentVisible) {
+        return [];
+      }
       const subjects = await prisma.syllabusSubject.findMany({
         where: { subCategoryId },
         include: { topics: { select: { name: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] } },
@@ -323,6 +348,10 @@ export async function executeTool(userId: string, toolName: string, args: Record
     case 'get_exam_full_info': {
       const subCategoryId = args.subCategoryId as string;
       if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
+      const subCategory = await prisma.examSubCategory.findUnique({ where: { id: subCategoryId }, select: { studentVisible: true } });
+      if (!subCategory || !subCategory.studentVisible) {
+        return { hasVerifiedInfo: false, message: 'This exam is not currently available on PONNA.' };
+      }
       const facts = await prisma.verifiedExamFact.findMany({
         where: { subCategoryId },
         select: { factType: true, value: true, sourceUrl: true, verifiedAt: true, isOfficialConfirmed: true },
@@ -398,6 +427,10 @@ export async function executeTool(userId: string, toolName: string, args: Record
     case 'get_previous_cutoffs': {
       const subCategoryId = args.subCategoryId as string;
       if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
+      const subCategory = await prisma.examSubCategory.findUnique({ where: { id: subCategoryId }, select: { studentVisible: true } });
+      if (!subCategory || !subCategory.studentVisible) {
+        return { found: false, message: 'This exam is not currently available on PONNA.' };
+      }
       const community = args.community as string | undefined;
       const records = await prisma.cutoffRecord.findMany({
         where: { subCategoryId, ...(community ? { community: community as any } : {}) },
