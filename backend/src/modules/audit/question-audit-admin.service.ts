@@ -165,6 +165,26 @@ export class QuestionAuditAdminService {
 
     return updated;
   }
+
+  /** Sept 2026 — admin-requested full reset before a large fresh run.
+   * Deletes every QuestionAuditFlag, QuestionAuditRunItem, and
+   * QuestionAuditRun row (in that order, since neither child table has
+   * ON DELETE CASCADE — a direct QuestionAuditRun delete would fail on
+   * the FK otherwise). NEVER touches the Question rows those flags/items
+   * point to -- only this app's own audit-tracking metadata. This also
+   * resets selectStratifiedSample()'s "exclude already-audited
+   * questions" memory entirely (it reads from QuestionAuditRunItem), so
+   * every question in the bank becomes eligible for sampling again --
+   * an explicit, understood tradeoff the admin confirmed before calling
+   * this, not a side effect to work around. */
+  async deleteAllRuns(): Promise<{ flagsDeleted: number; itemsDeleted: number; runsDeleted: number }> {
+    return prisma.$transaction(async (tx) => {
+      const flags = await tx.questionAuditFlag.deleteMany({});
+      const items = await tx.questionAuditRunItem.deleteMany({});
+      const runs = await tx.questionAuditRun.deleteMany({});
+      return { flagsDeleted: flags.count, itemsDeleted: items.count, runsDeleted: runs.count };
+    });
+  }
 }
 
 export const questionAuditAdminService = new QuestionAuditAdminService();

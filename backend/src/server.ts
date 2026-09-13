@@ -804,6 +804,20 @@ app.post('/admin/html-entity-cleanup/fix-all', requireStaffAuth, requireRole('SU
   }
 });
 
+// DELETE /admin/question-audit/runs — admin-requested full reset before
+// a large fresh run. See deleteAllRuns()'s own comment for exactly what
+// this does and does not touch (never Question rows, only audit
+// metadata) and the "already-audited" tracking reset this deliberately
+// causes.
+app.delete('/admin/question-audit/runs', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try {
+    res.json(await questionAuditAdminService.deleteAllRuns());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete audit runs' });
+  }
+});
+
 app.get('/admin/question-audit/runs', requireStaffAuth, async (_req, res) => {
   try {
     res.json(await questionAuditAdminService.listRuns());

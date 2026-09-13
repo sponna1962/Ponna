@@ -94,6 +94,7 @@ export default function QuestionAuditPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [runsLoaded, setRunsLoaded] = useState(false);
   const [reAuditingRunId, setReAuditingRunId] = useState<string | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   // Sept 2026 — inline edit, right on this page, instead of navigating
   // to the Questions page and hunting for the same question there.
@@ -138,6 +139,23 @@ export default function QuestionAuditPage() {
       loadRuns();
     } finally {
       setReAuditingRunId(null);
+    }
+  }
+
+  // Sept 2026 — admin-requested, deliberately hard to trigger by
+  // accident: this deletes ALL audit runs/flags AND resets which
+  // questions count as "already audited" for future sampling. Never
+  // touches Question rows themselves.
+  async function deleteAllRuns() {
+    if (!confirm('Delete ALL audit runs and flags? This also resets which questions count as "already audited" — future runs may re-sample questions already covered before. Question content itself is never touched. This cannot be undone.')) return;
+    if (!confirm('Really sure? Type OK on the next prompt to proceed, or Cancel to back out.')) return;
+    setDeletingAll(true);
+    try {
+      await adminFetch('/admin/question-audit/runs', { method: 'DELETE' });
+      setSelectedRunId(null);
+      loadRuns();
+    } finally {
+      setDeletingAll(false);
     }
   }
 
@@ -295,7 +313,18 @@ export default function QuestionAuditPage() {
       </div>
 
       {/* Runs list */}
-      <h2 style={{ fontSize: 16, marginBottom: 10 }}>Runs</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <h2 style={{ fontSize: 16, margin: 0 }}>Runs</h2>
+        {runs.length > 0 && (
+          <button
+            onClick={deleteAllRuns}
+            disabled={deletingAll}
+            style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #b91c1c', color: '#b91c1c', background: '#fff', cursor: 'pointer' }}
+          >
+            {deletingAll ? 'Deleting…' : 'Delete All Runs'}
+          </button>
+        )}
+      </div>
       {!runsLoaded && <p style={{ color: '#94a3b8' }}>Loading…</p>}
       {runsLoaded && runs.length === 0 && <p style={{ color: '#94a3b8' }}>No audit runs yet.</p>}
       {runs.map((r) => (
