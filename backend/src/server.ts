@@ -1571,6 +1571,49 @@ app.post('/admin/questions/heuristic-classify/apply', requireStaffAuth, requireR
   }
 });
 
+// GET /admin/diagnostics/group-iv-subject-mismatch — Sept 2026, ONE-TIME
+// diagnostic (read-only, no data changed): counts PUBLISHED Group - IV
+// questions per flat Subject name, specifically the ones the official
+// Syllabus PDF (Code 496, dated 12.12.2024) shows are mismatched --
+// "History and Culture of India and Tamil Nadu" (wrongly merges two
+// separate official Units III and VI), "Indian National Movement"
+// (shouldn't be its own Subject -- it's part of Unit III), "Indian
+// Economy" (Unit V's real name also includes "and Development
+// Administration in Tamil Nadu"), and any stray "General Studies" rows
+// (not a real Unit, just the Part A umbrella name). Needed before
+// designing a safe re-tagging migration -- this sandbox has no direct
+// database access, so counts have to come from a real deployed call.
+app.get('/admin/diagnostics/group-iv-subject-mismatch', requireStaffAuth, async (_req, res) => {
+  try {
+    const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
+    if (!groupIv) {
+      res.status(404).json({ error: 'Group - IV Sub-Category not found' });
+      return;
+    }
+    const namesToCheck = ['History and Culture of India and Tamil Nadu', 'Indian National Movement', 'Indian Economy', 'General Studies', 'Indian Polity', 'Geography', 'General Science', 'Aptitude & Mental Ability', 'General English'];
+    const results = [];
+    for (const name of namesToCheck) {
+      const subject = await prisma.subject.findFirst({ where: { name } });
+      if (!subject) {
+        results.push({ subjectName: name, exists: false, groupIvQuestionCount: 0 });
+        continue;
+      }
+      const count = await prisma.question.count({
+        where: {
+          subjectId: subject.id,
+          status: 'PUBLISHED',
+          OR: [{ subCategoryId: groupIv.id }, { authorityTags: { some: { subCategoryId: groupIv.id } } }],
+        },
+      });
+      results.push({ subjectName: name, exists: true, subjectId: subject.id, groupIvQuestionCount: count });
+    }
+    res.json({ groupIvSubCategoryId: groupIv.id, results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to run diagnostic' });
+  }
+});
+
 app.get('/admin/questions/stats', requireStaffAuth, async (_req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
