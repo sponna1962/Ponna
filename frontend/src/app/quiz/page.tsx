@@ -160,8 +160,13 @@ export default function QuizStartPage() {
     (difficultyStepVisible ? !!mode : true);
 
   useEffect(() => {
-    if (relevantAuthorities.length > 0 && !difficultyStepVisible && mode !== 'MIXED') {
-      setMode('MIXED');
+    // Sept 2026 (Phased Launch, explicit request) — was defaulting to
+    // MIXED (Medium+Hard combined) when the Difficulty step is hidden.
+    // Confirmed from a live screenshot: Group - IV practice should be
+    // entirely HARD, no Medium at all, once this step isn't shown to
+    // choose from.
+    if (relevantAuthorities.length > 0 && !difficultyStepVisible && mode !== 'HARD') {
+      setMode('HARD');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [difficultyStepVisible, relevantAuthorities.length]);
