@@ -30,7 +30,7 @@ type Question = {
   translationGroupId: string | null;
   authority: { name: string } | null;
   examCategory: { name: string } | null;
-  subCategory: { name: string } | null;
+  subCategory: { id: string; name: string } | null;
   subject: { name: string } | null;
   sourceType: 'PREVIOUS_EXAM' | 'BOOK' | 'ORIGINAL' | 'OTHER';
   sourceName: string | null;
@@ -622,7 +622,7 @@ function AdminQuestionsPageInner() {
               Exam Year (optional):{' '}
               <input type="number" value={examYear} onChange={(e) => setExamYear(e.target.value)} placeholder="2024" style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }} />
             </label>
-            <SubjectInput value={subjectName} onChange={setSubjectName} />
+            <SubjectInput value={subjectName} onChange={setSubjectName} subCategoryId={taxonomy.subCategoryId || undefined} />
           </div>
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -875,7 +875,7 @@ function AdminQuestionsPageInner() {
                 Exam Year:{' '}
                 <input type="number" value={editExamYear} onChange={(e) => setEditExamYear(e.target.value)} style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #cbd5e1' }} />
               </label>
-              <SubjectInput value={editSubjectName} onChange={setEditSubjectName} />
+              <SubjectInput value={editSubjectName} onChange={setEditSubjectName} subCategoryId={editing?.subCategory?.id ?? undefined} />
             </div>
             <label style={{ fontSize: 13, display: 'block', marginBottom: 16 }}>
               Source Name:{' '}
@@ -1002,7 +1002,7 @@ function AdminQuestionsPageInner() {
                   <input value={bulkExamName} onChange={(e) => setBulkExamName(e.target.value)} placeholder="(leave unchanged)" style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 220 }} />
                 </label>
                 <div style={{ marginBottom: 8 }}>
-                  <SubjectInput value={bulkSubjectName} onChange={setBulkSubjectName} />
+                  <SubjectInput value={bulkSubjectName} onChange={setBulkSubjectName} subCategoryId={taxonomyFilter.subCategoryId || undefined} />
                 </div>
                 <label style={{ fontSize: 13, display: 'block', marginBottom: 16 }}>
                   Source Name:{' '}

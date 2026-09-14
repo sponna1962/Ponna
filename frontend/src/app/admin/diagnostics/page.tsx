@@ -17,6 +17,23 @@ export default function DiagnosticsPage() {
   const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [settingUp, setSettingUp] = useState(false);
+  const [setupResult, setSetupResult] = useState<{ name: string; wasNew: boolean }[] | null>(null);
+
+  async function setupOfficialSubjects() {
+    setSettingUp(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/setup-group-iv-official-subjects', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to set up subjects');
+        return;
+      }
+      setSetupResult(body.subjects);
+    } finally {
+      setSettingUp(false);
+    }
+  }
 
   async function run() {
     setLoading(true);
@@ -43,10 +60,29 @@ export default function DiagnosticsPage() {
       <button
         onClick={run}
         disabled={loading}
-        style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20 }}
+        style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12 }}
       >
         {loading ? 'Running…' : 'Run Group IV Subject-Mismatch Check'}
       </button>
+
+      {/* Sept 2026 — explicit request, official Syllabus PDF (Code 496)
+          confirmed as the final subject list. Idempotent -- safe to
+          click more than once. Does NOT re-tag any existing question,
+          only ensures the 8 correct Subject rows exist (scoped to
+          Group - IV) so they show up in the now-scoped SubjectInput
+          dropdown going forward. */}
+      <button
+        onClick={setupOfficialSubjects}
+        disabled={settingUp}
+        style={{ padding: '8px 16px', borderRadius: 6, background: '#b45309', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20, marginLeft: 8 }}
+      >
+        {settingUp ? 'Setting up…' : 'Set Up 8 Official Group IV Subjects'}
+      </button>
+      {setupResult && (
+        <p style={{ fontSize: 12, color: '#166534', marginBottom: 12 }}>
+          Done: {setupResult.filter((s) => s.wasNew).length} newly created, {setupResult.filter((s) => !s.wasNew).length} already existed.
+        </p>
+      )}
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
 

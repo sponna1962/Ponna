@@ -1593,6 +1593,51 @@ app.post('/admin/questions/heuristic-classify/apply', requireStaffAuth, requireR
 // match. This version sidesteps the guessing problem entirely: it
 // queries every Subject that ACTUALLY has a question tagged to Group -
 // IV, directly, by real usage rather than by name.
+// POST /admin/diagnostics/setup-group-iv-official-subjects — Sept 2026,
+// ONE-TIME setup (explicit request, official Syllabus PDF Code 496,
+// dated 12.12.2024, confirmed as the final list). Creates the 8
+// official Subjects for Group - IV, each scoped to ONLY this exam
+// (subCategoryId set) -- idempotent, safe to call more than once
+// (find-or-create per name, same helper question.service.ts's own
+// resolveSubjectId() uses). Does NOT touch any existing Question rows
+// or their current subjectId -- this only ensures the correct Subject
+// rows exist so they show up in the now-scoped SubjectInput dropdown;
+// re-tagging existing mistagged questions to these is a deliberately
+// separate, later step.
+app.post('/admin/diagnostics/setup-group-iv-official-subjects', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try {
+    const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
+    if (!groupIv) {
+      res.status(404).json({ error: 'Group - IV Sub-Category not found' });
+      return;
+    }
+    const officialSubjects = [
+      'General Science',
+      'Geography',
+      'History, Culture of India, and Indian National Movement',
+      'Indian Polity',
+      'Indian Economy and Development Administration in Tamil Nadu',
+      'History, Culture, Heritage, and Socio-Political Movements of Tamil Nadu',
+      'Aptitude',
+      'Reasoning',
+    ];
+    const created: { name: string; id: string; wasNew: boolean }[] = [];
+    for (const name of officialSubjects) {
+      const existing = await prisma.subject.findFirst({ where: { name, subCategoryId: groupIv.id } });
+      if (existing) {
+        created.push({ name, id: existing.id, wasNew: false });
+      } else {
+        const row = await prisma.subject.create({ data: { name, subCategoryId: groupIv.id } });
+        created.push({ name, id: row.id, wasNew: true });
+      }
+    }
+    res.json({ groupIvSubCategoryId: groupIv.id, subjects: created });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to set up official Group IV subjects' });
+  }
+});
+
 app.get('/admin/diagnostics/group-iv-subject-mismatch', requireStaffAuth, async (_req, res) => {
   try {
     const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
@@ -2374,9 +2419,15 @@ app.post('/diagnostic/attempts/:attemptId/complete', requireStudentAuth, async (
 // type-with-suggestions Subject field. No POST route: a Subject is
 // created automatically (find-or-create by name) the first time it's
 // used on a question, not through a separate admin step.
-app.get('/admin/subjects', requireStaffAuth, async (_req, res) => {
+// GET /admin/subjects?subCategoryId=... — Sept 2026 (real fix) — an
+// optional filter scoping to ONE exam's own Subjects, now that Subject
+// genuinely belongs to a specific exam (see schema.prisma's own
+// comment on Subject.subCategoryId). Omitting the param still returns
+// every Subject, for now-legacy callers that haven't been updated to
+// pass exam context yet.
+app.get('/admin/subjects', requireStaffAuth, async (req, res) => {
   res.set('Cache-Control', 'no-store');
-  res.json(await questionService.listSubjects());
+  res.json(await questionService.listSubjects(req.query.subCategoryId as string | undefined));
 });
 
 // POST /admin/exam-taxonomy/purposes  { name, nameTa? } — Super Admin only

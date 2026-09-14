@@ -15,16 +15,23 @@ import { adminFetch } from '../lib/admin-fetch';
 // forward. A genuinely new Subject (rare) still needs one, so an
 // explicit "+ Add a new subject" toggle is kept, deliberately separate
 // from the everyday picking flow so it's never reached by accident.
-export function SubjectInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function SubjectInput({ value, onChange, subCategoryId }: { value: string; onChange: (v: string) => void; subCategoryId?: string }) {
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
   const [addingNew, setAddingNew] = useState(false);
 
   useEffect(() => {
-    adminFetch('/admin/subjects')
+    // Sept 2026 (real fix, explicit request) — scoped to ONE exam's own
+    // Subjects when subCategoryId is known, so "these are the decided
+    // subjects for this exam" is what the dropdown actually shows —
+    // not all ~339 Subject rows across every exam. Falls back to the
+    // full list when no exam context is available yet (e.g. Bulk
+    // Upload before an exam has been picked).
+    const query = subCategoryId ? `?subCategoryId=${encodeURIComponent(subCategoryId)}` : '';
+    adminFetch(`/admin/subjects${query}`)
       .then((r) => r.json())
       .then((list: { id: string; name: string }[]) => setSubjects(list.slice().sort((a, b) => a.name.localeCompare(b.name))))
       .catch(() => {});
-  }, []);
+  }, [subCategoryId]);
 
   // If the current value doesn't match any known Subject exactly (e.g.
   // editing an existing question whose Subject text is itself one of the

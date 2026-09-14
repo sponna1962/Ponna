@@ -965,10 +965,25 @@ model ExamCategory {
 // Subject name directly on the Bulk Upload / Add Question forms; the
 // backend finds-or-creates by name, so this list grows organically without
 // a separate "manage Subjects" admin step.
+// Sept 2026 (real fix, explicit request) — added subCategoryId so a
+// Subject genuinely belongs to ONE exam, not a global flat list shared
+// across all of them. Was the root cause of the ugly "(Subject Code
+// NNN)" suffixes seen throughout the real data -- name alone had a
+// GLOBAL unique constraint, so two different exams' identically-named
+// subjects (e.g. both have a "General Science") could never coexist
+// without an artificial disambiguating suffix. The unique constraint is
+// now on (name, subCategoryId) together instead -- "General Science"
+// can now exist once PER exam, cleanly, with no suffix needed going
+// forward. Nullable for backward compatibility with existing legacy
+// rows not yet linked to a specific exam.
 model Subject {
-  id        String     @id @default(uuid())
-  name      String     @unique
-  questions Question[]
+  id            String           @id @default(uuid())
+  name          String
+  subCategoryId String?
+  subCategory   ExamSubCategory? @relation(fields: [subCategoryId], references: [id])
+  questions     Question[]
+
+  @@unique([name, subCategoryId])
 }
 
 model ExamSubCategory {
@@ -987,6 +1002,7 @@ model ExamSubCategory {
   mockExamAttempts MockExamAttempt[]
   adaptiveMockAttempts AdaptiveMockAttempt[]
   explanationGenerationRuns ExplanationGenerationRun[]
+  subjects Subject[]
   planScopes PlanSubCategoryScope[]
   crossExamAuditSuggestions QuestionAuditFlag[]
   // Student-facing launch visibility (finalized requirement — same

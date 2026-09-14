@@ -50,16 +50,31 @@ export class QuestionService {
    * offer a free-type-with-suggestions field instead of requiring a
    * separate "add a Subject" admin step first.
    */
-  private async resolveSubjectId(subjectName: string | undefined): Promise<string | undefined> {
+  // Sept 2026 (real fix, explicit request) — Subject's uniqueness is now
+  // (name, subCategoryId) together, not name alone, since a Subject now
+  // genuinely belongs to one exam (see schema.prisma's own comment).
+  // Explicit find-then-create rather than prisma.subject.upsert(): a
+  // compound unique key with a nullable field (subCategoryId can be
+  // null for legacy/unscoped Subjects) doesn't reliably match NULL rows
+  // through Prisma's generated compound-key where clause, so upsert()
+  // would risk creating a duplicate row every time instead of reusing
+  // the existing null-scoped one.
+  private async resolveSubjectId(subjectName: string | undefined, subCategoryId?: string): Promise<string | undefined> {
     const name = subjectName?.trim();
     if (!name) return undefined;
-    const subject = await prisma.subject.upsert({ where: { name }, create: { name }, update: {} });
-    return subject.id;
+    const scopeId = subCategoryId ?? null;
+    const existing = await prisma.subject.findFirst({ where: { name, subCategoryId: scopeId } });
+    if (existing) return existing.id;
+    const created = await prisma.subject.create({ data: { name, subCategoryId: scopeId } });
+    return created.id;
   }
 
   /** Full Subject list, for the Bulk Upload / Add Question forms' autocomplete. */
-  async listSubjects() {
-    return prisma.subject.findMany({ orderBy: { name: 'asc' } });
+  async listSubjects(subCategoryId?: string) {
+    return prisma.subject.findMany({
+      where: subCategoryId ? { subCategoryId } : undefined,
+      orderBy: { name: 'asc' },
+    });
   }
 
   /**
@@ -105,7 +120,7 @@ export class QuestionService {
       }
     }
 
-    const subjectId = await this.resolveSubjectId(input.subjectName);
+    const subjectId = await this.resolveSubjectId(input.subjectName, input.subCategoryId);
 
     return prisma.question.create({
       data: {
@@ -168,7 +183,7 @@ export class QuestionService {
     // reject the whole update with an unknown-field error the moment an
     // edit form includes a Subject field.
     const { subjectName, ...rest } = input;
-    const subjectId = subjectName !== undefined ? await this.resolveSubjectId(subjectName) : undefined;
+    const subjectId = subjectName !== undefined ? await this.resolveSubjectId(subjectName, merged.subCategoryId) : undefined;
 
     const updated = await prisma.question.update({
       where: { id },
@@ -267,7 +282,7 @@ export class QuestionService {
       additionalTags?: { authorityId: string; categoryId?: string; subCategoryId?: string }[];
     },
   ) {
-    const subjectId = fields.subjectName !== undefined ? await this.resolveSubjectId(fields.subjectName) : undefined;
+    const subjectId = fields.subjectName !== undefined ? await this.resolveSubjectId(fields.subjectName, fields.subCategoryId) : undefined;
     const data: Record<string, unknown> = {};
     if (fields.sourceType !== undefined) data.sourceType = fields.sourceType;
     if (fields.categoryId !== undefined) data.categoryId = fields.categoryId || null;
