@@ -37,6 +37,7 @@ import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { questionAuditService } from './modules/audit/question-audit.service';
 import { bulkExplanationService } from './modules/questions/bulk-explanation.service';
+import { subjectClassificationService } from './modules/questions/subject-classification.service';
 import { questionAuditAdminService } from './modules/audit/question-audit-admin.service';
 import { htmlEntityCleanupService } from './modules/admin/html-entity-cleanup.service';
 import { StudentReviewService } from './modules/questions/student-review.service';
@@ -869,6 +870,79 @@ app.post('/admin/bulk-explanation/runs/:id/cancel', requireStaffAuth, requireRol
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to cancel run' });
+  }
+});
+
+// ── Subject Classification (Sept 2026, Group IV first) ─────────────────
+// See schema.prisma's own header comment on SubjectClassificationRun.
+
+app.post('/admin/subject-classification/runs', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const sampleSize = Number(req.body.sampleSize) || 500;
+    const subCategoryId = req.body.subCategoryId as string;
+    if (!subCategoryId) {
+      res.status(400).json({ error: 'subCategoryId is required' });
+      return;
+    }
+    const officialSubjects = await prisma.subject.findMany({ where: { subCategoryId }, select: { id: true } });
+    if (officialSubjects.length === 0) {
+      res.status(400).json({ error: 'No official Subjects exist for this exam yet -- set them up first.' });
+      return;
+    }
+    const questionIds = await subjectClassificationService.selectQuestionsNeedingClassification(
+      subCategoryId,
+      officialSubjects.map((s) => s.id),
+      sampleSize,
+    );
+    if (questionIds.length === 0) {
+      res.status(400).json({ error: 'No questions currently need classification for this exam.' });
+      return;
+    }
+    const label = req.body.label || `Subject classification — ${questionIds.length} questions (${new Date().toLocaleString('en-IN')})`;
+    const run = await subjectClassificationService.createRun(label, subCategoryId, questionIds);
+    subjectClassificationService.processRun(run.id).catch((err) => console.error(`Subject classification run ${run.id} crashed:`, err));
+    res.json(run);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to start subject classification run' });
+  }
+});
+
+app.get('/admin/subject-classification/runs', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await subjectClassificationService.listRuns());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load subject classification runs' });
+  }
+});
+
+app.post('/admin/subject-classification/runs/:id/cancel', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await subjectClassificationService.cancelRun(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to cancel run' });
+  }
+});
+
+app.get('/admin/subject-classification/runs/:id/needs-review', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await subjectClassificationService.getResultsNeedingReview(req.params.id));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load results needing review' });
+  }
+});
+
+app.post('/admin/subject-classification/results/:id/apply', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await subjectClassificationService.applyResult(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to apply result' });
   }
 });
 
@@ -2710,6 +2784,7 @@ app.listen(PORT, () => {
   // bulk-explanation runs' resume here, at the same startup point.
   questionAuditService.resumeStaleRuns().catch((err) => console.error('Failed to resume stale audit runs:', err));
   bulkExplanationService.resumeStaleRuns().catch((err) => console.error('Failed to resume stale explanation-generation runs:', err));
+  subjectClassificationService.resumeStaleRuns().catch((err) => console.error('Failed to resume stale subject-classification runs:', err));
 });
 
 // Last-resort error handler (Express requires exactly 4 params to recognize
