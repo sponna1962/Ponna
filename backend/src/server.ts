@@ -848,6 +848,19 @@ app.get('/admin/bulk-explanation/runs', requireStaffAuth, async (_req, res) => {
   }
 });
 
+// GET /admin/bulk-explanation/runs/:id/questions — Sept 2026, admin
+// requested: a way to actually SEE what a run generated (the run card
+// itself only ever showed progress/cost stats), for a real quality
+// check before scaling a small test run up to the full exam.
+app.get('/admin/bulk-explanation/runs/:id/questions', requireStaffAuth, async (req, res) => {
+  try {
+    res.json(await bulkExplanationService.getRunQuestions(req.params.id));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load run questions' });
+  }
+});
+
 app.post('/admin/bulk-explanation/runs/:id/cancel', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
   try {
     await bulkExplanationService.cancelRun(req.params.id);

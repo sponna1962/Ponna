@@ -205,6 +205,25 @@ Respond with ONLY a JSON array, one object per question in the same order, each 
     return prisma.explanationGenerationRun.findMany({ orderBy: { startedAt: 'desc' } });
   }
 
+  /** Sept 2026 — admin requested: a real quality-check view of what a
+   * run actually generated, not just its progress stats. Returns the
+   * run's own questionIds (fixed at creation) with their current
+   * question text and explanations -- reflects the LATEST content even
+   * if something else touched the question since (e.g. AI Question
+   * Audit's own auto-apply), which is the honest, current state to show
+   * an admin doing a quality check. */
+  async getRunQuestions(runId: string) {
+    const run = await prisma.explanationGenerationRun.findUniqueOrThrow({ where: { id: runId } });
+    const questions = await prisma.question.findMany({
+      where: { id: { in: run.questionIds } },
+      select: { id: true, questionText: true, optionA: true, optionB: true, optionC: true, optionD: true, correctOption: true, explanationTa: true, explanationEn: true },
+    });
+    // Preserve the run's own original question order rather than
+    // whatever order the database happens to return.
+    const byId = new Map(questions.map((q) => [q.id, q]));
+    return run.questionIds.map((id) => byId.get(id)).filter((q): q is NonNullable<typeof q> => !!q);
+  }
+
   /** Resume any run left RUNNING by an interrupted server process --
    * same pattern as question-audit.service.ts's resumeStaleRuns(),
    * called once at server startup. */

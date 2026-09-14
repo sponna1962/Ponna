@@ -32,6 +32,28 @@ export default function BulkExplanationPage() {
   const [starting, setStarting] = useState(false);
   const [cancellingRunId, setCancellingRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Sept 2026 — admin requested: a real quality-check view of generated
+  // content, not just progress stats.
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [runQuestions, setRunQuestions] = useState<
+    { id: string; questionText: string; optionA: string; optionB: string; optionC: string; optionD: string; correctOption: string; explanationTa: string | null; explanationEn: string | null }[]
+  >([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  async function toggleExpand(runId: string) {
+    if (expandedRunId === runId) {
+      setExpandedRunId(null);
+      return;
+    }
+    setExpandedRunId(runId);
+    setLoadingQuestions(true);
+    try {
+      const res = await adminFetch(`/admin/bulk-explanation/runs/${runId}/questions`);
+      setRunQuestions(res.ok ? await res.json() : []);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  }
 
   function load() {
     adminFetch('/admin/bulk-explanation/runs')
@@ -188,6 +210,35 @@ export default function BulkExplanationPage() {
             >
               {cancellingRunId === r.id ? 'Cancelling…' : 'Cancel Run'}
             </button>
+          )}
+          <button
+            onClick={() => toggleExpand(r.id)}
+            style={{ marginTop: 8, marginLeft: 8, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #0f172a', color: '#0f172a', background: '#fff', cursor: 'pointer' }}
+          >
+            {expandedRunId === r.id ? 'Hide Generated Content' : 'View Generated Content'}
+          </button>
+
+          {expandedRunId === r.id && (
+            <div style={{ marginTop: 12, borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+              {loadingQuestions && <p style={{ fontSize: 12, color: '#64748b' }}>Loading…</p>}
+              {!loadingQuestions &&
+                runQuestions.map((q) => (
+                  <div key={q.id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 10, fontSize: 13 }}>
+                    <p style={{ fontWeight: 600, marginBottom: 6, whiteSpace: 'pre-wrap' }}>{q.questionText}</p>
+                    <p style={{ color: '#475569', marginBottom: 2 }}>
+                      A. {q.optionA} &nbsp; B. {q.optionB} &nbsp; C. {q.optionC} &nbsp; D. {q.optionD}
+                    </p>
+                    <p style={{ color: '#166534', fontWeight: 600, marginBottom: 8 }}>Correct: {q.correctOption}</p>
+                    <p style={{ marginBottom: 4 }}>
+                      <strong>தமிழ்:</strong> {q.explanationTa ?? <em style={{ color: '#94a3b8' }}>(none)</em>}
+                    </p>
+                    <p>
+                      <strong>English:</strong> {q.explanationEn ?? <em style={{ color: '#94a3b8' }}>(none)</em>}
+                    </p>
+                  </div>
+                ))}
+              {!loadingQuestions && runQuestions.length === 0 && <p style={{ fontSize: 12, color: '#64748b' }}>No questions found for this run.</p>}
+            </div>
           )}
         </div>
       ))}
