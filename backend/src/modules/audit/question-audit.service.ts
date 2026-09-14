@@ -67,6 +67,35 @@ interface AuditCallResult {
   modelUsed: string;
 }
 
+// Sept 2026 (real cost lesson, admin-requested) — batched audit calls,
+// same reasoning as bulk-explanation.service.ts's own header comment:
+// repeating the same lengthy instructions per-question wastes input
+// tokens; batching amortizes that overhead across several questions per
+// call. Smaller batch than bulk-explanation's 8 (this schema is richer
+// per question -- multiple possible flags, several optional
+// suggested* fields each -- so a smaller batch keeps response size and
+// truncation risk manageable).
+const AUDIT_BATCH_SIZE = 4;
+
+interface QuestionAuditContext {
+  id: string;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctOption: string;
+  explanationTa: string | null;
+  explanationEn: string | null;
+  language: string;
+  difficulty: string | null;
+  authority?: { name: string } | null;
+  examCategory?: { name: string } | null;
+  subCategory?: { name: string } | null;
+  candidates: { index: number; questionText: string; id: string }[];
+  crossExamCandidates: { index: number; name: string; topics: string[]; subCategoryId: string }[];
+}
+
 export class QuestionAuditService {
   private async fetchWithRetry(url: string, init: RequestInit, maxAttempts = 2): Promise<Response> {
     const delayMs = 2000;
@@ -106,174 +135,6 @@ export class QuestionAuditService {
     }
     const fallback = requestFor(GEMINI_MODEL_FALLBACK);
     return { response: await this.fetchWithRetry(fallback.url, fallback.init, 1), model: GEMINI_MODEL_FALLBACK };
-  }
-
-  private buildPrompt(
-    question: {
-      questionText: string;
-      optionA: string;
-      optionB: string;
-      optionC: string;
-      optionD: string;
-      correctOption: string;
-      explanationTa: string | null;
-      explanationEn: string | null;
-      language: string;
-      difficulty: string | null;
-      authority?: { name: string } | null;
-      examCategory?: { name: string } | null;
-      subCategory?: { name: string } | null;
-    },
-    candidates: { index: number; questionText: string }[],
-    crossExamCandidates: { index: number; name: string; topics: string[] }[] = [],
-  ): string {
-    const examContext = question.authority
-      ? `Exam mapping: ${question.authority.name}${question.examCategory ? ' — ' + question.examCategory.name : ''}${question.subCategory ? ' — ' + question.subCategory.name : ''}`
-      : 'Exam mapping: none tagged';
-
-    const candidateBlock =
-      candidates.length > 0
-        ? `\n\nPossible near-duplicate candidates (same exam scope, textually similar) — check if the question is a near-duplicate of any of these:\n${candidates.map((c) => `[${c.index}] ${c.questionText}`).join('\n')}`
-        : '';
-
-    // Sept 2026 — Phase 1, admin-approved, low-risk scope: only ever
-    // compares against OTHER exams sharing the SAME admin-set
-    // standardGroup as this question's own exam (e.g. both "SSLC") —
-    // comparing across different standards risks a difficulty mismatch
-    // even when the topic matches, so that's deliberately never offered
-    // as a candidate here at all (filtered before this prompt is built).
-    const crossExamBlock =
-      crossExamCandidates.length > 0
-        ? `\n\nOther exams at the SAME qualification standard as this question's own exam, with their syllabus topics — check if this question's content would ALSO genuinely fit any of these (same subject matter AND same difficulty level, not just a loosely related topic):\n${crossExamCandidates.map((c) => `[${c.index}] ${c.name} — topics: ${c.topics.join(', ') || '(no topics listed)'}`).join('\n')}`
-        : '';
-
-    return `You are auditing ONE competitive-exam practice question for quality issues. You are a careful reviewer, NOT an editor — you only report problems, you never rewrite or correct anything.
-
-${examContext}
-Difficulty currently set: ${question.difficulty ?? 'not set'}
-Language: ${question.language}
-
-Question: ${question.questionText}
-A. ${question.optionA}
-B. ${question.optionB}
-C. ${question.optionC}
-D. ${question.optionD}
-Marked correct answer: ${question.correctOption}
-Explanation (Tamil): ${question.explanationTa ?? '(none provided)'}
-Explanation (English): ${question.explanationEn ?? '(none provided)'}${candidateBlock}${crossExamBlock}
-
-Check for ALL of the following, independently — a question can have zero, one, or several genuine issues:
-- WRONG_ANSWER: the marked correct option is actually wrong — always include "suggestedCorrectOption" with the letter you believe is actually correct
-- MULTIPLE_CORRECT_OPTIONS: more than one option could be defended as correct
-- UNCLEAR_OR_INVALID_QUESTION: the question is ambiguous, malformed, or unanswerable as written — if you can confidently rewrite the question text to fix it while preserving its intent, include "suggestedQuestionText"; if the question is too broken to salvage this way (should really just be disabled instead), leave it out
-- WRONG_EXPLANATION: the explanation is incorrect, contradicts the marked answer, or is missing when it shouldn't be — if confident, include a corrected "suggestedExplanationTa" and/or "suggestedExplanationEn" (whichever language(s) the source used)
-- LANGUAGE_ISSUE: a genuine Tamil/English grammar, spelling, or translation error (not just an awkward-but-correct phrasing) — if confident, include the corrected text in "suggestedQuestionText" and/or "suggestedExplanationTa"/"suggestedExplanationEn", whichever field(s) actually have the error
-- LIKELY_DUPLICATE: only if candidates were given above and this question is substantially the same as one of them — reference it by its [index]
-- WRONG_MAPPING: the exam/category/sub-category mapping above looks wrong for this question's actual content (this is a claim the CURRENT tag is a mistake — different from CROSS_EXAM_APPLICABLE below)
-- WRONG_DIFFICULTY: the difficulty level set is clearly miscalibrated for the stated exam — this app only has two difficulty levels, MEDIUM and HARD (no EASY); if you believe a question is easier than either, still choose MEDIUM as the closest available level. Always include "suggestedDifficulty" as exactly "MEDIUM" or "HARD"
-- FACTUAL_CONCERN: a factual claim in the question, options, or explanation may be incorrect. If you cannot reliably verify this either way from your own knowledge, still report it — use verdict "CANNOT_VERIFY" rather than staying silent. Do NOT skip this category just because you found nothing else wrong.
-- CROSS_EXAM_APPLICABLE: only if cross-exam candidates were given above and this question's content genuinely fits one of them (same topic AND same standard/level) — this is ADDITIVE, never a claim the existing tag is wrong. Reference the exam by its [index]. Be conservative — only flag this when you're genuinely confident the fit is good, not just topically adjacent.
-- POOR_READABILITY: the question is answerable and correct as written, but several numbered/lettered sub-items — (i)/(ii)/(iii)/(iv), (a)/(b)/(c)/(d), 1./2./3./4., etc. — are run together in one continuous line with no line breaks, making it noticeably harder to read and compare than it needs to be. Never a correctness claim. Include "suggestedQuestionText" with the SAME text, unchanged in every other way, but with a line break (\n) before each sub-item so they read as a clean list
-
-Rules:
-- Report EACH issue you find as its OWN separate entry — never combine multiple issues into one entry.
-- Only include an entry for a category if you genuinely believe there's a concern (or, for FACTUAL_CONCERN specifically, cannot verify it) — do not include categories with no concern.
-- "confidence" (0-100) is YOUR confidence in that specific flag being correct — it does not trigger any action, it is shown to a human reviewer as-is.
-- verdict is "LIKELY_ISSUE" for a problem you believe is real, or "CANNOT_VERIFY" ONLY for FACTUAL_CONCERN cases you cannot confidently resolve.
-
-Respond with ONLY a JSON object, no other text, no markdown fences:
-{"flags": [{"issueType": "<one of: WRONG_ANSWER, MULTIPLE_CORRECT_OPTIONS, UNCLEAR_OR_INVALID_QUESTION, WRONG_EXPLANATION, LANGUAGE_ISSUE, LIKELY_DUPLICATE, WRONG_MAPPING, WRONG_DIFFICULTY, FACTUAL_CONCERN, CROSS_EXAM_APPLICABLE, POOR_READABILITY>", "verdict": "LIKELY_ISSUE or CANNOT_VERIFY", "confidence": <0-100 integer>, "notes": "<one or two short sentences explaining the concern>", "duplicateOfIndex": <only for LIKELY_DUPLICATE, the [index] number from the candidates list above>, "crossExamIndex": <only for CROSS_EXAM_APPLICABLE, the [index] number from the cross-exam candidates list above>, "suggestedCorrectOption": "<only for WRONG_ANSWER, the single letter A, B, C, or D you believe is actually correct>", "suggestedQuestionText": "<only when confident, for UNCLEAR_OR_INVALID_QUESTION, LANGUAGE_ISSUE, or POOR_READABILITY, a corrected version of the full question text>", "suggestedExplanationTa": "<only when confident, for WRONG_EXPLANATION or LANGUAGE_ISSUE, a corrected Tamil explanation>", "suggestedExplanationEn": "<only when confident, for WRONG_EXPLANATION or LANGUAGE_ISSUE, a corrected English explanation>", "suggestedDifficulty": "<only for WRONG_DIFFICULTY, exactly MEDIUM or HARD>"}]}
-Never fabricate a suggested* field just to fill it in — leave it out entirely whenever you are not genuinely confident in the exact replacement text.
-If there are no concerns at all, respond with {"flags": []}.`;
-  }
-
-  private async callAudit(questionId: string): Promise<AuditCallResult> {
-    if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is not set — AI audit is unavailable until this is configured.');
-    }
-
-    const question = await prisma.question.findUniqueOrThrow({
-      where: { id: questionId },
-      include: { authority: true, examCategory: true, subCategory: true },
-    });
-
-    const candidateRows = await findDuplicateCandidates({
-      id: question.id,
-      questionText: question.questionText,
-      subCategoryId: question.subCategoryId,
-      categoryId: question.categoryId,
-      language: question.language,
-    });
-    const candidates = candidateRows.map((c, i) => ({ index: i, questionText: c.questionText, id: c.id }));
-
-    // Sept 2026 — Cross-Exam Question Tagging (Phase 1, admin-approved,
-    // low-risk scope). Only ever compares within the SAME admin-set
-    // standardGroup — a null standardGroup on this question's own
-    // Sub-Category means it hasn't been classified yet, so no cross-exam
-    // comparison is offered at all (safer to skip than guess).
-    let crossExamCandidates: { index: number; name: string; topics: string[]; subCategoryId: string }[] = [];
-    if (question.subCategory?.standardGroup) {
-      const otherSubCategories = await prisma.examSubCategory.findMany({
-        where: {
-          standardGroup: question.subCategory.standardGroup,
-          id: { not: question.subCategory.id },
-          studentVisible: true,
-        },
-        include: { syllabusSubjects: { include: { topics: { select: { name: true }, take: 15 } } } },
-        take: 10, // keep the prompt bounded even if a standardGroup ends up with many Sub-Categories
-      });
-      crossExamCandidates = otherSubCategories.map((sc, i) => ({
-        index: i,
-        name: sc.name,
-        topics: sc.syllabusSubjects.flatMap((s) => s.topics.map((t) => t.name)).slice(0, 20),
-        subCategoryId: sc.id,
-      }));
-    }
-
-    const prompt = this.buildPrompt(question, candidates, crossExamCandidates);
-    const { response, model } = await this.fetchWithFallback(prompt);
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status} ${await response.text()}`);
-    }
-
-    const data = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
-      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-    };
-    const finishReason = data.candidates?.[0]?.finishReason;
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-
-    let parsed: { flags: RawFlag[] };
-    try {
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
-    } catch {
-      const hint = finishReason === 'MAX_TOKENS' ? ' (response was cut off — increase maxOutputTokens)' : '';
-      throw new Error(`Could not parse AI audit response${hint}: ${text.slice(0, 200)}`);
-    }
-
-    // Resolve duplicateOfIndex / crossExamIndex back to real ids before
-    // returning — keeps the candidate-index indirection entirely inside
-    // this function.
-    const flags = (parsed.flags ?? []).map((f) => {
-      if (f.issueType === 'LIKELY_DUPLICATE' && typeof f.duplicateOfIndex === 'number') {
-        const match = candidates.find((c) => c.index === f.duplicateOfIndex);
-        return { ...f, duplicateOfIndex: undefined, resolvedDuplicateId: match?.id };
-      }
-      if (f.issueType === 'CROSS_EXAM_APPLICABLE' && typeof f.crossExamIndex === 'number') {
-        const match = crossExamCandidates.find((c) => c.index === f.crossExamIndex);
-        return { ...f, crossExamIndex: undefined, resolvedCrossExamSubCategoryId: match?.subCategoryId };
-      }
-      return f;
-    });
-
-    return {
-      flags,
-      inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
-      outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
-      modelUsed: model,
-    };
   }
 
   /** Random-sampled, exam-priority-weighted selection for the pilot — never
@@ -425,79 +286,101 @@ If there are no concerns at all, respond with {"flags": []}.`;
       const alreadyProcessedIds = new Set(alreadyProcessed.map((i) => i.questionId));
       const remainingQuestionIds = runRecord.questionIds.filter((id) => !alreadyProcessedIds.has(id));
 
-      for (const questionId of remainingQuestionIds) {
-        // Sept 2026 — Cancel Run: check the run's own current status
-        // before each question, so a run stuck failing repeatedly (e.g.
-        // Gemini billing depleted, confirmed from a real Render log) can
-        // actually be stopped mid-loop by an admin action, not just left
-        // to burn through the rest of the sample uselessly.
+      // Sept 2026 — batched (AUDIT_BATCH_SIZE questions per Gemini call),
+      // real cost lesson (see this class's own AUDIT_BATCH_SIZE comment).
+      // Chunking preserves every existing per-question guarantee below
+      // (its own create-transaction, its own auto-apply attempt, its own
+      // error isolation) -- only the Gemini CALL itself is now shared
+      // across a chunk, not each question's own database writes.
+      for (let chunkStart = 0; chunkStart < remainingQuestionIds.length; chunkStart += AUDIT_BATCH_SIZE) {
+        const chunk = remainingQuestionIds.slice(chunkStart, chunkStart + AUDIT_BATCH_SIZE);
+
+        // Sept 2026 — Cancel Run: same check as before, now once per
+        // BATCH rather than once per question (worst case a cancel takes
+        // up to AUDIT_BATCH_SIZE questions longer to take effect, an
+        // acceptable trade-off at this batch size).
         const stillRunning = await prisma.questionAuditRun.findUnique({ where: { id: runId }, select: { status: true } });
         if (stillRunning?.status !== 'RUNNING') {
           console.log(`Question audit run ${runId} stopped mid-loop (status is now ${stillRunning?.status}).`);
           return;
         }
-        try {
-          const result = await this.callAudit(questionId);
 
-          const txResults = await prisma.$transaction([
-            prisma.questionAuditRunItem.create({
-              data: { runId, questionId, flagCount: result.flags.length },
-            }),
-            ...result.flags.map((f) =>
-              prisma.questionAuditFlag.create({
+        let batchResults: Map<string, AuditCallResult>;
+        try {
+          batchResults = await this.callAuditBatch(chunk);
+        } catch (err) {
+          // Whole-batch failure (e.g. Gemini API error) -- mark every
+          // question in this chunk processed-with-no-result, same
+          // resilience guarantee the old per-question catch gave: one
+          // bad call never stops the run, just skips what it covered.
+          console.error(`Question audit batch failed for [${chunk.join(', ')}]:`, err);
+          await prisma.questionAuditRun.update({ where: { id: runId }, data: { processedQuestions: { increment: chunk.length } } });
+          continue;
+        }
+
+        for (const questionId of chunk) {
+          const result = batchResults.get(questionId) ?? { flags: [], inputTokens: 0, outputTokens: 0, modelUsed: GEMINI_MODEL };
+          try {
+            const txResults = await prisma.$transaction([
+              prisma.questionAuditRunItem.create({
+                data: { runId, questionId, flagCount: result.flags.length },
+              }),
+              ...result.flags.map((f) =>
+                prisma.questionAuditFlag.create({
+                  data: {
+                    runId,
+                    questionId,
+                    issueType: f.issueType as AuditIssueType,
+                    verdict: (f.verdict === 'CANNOT_VERIFY' ? 'CANNOT_VERIFY' : 'LIKELY_ISSUE') as AuditVerdict,
+                    confidence: Math.max(0, Math.min(100, Math.round(f.confidence))),
+                    aiNotes: f.notes,
+                    duplicateOfQuestionIds: f.resolvedDuplicateId ? [f.resolvedDuplicateId] : [],
+                    suggestedAdditionalSubCategoryId: f.resolvedCrossExamSubCategoryId ?? null,
+                    suggestedCorrectOption: ['A', 'B', 'C', 'D'].includes(f.suggestedCorrectOption ?? '') ? (f.suggestedCorrectOption as CorrectOption) : null,
+                    suggestedQuestionText: f.suggestedQuestionText ?? null,
+                    suggestedExplanationTa: f.suggestedExplanationTa ?? null,
+                    suggestedExplanationEn: f.suggestedExplanationEn ?? null,
+                    suggestedDifficulty: ['MEDIUM', 'HARD'].includes(f.suggestedDifficulty ?? '') ? (f.suggestedDifficulty as Difficulty) : null,
+                  },
+                }),
+              ),
+              prisma.questionAuditRun.update({
+                where: { id: runId },
                 data: {
-                  runId,
-                  questionId,
-                  issueType: f.issueType as AuditIssueType,
-                  verdict: (f.verdict === 'CANNOT_VERIFY' ? 'CANNOT_VERIFY' : 'LIKELY_ISSUE') as AuditVerdict,
-                  confidence: Math.max(0, Math.min(100, Math.round(f.confidence))),
-                  aiNotes: f.notes,
-                  duplicateOfQuestionIds: f.resolvedDuplicateId ? [f.resolvedDuplicateId] : [],
-                  suggestedAdditionalSubCategoryId: f.resolvedCrossExamSubCategoryId ?? null,
-                  suggestedCorrectOption: ['A', 'B', 'C', 'D'].includes(f.suggestedCorrectOption ?? '') ? (f.suggestedCorrectOption as CorrectOption) : null,
-                  suggestedQuestionText: f.suggestedQuestionText ?? null,
-                  suggestedExplanationTa: f.suggestedExplanationTa ?? null,
-                  suggestedExplanationEn: f.suggestedExplanationEn ?? null,
-                  suggestedDifficulty: ['MEDIUM', 'HARD'].includes(f.suggestedDifficulty ?? '') ? (f.suggestedDifficulty as Difficulty) : null,
+                  processedQuestions: { increment: 1 },
+                  flaggedQuestions: { increment: result.flags.length > 0 ? 1 : 0 },
+                  totalFlags: { increment: result.flags.length },
+                  inputTokens: { increment: result.inputTokens },
+                  outputTokens: { increment: result.outputTokens },
+                  model: result.modelUsed,
                 },
               }),
-            ),
-            prisma.questionAuditRun.update({
-              where: { id: runId },
-              data: {
-                processedQuestions: { increment: 1 },
-                flaggedQuestions: { increment: result.flags.length > 0 ? 1 : 0 },
-                totalFlags: { increment: result.flags.length },
-                inputTokens: { increment: result.inputTokens },
-                outputTokens: { increment: result.outputTokens },
-                model: result.modelUsed,
-              },
-            }),
-          ]);
+            ]);
 
-          // Sept 2026 — Confidence-Threshold Auto-Apply (admin-approved):
-          // right after each flag is safely created, immediately check
-          // whether it's eligible to apply itself (see
-          // question-audit-admin.service.ts's tryAutoApply() for the
-          // exact rule). Deliberately a SEPARATE step after the create
-          // transaction commits, not inside it -- keeps the create logic
-          // and the apply logic independently readable, and a failure
-          // here (e.g. one flag's field update erroring) never rolls
-          // back the flags/run-item that were already safely recorded.
-          const createdFlagIds = (txResults.slice(1, 1 + result.flags.length) as { id: string }[]).map((f) => f.id);
-          for (const flagId of createdFlagIds) {
-            try {
-              await questionAuditAdminService.tryAutoApply(flagId);
-            } catch (err) {
-              console.error(`Auto-apply failed for flag ${flagId}:`, err);
+            // Sept 2026 — Confidence-Threshold Auto-Apply (admin-approved):
+            // right after each flag is safely created, immediately check
+            // whether it's eligible to apply itself (see
+            // question-audit-admin.service.ts's tryAutoApply() for the
+            // exact rule). Deliberately a SEPARATE step after the create
+            // transaction commits, not inside it -- keeps the create logic
+            // and the apply logic independently readable, and a failure
+            // here (e.g. one flag's field update erroring) never rolls
+            // back the flags/run-item that were already safely recorded.
+            const createdFlagIds = (txResults.slice(1, 1 + result.flags.length) as { id: string }[]).map((f) => f.id);
+            for (const flagId of createdFlagIds) {
+              try {
+                await questionAuditAdminService.tryAutoApply(flagId);
+              } catch (err) {
+                console.error(`Auto-apply failed for flag ${flagId}:`, err);
+              }
             }
+          } catch (err) {
+            console.error(`Question audit failed for ${questionId}:`, err);
+            await prisma.questionAuditRun.update({
+              where: { id: runId },
+              data: { processedQuestions: { increment: 1 } },
+            });
           }
-        } catch (err) {
-          console.error(`Question audit failed for ${questionId}:`, err);
-          await prisma.questionAuditRun.update({
-            where: { id: runId },
-            data: { processedQuestions: { increment: 1 } },
-          });
         }
       }
 
