@@ -162,7 +162,7 @@ export default function BulkUploadPage() {
             Exam Year (optional):{' '}
             <input type="number" value={examYear} onChange={(e) => setExamYear(e.target.value)} placeholder="2024" style={{ width: 90, padding: 6, borderRadius: 6, border: '1px solid #cbd5e1' }} />
           </label>
-          <SubjectInput value={subjectName} onChange={setSubjectName} />
+          <SubjectInput value={subjectName} onChange={setSubjectName} subCategoryId={taxonomy.subCategoryId || undefined} />
         </div>
         <label style={{ fontSize: 13, display: 'block' }}>
           Source Name (optional, admin-only):{' '}
