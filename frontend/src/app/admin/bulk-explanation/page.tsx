@@ -98,7 +98,14 @@ export default function BulkExplanationPage() {
       const res = await adminFetch('/admin/bulk-explanation/runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sampleSize, subCategoryId: scopeSubCategoryId }),
+        body: JSON.stringify({
+          sampleSize,
+          subCategoryId: scopeSubCategoryId,
+          // Sept 2026 — was defaulting server-side to "Explanation run —
+          // N questions (date)" with no exam name at all, unlike AI
+          // Question Audit's own scoped-run label. Now includes it.
+          label: `Explanation run — ${subCategoryOptions.find((o) => o.id === scopeSubCategoryId)?.label ?? 'exam'} — ${sampleSize} questions (${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })})`,
+        }),
       });
       if (!res.ok) {
         const body = await res.json();
