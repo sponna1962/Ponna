@@ -14,6 +14,7 @@ type Result = { subjectName: string; exists: boolean; subjectId?: string; groupI
 
 export default function DiagnosticsPage() {
   const [results, setResults] = useState<Result[] | null>(null);
+  const [allSubjects, setAllSubjects] = useState<{ name: string; totalQuestionCount: number }[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +29,7 @@ export default function DiagnosticsPage() {
         return;
       }
       setResults(body.results);
+      setAllSubjects(body.allSubjectsInDatabase);
     } finally {
       setLoading(false);
     }
@@ -67,6 +69,28 @@ export default function DiagnosticsPage() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {allSubjects && (
+        <>
+          <h2 style={{ fontSize: 16, marginTop: 28, marginBottom: 10 }}>Every Subject actually in the database ({allSubjects.length})</h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
+                <th style={{ padding: 8 }}>Exact Name (as stored)</th>
+                <th style={{ padding: 8 }}>Total Question Count (any exam)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allSubjects.map((s) => (
+                <tr key={s.name} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: 8, fontFamily: 'monospace' }}>{s.name}</td>
+                  <td style={{ padding: 8, fontWeight: 700 }}>{s.totalQuestionCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
     </div>
   );

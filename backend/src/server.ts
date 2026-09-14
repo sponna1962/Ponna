@@ -1608,7 +1608,16 @@ app.get('/admin/diagnostics/group-iv-subject-mismatch', requireStaffAuth, async 
       });
       results.push({ subjectName: name, exists: true, subjectId: subject.id, groupIvQuestionCount: count });
     }
-    res.json({ groupIvSubCategoryId: groupIv.id, results });
+
+    // Sept 2026 — added after the exact-name lookups above ALL came back
+    // "not found", including subjects confirmed to exist from a live
+    // screenshot (Indian Polity, Geography, General Science) -- lists
+    // EVERY Subject actually in the database (name + total question
+    // count, any exam) so the real, exact stored names can be seen and
+    // compared, rather than guessed at again.
+    const allSubjects = await prisma.subject.findMany({ select: { id: true, name: true, _count: { select: { questions: true } } } });
+
+    res.json({ groupIvSubCategoryId: groupIv.id, results, allSubjectsInDatabase: allSubjects.map((s) => ({ name: s.name, totalQuestionCount: s._count.questions })) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to run diagnostic' });
