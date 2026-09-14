@@ -323,6 +323,29 @@ export default function QuestionAuditPage() {
     if (selectedRunId) loadFlags(selectedRunId);
   }
 
+  // Sept 2026 — same safe bulkDelete() the Questions page's own "Delete"
+  // action uses (the QA-only "Force Delete" is deliberately NOT exposed
+  // here): if a student has ever answered this question, it's
+  // automatically DISABLED instead of deleted, so their recorded stats
+  // are never touched. Only genuinely deletes when truly safe to.
+  async function deleteQuestion(questionId: string) {
+    if (!confirm('Delete this question? If any student has already answered it, it will be disabled instead (their stats are never touched) — otherwise it is permanently removed.')) return;
+    const res = await adminFetch('/admin/questions/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [questionId] }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(body.error ?? 'Failed to delete question');
+      return;
+    }
+    if (body.disabledInstead > 0) {
+      alert('A student has already answered this question, so it was disabled instead of deleted (their stats are preserved).');
+    }
+    if (selectedRunId) loadFlags(selectedRunId);
+  }
+
   function openInlineEdit(f: Flag) {
     setEditingFlagId(f.id);
     setEditForm({
@@ -668,6 +691,20 @@ export default function QuestionAuditPage() {
                     Disable Question
                   </button>
                 )}
+                {/* Sept 2026 — explicit admin request: a way to actually
+                    remove a genuinely bad question, not just hide it,
+                    without risking any student's recorded stats. Reuses
+                    the same safe bulkDelete() the Questions page's own
+                    "Delete" button calls (auto-falls-back to Disable
+                    when a student has already answered it) -- never the
+                    QA-only Force Delete, which is deliberately not
+                    exposed on this page. */}
+                <button
+                  onClick={() => deleteQuestion(f.question.id)}
+                  style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #7f1d1d', color: '#fff', background: '#7f1d1d', cursor: 'pointer' }}
+                >
+                  Delete Question
+                </button>
                 {f.status === 'OPEN' && (
                   <button onClick={() => reviewFlag(f.id, 'CONFIRMED')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '1px solid #16a34a', color: '#16a34a', background: '#fff', cursor: 'pointer' }}>
                     {f.issueType === 'CROSS_EXAM_APPLICABLE' ? 'Confirm — add this tag' : 'Confirm — real issue'}
