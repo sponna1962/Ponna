@@ -1584,6 +1584,15 @@ app.post('/admin/questions/heuristic-classify/apply', requireStaffAuth, requireR
 // (not a real Unit, just the Part A umbrella name). Needed before
 // designing a safe re-tagging migration -- this sandbox has no direct
 // database access, so counts have to come from a real deployed call.
+// GET /admin/diagnostics/group-iv-subject-mismatch — Sept 2026, ONE-TIME
+// diagnostic (read-only, no data changed). Redesigned after the first
+// version's exact-name guesses ALL came back "not found" -- a live
+// screenshot showed ~339 Subject rows in the database, most suffixed
+// with "(Subject Code NNN)" to disambiguate the same-named subject
+// across different exams, so guessing plain names was never going to
+// match. This version sidesteps the guessing problem entirely: it
+// queries every Subject that ACTUALLY has a question tagged to Group -
+// IV, directly, by real usage rather than by name.
 app.get('/admin/diagnostics/group-iv-subject-mismatch', requireStaffAuth, async (_req, res) => {
   try {
     const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
@@ -1591,33 +1600,25 @@ app.get('/admin/diagnostics/group-iv-subject-mismatch', requireStaffAuth, async 
       res.status(404).json({ error: 'Group - IV Sub-Category not found' });
       return;
     }
-    const namesToCheck = ['History and Culture of India and Tamil Nadu', 'Indian National Movement', 'Indian Economy', 'General Studies', 'Indian Polity', 'Geography', 'General Science', 'Aptitude & Mental Ability', 'General English'];
-    const results = [];
-    for (const name of namesToCheck) {
-      const subject = await prisma.subject.findFirst({ where: { name } });
-      if (!subject) {
-        results.push({ subjectName: name, exists: false, groupIvQuestionCount: 0 });
-        continue;
-      }
-      const count = await prisma.question.count({
-        where: {
-          subjectId: subject.id,
-          status: 'PUBLISHED',
-          OR: [{ subCategoryId: groupIv.id }, { authorityTags: { some: { subCategoryId: groupIv.id } } }],
-        },
-      });
-      results.push({ subjectName: name, exists: true, subjectId: subject.id, groupIvQuestionCount: count });
+    const groupIvQuestions = await prisma.question.findMany({
+      where: {
+        status: 'PUBLISHED',
+        OR: [{ subCategoryId: groupIv.id }, { authorityTags: { some: { subCategoryId: groupIv.id } } }],
+      },
+      select: { subjectId: true, subject: { select: { name: true } } },
+    });
+    const counts = new Map<string, { name: string; count: number }>();
+    for (const q of groupIvQuestions) {
+      const key = q.subjectId ?? 'NONE';
+      const name = q.subject?.name ?? '(no subject tagged)';
+      const existing = counts.get(key);
+      counts.set(key, { name, count: (existing?.count ?? 0) + 1 });
     }
+    const results = Array.from(counts.entries())
+      .map(([subjectId, v]) => ({ subjectId, subjectName: v.name, groupIvQuestionCount: v.count }))
+      .sort((a, b) => b.groupIvQuestionCount - a.groupIvQuestionCount);
 
-    // Sept 2026 — added after the exact-name lookups above ALL came back
-    // "not found", including subjects confirmed to exist from a live
-    // screenshot (Indian Polity, Geography, General Science) -- lists
-    // EVERY Subject actually in the database (name + total question
-    // count, any exam) so the real, exact stored names can be seen and
-    // compared, rather than guessed at again.
-    const allSubjects = await prisma.subject.findMany({ select: { id: true, name: true, _count: { select: { questions: true } } } });
-
-    res.json({ groupIvSubCategoryId: groupIv.id, results, allSubjectsInDatabase: allSubjects.map((s) => ({ name: s.name, totalQuestionCount: s._count.questions })) });
+    res.json({ groupIvSubCategoryId: groupIv.id, totalGroupIvQuestions: groupIvQuestions.length, subjectsActuallyUsed: results });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to run diagnostic' });

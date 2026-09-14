@@ -10,11 +10,11 @@
 import { useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
 
-type Result = { subjectName: string; exists: boolean; subjectId?: string; groupIvQuestionCount: number };
+type Result = { subjectId: string; subjectName: string; groupIvQuestionCount: number };
 
 export default function DiagnosticsPage() {
   const [results, setResults] = useState<Result[] | null>(null);
-  const [allSubjects, setAllSubjects] = useState<{ name: string; totalQuestionCount: number }[] | null>(null);
+  const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,8 +28,8 @@ export default function DiagnosticsPage() {
         setError(body.error ?? 'Failed to run diagnostic');
         return;
       }
-      setResults(body.results);
-      setAllSubjects(body.allSubjectsInDatabase);
+      setResults(body.subjectsActuallyUsed);
+      setTotalQuestions(body.totalGroupIvQuestions);
     } finally {
       setLoading(false);
     }
@@ -51,41 +51,22 @@ export default function DiagnosticsPage() {
       {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
 
       {results && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
-              <th style={{ padding: 8 }}>Subject Name</th>
-              <th style={{ padding: 8 }}>Exists?</th>
-              <th style={{ padding: 8 }}>Group IV Questions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {results.map((r) => (
-              <tr key={r.subjectName} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: 8 }}>{r.subjectName}</td>
-                <td style={{ padding: 8 }}>{r.exists ? '✅' : '❌ not found'}</td>
-                <td style={{ padding: 8, fontWeight: 700 }}>{r.groupIvQuestionCount}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {allSubjects && (
         <>
-          <h2 style={{ fontSize: 16, marginTop: 28, marginBottom: 10 }}>Every Subject actually in the database ({allSubjects.length})</h2>
+          <p style={{ fontSize: 13, color: '#334155', marginBottom: 10 }}>
+            <strong>{totalQuestions}</strong> total PUBLISHED Group IV questions, across <strong>{results.length}</strong> distinct Subjects actually used:
+          </p>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
-                <th style={{ padding: 8 }}>Exact Name (as stored)</th>
-                <th style={{ padding: 8 }}>Total Question Count (any exam)</th>
+                <th style={{ padding: 8 }}>Subject Name (as actually stored)</th>
+                <th style={{ padding: 8 }}>Group IV Questions</th>
               </tr>
             </thead>
             <tbody>
-              {allSubjects.map((s) => (
-                <tr key={s.name} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: 8, fontFamily: 'monospace' }}>{s.name}</td>
-                  <td style={{ padding: 8, fontWeight: 700 }}>{s.totalQuestionCount}</td>
+              {results.map((r) => (
+                <tr key={r.subjectId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: 8, fontFamily: 'monospace' }}>{r.subjectName}</td>
+                  <td style={{ padding: 8, fontWeight: 700 }}>{r.groupIvQuestionCount}</td>
                 </tr>
               ))}
             </tbody>
