@@ -64,6 +64,7 @@ import { MockExamService } from './modules/quiz/mock-exam.service';
 import { adaptiveMockService } from './modules/quiz/adaptive-mock.service';
 import { DiagnosticService } from './modules/quiz/diagnostic.service';
 import { DailyQuizType } from '@prisma/client';
+import { prisma } from './lib/prisma';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
