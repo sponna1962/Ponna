@@ -549,16 +549,38 @@ export class QuestionService {
    * would also silently corrupt that student's stats — so those are
    * DISABLED instead, which removes them from any future quiz without
    * touching already-recorded history.
+   *
+   * Sept 2026 (real bug fix) — was only checking UserQuestionHistory and
+   * QuizSessionQuestion, which meant any question ever included in an AI
+   * Question Audit run (QuestionAuditRunItem, a RESTRICT foreign key) still
+   * crashed with a raw Postgres error instead of being safely disabled.
+   * Now checks every table with a real FK to Question: QuestionReport,
+   * QuestionAuditRunItem, QuestionAuditFlag, QuestionTaxonomyTag,
+   * QuizSessionQuestion, OfflinePackItem, MistakeReview, MockExamQuestion,
+   * AdaptiveMockQuestion, DiagnosticAnswer, UserQuestionHistory. (Excludes
+   * AutoApplyLog and DailyQuizAnswer -- the former stores questionId as a
+   * plain string with no actual FK constraint; the latter's questionId
+   * points to DailyQuizQuestion, an unrelated table, not this Question.)
    */
   async bulkDelete(ids: string[]) {
     let referencedIds = new Set<string>();
     for (const batch of this.chunkIds(ids)) {
-      const [withHistory, withSessionRefs] = await Promise.all([
+      const referencingTables = await Promise.all([
         prisma.userQuestionHistory.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
         prisma.quizSessionQuestion.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.questionReport.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.questionAuditRunItem.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.questionAuditFlag.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.questionTaxonomyTag.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.offlinePackItem.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.mistakeReview.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.mockExamQuestion.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.adaptiveMockQuestion.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
+        prisma.diagnosticAnswer.findMany({ where: { questionId: { in: batch } }, select: { questionId: true }, distinct: ['questionId'] }),
       ]);
-      for (const h of withHistory) referencedIds.add(h.questionId);
-      for (const s of withSessionRefs) referencedIds.add(s.questionId);
+      for (const rows of referencingTables) {
+        for (const r of rows) referencedIds.add(r.questionId);
+      }
     }
 
     const safeToDelete = ids.filter((id) => !referencedIds.has(id));
@@ -582,10 +604,27 @@ export class QuestionService {
    * prep tool only (Super Admin, extra confirmation in the UI): using this on
    * questions real students have answered corrupts their recorded stats.
    * Never call this from any student-facing or automated path.
+   *
+   * Sept 2026 (real bug fix, same root cause as bulkDelete() above) — now
+   * clears every table with a real FK to Question, not just
+   * UserQuestionHistory/QuizSessionQuestion. AutoApplyLog is cleared first
+   * since it references QuestionAuditFlag (deleted next), which itself
+   * references Question.
    */
   async forceBulkDelete(ids: string[]) {
     for (const batch of this.chunkIds(ids)) {
+      const flagIds = (await prisma.questionAuditFlag.findMany({ where: { questionId: { in: batch } }, select: { id: true } })).map((f) => f.id);
       await prisma.$transaction([
+        prisma.autoApplyLog.deleteMany({ where: { flagId: { in: flagIds } } }),
+        prisma.questionAuditFlag.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.questionAuditRunItem.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.questionReport.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.questionTaxonomyTag.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.offlinePackItem.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.mistakeReview.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.mockExamQuestion.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.adaptiveMockQuestion.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.diagnosticAnswer.deleteMany({ where: { questionId: { in: batch } } }),
         prisma.userQuestionHistory.deleteMany({ where: { questionId: { in: batch } } }),
         prisma.quizSessionQuestion.deleteMany({ where: { questionId: { in: batch } } }),
         prisma.question.deleteMany({ where: { id: { in: batch } } }),
