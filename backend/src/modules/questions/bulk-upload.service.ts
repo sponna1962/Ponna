@@ -193,8 +193,20 @@ export class BulkUploadService {
 
     // Resolved once per batch (not per row) — same find-or-create pattern as
     // the single Add Question form, just applied to every row up front.
+    // Sept 2026 (real fix, same as question.service.ts's own
+    // resolveSubjectId()) — Subject's uniqueness is now (name,
+    // subCategoryId) together, not name alone, since a Subject now
+    // genuinely belongs to one exam. Explicit find-then-create rather
+    // than prisma.subject.upsert(): a compound unique key with a
+    // nullable field doesn't reliably match NULL rows through Prisma's
+    // generated compound-key where clause.
     const subjectName = batchMeta.subjectName?.trim();
-    const subjectId = subjectName ? (await prisma.subject.upsert({ where: { name: subjectName }, create: { name: subjectName }, update: {} })).id : undefined;
+    let subjectId: string | undefined;
+    if (subjectName) {
+      const scopeId = batchMeta.subCategoryId ?? null;
+      const existingSubject = await prisma.subject.findFirst({ where: { name: subjectName, subCategoryId: scopeId } });
+      subjectId = existingSubject ? existingSubject.id : (await prisma.subject.create({ data: { name: subjectName, subCategoryId: scopeId } })).id;
+    }
 
     for (const row of rows) {
       if (!row) continue;
