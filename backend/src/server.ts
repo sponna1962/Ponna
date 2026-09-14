@@ -1694,6 +1694,18 @@ app.post('/admin/diagnostics/setup-group-iv-official-subjects', requireStaffAuth
       'History, Culture, Heritage, and Socio-Political Movements of Tamil Nadu',
       'Aptitude',
       'Reasoning',
+      // Sept 2026 — Part C: தமிழ் தகுதி மற்றும் மதிப்பீட்டுத் தேர்வு (100
+      // Questions), the official syllabus's 7 remaining units, per
+      // explicit admin request after confirming Part A/B's 8 subjects
+      // above were correct but Part C (fully half the exam's marks) had
+      // no representation at all in the Subject taxonomy.
+      'Tamil Grammar',
+      'Tamil Vocabulary',
+      'Tamil Writing Skills',
+      'Tamil Technical Terms',
+      'Tamil Reading Comprehension',
+      'Tamil Translation',
+      'Tamil Literature and Tamil Scholars',
     ];
     const created: { name: string; id: string; wasNew: boolean }[] = [];
     for (const name of officialSubjects) {
