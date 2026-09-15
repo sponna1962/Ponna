@@ -1521,6 +1521,19 @@ model QuizSessionQuestion {
   // before this field existed.
   timeSpentSeconds Int?
 
+  // Sept 2026 (Option Shuffling, explicit request) — a 4-character
+  // permutation of "ABCD" fixed at session-creation time, e.g. "CADB"
+  // means display-position-A shows the STORED optionC's text,
+  // display-position-B shows stored optionA, etc. Purely a translation
+  // at the API boundary (getSessionForStudent()'s content mapping, and
+  // submitAnswer()'s incoming-letter conversion) -- selectedOption/
+  // isCorrect/correctOption everywhere else in this schema, and every
+  // downstream feature (Mistake Review, performance stats, Subject
+  // Classification, etc.), continue to work with the STORED letter only
+  // and never need to know shuffling happened. Null for sessions created
+  // before this field existed (no shuffle applied, same as always).
+  optionOrder   String?
+
   @@unique([sessionId, questionId])
   @@index([sessionId, sequenceNumber])
 }

@@ -14,6 +14,40 @@ import { MilestoneService } from '../practice-preference/milestone.service';
 
 const milestoneService = new MilestoneService();
 
+// Sept 2026 (Option Shuffling, explicit request) — see schema.prisma's
+// own comment on QuizSessionQuestion.optionOrder for the full design.
+// Pure translation helpers at the API boundary; nothing downstream of
+// this file needs to know shuffling happened.
+const DISPLAY_LETTERS = ['A', 'B', 'C', 'D'] as const;
+
+function generateOptionOrder(): string {
+  const letters: string[] = [...DISPLAY_LETTERS];
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+  return letters.join('');
+}
+
+/** Given the letter the student tapped on screen, returns which STORED
+ * option (matching question.correctOption's own lettering) that actually
+ * is. Identity mapping when optionOrder is null (older sessions, or
+ * shuffling never applied). */
+function displayToStored(displayLetter: string, optionOrder: string | null): string {
+  if (!optionOrder) return displayLetter;
+  const idx = DISPLAY_LETTERS.indexOf(displayLetter as any);
+  return idx === -1 ? displayLetter : optionOrder[idx];
+}
+
+/** Given the STORED correct-option letter, returns which screen position
+ * it's actually displayed in for this session's shuffle -- used only when
+ * showing the correct answer back to the student after they've answered. */
+function storedToDisplay(storedLetter: string, optionOrder: string | null): string {
+  if (!optionOrder) return storedLetter;
+  const idx = optionOrder.indexOf(storedLetter);
+  return idx === -1 ? storedLetter : DISPLAY_LETTERS[idx];
+}
+
 const quota = new QuotaService();
 const allocation = new AllocationService();
 const ranking = new RankingService();
@@ -122,6 +156,7 @@ export class SessionService {
           create: questionIds.map((questionId, idx) => ({
             questionId,
             sequenceNumber: idx + 1,
+            optionOrder: generateOptionOrder(),
           })),
         },
       },
@@ -156,18 +191,29 @@ export class SessionService {
       const answeredQuestion = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
       return {
         isCorrect: existingAnswer.isCorrect ?? false,
-        correctOption: answeredQuestion.correctOption,
+        // Sept 2026 (Option Shuffling) — translated to the display letter
+        // this session's own shuffle actually shows, matching
+        // getSessionForStudent()'s own correctOption translation.
+        correctOption: storedToDisplay(answeredQuestion.correctOption, existingAnswer.optionOrder),
         explanation: answeredQuestion.language === 'TA' ? answeredQuestion.explanationTa : answeredQuestion.explanationEn,
       };
     }
 
     const question = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
-    const isCorrect = question.correctOption === selectedOption;
+    // Sept 2026 (Option Shuffling) — selectedOption arriving here is the
+    // DISPLAY letter the student actually tapped; translate it to the
+    // STORED letter before comparing to question.correctOption (which is
+    // always in terms of the stored letter) or writing anywhere.
+    // Everything downstream of this line (isCorrect, the write below,
+    // UserQuestionHistory, Mistake Review, etc.) uses the stored letter
+    // only and never needs to know shuffling happened.
+    const storedSelectedOption = displayToStored(selectedOption, existingAnswer.optionOrder) as CorrectOption;
+    const isCorrect = question.correctOption === storedSelectedOption;
 
     await prisma.$transaction([
       prisma.quizSessionQuestion.update({
         where: { sessionId_questionId: { sessionId, questionId } },
-        data: { answered: true, selectedOption, isCorrect, answeredAt: new Date(), timeSpentSeconds },
+        data: { answered: true, selectedOption: storedSelectedOption, isCorrect, answeredAt: new Date(), timeSpentSeconds },
       }),
       prisma.quizSession.update({
         where: { id: sessionId },
@@ -222,7 +268,10 @@ export class SessionService {
 
     return {
       isCorrect,
-      correctOption: question.correctOption,
+      // Sept 2026 (Option Shuffling) — translated to the display letter
+      // this session's own shuffle actually shows, same as the two
+      // other return points in this method.
+      correctOption: storedToDisplay(question.correctOption, existingAnswer.optionOrder),
       // Sept 2026 (Tap-to-Reveal Explanation) — plain field, no "AI"
       // labeling anywhere near this per explicit design decision; null
       // when the question has no explanation generated yet.
@@ -271,16 +320,31 @@ export class SessionService {
       status: session.status,
       totalQuestions: session.totalQuestions,
       questions: session.questions.map((sq) => {
+        // Sept 2026 (Option Shuffling) — see this file's own
+        // displayToStored/storedToDisplay helpers and schema.prisma's
+        // comment on optionOrder for the full design.
+        const shownCorrectOption = sq.answered ? storedToDisplay(sq.question.correctOption, sq.optionOrder) : null;
+        const storedOptions: Record<string, string> = {
+          A: sq.question.optionA,
+          B: sq.question.optionB,
+          C: sq.question.optionC,
+          D: sq.question.optionD,
+        };
+        const order = sq.optionOrder ?? 'ABCD';
         return {
           sequenceNumber: sq.sequenceNumber,
           questionId: sq.questionId,
           answered: sq.answered,
-          selectedOption: sq.selectedOption,
+          // Sept 2026 (Option Shuffling) — selectedOption is stored using
+          // the STORED letter (see submitAnswer()'s own comment), so it
+          // must be translated back to which screen position the student
+          // actually tapped, same as correctOption below.
+          selectedOption: sq.answered && sq.selectedOption ? storedToDisplay(sq.selectedOption, sq.optionOrder) : sq.selectedOption,
           isCorrect: sq.isCorrect,
           difficulty: sq.question.difficulty,
           category: sq.question.category,
           // correctOption intentionally omitted until answered=true
-          correctOption: sq.answered ? sq.question.correctOption : null,
+          correctOption: shownCorrectOption,
           // Sept 2026 (Tap-to-Reveal Explanation) — same "never before
           // answered" guard as correctOption above: an explanation would
           // otherwise give the answer away before the student commits.
@@ -294,10 +358,14 @@ export class SessionService {
           content: {
             [sq.question.language]: {
               questionText: sq.question.questionText,
-              optionA: sq.question.optionA,
-              optionB: sq.question.optionB,
-              optionC: sq.question.optionC,
-              optionD: sq.question.optionD,
+              // Sept 2026 (Option Shuffling) — each display slot shows
+              // whichever STORED option this session's own optionOrder
+              // maps it to, e.g. order[0] says which stored option
+              // appears in display-slot-A.
+              optionA: storedOptions[order[0]],
+              optionB: storedOptions[order[1]],
+              optionC: storedOptions[order[2]],
+              optionD: storedOptions[order[3]],
             },
           },
         };
