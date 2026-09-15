@@ -87,7 +87,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'get_exam_syllabus',
-    description: "Fetch the official Subject -> Topic syllabus structure for one specific exam. Use this when discussing what the student needs to study for a specific exam.",
+    description:
+      "Fetch the official Subject -> Topic syllabus structure for one specific exam, plus pdfUrl (the original Syllabus PDF's own hosted download link, or null if none was ever uploaded). Use this when discussing what the student needs to study for a specific exam. Always offer the pdfUrl as a direct download link in the same response as the syllabus content, when it's present.",
     parameters: {
       type: 'object',
       properties: { subCategoryId: { type: 'string', description: 'The exam id, from find_exam' } },
@@ -96,7 +97,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'get_exam_full_info',
-    description: "Fetch the FULL structured exam information for one specific exam -- posts covered, department/service, age limit/relaxation, exam stages, paper structure, selection process, vacancy count, hall ticket/answer key/result status, application dates, reservation info, and any other verified facts on file. Each fact includes isOfficialConfirmed (true = admin-confirmed against an official source; false = tentative/expected) and whether it is stale (only ever true for genuinely time-varying facts -- dates, vacancy, hall ticket, answer key, result, application window -- never for stable facts like syllabus or eligibility). If a stale time-sensitive fact is returned, call search_current_info to check for a more current value before answering. Never state a fact's official/tentative status incorrectly -- always relay exactly what this tool says.",
+    description:
+      "Fetch the FULL structured exam information for one specific exam -- posts covered, department/service, age limit/relaxation, exam stages, paper structure, selection process, vacancy count, hall ticket/answer key/result status, application dates, reservation info, and any other verified facts on file. Each fact includes isOfficialConfirmed (true = admin-confirmed against an official source; false = tentative/expected), sourceUrl (a direct download link to the original official document this fact came from, e.g. a Notification PDF -- offer it when present, in the same response as the fact itself), and whether it is stale (only ever true for genuinely time-varying facts -- dates, vacancy, hall ticket, answer key, result, application window -- never for stable facts like syllabus or eligibility). If a stale time-sensitive fact is returned, call search_current_info to check for a more current value before answering. Never state a fact's official/tentative status incorrectly -- always relay exactly what this tool says.",
     parameters: {
       type: 'object',
       properties: { subCategoryId: { type: 'string', description: 'The exam id, from find_exam' } },
@@ -335,14 +337,29 @@ export async function executeTool(userId: string, toolName: string, args: Record
       if (!subCategoryId) throw new ToolLayerError('subCategoryId is required');
       const subCategory = await prisma.examSubCategory.findUnique({ where: { id: subCategoryId }, select: { studentVisible: true } });
       if (!subCategory || !subCategory.studentVisible) {
-        return [];
+        return { subjects: [], pdfUrl: null };
       }
       const subjects = await prisma.syllabusSubject.findMany({
         where: { subCategoryId },
         include: { topics: { select: { name: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] } },
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       });
-      return subjects.map((s) => ({ subject: s.name, topics: s.topics.map((t) => t.name) }));
+      // Sept 2026 (explicit request) — the original Syllabus PDF's own
+      // hosted URL, so Ask Ponna can offer a direct download link in the
+      // same response as the syllabus details, not just describe it.
+      // Syllabus PDF Import always saves this as an ELIGIBILITY
+      // VerifiedExamFact's sourceUrl (see syllabus-import.service.ts's
+      // own applyDraft()) -- the most recently verified one for this
+      // exam is the current syllabus PDF.
+      const syllabusFact = await prisma.verifiedExamFact.findFirst({
+        where: { subCategoryId, factType: 'ELIGIBILITY', sourceUrl: { not: null } },
+        orderBy: { verifiedAt: 'desc' },
+        select: { sourceUrl: true },
+      });
+      return {
+        subjects: subjects.map((s) => ({ subject: s.name, topics: s.topics.map((t) => t.name) })),
+        pdfUrl: syllabusFact?.sourceUrl ?? null,
+      };
     }
 
     case 'get_exam_full_info': {
