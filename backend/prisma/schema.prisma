@@ -1065,6 +1065,7 @@ model ExamSubCategory {
   explanationGenerationRuns ExplanationGenerationRun[]
   subjects Subject[]
   subjectClassificationRuns SubjectClassificationRun[]
+  guestDiagnosticAttempts GuestDiagnosticAttempt[]
   planScopes PlanSubCategoryScope[]
   crossExamAuditSuggestions QuestionAuditFlag[]
   // Student-facing launch visibility (finalized requirement — same
@@ -1452,6 +1453,7 @@ model Question {
   adaptiveMockQuestions AdaptiveMockQuestion[]
   subjectClassificationResults SubjectClassificationResult[]
   diagnosticAnswers DiagnosticAnswer[]
+  guestDiagnosticAnswers GuestDiagnosticAnswer[]
 
   @@index([status, difficulty, category])
   @@index([contentHash])
@@ -1792,6 +1794,47 @@ model AdaptiveMockQuestion {
 // report as a real "accuracy" statistic anywhere those numbers are
 // otherwise trusted. One attempt ever, per student; skippable, never
 // forced.
+// ── Signup-less "Test Your Ability" Diagnostic (Sept 2026, explicit
+// request — Item 4) ──────────────────────────────────────────────────
+// Deliberately SEPARATE from DiagnosticAttempt below (which requires a
+// real, already-signed-up userId) -- this exists specifically so a
+// brand-new visitor can start answering immediately with NO signup,
+// per the explicit, confirmed design decision: signup is required only
+// to SEE the report, not to take the diagnostic itself (lower friction,
+// "sunk cost" motivation to complete signup once they've already
+// invested the time answering). guestId is a client-generated UUID
+// (localStorage, never a real userId) -- once the visitor signs up, the
+// SAME attempt is claimed (migratedToUserId set) rather than losing
+// their answers or creating a duplicate DiagnosticAttempt.
+model GuestDiagnosticAttempt {
+  id               String                   @id @default(uuid())
+  guestId          String                   @unique
+  subCategoryId    String
+  subCategory      ExamSubCategory          @relation(fields: [subCategoryId], references: [id])
+  startedAt        DateTime                 @default(now())
+  completedAt      DateTime?
+  // Set once a real signed-up student claims this attempt (see
+  // guest-diagnostic.service.ts's claimAttempt()) -- the report is only
+  // ever shown once this is non-null, enforcing the signup gate
+  // server-side, not just in the UI.
+  migratedToUserId String?
+  answers          GuestDiagnosticAnswer[]
+}
+
+model GuestDiagnosticAnswer {
+  id             String                 @id @default(uuid())
+  attemptId      String
+  attempt        GuestDiagnosticAttempt @relation(fields: [attemptId], references: [id])
+  questionId     String
+  question       Question               @relation(fields: [questionId], references: [id])
+  sequenceNumber Int
+  selectedOption CorrectOption?
+  isCorrect      Boolean?
+  answeredAt     DateTime?
+
+  @@unique([attemptId, questionId])
+}
+
 model DiagnosticAttempt {
   id          String                  @id @default(uuid())
   userId      String                  @unique

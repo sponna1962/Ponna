@@ -11,6 +11,7 @@ import { SessionService } from './modules/quiz/session.service';
 import { PracticePreferenceService, InvalidSelectionError } from './modules/practice-preference/practice-preference.service';
 import { RankingService } from './modules/ranking/ranking.service';
 import { activitySummaryService } from './modules/students/activity-summary.service';
+import { guestDiagnosticService } from './modules/students/guest-diagnostic.service';
 import { gapAnalysisService } from './modules/practice-preference/gap-analysis.service';
 import { weakAreaService } from './modules/practice-preference/weak-area.service';
 import { progressCoachService } from './modules/practice-preference/progress-coach.service';
@@ -1234,6 +1235,77 @@ app.get('/students/me/monthly-summary', requireStudentAuth, async (req: StudentA
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load monthly summary' });
+  }
+});
+
+// ── Signup-less "Test Your Ability" Diagnostic (Sept 2026, Item 4) ─────
+// See schema.prisma's own header comment on GuestDiagnosticAttempt.
+// start/questions/answer/complete are deliberately PUBLIC (no auth) --
+// the whole point is a brand-new visitor can take this with no signup.
+// claim/report require a logged-in student, since they're the signup
+// gate itself.
+
+app.post('/guest-diagnostic/start', async (req, res) => {
+  try {
+    const { guestId, subCategoryId } = req.body;
+    if (!guestId || !subCategoryId) {
+      res.status(400).json({ error: 'guestId and subCategoryId are required' });
+      return;
+    }
+    res.json(await guestDiagnosticService.startAttempt(guestId, subCategoryId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to start diagnostic' });
+  }
+});
+
+app.get('/guest-diagnostic/:guestId/questions', async (req, res) => {
+  try {
+    res.json(await guestDiagnosticService.getQuestions(req.params.guestId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to load questions' });
+  }
+});
+
+app.post('/guest-diagnostic/:guestId/answer', async (req, res) => {
+  try {
+    const { questionId, selectedOption } = req.body;
+    res.json(await guestDiagnosticService.submitAnswer(req.params.guestId, questionId, selectedOption));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to save answer' });
+  }
+});
+
+app.post('/guest-diagnostic/:guestId/complete', async (req, res) => {
+  try {
+    res.json(await guestDiagnosticService.completeAttempt(req.params.guestId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to complete diagnostic' });
+  }
+});
+
+// POST /guest-diagnostic/:guestId/claim — the signup gate itself. Called
+// right after a guest completes signup so their already-answered
+// diagnostic becomes claimable by their new real account.
+app.post('/guest-diagnostic/:guestId/claim', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await guestDiagnosticService.claimAttempt(req.params.guestId, req.studentUserId!);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to claim diagnostic result' });
+  }
+});
+
+app.get('/guest-diagnostic/:guestId/report', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    res.json(await guestDiagnosticService.getReport(req.params.guestId, req.studentUserId!));
+  } catch (err: any) {
+    console.error(err);
+    res.status(403).json({ error: err.message ?? 'Failed to load report' });
   }
 });
 
