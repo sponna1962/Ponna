@@ -1245,6 +1245,31 @@ app.get('/students/me/monthly-summary', requireStudentAuth, async (req: StudentA
 // claim/report require a logged-in student, since they're the signup
 // gate itself.
 
+// GET /public/primary-exam — Sept 2026, Item 4 support. The Test Your
+// Ability guest page needs to know which exam to diagnose against
+// WITHOUT requiring login. Since Phased Launch scopes PONNA to a single
+// visible exam right now, this simply returns the first
+// studentVisible=true Sub-Category (same visibility flag respected
+// everywhere else in the app) -- if more than one exam is ever visible
+// again, this naturally becomes "the first one," a reasonable default
+// rather than an error.
+app.get('/public/primary-exam', async (_req, res) => {
+  try {
+    const subCategory = await prisma.examSubCategory.findFirst({
+      where: { studentVisible: true },
+      select: { id: true, name: true },
+    });
+    if (!subCategory) {
+      res.status(404).json({ error: 'No exam is currently available.' });
+      return;
+    }
+    res.json(subCategory);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load primary exam' });
+  }
+});
+
 app.post('/guest-diagnostic/start', async (req, res) => {
   try {
     const { guestId, subCategoryId } = req.body;

@@ -199,6 +199,23 @@ export default function IndexPage() {
     }
     const { token } = await res.json();
     completeLogin(token);
+    // Sept 2026 (Item 4, Signup-less Diagnostic) — if this student took
+    // the Test Your Ability guest diagnostic before signing up (guestId
+    // stored locally by that page), claim it now so their already-
+    // answered questions become theirs, then take them straight to the
+    // report they were promised. A no-op (harmless) if they never took
+    // it -- normal login continues exactly as before.
+    const guestDiagnosticId = localStorage.getItem('ponna_guest_diagnostic_id');
+    if (guestDiagnosticId) {
+      try {
+        await studentFetch(`/guest-diagnostic/${guestDiagnosticId}/claim`, { method: 'POST' });
+        window.location.href = '/test-your-ability/report';
+        return;
+      } catch {
+        // Claim failing is never fatal to login itself -- fall through
+        // to the normal completed-login flow below.
+      }
+    }
     setLoading(false);
   }
 
@@ -474,6 +491,22 @@ export default function IndexPage() {
           >
             பயிற்சியைத் தொடங்குங்கள் / Start Practising
           </button>
+        </div>
+      )}
+
+      {/* Sept 2026 (Item 4) — prominent entry point specifically for
+          logged-out visitors: no signup needed to try this, matching
+          the whole point of the signup-less diagnostic. Never shown to
+          an already-logged-in student (they already have real Practice
+          history, this isn't for them). */}
+      {!isLoggedIn && (
+        <div style={{ maxWidth: 480, margin: '20px auto 0', padding: '0 16px' }}>
+          <a
+            href="/test-your-ability"
+            style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, border: `1.5px solid ${COLORS.gold}`, background: COLORS.goldLight, color: COLORS.ink, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}
+          >
+            🎯 உங்க திறமையை இப்போவே பரிசோதிப்போம் — Sign up தேவையில்லை
+          </a>
         </div>
       )}
 
