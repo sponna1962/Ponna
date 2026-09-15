@@ -468,42 +468,6 @@ export default function IndexPage() {
               Now sets Subject Preference for this one weakest Subject
               (reusing the existing feature, not a new mechanism), then
               goes straight to Start Practice. */}
-          {isLoggedIn && weakArea && (
-            <div style={{ border: '1px solid #F3D9A8', borderRadius: 10, padding: 12, marginBottom: 20, background: '#FFF8EC' }}>
-              <p style={{ fontSize: 11, color: '#92400E', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
-                கவனிக்க வேண்டிய பகுதி / Weak Area
-              </p>
-              <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 8px', lineHeight: 1.5 }}>
-                <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
-              </p>
-              {/* Sept 2026 — Verified Progress Coach: adds REAL exam-
-                  pattern context only when a genuine textual match
-                  exists in an official Scheme-of-Examination fact for
-                  this exam — never a fabricated per-subject weightage
-                  (see progress-coach.service.ts's own header comment). */}
-              {progressCoach?.relatedPaperFact && (
-                <p style={{ fontSize: 12, color: '#78350F', margin: '0 0 10px', lineHeight: 1.5, fontStyle: 'italic' }}>
-                  ✓ Verified exam pattern: {progressCoach.relatedPaperFact.value}
-                </p>
-              )}
-              <button
-                disabled={settingWeakAreaPractice}
-                onClick={async () => {
-                  setSettingWeakAreaPractice(true);
-                  await studentFetch(`/subject-preference/${weakArea.subCategoryId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subjectIds: [weakArea.subjectId], topicIds: [] }),
-                  });
-                  window.location.href = '/quiz';
-                }}
-                style={{ padding: '9px 16px', borderRadius: 8, background: '#92400E', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-              >
-                {settingWeakAreaPractice ? '...' : 'இப்போ Practice பண்ணுங்க'}
-              </button>
-            </div>
-          )}
-
           <button
             onClick={handleStartPractising}
             style={{ display: 'block', width: '100%', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
