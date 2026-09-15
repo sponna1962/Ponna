@@ -32,8 +32,21 @@
 // implied by taxonomyFilter — the finalized rule is that Language is a pure
 // content filter, not tied to any specific Authority.
 
-import { Difficulty, QuizMode, QuestionCategory, Language, Prisma } from '@prisma/client';
+import { Difficulty, QuizMode, QuestionCategory, Language, Prisma, SourceType } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+
+// Sept 2026 (Source-Priority, explicit request) — PONNA's own
+// ORIGINAL-authored questions get priority over old previous-exam
+// papers, since the latter risk a student pattern-matching a
+// memorized answer instead of engaging with the content (see
+// this same session's Option Shuffling work for the related concern).
+// 70% target, backfilled from whatever's left when ORIGINAL supply is
+// short for a given Subject/Difficulty/exam combination -- deliberately
+// NEVER reaches outside the caller's own `where` clause (which already
+// carries the taxonomyFilter scoping to one exam), so backfill only ever
+// pulls from the SAME exam's own PREVIOUS_EXAM/BOOK/OTHER questions,
+// never a different exam's -- explicitly confirmed as a hard requirement.
+const ORIGINAL_SOURCE_TARGET_RATIO = 0.7;
 
 // Sept 2026 (BINDING, data-quality safety) — a question with an
 // unreviewed (OPEN) AI Question Audit flag must NEVER be served to a
@@ -65,6 +78,47 @@ const NOT_PENDING_AUDIT_REVIEW = { auditFlags: { none: { status: { not: 'DISMISS
 export type SubjectTopicPreference = { subjectIds: string[]; topicIds: string[] } | null;
 
 export class AllocationService {
+  /** See this file's own ORIGINAL_SOURCE_TARGET_RATIO comment for the full
+   * design. `where` must already include every filter the caller needs
+   * (difficulty, language, taxonomyFilter, id: { notIn: [...already
+   * selected across the whole session] }, etc.) -- this helper only adds
+   * the sourceType priority/backfill split on top, never removes or
+   * loosens anything the caller already scoped. */
+  private async fetchWithSourcePriority(where: Prisma.QuestionWhereInput, take: number): Promise<{ id: string }[]> {
+    if (take <= 0) return [];
+
+    const originalTarget = Math.round(take * ORIGINAL_SOURCE_TARGET_RATIO);
+    // Sept 2026 — SourceType.ORIGINAL (the enum object) is unavailable
+    // here at RUNTIME in this environment (a sandbox-wide Prisma-client
+    // generation quirk, confirmed via a direct `node -e` check finding
+    // EVERY enum's runtime object undefined, not just this one) --
+    // string literals typed against the enum, matching this codebase's
+    // own established pattern elsewhere (e.g. status: 'PUBLISHED'),
+    // avoid the issue entirely since TypeScript's enum TYPES still work
+    // fine, only the runtime VALUE object doesn't.
+    const originalQuestions = await prisma.question.findMany({
+      where: { ...where, sourceType: 'ORIGINAL' as SourceType },
+      take: originalTarget,
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const stillNeeded = take - originalQuestions.length;
+    if (stillNeeded <= 0) return originalQuestions;
+
+    const existingNotIn = ((where.id as Prisma.StringFilter)?.notIn ?? []) as string[];
+    const backfill = await prisma.question.findMany({
+      where: {
+        ...where,
+        sourceType: { not: 'ORIGINAL' as SourceType },
+        id: { notIn: [...existingNotIn, ...originalQuestions.map((q) => q.id)] },
+      },
+      take: stillNeeded,
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return [...originalQuestions, ...backfill];
+  }
+
   async buildSessionQuestionIds(
     userId: string,
     mode: QuizMode,
@@ -112,10 +166,12 @@ export class AllocationService {
 
     // ── Step 2: Unseen standard questions matching the requested Difficulty ────
     if (!hasPreference) {
-      // Byte-identical to the pre-Stage-2 query — no preference saved (or
-      // an explicitly empty one) means zero behavior change.
-      const unseen = await prisma.question.findMany({
-        where: {
+      // Byte-identical filter set to the pre-Stage-2 query -- no
+      // preference saved (or an explicitly empty one) means zero
+      // behavior change apart from the Source-Priority split now
+      // applied on top (Sept 2026, explicit request).
+      const unseen = await this.fetchWithSourcePriority(
+        {
           status: 'PUBLISHED',
           ...NOT_PENDING_AUDIT_REVIEW,
           difficulty: { in: difficulties },
@@ -124,11 +180,8 @@ export class AllocationService {
           history: { none: { userId } },
           ...taxonomyFilter,
         },
-        take: remaining,
-        // Randomized ordering; for large tables swap this for a more scalable
-        // random-sampling strategy (e.g. TABLESAMPLE) before production scale.
-        orderBy: { createdAt: 'asc' },
-      });
+        remaining,
+      );
       selected.push(...unseen.map((q) => q.id));
     } else {
       // Stage 2 — split the "remaining" (non-CA) budget between the
@@ -138,8 +191,8 @@ export class AllocationService {
       const preferredTarget = Math.round((remaining * weightPercent) / 100);
 
       const preferredFilter = this.resolvePreferredFilter(preference!);
-      const preferredQuestions = await prisma.question.findMany({
-        where: {
+      const preferredQuestions = await this.fetchWithSourcePriority(
+        {
           status: 'PUBLISHED',
           ...NOT_PENDING_AUDIT_REVIEW,
           difficulty: { in: difficulties },
@@ -149,9 +202,8 @@ export class AllocationService {
           ...taxonomyFilter,
           ...preferredFilter,
         },
-        take: preferredTarget,
-        orderBy: { createdAt: 'asc' },
-      });
+        preferredTarget,
+      );
       selected.push(...preferredQuestions.map((q) => q.id));
 
       // Graceful fallback (finalized requirement) — the General target is
@@ -169,19 +221,18 @@ export class AllocationService {
         // before Stage 2 existed (untagged questions, i.e.
         // syllabusTopicId is null, land here naturally and continue
         // working exactly as before — finalized requirement).
-        const generalQuestions = await prisma.question.findMany({
-          where: {
+        const generalQuestions = await this.fetchWithSourcePriority(
+          {
             status: 'PUBLISHED',
-          ...NOT_PENDING_AUDIT_REVIEW,
+            ...NOT_PENDING_AUDIT_REVIEW,
             difficulty: { in: difficulties },
             language,
             id: { notIn: selected },
             history: { none: { userId } },
             ...taxonomyFilter,
           },
-          take: generalTarget,
-          orderBy: { createdAt: 'asc' },
-        });
+          generalTarget,
+        );
         selected.push(...generalQuestions.map((q) => q.id));
       }
     }
@@ -199,18 +250,17 @@ export class AllocationService {
     // re-apply the Preferred/General split — this tier exists purely to
     // guarantee the session still completes, exactly as it did before
     // Stage 2 existed.
-    const broadened = await prisma.question.findMany({
-      where: {
+    const broadened = await this.fetchWithSourcePriority(
+      {
         status: 'PUBLISHED',
-          ...NOT_PENDING_AUDIT_REVIEW,
+        ...NOT_PENDING_AUDIT_REVIEW,
         language,
         id: { notIn: selected },
         history: { none: { userId } },
         ...taxonomyFilter,
       },
-      take: stillRemaining,
-      orderBy: { createdAt: 'asc' },
-    });
+      stillRemaining,
+    );
     selected.push(...broadened.map((q) => q.id));
 
     return selected;

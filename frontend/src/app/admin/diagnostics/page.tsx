@@ -68,7 +68,7 @@ export default function DiagnosticsPage() {
       {/* Sept 2026 — explicit request, official Syllabus PDF (Code 496)
           confirmed as the final subject list. Idempotent -- safe to
           click more than once. Does NOT re-tag any existing question,
-          only ensures the 8 correct Subject rows exist (scoped to
+          only ensures the 15 correct Subject rows exist (scoped to
           Group - IV) so they show up in the now-scoped SubjectInput
           dropdown going forward. */}
       <button
@@ -76,7 +76,7 @@ export default function DiagnosticsPage() {
         disabled={settingUp}
         style={{ padding: '8px 16px', borderRadius: 6, background: '#b45309', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20, marginLeft: 8 }}
       >
-        {settingUp ? 'Setting up…' : 'Set Up 8 Official Group IV Subjects'}
+        {settingUp ? 'Setting up…' : 'Set Up 15 Official Group IV Subjects'}
       </button>
       {setupResult && (
         <p style={{ fontSize: 12, color: '#166534', marginBottom: 12 }}>

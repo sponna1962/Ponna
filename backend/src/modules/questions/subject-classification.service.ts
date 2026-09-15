@@ -76,7 +76,7 @@ export class SubjectClassificationService {
    * sampling (22b36ac) -- selects questions currently tagged to any of
    * the OLD legacy Subjects for this exam (or untagged), so this can be
    * run repeatedly and pick up whatever hasn't been reclassified yet
-   * (it excludes questions already tagged to one of the 8 official
+   * (it excludes questions already tagged to one of the official
    * Subjects, since those don't need reclassifying). */
   async selectQuestionsNeedingClassification(subCategoryId: string, officialSubjectIds: string[], targetSize: number): Promise<string[]> {
     const rows = await prisma.$queryRaw<{ id: string }[]>(
