@@ -130,6 +130,12 @@ export default function IndexPage() {
     if (typeof window === 'undefined' || !checkedAuth) return;
     const token = localStorage.getItem('ponna_student_token');
     if (token) return; // already logged in — never redirect a real student here
+    // Sept 2026 — never redirect to the Welcome Screen when the visitor
+    // is here specifically to log in and claim a just-completed
+    // diagnostic (see openLogin's own startLogin effect above) -- that
+    // would send them right back to redo the diagnostic instead of
+    // letting them sign in.
+    if (new URLSearchParams(window.location.search).get('startLogin') === '1') return;
 
     const guestId = localStorage.getItem('ponna_guest_diagnostic_id');
     if (!guestId) {
@@ -282,6 +288,28 @@ export default function IndexPage() {
     setError(null);
     setView('chooseMethod');
   }
+
+  // Sept 2026 (Item 4, explicit navigation fix) — a query-param trigger
+  // for /?startLogin=1 to jump straight into the login flow (skipping
+  // the normal hero/home content) -- since /login is retired (redirects
+  // back here) and login genuinely lives inside this page's own `view`
+  // state, this is the only way to "navigate directly to login" without
+  // reintroducing a separate login page. Used by the guest-diagnostic
+  // completion message's "Sign up செய்து Result பாருங்கள்" button so the
+  // student lands straight on the phone/Google choice screen, never the
+  // normal Home page in between. The already-completed diagnostic
+  // itself needs no special handling here to "preserve" it -- it lives
+  // entirely in the backend (GuestDiagnosticAttempt, keyed by the
+  // guestId already sitting in localStorage) and gets claimed the
+  // moment login succeeds in attemptLogin() below, exactly as it does
+  // from any other entry point into login.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !checkedAuth) return;
+    if (new URLSearchParams(window.location.search).get('startLogin') === '1') {
+      openLogin();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkedAuth]);
 
   function handleStartPractising() {
     if (isLoggedIn) {
