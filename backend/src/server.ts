@@ -1272,12 +1272,12 @@ app.get('/public/primary-exam', async (_req, res) => {
 
 app.post('/guest-diagnostic/start', async (req, res) => {
   try {
-    const { guestId, subCategoryId } = req.body;
-    if (!guestId || !subCategoryId) {
-      res.status(400).json({ error: 'guestId and subCategoryId are required' });
+    const { guestId, subCategoryId, language } = req.body;
+    if (!guestId || !subCategoryId || !language) {
+      res.status(400).json({ error: 'guestId, subCategoryId, and language are required' });
       return;
     }
-    res.json(await guestDiagnosticService.startAttempt(guestId, subCategoryId));
+    res.json(await guestDiagnosticService.startAttempt(guestId, subCategoryId, language));
   } catch (err: any) {
     console.error(err);
     res.status(400).json({ error: err.message ?? 'Failed to start diagnostic' });

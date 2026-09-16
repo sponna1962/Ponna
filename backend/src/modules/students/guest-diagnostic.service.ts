@@ -16,13 +16,14 @@ export class GuestDiagnosticError extends Error {}
 const MIN_DIAGNOSTIC_QUESTIONS = 15;
 
 export class GuestDiagnosticService {
-  async startAttempt(guestId: string, subCategoryId: string) {
+  async startAttempt(guestId: string, subCategoryId: string, language: 'TA' | 'EN') {
     const existing = await prisma.guestDiagnosticAttempt.findUnique({ where: { guestId } });
     if (existing) return existing;
 
     const questions = await prisma.question.findMany({
       where: {
         status: 'PUBLISHED',
+        language,
         auditFlags: { none: { status: { not: 'DISMISSED' } } },
         OR: [{ subCategoryId }, { authorityTags: { some: { subCategoryId } } }],
       },

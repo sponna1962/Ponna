@@ -13,6 +13,18 @@ import { apiUrl } from '../../lib/api-config';
 import { StudentMenu } from '../../components/StudentMenu';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
+const GUEST_ID_KEY = 'ponna_guest_diagnostic_id';
+
+type GuestQuestion = {
+  sequenceNumber: number;
+  questionId: string;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+};
+
 type Message = { role: 'USER' | 'ASSISTANT'; content: string; toolCallsUsed?: string[] };
 
 /** Parses trailing "[[OPTIONS: a | b | c]]" (tappable choices sent as the
@@ -47,6 +59,24 @@ export default function AskPonnaPage() {
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Sept 2026 (Item 4 — First-Visit TNPSC Group 4 Diagnostic Flow) —
+  // guest mode is a SEPARATE, PARALLEL flow reusing this same page's
+  // chat-bubble UI (so it looks and feels identical to real Ask Ponna),
+  // but driven entirely by local state and the public guest-diagnostic
+  // endpoints -- never calls the authenticated /ask-ponna/chat route or
+  // touches its paid-access restriction at all, per the explicit
+  // instruction to leave that rule untouched for normal use. Entered via
+  // ?guestDiagnostic=1 from the Welcome Screen (/test-your-ability), and
+  // only actually activates for a NOT-logged-in visitor -- an
+  // already-logged-in student hitting this link just gets the normal
+  // Ask Ponna page.
+  const [guestMode, setGuestMode] = useState(false);
+  const [guestStage, setGuestStage] = useState<'language' | 'quiz' | 'done'>('language');
+  const [guestId, setGuestId] = useState<string | null>(null);
+  const [guestSubCategoryId, setGuestSubCategoryId] = useState<string | null>(null);
+  const [guestQuestions, setGuestQuestions] = useState<GuestQuestion[]>([]);
+  const [guestIndex, setGuestIndex] = useState(0);
+
   useEffect(() => {
     fetch(apiUrl('/ask-ponna/enabled'))
       .then((r) => r.json())
@@ -60,6 +90,21 @@ export default function AskPonnaPage() {
     const params = new URLSearchParams(window.location.search);
     const context = params.get('context');
     const prefill = params.get('prefill');
+    const isLoggedIn = !!localStorage.getItem('ponna_student_token');
+
+    // Sept 2026 (Item 4) — guest mode only actually activates for a
+    // NOT-logged-in visitor; an already-logged-in student hitting this
+    // same link (e.g. an old bookmark) just gets normal Ask Ponna,
+    // since they don't need the signup-less path at all.
+    if (params.get('guestDiagnostic') === '1' && !isLoggedIn) {
+      setGuestMode(true);
+      setMessages([
+        { role: 'ASSISTANT', content: 'உங்கள் பயிற்சிக்கான மொழியைத் தேர்வு செய்யுங்கள்[[OPTIONS: தமிழ் | English]]' },
+      ]);
+      setAccessState('available');
+      return;
+    }
+
     if (context === 'mistakes') {
       setInput(t.askPonna.contextPrefillMistakes);
     } else if (prefill) {
@@ -69,6 +114,95 @@ export default function AskPonnaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkedEnabled, enabled]);
 
+  function getOrCreateGuestId(): string {
+    let id = localStorage.getItem(GUEST_ID_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(GUEST_ID_KEY, id);
+    }
+    return id;
+  }
+
+  /** Sept 2026 (Item 4) — the guest-mode equivalent of send() below,
+   * driving the local language-selection -> 15-question state machine.
+   * Never calls the authenticated /ask-ponna/chat route. */
+  async function sendGuest(tappedOption: string) {
+    if (sending) return;
+    setMessages((prev) => [...prev, { role: 'USER', content: tappedOption }]);
+    setSending(true);
+    setError(null);
+
+    try {
+      if (guestStage === 'language') {
+        const language: 'TA' | 'EN' = tappedOption === 'English' ? 'EN' : 'TA';
+        const examRes = await fetch(apiUrl('/public/primary-exam'));
+        const exam = await examRes.json().catch(() => null);
+        if (!examRes.ok || !exam?.id) throw new Error('No exam is currently available.');
+        setGuestSubCategoryId(exam.id);
+
+        const id = getOrCreateGuestId();
+        setGuestId(id);
+        const startRes = await fetch(apiUrl('/guest-diagnostic/start'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guestId: id, subCategoryId: exam.id, language }),
+        });
+        if (!startRes.ok) {
+          const body = await startRes.json().catch(() => ({}));
+          throw new Error(body.error ?? 'Failed to start');
+        }
+        const qRes = await fetch(apiUrl(`/guest-diagnostic/${id}/questions`));
+        const questions: GuestQuestion[] = await qRes.json();
+        if (!qRes.ok || questions.length === 0) throw new Error('Failed to load questions');
+
+        setGuestQuestions(questions);
+        setGuestIndex(0);
+        setGuestStage('quiz');
+        appendQuestionMessage(questions[0], 1, questions.length);
+        return;
+      }
+
+      if (guestStage === 'quiz') {
+        const q = guestQuestions[guestIndex];
+        const letterMatch = tappedOption.match(/^([A-D])\)/);
+        const letter = letterMatch ? letterMatch[1] : tappedOption;
+
+        const res = await fetch(apiUrl(`/guest-diagnostic/${guestId}/answer`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionId: q.questionId, selectedOption: letter }),
+        });
+        const body = await res.json();
+        setMessages((prev) => [...prev, { role: 'ASSISTANT', content: body.isCorrect ? '✓ சரி!' : '✕ தப்பு' }]);
+
+        const nextIndex = guestIndex + 1;
+        if (nextIndex < guestQuestions.length) {
+          setGuestIndex(nextIndex);
+          appendQuestionMessage(guestQuestions[nextIndex], nextIndex + 1, guestQuestions.length);
+        } else {
+          if (guestId) await fetch(apiUrl(`/guest-diagnostic/${guestId}/complete`), { method: 'POST' });
+          setGuestStage('done');
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'ASSISTANT',
+              content: 'அருமை! 15 கேள்விகளும் முடிந்தது 🎉 உங்க முழு result-ஐ (subject-வாரியான breakdown) பார்க்க, ஒரு free account உருவாக்குங்க.[[NAVIGATE: / | Sign up பண்ணி Result பாருங்க]]',
+            },
+          ]);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message ?? 'ஏதோ தப்பு நடந்தது.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function appendQuestionMessage(q: GuestQuestion, num: number, total: number) {
+    const optionsLine = `[[OPTIONS: A) ${q.optionA} | B) ${q.optionB} | C) ${q.optionC} | D) ${q.optionD}]]`;
+    setMessages((prev) => [...prev, { role: 'ASSISTANT', content: `கேள்வி ${num} / ${total}\n\n${q.questionText}${optionsLine}` }]);
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -76,6 +210,14 @@ export default function AskPonnaPage() {
   async function send(overrideText?: string) {
     const toSend = overrideText ?? input;
     if (!toSend.trim() || sending) return;
+    // Sept 2026 (Item 4) — guest mode branches off entirely here, before
+    // any input-clearing/message-pushing happens in this function (that
+    // work is done inside sendGuest() itself) — never touches
+    // /ask-ponna/chat or its access restriction.
+    if (guestMode) {
+      await sendGuest(toSend.trim());
+      return;
+    }
     const userMessage = toSend.trim();
     setInput('');
     setError(null);
@@ -140,7 +282,7 @@ export default function AskPonnaPage() {
       )}
 
       <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
-        {messages.length === 0 && accessState !== 'locked' && (
+        {messages.length === 0 && accessState !== 'locked' && !guestMode && (
           <div style={{ marginTop: 20, textAlign: 'center' }}>
             <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 18 }}>{t.askPonna.emptyState}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -279,7 +421,7 @@ export default function AskPonnaPage() {
         <div ref={bottomRef} />
       </div>
 
-      {accessState !== 'locked' && (
+      {accessState !== 'locked' && !guestMode && (
         <div style={{ display: 'flex', gap: 8, paddingBottom: 12 }}>
           <input
             value={input}
