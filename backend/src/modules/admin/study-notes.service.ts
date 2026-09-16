@@ -72,9 +72,9 @@ export class StudyNotesService {
 The OFFICIAL syllabus content for this subject is:
 ${topics.map((t) => `- ${t}`).join('\n')}
 
-Write a clear, well-organized summary note covering the key facts, concepts, and points an aspirant should know from this syllabus content -- structured with short headings and bullet points, exam-focused (what's likely to be asked), not a generic essay. Stay strictly within the syllabus content given above -- do not introduce topics not listed. ${langInstruction}
+Write a clear, well-organized summary note covering the key facts, concepts, and points an aspirant should know from this syllabus content -- structured with short headings and clearly separated points, exam-focused (what's likely to be asked), not a generic essay. Stay strictly within the syllabus content given above -- do not introduce topics not listed. ${langInstruction}
 
-Respond with ONLY the note content itself (plain text with simple markdown-style headings like "## Heading" and "- bullet"), no preamble, no "Here is the note" framing.`;
+Respond with ONLY the note content itself, in PLAIN TEXT -- absolutely NO markdown syntax of any kind: no "**bold**", no "##" headings, no "-" or "*" bullet markers. Write headings as a short line of plain text followed by a blank line, and list items as plain lines separated by line breaks (each on its own line), never with a leading symbol. No preamble, no "Here is the note" framing.`;
   }
 
   /** Generates (or regenerates) a draft note for one Subject in one
@@ -93,11 +93,24 @@ Respond with ONLY the note content itself (plain text with simple markdown-style
 
     const prompt = this.buildPrompt(subject.name, topicNames, language);
     const { text, model, inputTokens, outputTokens } = await this.fetchWithFallback(prompt);
+    // Sept 2026 (real bug fix, confirmed from a live report) — defense-
+    // in-depth cleanup on top of the prompt's own "no markdown" instruction
+    // above: strips any stray "**bold**"/"##"/leading "-"/"*" bullet
+    // markers the model added anyway (a common habit even when told not
+    // to), since the student-facing page renders this as plain text with
+    // no markdown parser -- unstripped syntax showed up as literal
+    // clutter (e.g. "**" characters scattered through the text),
+    // confirmed unreadable in a live report.
+    const cleanedText = text
+      .replace(/\*\*(.*?)\*\*/g, '$1') // **bold** -> bold
+      .replace(/^#{1,6}\s*/gm, '') // markdown headings
+      .replace(/^[-*]\s+/gm, '') // leading bullet markers
+      .replace(/\*/g, ''); // any remaining stray asterisks
 
     await prisma.studyNote.upsert({
       where: { subjectId_language: { subjectId, language } },
-      create: { subjectId, language, content: text, model, reviewed: false },
-      update: { content: text, model, reviewed: false, reviewedAt: null, generatedAt: new Date() },
+      create: { subjectId, language, content: cleanedText, model, reviewed: false },
+      update: { content: cleanedText, model, reviewed: false, reviewedAt: null, generatedAt: new Date() },
     });
 
     console.log(`Study note generated: subject=${subject.name} language=${language} model=${model} tokens=${inputTokens}+${outputTokens} est_cost=$${((inputTokens / 1_000_000) * EST_INPUT_COST_PER_1M + (outputTokens / 1_000_000) * EST_OUTPUT_COST_PER_1M).toFixed(4)}`);
