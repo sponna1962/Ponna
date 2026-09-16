@@ -10,6 +10,8 @@ import { DailyQuizService } from './daily-quiz/daily-quiz.service';
 import { runWhatsAppReminderSweep } from './notifications/whatsapp-reminder.service';
 import { pushNotificationService } from './notifications/push-notification.service';
 import { questionAuditService } from './audit/question-audit.service';
+import { dailyCurrentAffairsService } from './admin/daily-current-affairs.service';
+import { prisma } from '../lib/prisma';
 
 const sessionService = new SessionService();
 const rankingService = new RankingService();
@@ -131,5 +133,34 @@ export function startScheduledJobs() {
     }
   });
 
-  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute), WhatsApp reminder sweep (daily), push practice reminder sweep (daily), Live Exam weekend reminder (weekly, Friday)');
+  // Daily Current Affairs question generation (Sept 2026, explicit
+  // requirement: daily, every morning, covering the PREVIOUS day's news,
+  // never weekly) — scheduled at 6:30 AM server time (same IST-
+  // assumption caveat already noted on the WhatsApp reminder sweep
+  // above; worth revisiting once the actual Render server timezone is
+  // confirmed). Drafts questions only (status=DRAFT, the Question
+  // model's own default) -- an admin must review and publish each one,
+  // same "Verified, Not Guessed" principle as every other AI-generated
+  // content in this app. Looks up "Group - IV" by name each run rather
+  // than hardcoding an id, matching this codebase's own established
+  // pattern elsewhere for resolving this same exam.
+  cron.schedule('30 6 * * *', async () => {
+    try {
+      const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
+      if (!groupIv) {
+        console.error('[cron] Daily Current Affairs generation skipped: Group - IV Sub-Category not found');
+        return;
+      }
+      const result = await dailyCurrentAffairsService.generateDailyBatch(groupIv.id);
+      if (result.skippedNoResults) {
+        console.log('[cron] Daily Current Affairs: no significant events found for yesterday, nothing drafted');
+      } else {
+        console.log(`[cron] Daily Current Affairs: drafted ${result.created} question rows for admin review`);
+      }
+    } catch (err) {
+      console.error('[cron] Daily Current Affairs generation failed:', err);
+    }
+  });
+
+  console.log('Scheduled jobs started: abandonment sweep (every 15 min), rank recomputation (hourly), suspicious-usage sweep (daily), Daily Quiz status sweep (every minute), WhatsApp reminder sweep (daily), push practice reminder sweep (daily), Live Exam weekend reminder (weekly, Friday), Daily Current Affairs generation (daily, morning)');
 }

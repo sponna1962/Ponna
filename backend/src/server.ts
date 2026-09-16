@@ -39,6 +39,7 @@ import { QuestionReportService } from './modules/questions/question-report.servi
 import { questionAuditService } from './modules/audit/question-audit.service';
 import { bulkExplanationService } from './modules/questions/bulk-explanation.service';
 import { studyNotesService } from './modules/admin/study-notes.service';
+import { dailyCurrentAffairsService } from './modules/admin/daily-current-affairs.service';
 import { subjectClassificationService } from './modules/questions/subject-classification.service';
 import { questionAuditAdminService } from './modules/audit/question-audit-admin.service';
 import { htmlEntityCleanupService } from './modules/admin/html-entity-cleanup.service';
@@ -949,6 +950,25 @@ app.get('/study-notes', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load study notes' });
+  }
+});
+
+// POST /admin/current-affairs/generate-today — manual trigger for the
+// same daily job scheduled-jobs.ts runs automatically every morning
+// (Sept 2026). Useful for testing this without waiting for the cron,
+// or to backfill a day the automatic run missed. Drafts only
+// (status=DRAFT) -- never auto-publishes.
+app.post('/admin/current-affairs/generate-today', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const { subCategoryId } = req.body;
+    if (!subCategoryId) {
+      res.status(400).json({ error: 'subCategoryId is required' });
+      return;
+    }
+    res.json(await dailyCurrentAffairsService.generateDailyBatch(subCategoryId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message ?? 'Failed to generate Current Affairs questions' });
   }
 });
 
