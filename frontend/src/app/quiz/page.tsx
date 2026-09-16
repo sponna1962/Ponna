@@ -185,14 +185,29 @@ export default function QuizStartPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ selections, mode }),
     })
-      .then((r) => r.json())
-      .then((body: { languages: ('TA' | 'EN')[] }) => {
+      .then(async (r) => {
+        // Sept 2026 (real bug fix, confirmed from a live crash report
+        // with full stack trace) — was assuming every response has a
+        // valid languages array, even a failed one. On a genuine
+        // backend failure the body is {error: ...} instead, so
+        // body.languages was undefined, and calling .includes() on it
+        // below threw -- uncaught, since this whole chain had no res.ok
+        // check and no .catch(), only .finally(). This is very likely
+        // the root cause of the earlier-reported "Application error"
+        // crash on Start Practising, which happens right after this
+        // exact check runs during Practice Setup.
+        if (!r.ok) {
+          console.error('available-languages check failed:', await r.text().catch(() => ''));
+          return;
+        }
+        const body: { languages: ('TA' | 'EN')[] } = await r.json();
         setAvailableLanguages(body.languages);
         // If the previously chosen language is no longer valid for this
         // selection, clear it (student must knowingly pick again) — never
         // silently keep an invalid language selected.
         setLanguage((prev) => (body.languages.includes(prev as any) ? prev : body.languages.length === 1 ? body.languages[0] : ''));
       })
+      .catch((err) => console.error('available-languages check failed:', err))
       .finally(() => setCheckingLanguages(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, JSON.stringify(selections), mode]);
