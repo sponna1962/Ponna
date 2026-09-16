@@ -1,31 +1,18 @@
 'use client';
 
 // Welcome Screen (Sept 2026, Item 4 — First-Visit TNPSC Group 4
-// Diagnostic Flow). Explicit design brief: this is PONNA's own front
-// gateway ("நுழைவாயில்") and must feel genuinely premium and deliberate
-// on mobile, never careless. Design grounded in the brand's own
-// meaning -- "Ponna" (பொன்ன) is Tamil for gold, and the tagline
-// "வெற்றியின் முதல் படி" ("the first step to success") is itself a pun
-// on படி meaning both "step" (as in a staircase) and "prepare/study" --
-// the ascending-bars motif below is a quiet visual echo of that pun,
-// not a generic icon. Full ink-navy ground (rather than the site's
-// usual pale paper) gives this one screen its own gravity as a
-// threshold moment, with gold doing real work as a beacon rather than
-// decoration. Copy itself is locked/approved content from an earlier
-// round -- unchanged here, only the visual treatment around it.
+// Diagnostic Flow). Refined per explicit follow-up feedback: keep the
+// existing dark-navy/gold/premium direction, but read less like a
+// generic AI-product landing page and more like a trusted government
+// competitive-exam platform -- no emoji on the CTA, no generic bar-
+// chart-style icon (no PONNA logo asset exists yet, so the top area
+// stays simple: the plain wordmark, matching how it reads everywhere
+// else on the site), and the gold glow toned down so it reads as a
+// quiet accent rather than a decorative effect. Copy is locked/
+// approved content from this same feedback round -- unchanged from
+// here on without a further explicit request.
 
-import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
-
-function AscendingStepsIcon() {
-  return (
-    <svg width="64" height="40" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="2" y="28" width="12" height="10" rx="2" fill="#D9A94A" fillOpacity="0.55" />
-      <rect x="20" y="19" width="12" height="19" rx="2" fill="#D9A94A" fillOpacity="0.75" />
-      <rect x="38" y="9" width="12" height="29" rx="2" fill="#D9A94A" />
-      <circle cx="56" cy="6" r="4.5" fill="#D9A94A" />
-    </svg>
-  );
-}
+import { DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
 export default function TestYourAbilityPage() {
   return (
@@ -41,20 +28,20 @@ export default function TestYourAbilityPage() {
     >
       <BitterFontLinks />
 
-      {/* A quiet, single orchestrated glow behind the headline — the one
-          moment of visual richness on this screen, everything else stays
-          disciplined around it. */}
+      {/* A single, quiet glow behind the headline -- toned down
+          (explicit feedback) from the previous pass so it reads as a
+          subtle accent, not a decorative effect. */}
       <div
         aria-hidden="true"
         style={{
           position: 'absolute',
-          top: '-18%',
+          top: '-22%',
           left: '50%',
           transform: 'translateX(-50%)',
-          width: 520,
-          height: 520,
+          width: 440,
+          height: 440,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(217,169,74,0.20) 0%, rgba(217,169,74,0) 68%)',
+          background: 'radial-gradient(circle, rgba(217,169,74,0.10) 0%, rgba(217,169,74,0) 70%)',
           pointerEvents: 'none',
         }}
       />
@@ -74,9 +61,18 @@ export default function TestYourAbilityPage() {
           textAlign: 'center',
         }}
       >
-        <div style={{ marginBottom: 28 }}>
-          <AscendingStepsIcon />
-        </div>
+        <p
+          style={{
+            fontFamily: FONT_FAMILY,
+            fontSize: 15,
+            fontWeight: 700,
+            color: '#D9A94A',
+            letterSpacing: '0.02em',
+            margin: '0 0 32px',
+          }}
+        >
+          PONNA.in
+        </p>
 
         <h1
           style={{
@@ -103,7 +99,7 @@ export default function TestYourAbilityPage() {
             maxWidth: 380,
           }}
         >
-          TNPSC Group 4 தேர்வுக்கு நீங்கள் எவ்வளவு தயாராக இருக்கிறீர்கள்?
+          அரசுப் போட்டித் தேர்வுக்கு நீங்கள் எவ்வளவு தயாராக இருக்கிறீர்கள்?
         </h2>
 
         <div style={{ width: 44, height: 2, background: 'rgba(217,169,74,0.4)', marginBottom: 22 }} />
@@ -117,7 +113,7 @@ export default function TestYourAbilityPage() {
             maxWidth: 340,
           }}
         >
-          எங்கள் கேள்விகளுக்கு பதிலளித்து, உங்கள் நிலையைத் தெரிந்துகொள்ளுங்கள்.
+          எங்கள் கேள்விகளுக்கு பதிலளித்து, உங்கள் தயார்நிலையைத் தெரிந்துகொள்ளுங்கள்.
         </p>
 
         <a
@@ -134,16 +130,16 @@ export default function TestYourAbilityPage() {
             fontWeight: 800,
             fontSize: 17,
             letterSpacing: '0.01em',
-            boxShadow: '0 8px 24px rgba(217,169,74,0.32), 0 2px 6px rgba(0,0,0,0.2)',
+            boxShadow: '0 6px 16px rgba(217,169,74,0.22)',
           }}
         >
-          🎯 தொடங்குங்கள்
+          தொடங்குங்கள் →
         </a>
 
-        {/* "Go to Home" escape hatch (explicit fix — a visitor must never
-            feel stuck on this screen with no way out). Deliberately quiet
-            relative to the CTA above -- a plain text link, not a second
-            button competing for attention. */}
+        {/* "Go to Home" escape hatch — a visitor must never feel stuck on
+            this screen with no way out. Deliberately quiet relative to
+            the CTA above -- a plain text link, not a second button
+            competing for attention. */}
         <a
           href="/?skipWelcome=1"
           style={{
