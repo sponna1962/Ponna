@@ -10,6 +10,7 @@
 // structurally, not just by convention.
 
 import { prisma } from '../../lib/prisma';
+import { Prisma } from '@prisma/client';
 import { ToolDefinition } from './provider-adapter';
 import { isFactStale } from './verification-tiers';
 import { searchCurrentInfo } from './live-search-adapter';
@@ -31,7 +32,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'get_diagnostic_next_question',
-    description: "Fetch the next unanswered question in the student's in-progress diagnostic warm-up. Present the question text, then list the four options using your normal [[OPTIONS: ...]] marker so the student can tap one. Returns null/done when there are no more questions -- call complete_diagnostic then.",
+    description:
+      "Fetch the next unanswered question in the student's in-progress diagnostic warm-up. Your reply for this turn must be built from the returned fields directly: the exact questionText verbatim first (as its own paragraph -- never skip it, never summarize or paraphrase it, never reply with only the options), then immediately your normal [[OPTIONS: ...]] marker built from optionA/B/C/D verbatim (never invent, reorder, or shorten them). A message with options but no question text is a genuine bug -- always double-check your own reply includes the questionText before sending it. Returns null/done when there are no more questions -- call complete_diagnostic then.",
     parameters: { type: 'object', properties: {}, required: [] },
   },
   {
@@ -218,11 +220,26 @@ export async function executeTool(userId: string, toolName: string, args: Record
       const scopeVisible = subCategoryId
         ? (await prisma.examSubCategory.findUnique({ where: { id: subCategoryId }, select: { studentVisible: true } }))?.studentVisible
         : true;
-      const questions = await prisma.question.findMany({
-        where: subCategoryId && scopeVisible ? { status: 'PUBLISHED', authorityTags: { some: { subCategoryId } } } : { status: 'PUBLISHED' },
-        take: 12,
-        orderBy: { createdAt: 'asc' },
-      });
+      // Sept 2026 (real quality fix, same principle as the Guest
+      // Diagnostic's own fix) — was a fixed "first 12 by createdAt"
+      // pick, meaning every student who tried this warm-up got the
+      // exact same questions in the exact same order every time.
+      // Genuinely random now (Postgres random()), matching the pattern
+      // already used elsewhere for scoped sampling.
+      const questions =
+        subCategoryId && scopeVisible
+          ? await prisma.$queryRaw<{ id: string }[]>(
+              Prisma.sql`
+                SELECT DISTINCT q.id FROM "Question" q
+                LEFT JOIN "QuestionTaxonomyTag" t ON t."questionId" = q.id
+                WHERE q.status = 'PUBLISHED' AND (q."subCategoryId" = ${subCategoryId} OR t."subCategoryId" = ${subCategoryId})
+                ORDER BY random()
+                LIMIT 12
+              `,
+            )
+          : await prisma.$queryRaw<{ id: string }[]>(
+              Prisma.sql`SELECT id FROM "Question" WHERE status = 'PUBLISHED' ORDER BY random() LIMIT 12`,
+            );
       if (questions.length < 12) return { status: 'error', message: 'Not enough published questions available yet for this warm-up.' };
 
       await prisma.diagnosticAttempt.create({
