@@ -136,6 +136,13 @@ export default function IndexPage() {
     // would send them right back to redo the diagnostic instead of
     // letting them sign in.
     if (new URLSearchParams(window.location.search).get('startLogin') === '1') return;
+    // Sept 2026 — the Welcome Screen's own "Go to Home" escape link
+    // (explicit fix: a visitor must never feel stuck there with no way
+    // out) skips the redirect for this one page load only -- it does
+    // NOT set anything persistent, so their next fresh visit to "/"
+    // still redirects as normal (the diagnostic is genuinely still
+    // incomplete/unclaimed; skipping once doesn't change that).
+    if (new URLSearchParams(window.location.search).get('skipWelcome') === '1') return;
 
     const guestId = localStorage.getItem('ponna_guest_diagnostic_id');
     if (!guestId) {
@@ -546,22 +553,6 @@ export default function IndexPage() {
           >
             பயிற்சியைத் தொடங்குங்கள் / Start Practising
           </button>
-        </div>
-      )}
-
-      {/* Sept 2026 (Item 4) — prominent entry point specifically for
-          logged-out visitors: no signup needed to try this, matching
-          the whole point of the signup-less diagnostic. Never shown to
-          an already-logged-in student (they already have real Practice
-          history, this isn't for them). */}
-      {!isLoggedIn && (
-        <div style={{ maxWidth: 480, margin: '20px auto 0', padding: '0 16px' }}>
-          <a
-            href="/test-your-ability"
-            style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, border: `1.5px solid ${COLORS.gold}`, background: COLORS.goldLight, color: COLORS.ink, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}
-          >
-            🎯 உங்க திறமையை இப்போவே பரிசோதிப்போம் — Sign up தேவையில்லை
-          </a>
         </div>
       )}
 
