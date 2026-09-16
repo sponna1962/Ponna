@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
 import { apiUrl } from '../../lib/api-config';
+import { generateId } from '../../lib/generate-id';
 import { StudentMenu } from '../../components/StudentMenu';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
@@ -118,7 +119,7 @@ export default function AskPonnaPage() {
   function getOrCreateGuestId(): string {
     let id = localStorage.getItem(GUEST_ID_KEY);
     if (!id) {
-      id = crypto.randomUUID();
+      id = generateId();
       localStorage.setItem(GUEST_ID_KEY, id);
     }
     return id;

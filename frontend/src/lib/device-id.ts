@@ -5,13 +5,15 @@
 // Clearing browser storage looks like a new device on next login, same as
 // most consumer apps.
 
+import { generateId } from './generate-id';
+
 const STORAGE_KEY = 'ponna_device_id';
 
 export function getDeviceId(): string {
   if (typeof window === 'undefined') return '';
   let id = localStorage.getItem(STORAGE_KEY);
   if (!id) {
-    id = crypto.randomUUID();
+    id = generateId();
     localStorage.setItem(STORAGE_KEY, id);
   }
   return id;
