@@ -16,15 +16,26 @@ export class GuestDiagnosticError extends Error {}
 const MIN_DIAGNOSTIC_QUESTIONS = 15;
 
 export class GuestDiagnosticService {
-  /** Sept 2026 (explicit requirement) — if the visitor already has an
-   * INCOMPLETE attempt (started before, didn't finish), it's discarded
-   * and a fresh one created -- NEVER resumed from halfway. A COMPLETED
-   * attempt, on the other hand, is returned as-is (they already have a
-   * real result; starting over would just lose it). */
+  /** Sept 2026 (real bug fix, confirmed from a live report) — was
+   * returning an existing COMPLETED attempt as-is regardless of the
+   * newly selected language, since "completed" was being treated as
+   * "keep it, don't restart." That's wrong for the actual repeat-testing
+   * scenario: a visitor who takes the diagnostic more than once before
+   * ever signing up (e.g. tries Tamil, then comes back and picks
+   * English) kept getting the SAME OLD attempt's questions in the SAME
+   * OLD language every time, since "completed" was already true from
+   * the first run.
+   *
+   * The only attempt that must genuinely never be discarded is one
+   * that's already been CLAIMED by a real signed-up student
+   * (migratedToUserId set) -- that's a permanent record of their actual
+   * result. Anything unclaimed -- whether completed or still in
+   * progress -- is discarded and a fresh attempt started in whichever
+   * language was just selected, every time. */
   async startAttempt(guestId: string, subCategoryId: string, language: 'TA' | 'EN') {
     const existing = await prisma.guestDiagnosticAttempt.findUnique({ where: { guestId } });
     if (existing) {
-      if (existing.completedAt) return existing;
+      if (existing.migratedToUserId) return existing;
       await prisma.guestDiagnosticAnswer.deleteMany({ where: { attemptId: existing.id } });
       await prisma.guestDiagnosticAttempt.delete({ where: { id: existing.id } });
     }
@@ -55,14 +66,16 @@ export class GuestDiagnosticService {
   }
 
   /** Sept 2026 — lightweight status check for the Home page's auto-
-   * redirect logic: does this device's guestId already have a COMPLETED
-   * attempt? If not (either no attempt at all, or one still in
-   * progress), the Welcome Screen should show again -- startAttempt()
-   * above will discard any incomplete one and start fresh, never
-   * resume. */
+   * redirect logic: does this device's guestId already have a genuinely
+   * FINAL result -- i.e. claimed by a real signed-up student? (Not just
+   * "completed" -- see startAttempt()'s own comment on why an unclaimed
+   * completed attempt must still be freely restartable, e.g. to retry in
+   * a different language before ever signing up.) If not claimed, the
+   * Welcome Screen should show again on the next visit; startAttempt()
+   * will discard whatever's there and start fresh. */
   async getStatus(guestId: string): Promise<{ completed: boolean }> {
-    const attempt = await prisma.guestDiagnosticAttempt.findUnique({ where: { guestId }, select: { completedAt: true } });
-    return { completed: !!attempt?.completedAt };
+    const attempt = await prisma.guestDiagnosticAttempt.findUnique({ where: { guestId }, select: { migratedToUserId: true } });
+    return { completed: !!attempt?.migratedToUserId };
   }
 
   async getQuestions(guestId: string) {
