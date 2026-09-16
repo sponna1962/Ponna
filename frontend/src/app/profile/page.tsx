@@ -85,6 +85,7 @@ export default function ProfilePage() {
   const [community, setCommunity] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -234,6 +235,7 @@ export default function ProfilePage() {
   async function save() {
     setSaving(true);
     setSaved(false);
+    setSaveError(null);
     const res = await studentFetch('/students/me/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -262,6 +264,12 @@ export default function ProfilePage() {
         window.location.href = '/quiz';
         return;
       }
+    } else {
+      // Sept 2026 (real bug fix) — was silently doing nothing on
+      // failure (e.g. a duplicate email hitting the unique constraint),
+      // leaving the student with no idea their edits weren't saved.
+      const body = await res.json().catch(() => ({}));
+      setSaveError(body.error ?? 'Save ஆகவில்லை. மீண்டும் முயற்சிக்கவும்.');
     }
   }
 
@@ -634,6 +642,7 @@ export default function ProfilePage() {
           {saving ? '…' : t.profile.save}
         </button>
         {saved && <p style={{ color: '#16a34a', fontSize: 13, marginBottom: 16 }}>{t.profile.saved}</p>}
+        {saveError && <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 16 }}>{saveError}</p>}
 
         <SectionHeading>{t.profile.account}</SectionHeading>
         <a href="/plans" style={{ display: 'block', textAlign: 'center', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', color: '#0f172a', textDecoration: 'none', fontWeight: 600, marginBottom: 12 }}>

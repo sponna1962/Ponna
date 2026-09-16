@@ -1533,12 +1533,24 @@ app.get('/students/me/profile', requireStudentAuth, async (req: StudentAuthedReq
 // PATCH /students/me/profile — finalized Profile redesign: name, dateOfBirth,
 // email, whatsappNumber, district, cityTownVillage, educationStatus +
 // the one relevant education detail field. See profile.service.ts.
+// Sept 2026 (real bug fix, confirmed from a live report) — email has a
+// @unique constraint on User; saving an email already used by another
+// account throws a Prisma P2002 error, which this route was catching
+// generically as a bare 500 with no detail -- combined with the
+// frontend's own save() only handling the res.ok case (no error
+// branch at all), this meant the student saw NOTHING: no success, no
+// error, the page just looked like nothing happened. Now surfaces a
+// clear, specific message for this case instead of a silent failure.
 app.patch('/students/me/profile', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
     const result = await profileService.updateProfile(req.studentUserId!, req.body);
     res.json(result);
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
+    if (err.code === 'P2002' && err.meta?.target?.includes?.('email')) {
+      res.status(400).json({ error: 'இந்த Email ஏற்கனவே வேறு account-ல் பயன்படுத்தப்பட்டிருக்கிறது. வேறு Email கொடுங்கள்.' });
+      return;
+    }
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
