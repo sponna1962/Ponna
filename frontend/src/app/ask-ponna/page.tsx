@@ -167,13 +167,16 @@ export default function AskPonnaPage() {
         const letterMatch = tappedOption.match(/^([A-D])\)/);
         const letter = letterMatch ? letterMatch[1] : tappedOption;
 
-        const res = await fetch(apiUrl(`/guest-diagnostic/${guestId}/answer`), {
+        // Sept 2026 (explicit requirement) — the diagnostic never reveals
+        // correct/wrong per question; the answer is still saved and
+        // compared server-side (submitAnswer's own isCorrect
+        // computation, unchanged), just never shown here. The student
+        // sees only Question -> Select Answer -> Next Question.
+        await fetch(apiUrl(`/guest-diagnostic/${guestId}/answer`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ questionId: q.questionId, selectedOption: letter }),
         });
-        const body = await res.json();
-        setMessages((prev) => [...prev, { role: 'ASSISTANT', content: body.isCorrect ? '✓ சரி!' : '✕ தப்பு' }]);
 
         const nextIndex = guestIndex + 1;
         if (nextIndex < guestQuestions.length) {
@@ -182,11 +185,15 @@ export default function AskPonnaPage() {
         } else {
           if (guestId) await fetch(apiUrl(`/guest-diagnostic/${guestId}/complete`), { method: 'POST' });
           setGuestStage('done');
+          // Sept 2026 (explicit requirement) — no score/accuracy/correct-
+          // vs-wrong reveal here either; only signup unlocks the full
+          // report.
           setMessages((prev) => [
             ...prev,
             {
               role: 'ASSISTANT',
-              content: 'அருமை! 15 கேள்விகளும் முடிந்தது 🎉 உங்க முழு result-ஐ (subject-வாரியான breakdown) பார்க்க, ஒரு free account உருவாக்குங்க.[[NAVIGATE: / | Sign up பண்ணி Result பாருங்க]]',
+              content:
+                '🎉 15 கேள்விகளையும் முடித்துவிட்டீர்கள்!\n\nஉங்கள் முழுமையான Result மற்றும் செயல்திறன் பகுப்பாய்வைப் பார்க்க பதிவு செய்யுங்கள்.[[NAVIGATE: / | Sign up செய்து Result பாருங்கள்]]',
             },
           ]);
         }

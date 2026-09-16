@@ -124,20 +124,46 @@ export class GuestDiagnosticService {
 
   /** The report -- ONLY returned once claimAttempt() has run for this
    * exact userId (the signup gate, enforced here rather than just in the
-   * UI). Per-subject breakdown, same spirit as the existing
-   * DiagnosticAttempt flow inside Ask Ponna's own "How to Prepare"
-   * warm-up, just for this separate signup-less entry point. */
+   * UI). Deliberately measures performance only -- never rank, IQ/
+   * intelligence framing, comparison with other students, or negative
+   * labels like "weak"/"poor" (explicit requirement) -- "did well" vs
+   * "needs more practice" are computed here (>=60% accuracy threshold,
+   * simple and deterministic, no AI involved) and phrased encouragingly
+   * for the frontend to render as-is. */
   async getReport(guestId: string, userId: string) {
     const attempt = await prisma.guestDiagnosticAttempt.findUniqueOrThrow({
       where: { guestId },
-      include: { answers: { include: { question: { select: { subject: { select: { name: true } } } } } } },
+      include: {
+        answers: {
+          orderBy: { sequenceNumber: 'asc' },
+          include: {
+            question: {
+              select: {
+                questionText: true,
+                optionA: true,
+                optionB: true,
+                optionC: true,
+                optionD: true,
+                correctOption: true,
+                explanationTa: true,
+                explanationEn: true,
+                language: true,
+                subject: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
     });
     if (attempt.migratedToUserId !== userId) {
       throw new GuestDiagnosticError('Please sign up (or log in) to see your result.');
     }
 
     const answered = attempt.answers.filter((a) => a.answeredAt);
-    const correct = answered.filter((a) => a.isCorrect).length;
+    const correctCount = answered.filter((a) => a.isCorrect).length;
+    const wrongCount = answered.length - correctCount;
+    const totalQuestions = attempt.answers.length;
+    const accuracy = answered.length > 0 ? Math.round((correctCount / answered.length) * 100) : 0;
 
     const bySubject = new Map<string, { total: number; correct: number }>();
     for (const a of answered) {
@@ -147,12 +173,48 @@ export class GuestDiagnosticService {
       if (a.isCorrect) entry.correct += 1;
       bySubject.set(name, entry);
     }
+    const subjectBreakdown = Array.from(bySubject.entries()).map(([subject, s]) => ({
+      subject,
+      correct: s.correct,
+      total: s.total,
+      accuracy: Math.round((s.correct / s.total) * 100),
+    }));
+
+    // Explicit requirement: never "weak"/"poor" -- a simple 60% split
+    // into "did well" vs "needs more practice", both neutral/
+    // encouraging framings of the exact same real numbers above.
+    const didWell = subjectBreakdown.filter((s) => s.accuracy >= 60).map((s) => s.subject);
+    const needsPractice = subjectBreakdown.filter((s) => s.accuracy < 60).map((s) => s.subject);
+
+    const questionReview = attempt.answers.map((a) => {
+      const correctText = { A: a.question.optionA, B: a.question.optionB, C: a.question.optionC, D: a.question.optionD }[a.question.correctOption];
+      const selectedText = a.selectedOption ? { A: a.question.optionA, B: a.question.optionB, C: a.question.optionC, D: a.question.optionD }[a.selectedOption] : null;
+      return {
+        sequenceNumber: a.sequenceNumber,
+        isCorrect: a.isCorrect,
+        questionText: a.question.questionText,
+        optionA: a.question.optionA,
+        optionB: a.question.optionB,
+        optionC: a.question.optionC,
+        optionD: a.question.optionD,
+        selectedOption: a.selectedOption,
+        selectedText,
+        correctOption: a.question.correctOption,
+        correctText,
+        explanation: a.question.language === 'TA' ? a.question.explanationTa : a.question.explanationEn,
+      };
+    });
 
     return {
-      totalQuestions: attempt.answers.length,
+      totalQuestions,
       answeredCount: answered.length,
-      correctCount: correct,
-      subjectBreakdown: Array.from(bySubject.entries()).map(([subject, s]) => ({ subject, ...s })),
+      correctCount,
+      wrongCount,
+      accuracy,
+      subjectBreakdown,
+      didWell,
+      needsPractice,
+      questionReview,
     };
   }
 }

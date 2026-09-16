@@ -1,27 +1,56 @@
 'use client';
 
-// Test Your Ability — report page (Sept 2026, Item 4). Shown right
-// after a guest completes signup and their diagnostic attempt is
-// claimed (see page.tsx's attemptLogin — claim happens there, this page
-// just fetches and displays the resulting report). Server-side enforces
-// that the report is only ever returned once claimed by the requesting
-// student — see guest-diagnostic.service.ts's own getReport() comment.
+// Test Your Ability — full diagnostic report page (Sept 2026, explicit
+// spec). Shown right after a guest completes signup and their attempt
+// is claimed (see page.tsx's attemptLogin -- claim happens there, this
+// page just fetches and displays the resulting report). Server-side
+// enforces that the report is only ever returned once claimed by the
+// requesting student -- see guest-diagnostic.service.ts's own
+// getReport() comment.
+//
+// Deliberately measures performance only, never judges the student:
+// no rank, no IQ/intelligence framing, no comparison with other
+// students, no "weak"/"poor"/"failure" labels anywhere on this page --
+// "did well" vs "needs more practice" are the only two framings used,
+// both neutral and encouraging, computed server-side from the exact
+// same real numbers.
 
 import { useEffect, useState } from 'react';
 import { studentFetch } from '../../../lib/student-fetch';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../../lib/brand-theme';
 
+type QuestionReviewItem = {
+  sequenceNumber: number;
+  isCorrect: boolean | null;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  selectedOption: string | null;
+  selectedText: string | null;
+  correctOption: string;
+  correctText: string;
+  explanation: string | null;
+};
+
 type Report = {
   totalQuestions: number;
   answeredCount: number;
   correctCount: number;
-  subjectBreakdown: { subject: string; total: number; correct: number }[];
+  wrongCount: number;
+  accuracy: number;
+  subjectBreakdown: { subject: string; correct: number; total: number; accuracy: number }[];
+  didWell: string[];
+  needsPractice: string[];
+  questionReview: QuestionReviewItem[];
 };
 
 export default function TestYourAbilityReportPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedQ, setExpandedQ] = useState<number | null>(null);
 
   useEffect(() => {
     const guestId = localStorage.getItem('ponna_guest_diagnostic_id');
@@ -45,37 +74,134 @@ export default function TestYourAbilityReportPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', padding: 20, background: COLORS.paper, color: COLORS.ink }}>
       <BitterFontLinks />
-      <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 800, marginBottom: 16 }}>உங்க Result</h1>
+      <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 800, marginBottom: 16 }}>உங்க Diagnostic Result</h1>
 
       {loading && <p style={{ fontSize: 13, color: COLORS.inkMuted }}>…</p>}
       {error && <p style={{ fontSize: 13, color: '#b91c1c' }}>{error}</p>}
 
       {report && (
         <>
+          {/* A. Overall Performance */}
           <div style={{ textAlign: 'center', border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, marginBottom: 20 }}>
             <p style={{ fontFamily: FONT_FAMILY, fontSize: 40, fontWeight: 800, color: COLORS.gold, margin: '0 0 4px' }}>
-              {report.correctCount} / {report.answeredCount}
+              {report.correctCount} / {report.totalQuestions}
             </p>
-            <p style={{ fontSize: 13, color: COLORS.inkMuted }}>சரியான பதில்கள்</p>
-          </div>
-
-          <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.inkMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Subject-வாரியான Breakdown
-          </p>
-          {report.subjectBreakdown.map((s) => (
-            <div key={s.subject} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${COLORS.line}` }}>
-              <span style={{ fontSize: 14 }}>{s.subject}</span>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>
-                {s.correct}/{s.total}
+            <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 14 }}>Score</p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 18, fontSize: 13, flexWrap: 'wrap' }}>
+              <span>
+                <strong>{report.accuracy}%</strong> Accuracy
+              </span>
+              <span>
+                ✓ <strong>{report.correctCount}</strong> சரி
+              </span>
+              <span>
+                ✕ <strong>{report.wrongCount}</strong> தப்பு
               </span>
             </div>
-          ))}
+          </div>
+
+          {/* B. Subject-wise Performance */}
+          <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.inkMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            பாடம்-வாரியான Performance
+          </p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 16 }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: `2px solid ${COLORS.line}` }}>
+                <th style={{ padding: '6px 4px' }}>பாடம்</th>
+                <th style={{ padding: '6px 4px', textAlign: 'center' }}>சரியானது</th>
+                <th style={{ padding: '6px 4px', textAlign: 'center' }}>மொத்தம்</th>
+                <th style={{ padding: '6px 4px', textAlign: 'right' }}>Accuracy</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.subjectBreakdown.map((s) => (
+                <tr key={s.subject} style={{ borderBottom: `1px solid ${COLORS.line}` }}>
+                  <td style={{ padding: '8px 4px' }}>{s.subject}</td>
+                  <td style={{ padding: '8px 4px', textAlign: 'center' }}>{s.correct}</td>
+                  <td style={{ padding: '8px 4px', textAlign: 'center' }}>{s.total}</td>
+                  <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 700 }}>{s.accuracy}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {report.didWell.length > 0 && (
+            <p style={{ fontSize: 13, color: '#166534', marginBottom: 6 }}>
+              <strong>நன்றாகச் செய்த பகுதிகள்:</strong> {report.didWell.join(', ')}
+            </p>
+          )}
+          {report.needsPractice.length > 0 && (
+            <p style={{ fontSize: 13, color: COLORS.ink, marginBottom: 20 }}>
+              <strong>மேலும் பயிற்சி செய்ய வேண்டிய பகுதிகள்:</strong> {report.needsPractice.join(', ')}
+            </p>
+          )}
+
+          {/* C. Question-wise Performance */}
+          <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.inkMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            கேள்வி-வாரியான Review
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {report.questionReview.map((q) => (
+              <button
+                key={q.sequenceNumber}
+                onClick={() => setExpandedQ(expandedQ === q.sequenceNumber ? null : q.sequenceNumber)}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  border: `1.5px solid ${q.isCorrect ? '#166534' : '#B4544A'}`,
+                  background: expandedQ === q.sequenceNumber ? (q.isCorrect ? '#166534' : '#B4544A') : COLORS.paper,
+                  color: expandedQ === q.sequenceNumber ? '#fff' : q.isCorrect ? '#166534' : '#B4544A',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                {q.sequenceNumber} {q.isCorrect ? '✓' : '✕'}
+              </button>
+            ))}
+          </div>
+
+          {expandedQ !== null &&
+            (() => {
+              const q = report.questionReview.find((x) => x.sequenceNumber === expandedQ)!;
+              return (
+                <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 20, fontSize: 13, lineHeight: 1.6 }}>
+                  <p style={{ fontWeight: 600, marginBottom: 8, whiteSpace: 'pre-wrap' }}>{q.questionText}</p>
+                  <p style={{ marginBottom: 4 }}>
+                    உங்க பதில்: <strong style={{ color: q.isCorrect ? '#166534' : '#B4544A' }}>{q.selectedOption ? `${q.selectedOption}) ${q.selectedText}` : '(பதில் இல்லை)'}</strong>
+                  </p>
+                  <p style={{ marginBottom: 8 }}>
+                    சரியான பதில்: <strong style={{ color: '#166534' }}>{q.correctOption}) {q.correctText}</strong>
+                  </p>
+                  {q.explanation && (
+                    <div style={{ background: COLORS.paperAlt, borderRadius: 8, padding: 10, marginTop: 8, whiteSpace: 'pre-wrap' }}>{q.explanation}</div>
+                  )}
+                </div>
+              );
+            })()}
+
+          {/* D. Performance Insight */}
+          {(report.didWell.length > 0 || report.needsPractice.length > 0) && (
+            <div style={{ background: COLORS.goldLight, border: `1px solid ${COLORS.gold}`, borderRadius: 12, padding: 14, marginBottom: 16, fontSize: 13.5, lineHeight: 1.6 }}>
+              {report.didWell.length > 0 && <>{report.didWell.join(', ')} பகுதியில் நல்ல செயல்திறன் உள்ளது. </>}
+              {report.needsPractice.length > 0 && <>{report.needsPractice.join(', ')} பகுதிகளில் மேலும் பயிற்சி செய்வது பயனுள்ளதாக இருக்கும்.</>}
+            </div>
+          )}
+
+          {/* E. Next Practice Recommendation */}
+          <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.inkMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            அடுத்து என்ன பயிற்சி செய்யலாம்?
+          </p>
+          {report.needsPractice.length > 0 && (
+            <p style={{ fontSize: 13.5, color: COLORS.ink, marginBottom: 16, lineHeight: 1.6 }}>{report.needsPractice.join(', ')} பகுதிகளில் கூடுதல் பயிற்சி செய்யுங்கள்.</p>
+          )}
 
           <a
-            href="/"
-            style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 700, marginTop: 24 }}
+            href="/quiz"
+            style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 700, marginTop: 8 }}
           >
-            Practice தொடங்குங்கள்
+            தொடர் பயிற்சியைத் தொடங்குங்கள்
           </a>
         </>
       )}
