@@ -1941,6 +1941,38 @@ app.post('/admin/diagnostics/setup-group-iv-official-subjects', requireStaffAuth
   }
 });
 
+// GET /admin/diagnostics/group-iv-syllabus-subjects — Sept 2026,
+// ONE-TIME diagnostic (read-only, changes nothing). Explicit request:
+// the student-facing Subject Preference selector in Start Practice
+// (subject-preference.service.ts's own getSyllabus()) reads directly
+// from SyllabusSubject -- shows every SyllabusSubject row for this
+// exam, in case that table has its own extra/wrong entries beyond the
+// official 15 (the same class of mess already found and fixed in the
+// separate flat Subject model earlier this session -- SyllabusSubject
+// was never specifically checked for the same problem).
+app.get('/admin/diagnostics/group-iv-syllabus-subjects', requireStaffAuth, async (_req, res) => {
+  try {
+    const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
+    if (!groupIv) {
+      res.status(404).json({ error: 'Group - IV Sub-Category not found' });
+      return;
+    }
+    const subjects = await prisma.syllabusSubject.findMany({
+      where: { subCategoryId: groupIv.id },
+      include: { topics: { select: { id: true } } },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+    res.json({
+      groupIvSubCategoryId: groupIv.id,
+      totalSubjects: subjects.length,
+      subjects: subjects.map((s) => ({ id: s.id, name: s.name, nameTa: s.nameTa, sortOrder: s.sortOrder, topicCount: s.topics.length })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to run diagnostic' });
+  }
+});
+
 app.get('/admin/diagnostics/group-iv-subject-mismatch', requireStaffAuth, async (_req, res) => {
   try {
     const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });

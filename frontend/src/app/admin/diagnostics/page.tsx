@@ -19,6 +19,26 @@ export default function DiagnosticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [settingUp, setSettingUp] = useState(false);
   const [setupResult, setSetupResult] = useState<{ name: string; wasNew: boolean }[] | null>(null);
+  const [syllabusSubjectsLoading, setSyllabusSubjectsLoading] = useState(false);
+  const [syllabusSubjectsResult, setSyllabusSubjectsResult] = useState<{
+    totalSubjects: number;
+    subjects: { id: string; name: string; nameTa: string | null; topicCount: number }[];
+  } | null>(null);
+
+  async function runSyllabusSubjectsCheck() {
+    setSyllabusSubjectsLoading(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/group-iv-syllabus-subjects');
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to run check');
+        return;
+      }
+      setSyllabusSubjectsResult(body);
+    } finally {
+      setSyllabusSubjectsLoading(false);
+    }
+  }
 
   async function setupOfficialSubjects() {
     setSettingUp(true);
@@ -82,6 +102,44 @@ export default function DiagnosticsPage() {
         <p style={{ fontSize: 12, color: '#166534', marginBottom: 12 }}>
           Done: {setupResult.filter((s) => s.wasNew).length} newly created, {setupResult.filter((s) => !s.wasNew).length} already existed.
         </p>
+      )}
+
+      {/* Sept 2026 — explicit request: check whether SyllabusSubject (the
+          table the student-facing Subject Preference selector reads
+          from) has its own extra/wrong entries beyond the official 15,
+          the same class of mess already found and fixed in the separate
+          flat Subject model. Read-only. */}
+      <button
+        onClick={runSyllabusSubjectsCheck}
+        disabled={syllabusSubjectsLoading}
+        style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20, marginLeft: 8 }}
+      >
+        {syllabusSubjectsLoading ? 'Running…' : 'Check SyllabusSubject Table (Subject Preference)'}
+      </button>
+      {syllabusSubjectsResult && (
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 13, marginBottom: 8 }}>
+            <strong>{syllabusSubjectsResult.totalSubjects}</strong> SyllabusSubject rows for Group IV:
+          </p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
+                <th style={{ padding: 8 }}>Name (as stored)</th>
+                <th style={{ padding: 8 }}>Tamil Name</th>
+                <th style={{ padding: 8 }}>Topic Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {syllabusSubjectsResult.subjects.map((s) => (
+                <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: 8, fontFamily: 'monospace' }}>{s.name}</td>
+                  <td style={{ padding: 8 }}>{s.nameTa ?? '—'}</td>
+                  <td style={{ padding: 8, fontWeight: 700 }}>{s.topicCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
