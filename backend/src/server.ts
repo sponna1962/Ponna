@@ -38,6 +38,7 @@ import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
 import { questionAuditService } from './modules/audit/question-audit.service';
 import { bulkExplanationService } from './modules/questions/bulk-explanation.service';
+import { studyNotesService } from './modules/admin/study-notes.service';
 import { subjectClassificationService } from './modules/questions/subject-classification.service';
 import { questionAuditAdminService } from './modules/audit/question-audit-admin.service';
 import { htmlEntityCleanupService } from './modules/admin/html-entity-cleanup.service';
@@ -876,6 +877,80 @@ app.post('/admin/bulk-explanation/runs/:id/cancel', requireStaffAuth, requireRol
 
 // ── Subject Classification (Sept 2026, Group IV first) ─────────────────
 // See schema.prisma's own header comment on SubjectClassificationRun.
+
+// ── Study Notes (Sept 2026, Group IV first) ─────────────────────────────
+// See schema.prisma's own header comment on StudyNote.
+
+app.post('/admin/study-notes/generate-all', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const { subCategoryId } = req.body;
+    if (!subCategoryId) {
+      res.status(400).json({ error: 'subCategoryId is required' });
+      return;
+    }
+    res.json(await studyNotesService.generateAllMissing(subCategoryId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message ?? 'Failed to generate study notes' });
+  }
+});
+
+app.post('/admin/study-notes/subjects/:subjectId/regenerate', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const { language } = req.body;
+    if (!language) {
+      res.status(400).json({ error: 'language is required' });
+      return;
+    }
+    await studyNotesService.generateForSubject(req.params.subjectId, language);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message ?? 'Failed to regenerate note' });
+  }
+});
+
+app.get('/admin/study-notes', requireStaffAuth, async (req, res) => {
+  try {
+    const { subCategoryId } = req.query;
+    if (!subCategoryId) {
+      res.status(400).json({ error: 'subCategoryId is required' });
+      return;
+    }
+    res.json(await studyNotesService.listForAdmin(subCategoryId as string));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load study notes' });
+  }
+});
+
+app.patch('/admin/study-notes/:noteId/review', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await studyNotesService.reviewNote(req.params.noteId, req.body.content);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save review' });
+  }
+});
+
+// GET /study-notes?subCategoryId=...&language=TA — student-facing, only
+// ever reviewed notes. Public (no login required) -- study material,
+// same spirit as the syllabus/download-link content being freely
+// browsable.
+app.get('/study-notes', async (req, res) => {
+  try {
+    const { subCategoryId, language } = req.query;
+    if (!subCategoryId || !language) {
+      res.status(400).json({ error: 'subCategoryId and language are required' });
+      return;
+    }
+    res.json(await studyNotesService.listForStudent(subCategoryId as string, language as any));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load study notes' });
+  }
+});
 
 app.post('/admin/subject-classification/runs', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
   try {
