@@ -16,9 +16,18 @@ export class GuestDiagnosticError extends Error {}
 const MIN_DIAGNOSTIC_QUESTIONS = 15;
 
 export class GuestDiagnosticService {
+  /** Sept 2026 (explicit requirement) — if the visitor already has an
+   * INCOMPLETE attempt (started before, didn't finish), it's discarded
+   * and a fresh one created -- NEVER resumed from halfway. A COMPLETED
+   * attempt, on the other hand, is returned as-is (they already have a
+   * real result; starting over would just lose it). */
   async startAttempt(guestId: string, subCategoryId: string, language: 'TA' | 'EN') {
     const existing = await prisma.guestDiagnosticAttempt.findUnique({ where: { guestId } });
-    if (existing) return existing;
+    if (existing) {
+      if (existing.completedAt) return existing;
+      await prisma.guestDiagnosticAnswer.deleteMany({ where: { attemptId: existing.id } });
+      await prisma.guestDiagnosticAttempt.delete({ where: { id: existing.id } });
+    }
 
     const questions = await prisma.question.findMany({
       where: {
@@ -43,6 +52,17 @@ export class GuestDiagnosticService {
         },
       },
     });
+  }
+
+  /** Sept 2026 — lightweight status check for the Home page's auto-
+   * redirect logic: does this device's guestId already have a COMPLETED
+   * attempt? If not (either no attempt at all, or one still in
+   * progress), the Welcome Screen should show again -- startAttempt()
+   * above will discard any incomplete one and start fresh, never
+   * resume. */
+  async getStatus(guestId: string): Promise<{ completed: boolean }> {
+    const attempt = await prisma.guestDiagnosticAttempt.findUnique({ where: { guestId }, select: { completedAt: true } });
+    return { completed: !!attempt?.completedAt };
   }
 
   async getQuestions(guestId: string) {

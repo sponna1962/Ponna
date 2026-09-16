@@ -117,6 +117,33 @@ export default function IndexPage() {
     }
   }, []);
 
+  // Sept 2026 (Item 4) — auto-redirect a NOT-logged-in visitor to the
+  // Welcome Screen unless their diagnostic is genuinely COMPLETED.
+  // Deliberately progress-based, not a simple "have they visited before"
+  // flag (explicit correction): a visitor who started but abandoned the
+  // diagnostic midway must see the Welcome Screen again on their next
+  // visit -- and per an explicit follow-up requirement, that next
+  // attempt always starts FRESH (never resumes from halfway; see
+  // guest-diagnostic.service.ts's own startAttempt() comment). Only a
+  // COMPLETED attempt stops the redirect for good.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !checkedAuth) return;
+    const token = localStorage.getItem('ponna_student_token');
+    if (token) return; // already logged in — never redirect a real student here
+
+    const guestId = localStorage.getItem('ponna_guest_diagnostic_id');
+    if (!guestId) {
+      window.location.href = '/test-your-ability';
+      return;
+    }
+    fetch(apiUrl(`/guest-diagnostic/${guestId}/status`))
+      .then((r) => (r.ok ? r.json() : { completed: false }))
+      .then((data) => {
+        if (!data.completed) window.location.href = '/test-your-ability';
+      })
+      .catch(() => {}); // a status-check failure never blocks the normal Home page from showing
+  }, [checkedAuth]);
+
   useEffect(() => {
     if (!isLoggedIn) return;
     studentFetch('/students/me/subscriptions')

@@ -1293,6 +1293,19 @@ app.get('/guest-diagnostic/:guestId/questions', async (req, res) => {
   }
 });
 
+// Sept 2026 — lightweight status check for the Home page's own
+// auto-redirect logic (never show the Welcome Screen again once this
+// device's diagnostic is genuinely completed, per explicit
+// requirement).
+app.get('/guest-diagnostic/:guestId/status', async (req, res) => {
+  try {
+    res.json(await guestDiagnosticService.getStatus(req.params.guestId));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to load status' });
+  }
+});
+
 app.post('/guest-diagnostic/:guestId/answer', async (req, res) => {
   try {
     const { questionId, selectedOption } = req.body;
