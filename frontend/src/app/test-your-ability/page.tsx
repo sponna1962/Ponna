@@ -86,7 +86,7 @@ export default function TestYourAbilityPage() {
 
         <div style={{ border: '1px solid #E7E5DD', borderRadius: 14, background: '#fff', display: 'flex', marginBottom: 28 }}>
           {[
-            { icon: <DocumentIcon />, top: '15', bottom: 'கேள்விகள்' },
+            { icon: <DocumentIcon />, top: '20', bottom: 'கேள்விகள்' },
             { icon: <ClockIcon />, top: 'சில நிமிடங்களில்', bottom: 'முடிக்கலாம்' },
             { icon: <BarsIcon />, top: 'உங்கள் தயார்நிலையை', bottom: 'அறியலாம்' },
           ].map((item, i) => (

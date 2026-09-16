@@ -124,7 +124,7 @@ export default function AskPonnaPage() {
   }
 
   /** Sept 2026 (Item 4) — the guest-mode equivalent of send() below,
-   * driving the local language-selection -> 15-question state machine.
+   * driving the local language-selection -> 20-question state machine.
    * Never calls the authenticated /ask-ponna/chat route. */
   async function sendGuest(tappedOption: string) {
     if (sending) return;
@@ -193,7 +193,7 @@ export default function AskPonnaPage() {
             {
               role: 'ASSISTANT',
               content:
-                '🎉 15 கேள்விகளையும் முடித்துவிட்டீர்கள்!\n\nஉங்கள் முழுமையான Result மற்றும் செயல்திறன் பகுப்பாய்வைப் பார்க்க பதிவு செய்யுங்கள்.[[NAVIGATE: /?startLogin=1 | Sign up செய்து Result பாருங்கள்]]',
+                '🎉 20 கேள்விகளையும் முடித்துவிட்டீர்கள்!\n\nஉங்கள் முழுமையான Result மற்றும் செயல்திறன் பகுப்பாய்வைப் பார்க்க பதிவு செய்யுங்கள்.[[NAVIGATE: /?startLogin=1 | Sign up செய்து Result பாருங்கள்]]',
             },
           ]);
         }

@@ -7,13 +7,35 @@
 // only thing that can set it, and getReport() refuses to return
 // anything until it's set.
 
-import { CorrectOption } from '@prisma/client';
+import { CorrectOption, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 
 export class GuestDiagnosticError extends Error {}
 
-// Explicit requirement: at least 15 questions.
-const MIN_DIAGNOSTIC_QUESTIONS = 15;
+// Sept 2026 (explicit request, real quality fix) — was a flat 15,
+// selected chronologically (first-created questions, no subject
+// diversity, no quality signal) from ANY question tagged to the exam --
+// explicitly reported as feeling too "basic," since it had no real
+// design behind it at all. Now 20, proportionally sampled from the 8
+// official General Studies + Aptitude subjects (the content-knowledge
+// core of the exam) at the SAME ratio as the real exam's own official
+// weightage (Part A: 75 marks + Part B: 25 marks = 100, scaled to 20 at
+// a clean 5:1 ratio -- every unit's real question count divides evenly
+// by 5). Tamil-paper subjects (Part C, language-skill content, a
+// different kind of readiness than general/current-affairs knowledge)
+// are deliberately excluded from this quick diagnostic -- a scoping
+// decision, not an oversight.
+const DIAGNOSTIC_SUBJECT_WEIGHTS: { name: string; count: number }[] = [
+  { name: 'General Science', count: 1 },
+  { name: 'Geography', count: 1 },
+  { name: 'History, Culture of India, and Indian National Movement', count: 2 },
+  { name: 'Indian Polity', count: 3 },
+  { name: 'Indian Economy and Development Administration in Tamil Nadu', count: 4 },
+  { name: 'History, Culture, Heritage, and Socio-Political Movements of Tamil Nadu', count: 4 },
+  { name: 'Aptitude', count: 3 },
+  { name: 'Reasoning', count: 2 },
+];
+const TOTAL_DIAGNOSTIC_QUESTIONS = DIAGNOSTIC_SUBJECT_WEIGHTS.reduce((sum, s) => sum + s.count, 0); // 20
 
 export class GuestDiagnosticService {
   /** Sept 2026 (real bug fix, confirmed from a live report) — was
@@ -40,18 +62,51 @@ export class GuestDiagnosticService {
       await prisma.guestDiagnosticAttempt.delete({ where: { id: existing.id } });
     }
 
-    const questions = await prisma.question.findMany({
-      where: {
-        status: 'PUBLISHED',
-        language,
-        auditFlags: { none: { status: { not: 'DISMISSED' } } },
-        OR: [{ subCategoryId }, { authorityTags: { some: { subCategoryId } } }],
-      },
-      take: MIN_DIAGNOSTIC_QUESTIONS,
-      orderBy: { createdAt: 'asc' },
+    const officialSubjects = await prisma.subject.findMany({
+      where: { subCategoryId, name: { in: DIAGNOSTIC_SUBJECT_WEIGHTS.map((s) => s.name) } },
+      select: { id: true, name: true },
     });
-    if (questions.length < MIN_DIAGNOSTIC_QUESTIONS) {
+    const subjectIdByName = new Map(officialSubjects.map((s) => [s.name, s.id]));
+
+    const questions: { id: string }[] = [];
+    for (const { name, count } of DIAGNOSTIC_SUBJECT_WEIGHTS) {
+      const subjectId = subjectIdByName.get(name);
+      if (!subjectId) continue; // this official Subject hasn't been set up yet -- skip rather than fail the whole diagnostic
+      // Sept 2026 — genuinely random per subject (Postgres random(),
+      // same pattern already used for scoped audit sampling and Subject
+      // Classification's own question selection), biased toward
+      // PONNA's own ORIGINAL questions first (the same Source-Priority
+      // principle already applied to Start Practice) via the ORDER BY
+      // tiebreak -- never a fixed, chronological "first N" pick, which
+      // is exactly what made the diagnostic feel arbitrary/basic.
+      const picked = await prisma.$queryRaw<{ id: string }[]>(
+        Prisma.sql`
+          SELECT id FROM "Question"
+          WHERE status = 'PUBLISHED'
+            AND language = ${language}::"Language"
+            AND "subjectId" = ${subjectId}
+            AND NOT EXISTS (
+              SELECT 1 FROM "QuestionAuditFlag" f WHERE f."questionId" = "Question".id AND f.status != 'DISMISSED'
+            )
+          ORDER BY ("sourceType" = 'ORIGINAL') DESC, random()
+          LIMIT ${count}
+        `,
+      );
+      questions.push(...picked);
+    }
+
+    if (questions.length < TOTAL_DIAGNOSTIC_QUESTIONS) {
       throw new GuestDiagnosticError('Not enough published questions are available for this exam yet.');
+    }
+
+    // Shuffle before assigning sequence numbers -- questions were
+    // gathered subject-by-subject above, so without this every attempt
+    // would predictably cluster all of one subject's questions together
+    // (e.g. every Economy question back-to-back), which reads as
+    // repetitive rather than a genuine mixed diagnostic.
+    for (let i = questions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [questions[i], questions[j]] = [questions[j], questions[i]];
     }
 
     return prisma.guestDiagnosticAttempt.create({
