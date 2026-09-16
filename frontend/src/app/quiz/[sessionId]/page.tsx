@@ -72,25 +72,35 @@ export default function QuizSessionPage() {
   }, [sessionId]);
 
   async function loadSession() {
-    const res = await studentFetch(`/quiz/${sessionId}`);
-    if (!res.ok) return;
-    const data: SessionData = await res.json();
-    setSession(data);
+    // Sept 2026 (real bug fix, confirmed from a live crash report) — was
+    // unguarded: if the fetch itself failed (network drop) or the
+    // response body wasn't valid JSON for any reason, this threw inside
+    // a useEffect-fired async call with nothing to catch it -- an
+    // uncaught rejection that can surface as a full page crash, right
+    // after navigating here from Start Practising.
+    try {
+      const res = await studentFetch(`/quiz/${sessionId}`);
+      if (!res.ok) return;
+      const data: SessionData = await res.json();
+      setSession(data);
 
-    if (data.status === 'COMPLETED') {
-      loadResults();
-      return;
-    }
+      if (data.status === 'COMPLETED') {
+        loadResults();
+        return;
+      }
 
-    const firstUnanswered = data.questions.findIndex((q) => !q.answered);
-    const idx = firstUnanswered === -1 ? data.questions.length - 1 : firstUnanswered;
-    setCurrentIndex(idx);
+      const firstUnanswered = data.questions.findIndex((q) => !q.answered);
+      const idx = firstUnanswered === -1 ? data.questions.length - 1 : firstUnanswered;
+      setCurrentIndex(idx);
 
-    const q = data.questions[idx];
-    if (q?.answered) {
-      setSelected(q.selectedOption);
-      setCorrectOption(q.correctOption);
-      setExplanation(q.explanation);
+      const q = data.questions[idx];
+      if (q?.answered) {
+        setSelected(q.selectedOption);
+        setCorrectOption(q.correctOption);
+        setExplanation(q.explanation);
+      }
+    } catch (err) {
+      console.error(err);
     }
   }
 

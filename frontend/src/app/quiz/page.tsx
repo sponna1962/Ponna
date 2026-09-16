@@ -353,7 +353,14 @@ export default function QuizStartPage() {
     try {
       const res = await studentFetch('/quiz/start', { method: 'POST' });
       if (!res.ok) {
-        const body = await res.json();
+        // Sept 2026 (real bug fix, confirmed from a live crash report) —
+        // was assuming a failed response is always valid JSON; if the
+        // backend genuinely crashes and returns a raw non-JSON error
+        // (e.g. a 500 HTML page), res.json() below throws, and since
+        // this whole block had no catch, that exception went uncaught --
+        // a full "Application error" client-side crash instead of a
+        // recoverable, visible error message.
+        const body = await res.json().catch(() => ({}));
         // Free Preview one-time-per-phone (finalized requirement) — these
         // two are actionable, not just informational, so send the
         // student straight to where they fix it instead of just showing
@@ -371,6 +378,13 @@ export default function QuizStartPage() {
       }
       const session = await res.json();
       window.location.href = `/quiz/${session.id}`;
+    } catch (err) {
+      // Sept 2026 (real bug fix) — any other unexpected failure (network
+      // drop mid-request, a genuinely malformed success response, etc.)
+      // now shows the same recoverable error message instead of crashing
+      // the whole page.
+      console.error(err);
+      setError(t.quiz.startError);
     } finally {
       setStarting(false);
     }

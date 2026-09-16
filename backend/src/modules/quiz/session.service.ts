@@ -29,12 +29,29 @@ function generateOptionOrder(): string {
   return letters.join('');
 }
 
+/** Sept 2026 (real bug fix, live crash report) — validates optionOrder
+ * is genuinely a well-formed 4-character permutation of A/B/C/D before
+ * trusting it anywhere. The three call sites below previously used
+ * different falsy-checks (`!optionOrder` vs `?? 'ABCD'`) -- `??` only
+ * catches null/undefined, NOT an empty string or any other malformed
+ * value, so a row with optionOrder = '' (or any string that isn't
+ * exactly ABCD permuted) would silently produce `order[0]` through
+ * `order[3]` as `undefined`, making every option's displayed text
+ * `undefined` -- a real, uncaught crash risk downstream, not just a
+ * cosmetic bug. Centralizing the check here so all three call sites
+ * share the exact same, stricter validation and can never disagree
+ * with each other about what counts as "valid." */
+function isValidOptionOrder(optionOrder: string | null): optionOrder is string {
+  return !!optionOrder && optionOrder.length === 4 && [...optionOrder].every((c) => DISPLAY_LETTERS.includes(c as any));
+}
+
 /** Given the letter the student tapped on screen, returns which STORED
  * option (matching question.correctOption's own lettering) that actually
- * is. Identity mapping when optionOrder is null (older sessions, or
- * shuffling never applied). */
+ * is. Identity mapping when optionOrder is null/malformed (older
+ * sessions, shuffling never applied, or corrupted data -- never trust a
+ * malformed value over falling back safely). */
 function displayToStored(displayLetter: string, optionOrder: string | null): string {
-  if (!optionOrder) return displayLetter;
+  if (!isValidOptionOrder(optionOrder)) return displayLetter;
   const idx = DISPLAY_LETTERS.indexOf(displayLetter as any);
   return idx === -1 ? displayLetter : optionOrder[idx];
 }
@@ -43,7 +60,7 @@ function displayToStored(displayLetter: string, optionOrder: string | null): str
  * it's actually displayed in for this session's shuffle -- used only when
  * showing the correct answer back to the student after they've answered. */
 function storedToDisplay(storedLetter: string, optionOrder: string | null): string {
-  if (!optionOrder) return storedLetter;
+  if (!isValidOptionOrder(optionOrder)) return storedLetter;
   const idx = optionOrder.indexOf(storedLetter);
   return idx === -1 ? storedLetter : DISPLAY_LETTERS[idx];
 }
@@ -330,7 +347,7 @@ export class SessionService {
           C: sq.question.optionC,
           D: sq.question.optionD,
         };
-        const order = sq.optionOrder ?? 'ABCD';
+        const order = isValidOptionOrder(sq.optionOrder) ? sq.optionOrder : 'ABCD';
         return {
           sequenceNumber: sq.sequenceNumber,
           questionId: sq.questionId,
