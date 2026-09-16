@@ -35,7 +35,7 @@ export default function TestYourAbilityPage() {
         TNPSC Group 4 தேர்வுக்கு நீங்கள் எவ்வளவு தயாராக இருக்கிறீர்கள்?
       </h2>
       <p style={{ fontSize: 14.5, color: COLORS.inkMuted, lineHeight: 1.6, marginBottom: 32, maxWidth: 360 }}>
-        15 கேள்விகளில் உங்கள் தற்போதைய தேர்வு தயார்நிலையை இப்போது தெரிந்துகொள்ளுங்கள்.
+        எங்கள் கேள்விகளுக்கு பதிலளித்து, உங்கள் நிலையைத் தெரிந்துகொள்ளுங்கள்.
       </p>
       <a
         href="/ask-ponna?guestDiagnostic=1"
@@ -53,7 +53,7 @@ export default function TestYourAbilityPage() {
           boxShadow: '0 4px 14px rgba(26,34,56,0.25)',
         }}
       >
-        🎯 தயார்நிலையைச் சோதிக்கலாம்
+        🎯 தொடங்குங்கள்
       </a>
     </main>
   );
