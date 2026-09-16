@@ -75,6 +75,7 @@ export default function AskPonnaPage() {
   const [guestId, setGuestId] = useState<string | null>(null);
   const [guestSubCategoryId, setGuestSubCategoryId] = useState<string | null>(null);
   const [guestQuestions, setGuestQuestions] = useState<GuestQuestion[]>([]);
+  const [guestLanguage, setGuestLanguage] = useState<'TA' | 'EN'>('TA');
   const [guestIndex, setGuestIndex] = useState(0);
 
   useEffect(() => {
@@ -135,6 +136,7 @@ export default function AskPonnaPage() {
     try {
       if (guestStage === 'language') {
         const language: 'TA' | 'EN' = tappedOption === 'English' ? 'EN' : 'TA';
+        setGuestLanguage(language);
         const examRes = await fetch(apiUrl('/public/primary-exam'));
         const exam = await examRes.json().catch(() => null);
         if (!examRes.ok || !exam?.id) throw new Error('No exam is currently available.');
@@ -187,13 +189,19 @@ export default function AskPonnaPage() {
           setGuestStage('done');
           // Sept 2026 (explicit requirement) — no score/accuracy/correct-
           // vs-wrong reveal here either; only signup unlocks the full
-          // report.
+          // report. Message itself is fully in whichever language the
+          // student chose (guestLanguage), matching the same explicit
+          // requirement the report page's own STRINGS lookup follows --
+          // a Tamil-taker gets a fully Tamil completion message, an
+          // English-taker a fully English one, never a mix.
           setMessages((prev) => [
             ...prev,
             {
               role: 'ASSISTANT',
               content:
-                '🎉 20 கேள்விகளையும் முடித்துவிட்டீர்கள்!\n\nஉங்கள் முழுமையான Result மற்றும் செயல்திறன் பகுப்பாய்வைப் பார்க்க பதிவு செய்யுங்கள்.[[NAVIGATE: /?startLogin=1 | Sign up செய்து Result பாருங்கள்]]',
+                guestLanguage === 'EN'
+                  ? "🎉 You've completed all 20 questions!\n\nSign up to see your full Result and performance analysis.[[NAVIGATE: /?startLogin=1 | Sign up to see Result]]"
+                  : '🎉 20 கேள்விகளையும் முடித்துவிட்டீர்கள்!\n\nஉங்கள் முழுமையான Result மற்றும் செயல்திறன் பகுப்பாய்வைப் பார்க்க பதிவு செய்யுங்கள்.[[NAVIGATE: /?startLogin=1 | Sign up செய்து Result பாருங்கள்]]',
             },
           ]);
         }

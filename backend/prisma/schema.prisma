@@ -1811,6 +1811,12 @@ model GuestDiagnosticAttempt {
   guestId          String                   @unique
   subCategoryId    String
   subCategory      ExamSubCategory          @relation(fields: [subCategoryId], references: [id])
+  // Sept 2026 (explicit requirement) — the language the student chose to
+  // take the diagnostic in. The report page uses this to render EVERY
+  // label/heading in that same language, not just the underlying
+  // question content -- a Tamil-language diagnostic must produce a
+  // fully Tamil report, English a fully English one, never a mix.
+  language         Language                 @default(TA)
   startedAt        DateTime                 @default(now())
   completedAt      DateTime?
   // Set once a real signed-up student claims this attempt (see

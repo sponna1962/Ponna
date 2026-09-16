@@ -113,6 +113,7 @@ export class GuestDiagnosticService {
       data: {
         guestId,
         subCategoryId,
+        language,
         answers: {
           create: questions.map((q, i) => ({ questionId: q.id, sequenceNumber: i + 1 })),
         },
@@ -274,6 +275,7 @@ export class GuestDiagnosticService {
     });
 
     return {
+      language: attempt.language,
       totalQuestions,
       answeredCount: answered.length,
       correctCount,
