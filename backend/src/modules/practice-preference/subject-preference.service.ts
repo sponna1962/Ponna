@@ -1,22 +1,31 @@
-// Student Subject & Topic Preference — Stage 1 (finalized requirement).
-// Purely storage + a student-facing picker: fetch the verified syllabus
-// tree for one exam, and save/load the student's optional Subject/Topic
-// preference for it. NOTHING here is read by allocation.service.ts or
-// quota.service.ts yet — that's explicitly Stage 2, done separately once
-// this stage is confirmed working. Existing strict rules (Exam, Subject,
-// Language, Difficulty, No-Repeat) are completely untouched.
+// Student Subject & Topic Preference — Stage 2 (strict allocation boundary).
+// Fetches the verified syllabus tree for one exam and stores the student's
+// optional Subject/Topic preference. When a preference changes during an
+// active 75-question session, answered questions stay exactly where they
+// are and only the unanswered tail is reallocated from the new preference.
 
 import { prisma } from '../../lib/prisma';
 import { scopeAccessService } from '../quota/scope-access.service';
+import { AllocationService } from '../questions/allocation.service';
+import { PracticePreferenceService } from './practice-preference.service';
 
 export class SubjectPreferenceError extends Error {}
 
+const allocation = new AllocationService();
+const practicePreferenceService = new PracticePreferenceService();
+
+function generateOptionOrder(): string {
+  const letters = ['A', 'B', 'C', 'D'];
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+  return letters.join('');
+}
+
 export class SubjectPreferenceService {
-  /** Every TNPSC exam currently visible to students (finalized
-   * requirement — only officially-verified exams, same
-   * studentVisible-filtered set Practice Setup itself uses) with at
-   * least one Subject seeded, so the picker never shows an exam with
-   * nothing to actually choose from. */
+  /** Every TNPSC exam currently visible to students with at least one
+   * verified Subject seeded. */
   async listAvailableExams() {
     return prisma.examSubCategory.findMany({
       where: {
@@ -29,9 +38,7 @@ export class SubjectPreferenceService {
     });
   }
 
-  /** The Subject -> Topic tree for one exam — same shape as the admin
-   * syllabus service returns, just via a student-auth route instead of
-   * an admin one. Only ever returns a studentVisible exam's data. */
+  /** The Subject -> Topic tree for one exam. */
   async getSyllabus(subCategoryId: string) {
     const subCategory = await prisma.examSubCategory.findUnique({
       where: { id: subCategoryId },
@@ -52,27 +59,99 @@ export class SubjectPreferenceService {
     });
   }
 
-  /** Upsert — a student can revisit and change their preference anytime.
-   * Both lists are OPTIONAL (finalized requirement — "Subject/Topic
-   * Preference should be optional"); saving empty arrays is a valid,
-   * explicit "no preference, give me normal full-syllabus coverage"
-   * choice, not an error. */
-  /** Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING): Subject
-   * Preference only makes sense across a full Authority's Categories, so a
-   * student whose only active paid coverage is a restricted plan cannot
-   * use it at all, even by calling this endpoint directly. */
+  /**
+   * Saves the optional Subject/Topic preference.
+   *
+   * Active-session rule: changing Subject/Topic Preference MUST NOT throw
+   * away the student's progress. If a student has answered 50/75 and then
+   * changes the Subject Preference, questions 1-50 remain untouched and
+   * questions 51-75 are replaced with questions from the newly selected
+   * Subject/Topic. The session remains 75 questions and the next question
+   * is still numbered 51.
+   *
+   * Quota is not reserved again: the session already reserved its 75
+   * questions when it was created, and this operation only swaps the
+   * unanswered tail.
+   */
   async savePreference(userId: string, subCategoryId: string, subjectIds: string[], topicIds: string[]) {
     if (await scopeAccessService.isRestrictedOnly(userId)) {
       throw new SubjectPreferenceError('Subject Preference is not available on the TNPSC Group - IV Pass. Upgrade to the TNPSC Annual Pass to use it.');
     }
-    return prisma.studentSubjectTopicPreference.upsert({
+
+    const normalizedSubjectIds = [...new Set(subjectIds)].sort();
+    const normalizedTopicIds = [...new Set(topicIds)].sort();
+    const existingPreference = await prisma.studentSubjectTopicPreference.findUnique({
       where: { userId_subCategoryId: { userId, subCategoryId } },
-      create: { userId, subCategoryId, subjectIds, topicIds },
-      update: { subjectIds, topicIds },
+      select: { subjectIds: true, topicIds: true },
     });
+
+    const samePreference =
+      JSON.stringify([...(existingPreference?.subjectIds ?? [])].sort()) === JSON.stringify(normalizedSubjectIds) &&
+      JSON.stringify([...(existingPreference?.topicIds ?? [])].sort()) === JSON.stringify(normalizedTopicIds);
+
+    const saved = await prisma.studentSubjectTopicPreference.upsert({
+      where: { userId_subCategoryId: { userId, subCategoryId } },
+      create: { userId, subCategoryId, subjectIds: normalizedSubjectIds, topicIds: normalizedTopicIds },
+      update: { subjectIds: normalizedSubjectIds, topicIds: normalizedTopicIds },
+    });
+
+    if (!samePreference) {
+      await this.reallocateUnansweredTail(userId, subCategoryId, normalizedSubjectIds, normalizedTopicIds);
+    }
+
+    return saved;
+  }
+
+  /** Rebuild only the unanswered part of the student's active session. */
+  private async reallocateUnansweredTail(userId: string, subCategoryId: string, subjectIds: string[], topicIds: string[]) {
+    const session = await prisma.quizSession.findFirst({
+      where: { userId, status: 'IN_PROGRESS' },
+      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
+    });
+
+    if (!session || session.questions.length === 0) return;
+
+    const answeredCount = session.questions.filter((q) => q.answered).length;
+    const remainingCount = Math.max(0, session.totalQuestions - answeredCount);
+    if (remainingCount === 0) return;
+
+    const practicePreference = await practicePreferenceService.get(userId);
+    if (!practicePreference || practicePreference.language !== session.practiceLanguage) return;
+
+    const taxonomyFilter = practicePreferenceService.resolveTaxonomyFilter(practicePreference.selections as any);
+    const currentSubCategoryId = practicePreferenceService.extractSingleSubCategoryId(practicePreference.selections as any);
+    if (currentSubCategoryId !== subCategoryId) return;
+
+    const questionIds = await allocation.buildSessionQuestionIds(
+      userId,
+      session.mode,
+      remainingCount,
+      session.practiceLanguage,
+      taxonomyFilter,
+      { subjectIds, topicIds },
+    );
+
+    const targetTotal = answeredCount + questionIds.length;
+    if (questionIds.length === 0) {
+      throw new SubjectPreferenceError('No unanswered questions are available for the selected Subject/Topic right now.');
+    }
+
+    await prisma.$transaction([
+      prisma.quizSessionQuestion.deleteMany({ where: { sessionId: session.id, answered: false } }),
+      prisma.quizSession.update({ where: { id: session.id }, data: { totalQuestions: targetTotal, lastActivityAt: new Date() } }),
+      prisma.quizSessionQuestion.createMany({
+        data: questionIds.map((questionId, index) => ({
+          sessionId: session.id,
+          questionId,
+          sequenceNumber: answeredCount + index + 1,
+          optionOrder: generateOptionOrder(),
+        })),
+      }),
+    ]);
   }
 
   async clearPreference(userId: string, subCategoryId: string) {
-    await prisma.studentSubjectTopicPreference.deleteMany({ where: { userId, subCategoryId } });
+    const deleted = await prisma.studentSubjectTopicPreference.deleteMany({ where: { userId, subCategoryId } });
+    if (deleted.count > 0) await this.reallocateUnansweredTail(userId, subCategoryId, [], []);
   }
 }

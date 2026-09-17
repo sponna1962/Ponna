@@ -1,20 +1,23 @@
-// Live Exam / Mock Exam — student-facing engine (finalized requirement,
-// ₹999 Annual Plan value-add, item 2 of 3). A genuine timed simulation:
-// answers are NEVER revealed until the attempt is completed (unlike
-// Daily Quiz/normal Practice) so it actually feels like the real exam.
-// Full syllabus coverage -- no Subject Preference weighting, no
-// difficulty filtering by mode -- exactly like the real exam draws from
-// the whole syllabus. Completely separate from normal Practice: no
-// quota, no UserQuestionHistory, no effect on ranking or no-repeat.
+// Live Exam / Mock Exam — student-facing engine.
 //
-// Sept 2026 (BINDING) — Weekly cycle: the exam only OPENS Saturday
-// 00:00 IST through Sunday 23:59:59 IST each week (student's choice of
-// either day, one attempt per exam per weekend). Results are withheld
-// from EVERYONE until Monday 00:00 IST of that same weekend, regardless
-// of when within the window a student finished — so no student who
-// finishes early sees their score (or can infer anything from it)
-// before anyone else. A missed weekend is simply lost -- no catch-up,
-// matching how a real exam works.
+// Sept 2026: Live Exam is a WEEKLY exam, not a Saturday/Sunday-only exam.
+// Students can start it any day from Monday 00:00 IST through Sunday
+// 23:59:59 IST, with one attempt per exam per week. Results are released
+// together at the next Monday 00:00 IST.
+//
+// Question selection is now syllabus-blueprint driven. The configured
+// question count is distributed as evenly as possible across the official
+// SyllabusSubject rows already stored for that exam. Each subject must have
+// enough valid questions before an attempt can start. Questions used by any
+// previous Live Exam for the same exam are permanently excluded from future
+// papers (as long as the historical attempt records remain in the database).
+//
+// The existing SyllabusSubject/SyllabusTopic hierarchy is the source of
+// truth. At present, Question.subjectId is the reliable content mapping;
+// topic-level tagging is not yet complete for the existing bank, so this
+// release enforces the syllabus at SUBJECT level rather than inventing topic
+// weights. Once topic tagging is complete, the same blueprint can be made
+// topic-exact without changing the student-facing exam flow.
 
 import { CorrectOption, MockExamAttemptStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
@@ -28,46 +31,61 @@ const preferenceService = new PracticePreferenceService();
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** IST calendar-date LABEL for `now` — a UTC-midnight Date standing in
- * for that IST calendar date, same convention as streak.service.ts's
- * todayIstAsDate(). Day-arithmetic (+/- N days) on this label is exact
- * and DST-free since India has no DST. */
 function istDateLabel(now: Date): Date {
   const nowIst = new Date(now.getTime() + IST_OFFSET_MS);
   return new Date(Date.UTC(nowIst.getUTCFullYear(), nowIst.getUTCMonth(), nowIst.getUTCDate()));
 }
 
-/** The reverse of istDateLabel: the real UTC instant that "00:00 IST on
- * this labeled date" actually occurs at. */
 function istLabelToRealInstant(label: Date): Date {
   return new Date(label.getTime() - IST_OFFSET_MS);
 }
 
-/** Returns the Saturday IST-date LABEL identifying the CURRENT weekend
- * cycle if `now` falls within the Sat 00:00 IST – Sun 23:59:59.999 IST
- * window, or null if the window is currently closed (a weekday). */
-export function getCurrentExamWeekStart(now: Date = new Date()): Date | null {
+/** Monday IST-date LABEL identifying the current weekly Live Exam cycle. */
+export function getCurrentExamWeekStart(now: Date = new Date()): Date {
   const todayLabel = istDateLabel(now);
-  const dayOfWeek = new Date(now.getTime() + IST_OFFSET_MS).getUTCDay(); // 0=Sun..6=Sat, on the IST-shifted instant
-  if (dayOfWeek === 6) return todayLabel; // it IS Saturday
-  if (dayOfWeek === 0) return new Date(todayLabel.getTime() - DAY_MS); // Sunday -> the weekend's Saturday was yesterday
-  return null; // weekday — window closed
+  const dayOfWeek = new Date(now.getTime() + IST_OFFSET_MS).getUTCDay(); // 0=Sun..6=Sat
+  const daysSinceMonday = (dayOfWeek + 6) % 7;
+  return new Date(todayLabel.getTime() - daysSinceMonday * DAY_MS);
 }
 
-/** The real UTC instant results for a given weekStart become visible at
- * — Monday 00:00 IST of that same weekend (weekStart + 2 days). */
+/** Results for a weekly exam become visible at the following Monday 00:00 IST. */
 export function getResultsReleaseAt(weekStart: Date): Date {
-  const mondayLabel = new Date(weekStart.getTime() + 2 * DAY_MS);
-  return istLabelToRealInstant(mondayLabel);
+  return istLabelToRealInstant(new Date(weekStart.getTime() + 7 * DAY_MS));
 }
 
-/** The Saturday IST-date LABEL of the NEXT upcoming weekend window, for
- * a "next opens on <date>" hint when the window is currently closed. */
+/** Monday IST-date LABEL of the next weekly cycle. */
 export function getNextExamWeekStart(now: Date = new Date()): Date {
-  const todayLabel = istDateLabel(now);
-  const dayOfWeek = new Date(now.getTime() + IST_OFFSET_MS).getUTCDay();
-  const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7; // if today IS Saturday, "next" is 7 days away, not 0
-  return new Date(todayLabel.getTime() + daysUntilSaturday * DAY_MS);
+  return new Date(getCurrentExamWeekStart(now).getTime() + 7 * DAY_MS);
+}
+
+function normalizeName(value: string): string {
+  return value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Distribute N questions as evenly as possible across the supplied syllabus
+ * subjects. The first slots receive the remainder so the sum is EXACTLY N.
+ */
+function allocateEvenly(ids: string[], total: number): Map<string, number> {
+  const result = new Map<string, number>();
+  if (ids.length === 0) return result;
+  const base = Math.floor(total / ids.length);
+  let remainder = total % ids.length;
+  for (const id of ids) {
+    const count = base + (remainder > 0 ? 1 : 0);
+    result.set(id, count);
+    if (remainder > 0) remainder--;
+  }
+  return result;
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 export class MockExamService {
@@ -80,12 +98,6 @@ export class MockExamService {
     return !!activeSub;
   }
 
-  /** Live-checks and force-closes an attempt whose time has run out,
-   * scoring whatever was answered so far -- the same "never trust a
-   * stale status field alone" discipline as Daily Quiz's cron-safety
-   * design, just checked inline here since there's no separate sweep job
-   * for this (an attempt can only ever be interacted with by its own
-   * student, so an inline check on access is sufficient). */
   private async expireIfNeeded(attemptId: string) {
     const attempt = await prisma.mockExamAttempt.findUniqueOrThrow({ where: { id: attemptId }, include: { questions: true } });
     if (attempt.status === 'IN_PROGRESS' && new Date() >= attempt.expiresAt) {
@@ -99,7 +111,7 @@ export class MockExamService {
 
     let score = 0;
     for (const q of attempt.questions) {
-      if (q.selectedOption === null) continue; // unanswered — zero, no penalty
+      if (q.selectedOption === null) continue;
       if (q.isCorrect) score += config.marksPerQuestion;
       else score -= config.marksPerQuestion * config.negativeMarkingFraction;
     }
@@ -110,9 +122,6 @@ export class MockExamService {
     });
   }
 
-  /** Sept 2026 (student-requested) — every exam that actually has Live
-   * Exam configured, so students pick directly rather than navigating
-   * the full taxonomy tree to find out which ones even have it. */
   async listAvailableExams(): Promise<{ subCategoryId: string; name: string; authorityName: string; categoryName: string }[]> {
     const configs = await prisma.mockExamConfig.findMany({
       include: { subCategory: { include: { category: { include: { authority: true } } } } },
@@ -129,7 +138,6 @@ export class MockExamService {
 
   async getState(userId: string, subCategoryId: string) {
     if (!(await this.hasPaidAccess(userId))) return { access: 'FREE_LOCKED' as const };
-    // Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING).
     try {
       await scopeAccessService.assertSubCategoryAllowed(userId, subCategoryId);
     } catch (e) {
@@ -157,27 +165,15 @@ export class MockExamService {
         return { access: 'IN_PROGRESS' as const, attemptId: fresh.id, expiresAt: fresh.expiresAt, config };
       }
 
-      // Sept 2026 — Test Accounts skip the weekend-cycle/results-withholding
-      // gating entirely (retry as many times as needed for QA); a real
-      // student's actual weekly cycle behavior below is completely
-      // unaffected by this.
-      if (user.isTestAccount) {
-        return { access: 'READY' as const, config };
-      }
+      if (user.isTestAccount) return { access: 'READY' as const, config };
 
-      // Completed or Expired — withheld until Monday 00:00 IST of ITS OWN weekend cycle.
       const releaseAt = getResultsReleaseAt(fresh.weekStart);
       if (now < releaseAt) {
         return { access: 'AWAITING_RESULTS' as const, attemptId: fresh.id, resultsReleaseAt: releaseAt };
       }
 
-      // Results are out. If we're now inside a LATER open window than the
-      // one this attempt belongs to, let the student start fresh for the
-      // new weekend instead of showing last cycle's result forever.
-      const isThisWeeksAttempt = currentWeekStart !== null && fresh.weekStart.getTime() === currentWeekStart.getTime();
-      if (currentWeekStart !== null && !isThisWeeksAttempt) {
-        return { access: 'READY' as const, config };
-      }
+      const isThisWeeksAttempt = fresh.weekStart.getTime() === currentWeekStart.getTime();
+      if (!isThisWeeksAttempt) return { access: 'READY' as const, config };
 
       return {
         access: 'COMPLETED' as const,
@@ -188,16 +184,107 @@ export class MockExamService {
       };
     }
 
-    if (currentWeekStart === null && !user.isTestAccount) {
-      return { access: 'WINDOW_CLOSED' as const, nextOpensAt: istLabelToRealInstant(getNextExamWeekStart(now)) };
-    }
     return { access: 'READY' as const, config };
+  }
+
+  /**
+   * Build the weekly paper from the syllabus already stored for this exam.
+   *
+   * IMPORTANT: we do not silently fall back to random questions when a
+   * syllabus subject is under-filled. A paper that violates the syllabus
+   * blueprint is rejected instead, so the admin knows the content pool must
+   * be completed/classified first.
+   */
+  private async buildSyllabusBlueprintPaper(
+    subCategoryId: string,
+    language: 'TA' | 'EN',
+    questionCount: number,
+  ) {
+    const syllabusSubjects = await prisma.syllabusSubject.findMany({
+      where: { subCategoryId },
+      include: { topics: { select: { id: true, name: true } } },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+
+    if (syllabusSubjects.length === 0) {
+      throw new MockExamError('Live Exam cannot start because the official syllabus has no Subjects configured for this exam.');
+    }
+
+    // Question.subjectId belongs to the existing Question-bank Subject model;
+    // the syllabus master intentionally has a separate SyllabusSubject model.
+    // Match them by the exact human-approved subject name rather than guessing
+    // by ID. This is the reliable subject-level bridge used by the current bank.
+    const questionSubjects = await prisma.subject.findMany({
+      where: { subCategoryId },
+      select: { id: true, name: true },
+    });
+    const questionSubjectByName = new Map(questionSubjects.map((s) => [normalizeName(s.name), s]));
+
+    const mapped = syllabusSubjects.map((s) => ({
+      syllabus: s,
+      questionSubject: questionSubjectByName.get(normalizeName(s.name)),
+    }));
+    const unmapped = mapped.filter((m) => !m.questionSubject);
+    if (unmapped.length > 0) {
+      throw new MockExamError(
+        `Live Exam syllabus mapping is incomplete. No Question-bank Subject exists for: ${unmapped.map((m) => m.syllabus.name).join(', ')}. Classify/map these subjects before publishing the exam.`,
+      );
+    }
+
+    const counts = allocateEvenly(mapped.map((m) => m.questionSubject!.id), questionCount);
+
+    // Never reuse a question that appeared in an earlier Live Exam for this
+    // exam. This is intentionally independent of normal Practice history.
+    const previous = await prisma.mockExamQuestion.findMany({
+      where: { attempt: { subCategoryId } },
+      select: { questionId: true },
+      distinct: ['questionId'],
+    });
+    const excludedIds = previous.map((p) => p.questionId);
+
+    const selected: { id: string }[] = [];
+    const shortages: string[] = [];
+
+    for (const item of mapped) {
+      const subjectId = item.questionSubject!.id;
+      const needed = counts.get(subjectId) ?? 0;
+      if (needed === 0) continue;
+
+      const pool = await prisma.question.findMany({
+        where: {
+          id: { notIn: excludedIds },
+          status: 'PUBLISHED',
+          auditFlags: { none: { status: { not: 'DISMISSED' } } },
+          language,
+          subjectId,
+          OR: [{ subCategoryId }, { authorityTags: { some: { subCategoryId } } }],
+        },
+        select: { id: true },
+      });
+
+      if (pool.length < needed) {
+        shortages.push(`${item.syllabus.name}: ${pool.length}/${needed}`);
+        continue;
+      }
+
+      selected.push(...shuffle(pool).slice(0, needed));
+    }
+
+    if (shortages.length > 0) {
+      throw new MockExamError(
+        `Live Exam blueprint cannot be completed. Not enough new valid questions in: ${shortages.join('; ')}. Add/classify questions before students can start this week's exam.`,
+      );
+    }
+
+    if (selected.length !== questionCount) {
+      throw new MockExamError(`Live Exam blueprint produced ${selected.length}/${questionCount} questions. Exam not started.`);
+    }
+
+    return shuffle(selected);
   }
 
   async startAttempt(userId: string, subCategoryId: string) {
     if (!(await this.hasPaidAccess(userId))) throw new MockExamError('Live Exam requires an active Annual Plan.');
-    // Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING) — blocks
-    // even a direct API request for another exam's Live Exam.
     try {
       await scopeAccessService.assertSubCategoryAllowed(userId, subCategoryId);
     } catch (e) {
@@ -211,66 +298,27 @@ export class MockExamService {
     const weekStart = getCurrentExamWeekStart();
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { isTestAccount: true } });
 
-    if (weekStart === null && !user.isTestAccount) {
-      throw new MockExamError('Live Exam is open only on Saturdays and Sundays (IST). Come back this weekend.');
-    }
-    // Sept 2026 — Test Accounts (isTestAccount=true) bypass BOTH the
-    // weekday window and the one-attempt-per-weekend restriction, so QA
-    // can retry the same exam repeatedly without waiting for a real
-    // weekend. Falls back to today's IST date as a synthetic weekStart
-    // on a weekday, purely so the attempt record still has a value for
-    // that (required) column -- never used for any real student.
-    const effectiveWeekStart = weekStart ?? istDateLabel(new Date());
-
     const existing = await prisma.mockExamAttempt.findUnique({
-      where: { userId_subCategoryId_weekStart: { userId, subCategoryId, weekStart: effectiveWeekStart } },
+      where: { userId_subCategoryId_weekStart: { userId, subCategoryId, weekStart } },
     });
     if (existing) {
       if (!user.isTestAccount) {
-        throw new MockExamError('You have already attempted this exam this weekend — one attempt per weekend, like the real exam.');
+        throw new MockExamError('You have already attempted this exam this week. A new Live Exam opens next Monday.');
       }
-      // Test Account retry: clear the prior attempt for this exact
-      // weekStart so a fresh one can be created below.
       await prisma.mockExamQuestion.deleteMany({ where: { attemptId: existing.id } });
       await prisma.mockExamAttempt.delete({ where: { id: existing.id } });
     }
 
-    // Sept 2026 (BUG FIX) — Live Exam previously had NO language filter
-    // at all, mixing Tamil and English questions together regardless of
-    // the student's own preference. Uses the SAME saved Practice
-    // Preference language every other part of the app already respects
-    // — no separate language step needed here, matching how Live Exam
-    // otherwise reuses the student's existing setup (Sub-Category access,
-    // paid plan) rather than asking again.
     const preference = await preferenceService.get(userId);
     if (!preference) {
       throw new MockExamError('Please complete Practice Setup first — Live Exam uses the same language preference.');
     }
 
-    const questions = await prisma.question.findMany({
-      where: {
-        status: 'PUBLISHED',
-        // Sept 2026 (BINDING, data-quality safety) — any unresolved
-        // audit flag (OPEN or CONFIRMED-but-not-yet-fixed) keeps a
-        // question out of Live Exam too; only DISMISSED clears it.
-        auditFlags: { none: { status: { not: 'DISMISSED' } } },
-        language: preference.language,
-        // Sept 2026 (BUG FIX) — was authorityTags-only, missing the
-        // DIRECT subCategoryId a question is normally tagged with (the
-        // primary tag every Bulk Upload/Question edit sets). authorityTags
-        // (QuestionTaxonomyTag) is for ADDITIONAL tags on top of that —
-        // e.g. Cross-Exam Question Tagging — never the only path. Same
-        // OR pattern practice-preference.service.ts's own
-        // resolveTaxonomyFilter() already uses everywhere else; Live
-        // Exam had fallen out of sync with it.
-        OR: [{ subCategoryId }, { authorityTags: { some: { subCategoryId } } }],
-      },
-      take: config.questionCount,
-      orderBy: { createdAt: 'asc' },
-    });
-    if (questions.length < config.questionCount) {
-      throw new MockExamError('Not enough published questions are available for this exam yet. Please try again later.');
-    }
+    const questions = await this.buildSyllabusBlueprintPaper(
+      subCategoryId,
+      preference.language as 'TA' | 'EN',
+      config.questionCount,
+    );
 
     const startedAt = new Date();
     const expiresAt = new Date(startedAt.getTime() + config.durationMinutes * 60 * 1000);
@@ -281,7 +329,7 @@ export class MockExamService {
         subCategoryId,
         startedAt,
         expiresAt,
-        weekStart: effectiveWeekStart,
+        weekStart,
         totalMarks: config.questionCount * config.marksPerQuestion,
         questions: {
           create: questions.map((q, i) => ({ questionId: q.id, sequenceNumber: i + 1 })),
@@ -292,10 +340,6 @@ export class MockExamService {
     return { attemptId: attempt.id, expiresAt: attempt.expiresAt };
   }
 
-  /** Returns question content WITHOUT correctOption/explanation while the
-   * attempt is still in progress — a real exam never tells you if you're
-   * right as you go. Only once completed AND results have been released
-   * (Monday 00:00 IST) does this reveal everything. */
   async getQuestions(userId: string, attemptId: string) {
     await this.expireIfNeeded(attemptId);
     const attempt = await prisma.mockExamAttempt.findUniqueOrThrow({
@@ -319,8 +363,6 @@ export class MockExamService {
         optionC: mq.question.optionC,
         optionD: mq.question.optionD,
         selectedOption: mq.selectedOption,
-        // Only revealed once the attempt is completed AND Monday 00:00 IST
-        // has passed for its weekend — never mid-exam, never early.
         correctOption: resultsReleased ? mq.question.correctOption : null,
         explanation: resultsReleased ? (mq.question.language === 'TA' ? mq.question.explanationTa : mq.question.explanationEn) : null,
       })),
@@ -342,8 +384,6 @@ export class MockExamService {
       data: { selectedOption, isCorrect, answeredAt: new Date(), timeSpentSeconds },
     });
 
-    // Deliberately does NOT return isCorrect/correctOption to the caller
-    // -- a real exam gives no feedback as you answer.
     return { saved: true };
   }
 
@@ -353,10 +393,6 @@ export class MockExamService {
     if (attempt.status !== 'IN_PROGRESS') throw new MockExamError('This Live Exam has already ended.');
 
     await this.finalizeScore(attemptId, MockExamAttemptStatus.COMPLETED);
-    // Deliberately does NOT return score/totalMarks here anymore -- Sept
-    // 2026 (BINDING): results are withheld until Monday 00:00 IST for
-    // EVERY student who attempted this weekend, regardless of when they
-    // personally finished. The student sees "submitted" + the release time.
     return { submitted: true, resultsReleaseAt: getResultsReleaseAt(attempt.weekStart) };
   }
 }
