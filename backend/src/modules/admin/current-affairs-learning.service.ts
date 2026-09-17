@@ -10,7 +10,18 @@ const MAX_ITEMS = 20;
 type Candidate = { category: string; headline: string; eventDateTime: string; location: string; facts: string[] };
 type Verified = Candidate & { sourcePublishedAt: string; sourceUrl: string; verificationNote: string; headlineEn: string; factsEn: string[] };
 
-function cleanJson(raw: string) { return raw.replace(/^```json\s*|\s*```$/g, '').trim(); }
+function cleanJson(raw: string) {
+  const fenced = raw.replace(/^```json\s*|\s*```$/g, '').trim();
+  // Gemini sometimes prefixes/suffixes the JSON with stray commentary even
+  // without a code fence, or the response gets cut short by the token
+  // limit before the closing brace/bracket. Extract the outermost {...} or
+  // [...] block rather than assuming the whole string is clean JSON.
+  const firstBrace = fenced.search(/[[{]/);
+  if (firstBrace === -1) return fenced;
+  const lastBrace = Math.max(fenced.lastIndexOf('}'), fenced.lastIndexOf(']'));
+  if (lastBrace === -1 || lastBrace < firstBrace) return fenced;
+  return fenced.slice(firstBrace, lastBrace + 1);
+}
 function normalize(value: string) { return (value ?? '').normalize('NFKC').toLocaleLowerCase().replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim(); }
 function fingerprint(date: string, headline: string) { return `${date.slice(0, 10)}|${normalize(headline)}`; }
 function istToUtc(dateStr: string) { const [y, m, d] = dateStr.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); }
@@ -24,8 +35,25 @@ export class CurrentAffairsLearningService {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!response.ok) throw new Error(`Gemini request failed: ${response.status} ${await response.text()}`);
     const data = await response.json() as any;
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
-    try { return JSON.parse(cleanJson(raw)); } catch { throw new Error('AI returned invalid JSON for Current Affairs'); }
+    const candidate = data.candidates?.[0];
+    const raw = candidate?.content?.parts?.[0]?.text ?? '{}';
+    try {
+      return JSON.parse(cleanJson(raw));
+    } catch (err) {
+      // Sept 2026 — the bilingual (Tamil+English) prompt roughly doubles
+      // response size, and a response cut off mid-JSON by hitting
+      // maxOutputTokens (finishReason: 'MAX_TOKENS') was the actual cause
+      // the first few times this fired, not a genuinely malformed
+      // response. Surface that distinction and the raw tail so it's
+      // diagnosable from logs instead of a bare "invalid JSON".
+      const truncated = candidate?.finishReason === 'MAX_TOKENS';
+      console.error('[current-affairs] Gemini JSON parse failed', { finishReason: candidate?.finishReason, rawTail: raw.slice(-300) });
+      throw new Error(
+        truncated
+          ? 'AI response was cut off (hit the output token limit) before finishing the JSON. Try again — this is usually transient.'
+          : 'AI returned invalid JSON for Current Affairs'
+      );
+    }
   }
 
   async list(limit = 1200) {
@@ -61,7 +89,7 @@ export class CurrentAffairsLearningService {
     const discovery = await this.gemini(`CURRENT AFFAIRS DISCOVERY FOR PONNA.\n\nFind 15-25 significant, exam-relevant events for Indian competitive-exam students from Tamil Nadu, India and important international developments relevant to India. The event itself MUST have happened or first occurred between ${start} and ${end} UTC.\n\nCategories: தமிழ்நாடு, இந்தியா, உலகம், அறிவியல் மற்றும் தொழில்நுட்பம், பொருளாதாரம், சுற்றுச்சூழல், விளையாட்டு, கல்வி, விருதுகள் மற்றும் நியமனங்கள், முக்கிய நாட்கள்.\n\nDo not include routine political statements, celebrity news, ordinary crime, stock-market daily moves, every sports match, recycled coverage of an old event, anniversary stories, old reports, old schemes, or background facts. If the event date cannot be established, exclude it. Do not repeat the same underlying event already present in the previous list, even if today's article uses different wording.\n\nPREVIOUS PUBLISHED HEADLINES — DO NOT REUSE THE SAME UNDERLYING EVENT:\n${previousText || '(none)'}\n\nReturn ONLY JSON: {\"events\":[{\"category\":\"...\",\"headline\":\"...\",\"eventDateTime\":\"ISO-8601 UTC\",\"location\":\"...\",\"facts\":[\"...\",\"...\"]}]}\nUse Google Search and prefer primary/official sources plus reputable reporting.`, true, 9000) as { events?: Candidate[] };
 
     const candidates = (discovery.events ?? []).slice(0, 25);
-    const verification = await this.gemini(`INDEPENDENT VERIFICATION PASS FOR PONNA CURRENT AFFAIRS.\n\nIndependently search each candidate. Do not trust its date or facts. Accept ONLY events whose own occurrence/first occurrence is inside ${start} through ${end} UTC, whose key fact is supported by a reliable source, and which are useful for TNPSC/TNTET/general Indian competitive exams. A fresh article about an old event is NOT eligible. Reject a candidate if it is the same underlying event as any item in the previous published list, even if the headline is different.\n\nFor each accepted event, also provide a natural English translation of the Tamil headline and facts (headlineEn, factsEn) — plain, accurate English suitable for a student reading the same news in English instead of Tamil, not a literal word-for-word translation.\n\nPREVIOUS PUBLISHED HEADLINES:\n${previousText || '(none)'}\n\nCANDIDATES:\n${candidates.map((c, i) => `${i + 1}. ${c.category} | ${c.headline} | ${c.eventDateTime} | ${c.facts.join(' | ')}`).join('\n')}\n\nReturn ONLY JSON: {\"verifiedEvents\":[{\"category\":\"...\",\"headline\":\"...\",\"headlineEn\":\"...\",\"eventDateTime\":\"ISO-8601 UTC\",\"location\":\"...\",\"facts\":[\"...\"],\"factsEn\":[\"...\"],\"sourcePublishedAt\":\"ISO-8601 UTC\",\"sourceUrl\":\"https://...\",\"verificationNote\":\"...\"}]}. Reject uncertain or conflicting dates.`, true, 10000) as { verifiedEvents?: Verified[] };
+    const verification = await this.gemini(`INDEPENDENT VERIFICATION PASS FOR PONNA CURRENT AFFAIRS.\n\nIndependently search each candidate. Do not trust its date or facts. Accept ONLY events whose own occurrence/first occurrence is inside ${start} through ${end} UTC, whose key fact is supported by a reliable source, and which are useful for TNPSC/TNTET/general Indian competitive exams. A fresh article about an old event is NOT eligible. Reject a candidate if it is the same underlying event as any item in the previous published list, even if the headline is different.\n\nFor each accepted event, also provide a natural English translation of the Tamil headline and facts (headlineEn, factsEn) — plain, accurate English suitable for a student reading the same news in English instead of Tamil, not a literal word-for-word translation.\n\nPREVIOUS PUBLISHED HEADLINES:\n${previousText || '(none)'}\n\nCANDIDATES:\n${candidates.map((c, i) => `${i + 1}. ${c.category} | ${c.headline} | ${c.eventDateTime} | ${c.facts.join(' | ')}`).join('\n')}\n\nReturn ONLY JSON: {\"verifiedEvents\":[{\"category\":\"...\",\"headline\":\"...\",\"headlineEn\":\"...\",\"eventDateTime\":\"ISO-8601 UTC\",\"location\":\"...\",\"facts\":[\"...\"],\"factsEn\":[\"...\"],\"sourcePublishedAt\":\"ISO-8601 UTC\",\"sourceUrl\":\"https://...\",\"verificationNote\":\"...\"}]}. Reject uncertain or conflicting dates.`, true, 16000) as { verifiedEvents?: Verified[] };
 
     const startMs = new Date(start).getTime();
     const endMs = new Date(end).getTime();
