@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
 
-type Item = { id: string; date: string; headline: string; summary: string; sourceUrl: string | null; examRelevanceNote: string | null; verifiedAt: string };
+type Item = { id: string; date: string; headline: string; summary: string; headlineEn: string | null; summaryEn: string | null; sourceUrl: string | null; examRelevanceNote: string | null; verifiedAt: string };
 
 export default function CurrentAffairsLearningAdminPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState('');
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), category: 'தமிழ்நாடு', headline: '', summary: '', examRelevanceNote: '', sourceUrl: '' });
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), category: 'தமிழ்நாடு', headline: '', headlineEn: '', summary: '', summaryEn: '', examRelevanceNote: '', sourceUrl: '' });
 
   async function load() {
     setLoading(true);
@@ -45,7 +45,7 @@ export default function CurrentAffairsLearningAdminPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to add');
       setMessage('நிகழ்வு சேர்க்கப்பட்டது.');
-      setForm((f) => ({ ...f, headline: '', summary: '', examRelevanceNote: '', sourceUrl: '' }));
+      setForm((f) => ({ ...f, headline: '', headlineEn: '', summary: '', summaryEn: '', examRelevanceNote: '', sourceUrl: '' }));
       await load();
     } catch (err: any) { setMessage(err.message); }
   }
@@ -74,8 +74,10 @@ export default function CurrentAffairsLearningAdminPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 9 }}>
           <label>தேதி<input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required style={input} /></label>
           <label>பிரிவு<input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="தமிழ்நாடு / இந்தியா / அறிவியல்..." required style={input} /></label>
-          <label style={{ gridColumn: '1 / -1' }}>தலைப்பு<input value={form.headline} onChange={(e) => setForm({ ...form, headline: e.target.value })} required style={input} /></label>
-          <label style={{ gridColumn: '1 / -1' }}>சுருக்கம்<textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} required rows={3} style={input} /></label>
+          <label style={{ gridColumn: '1 / -1' }}>தலைப்பு (தமிழ்)<input value={form.headline} onChange={(e) => setForm({ ...form, headline: e.target.value })} required style={input} /></label>
+          <label style={{ gridColumn: '1 / -1' }}>Headline (English, optional)<input value={form.headlineEn} onChange={(e) => setForm({ ...form, headlineEn: e.target.value })} style={input} /></label>
+          <label style={{ gridColumn: '1 / -1' }}>சுருக்கம் (தமிழ்)<textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} required rows={3} style={input} /></label>
+          <label style={{ gridColumn: '1 / -1' }}>Summary (English, optional)<textarea value={form.summaryEn} onChange={(e) => setForm({ ...form, summaryEn: e.target.value })} rows={3} style={input} /></label>
           <label style={{ gridColumn: '1 / -1' }}>தேர்வுக்கு முக்கியம் / நினைவில் வைக்க<textarea value={form.examRelevanceNote} onChange={(e) => setForm({ ...form, examRelevanceNote: e.target.value })} rows={2} style={input} /></label>
           <label style={{ gridColumn: '1 / -1' }}>ஆதார இணைப்பு<input value={form.sourceUrl} onChange={(e) => setForm({ ...form, sourceUrl: e.target.value })} style={input} /></label>
         </div>

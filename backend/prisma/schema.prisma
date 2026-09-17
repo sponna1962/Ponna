@@ -1285,6 +1285,9 @@ model CurrentAffairsItem {
   date              DateTime
   headline          String
   summary           String
+  headlineEn        String?  // English translation, added alongside the Tamil original — Sept 2026 bilingual reading requirement. Nullable: older rows generated before this field existed have Tamil only.
+  summaryEn         String?
+  examRelevanceNoteEn String? // English counterpart of examRelevanceNote
   sourceUrl         String?
   examRelevanceNote String?  // PONNA's own "why this matters for the exam" -- kept separate from the news fact itself
   verifiedAt        DateTime
