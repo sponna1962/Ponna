@@ -20,6 +20,7 @@
 import { QuestionCategory, SourceType } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { prisma } from '../../lib/prisma';
+import { computeContentHash } from '../../common/content-hash';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.7-flash';
@@ -100,6 +101,13 @@ Only include events you found real, current search results for -- never invent a
     let created = 0;
     for (const q of parsed.questions) {
       const translationGroupId = randomUUID();
+      const contentHashTa = computeContentHash({
+        questionText: q.questionTextTa,
+        optionA: q.optionATa,
+        optionB: q.optionBTa,
+        optionC: q.optionCTa,
+        optionD: q.optionDTa,
+      });
       await prisma.question.create({
         data: {
           questionText: q.questionTextTa,
@@ -116,7 +124,15 @@ Only include events you found real, current search results for -- never invent a
           category: QuestionCategory.CURRENT_AFFAIRS,
           relevanceDate: yesterday,
           sourceType: SourceType.ORIGINAL,
+          contentHash: contentHashTa,
         },
+      });
+      const contentHashEn = computeContentHash({
+        questionText: q.questionTextEn,
+        optionA: q.optionAEn,
+        optionB: q.optionBEn,
+        optionC: q.optionCEn,
+        optionD: q.optionDEn,
       });
       await prisma.question.create({
         data: {
@@ -134,6 +150,7 @@ Only include events you found real, current search results for -- never invent a
           category: QuestionCategory.CURRENT_AFFAIRS,
           relevanceDate: yesterday,
           sourceType: SourceType.ORIGINAL,
+          contentHash: contentHashEn,
         },
       });
       created += 2;
