@@ -34,14 +34,7 @@ function yesterdayLabel(): string {
 
 export class DailyCurrentAffairsService {
   private buildPrompt(dateLabel: string): string {
-    return `Using Google Search, find the ${QUESTIONS_PER_DAY} most significant real news events from Tamil Nadu and India from ${dateLabel} that would be useful Current Affairs learning for a TNPSC Group - IV aspirant. Focus on government, polity, economy, science and technology, environment, important appointments, awards, reports, schemes, court/judicial developments, national/international developments relevant to India, and other exam-relevant factual news. Avoid entertainment and sports trivia.
-
-For each event, create one TNPSC-style multiple-choice question in Tamil and English with exactly four options, one correct answer, and a short explanation in both languages.
-
-Respond ONLY as JSON:
-{"questions":[{"questionTextTa":"...","optionATa":"...","optionBTa":"...","optionCTa":"...","optionDTa":"...","questionTextEn":"...","optionAEn":"...","optionBEn":"...","optionCEn":"...","optionDEn":"...","correctOption":"A","explanationTa":"...","explanationEn":"..."}]}
-
-Only use facts supported by the real search results. Do not invent events. Return fewer only if there are genuinely fewer than ${QUESTIONS_PER_DAY} suitable events.`;
+    return `Using Google Search, find the ${QUESTIONS_PER_DAY} most significant real news events from Tamil Nadu and India from ${dateLabel} that would be useful Current Affairs learning for a TNPSC Group - IV aspirant. Focus on government, polity, economy, science and technology, environment, important appointments, awards, reports, schemes, court/judicial developments, national/international developments relevant to India, and other exam-relevant factual news. Avoid entertainment and sports trivia.\n\nFor each event, create one TNPSC-style multiple-choice question in Tamil and English with exactly four options, one correct answer, and a short explanation in both languages.\n\nRespond ONLY as JSON:\n{\"questions\":[{\"questionTextTa\":\"...\",\"optionATa\":\"...\",\"optionBTa\":\"...\",\"optionCTa\":\"...\",\"optionDTa\":\"...\",\"questionTextEn\":\"...\",\"optionAEn\":\"...\",\"optionBEn\":\"...\",\"optionCEn\":\"...\",\"optionDEn\":\"...\",\"correctOption\":\"A\",\"explanationTa\":\"...\",\"explanationEn\":\"...\"}]}\n\nOnly use facts supported by the real search results. Do not invent events. Return fewer only if there are genuinely fewer than ${QUESTIONS_PER_DAY} suitable events.`;
   }
 
   /** Generate today's Current Affairs Daily Quiz directly. */
@@ -81,7 +74,6 @@ Only use facts supported by the real search results. Do not invent events. Retur
     const quiz = await prisma.dailyQuiz.create({
       data: {
         quizDate: new Date(quizDate), quizType: DailyQuizType.DAILY_QUIZ, publishAt, expiresAt,
-        // Quiz-level state only. There is no normal Question-bank DRAFT.
         status: DailyQuizStatus.SCHEDULED,
         questions: { create: questions.map((q, index) => ({
           sequenceNumber: index + 1,
@@ -93,6 +85,13 @@ Only use facts supported by the real search results. Do not invent events. Retur
       include: { questions: true },
     });
     return { created: quiz.questions.length, quizId: quiz.id, quizDate, skippedNoResults: false };
+  }
+
+  // Backward-compatible entry point for the existing admin route and cron.
+  // The supplied sub-category is intentionally ignored: Current Affairs
+  // generation is a Daily Quiz concern and never creates Question/DRAFT rows.
+  async generateDailyBatch(_subCategoryId?: string) {
+    return this.generateDailyQuiz();
   }
 }
 
