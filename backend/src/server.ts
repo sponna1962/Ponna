@@ -78,11 +78,22 @@ const app = express();
 // (finalized requirement). `true` trusts the immediate proxy's
 // X-Forwarded-For header, which is what Render's edge sets.
 app.set('trust proxy', true);
-// CORS: in production the frontend (Vercel) and backend (Railway) are on
-// different domains, so this can't be left wide-open without a config knob.
-// Set FRONTEND_URL in the backend's environment to your Vercel URL once
-// deployed; falls back to allowing all origins for local development.
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+// CORS: in production the frontend (Vercel + custom domain) and backend
+// (Render) are on different origins, so this can't be left wide-open
+// without a config knob. Set FRONTEND_URL in the backend's environment to
+// a comma-separated list of every origin that calls this API (Vercel URL,
+// custom domain, and its www variant) once deployed; falls back to
+// allowing all origins for local development. Sept 2026 — was a single
+// origin string, which silently CORS-blocked every request once the
+// ponna.in custom domain went live alongside the Vercel URL.
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map((o) => o.trim()).filter(Boolean)
+  : null;
+app.use(
+  cors({
+    origin: allowedOrigins ?? '*',
+  })
+);
 // Captures the raw request body alongside the parsed JSON — needed for
 // verifying the Razorpay webhook signature, which is computed over the raw
 // bytes, not the re-serialized JSON (those can differ in whitespace/key order).
