@@ -1,167 +1,98 @@
-// Daily Current Affairs question generation (Sept 2026, Group IV
-// first). Explicit request: daily (not weekly), every morning, drafted
-// from the PREVIOUS day's real news, newest always sorted to the top.
-//
-// Uses Gemini's OWN built-in Google Search grounding tool (the
-// `google_search` tool in the Gemini API request) rather than the
-// separate live-search-adapter.ts used by Ask Ponna -- that adapter
-// needs GOOGLE_SEARCH_API_KEY/GOOGLE_SEARCH_ENGINE_ID, which are NOT
-// YET SET on Render (see live-search-adapter.ts's own header comment).
-// Gemini's built-in search grounding needs only the ALREADY-WORKING
-// GEMINI_API_KEY this whole app already depends on for every other AI
-// feature -- no new credential setup required to get this running.
-//
-// "Verified, Not Guessed" philosophy, same as everywhere else: every
-// generated question is created with status=DRAFT (the Question
-// model's own default) -- an admin must review and publish each one
-// via the normal Questions admin page before a student ever sees it.
-// This service only ever drafts; nothing it does publishes a question.
+// Daily Current Affairs generation now belongs to the Daily Quiz workflow.
+// It creates a DailyQuiz directly; it never creates Question rows and never
+// sends generated questions to the normal Question/DRAFT bank.
 
-import { QuestionCategory, SourceType } from '@prisma/client';
-import { randomUUID } from 'crypto';
+import { CorrectOption, DailyQuizStatus, DailyQuizType } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
-import { computeContentHash } from '../../common/content-hash';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.7-flash';
-const EST_INPUT_COST_PER_1M = 0.75;
-const EST_OUTPUT_COST_PER_1M = 3.75;
+const QUESTIONS_PER_DAY = 10;
+const IST_OFFSET_MINUTES = 5 * 60 + 30;
 
-// One TA/EN pair per topic covered -- kept small since this runs daily
-// (accumulates fast) and each one still needs a human review before
-// publishing.
-const QUESTIONS_PER_DAY = 5;
+interface GeneratedQuestion {
+  questionTextTa: string; optionATa: string; optionBTa: string; optionCTa: string; optionDTa: string;
+  questionTextEn: string; optionAEn: string; optionBEn: string; optionCEn: string; optionDEn: string;
+  correctOption: 'A' | 'B' | 'C' | 'D'; explanationTa: string; explanationEn: string;
+}
 
-interface DraftQuestion {
-  headline: string;
-  questionTextTa: string;
-  optionATa: string;
-  optionBTa: string;
-  optionCTa: string;
-  optionDTa: string;
-  questionTextEn: string;
-  optionAEn: string;
-  optionBEn: string;
-  optionCEn: string;
-  optionDEn: string;
-  correctOption: 'A' | 'B' | 'C' | 'D';
-  explanationTa: string;
-  explanationEn: string;
+function istToUtc(dateStr: string, hhmm: string): Date {
+  const [h, m] = hhmm.split(':').map(Number);
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, h, m) - IST_OFFSET_MINUTES * 60 * 1000);
+}
+
+function todayIstDateStr(): string {
+  return new Date(Date.now() + IST_OFFSET_MINUTES * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function yesterdayLabel(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export class DailyCurrentAffairsService {
-  private buildPrompt(yesterdayLabel: string): string {
-    return `Using Google Search, find the ${QUESTIONS_PER_DAY} most significant, real news events from Tamil Nadu and India from ${yesterdayLabel} that would be relevant Current Affairs content for a TNPSC Group - IV exam aspirant (SSLC-standard government/civic affairs, not entertainment/sports trivia).
+  private buildPrompt(dateLabel: string): string {
+    return `Using Google Search, find the ${QUESTIONS_PER_DAY} most significant real news events from Tamil Nadu and India from ${dateLabel} that would be useful Current Affairs learning for a TNPSC Group - IV aspirant. Focus on government, polity, economy, science and technology, environment, important appointments, awards, reports, schemes, court/judicial developments, national/international developments relevant to India, and other exam-relevant factual news. Avoid entertainment and sports trivia.
 
-For EACH event, write one multiple-choice question in TNPSC's own style (SSLC-standard difficulty, factual, exam-appropriate), in BOTH Tamil and English, with exactly 4 options and one correct answer, plus a short explanation of why the answer is correct.
+For each event, create one TNPSC-style multiple-choice question in Tamil and English with exactly four options, one correct answer, and a short explanation in both languages.
 
-Respond with ONLY a JSON object, no markdown fences:
-{"questions": [{"headline": "<short 5-8 word summary of the news event>", "questionTextTa": "...", "optionATa": "...", "optionBTa": "...", "optionCTa": "...", "optionDTa": "...", "questionTextEn": "...", "optionAEn": "...", "optionBEn": "...", "optionCEn": "...", "optionDEn": "...", "correctOption": "A", "explanationTa": "...", "explanationEn": "..."}]}
-Only include events you found real, current search results for -- never invent a news event. If fewer than ${QUESTIONS_PER_DAY} genuinely significant events exist for that day, return fewer rather than padding with invented ones.`;
+Respond ONLY as JSON:
+{"questions":[{"questionTextTa":"...","optionATa":"...","optionBTa":"...","optionCTa":"...","optionDTa":"...","questionTextEn":"...","optionAEn":"...","optionBEn":"...","optionCEn":"...","optionDEn":"...","correctOption":"A","explanationTa":"...","explanationEn":"..."}]}
+
+Only use facts supported by the real search results. Do not invent events. Return fewer only if there are genuinely fewer than ${QUESTIONS_PER_DAY} suitable events.`;
   }
 
-  /** Generates today's draft batch for one exam, covering YESTERDAY's
-   * news (the explicit requirement -- run every morning, covering the
-   * previous day). Each question is created TWICE (a TA row + an EN
-   * row, linked via translationGroupId) as DRAFT, category
-   * CURRENT_AFFAIRS, relevanceDate = yesterday -- an admin reviews and
-   * publishes each via the normal Questions admin page. */
-  async generateDailyBatch(subCategoryId: string): Promise<{ created: number; skippedNoResults: boolean }> {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayLabel = yesterday.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  /** Generate today's Current Affairs Daily Quiz directly. */
+  async generateDailyQuiz(): Promise<{ created: number; quizId: string | null; quizDate: string; skippedNoResults: boolean }> {
+    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured');
+
+    const quizDate = todayIstDateStr();
+    const existing = await prisma.dailyQuiz.findUnique({
+      where: { quizDate_quizType: { quizDate: new Date(quizDate), quizType: DailyQuizType.DAILY_QUIZ } },
+    });
+    if (existing) return { created: 0, quizId: existing.id, quizDate, skippedNoResults: false };
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: this.buildPrompt(yesterdayLabel) }] }],
+        contents: [{ parts: [{ text: this.buildPrompt(yesterdayLabel()) }] }],
         tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 4000 },
+        generationConfig: { temperature: 0.2, maxOutputTokens: 7000 },
       }),
     });
-    if (!response.ok) {
-      throw new Error(`Gemini request failed: ${response.status} ${await response.text()}`);
-    }
-    const data = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-    };
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
-    let parsed: { questions: DraftQuestion[] } = { questions: [] };
+    if (!response.ok) throw new Error(`Gemini request failed: ${response.status} ${await response.text()}`);
+
+    const data = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+    let questions: GeneratedQuestion[] = [];
     try {
-      parsed = JSON.parse(rawText.replace(/^```json\s*|\s*```$/g, ''));
+      const parsed = JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '')) as { questions?: GeneratedQuestion[] };
+      questions = (parsed.questions ?? []).slice(0, QUESTIONS_PER_DAY);
     } catch {
-      console.error('[daily-current-affairs] JSON parse failed:', rawText.slice(0, 500));
+      throw new Error('AI returned invalid JSON for the Daily Current Affairs quiz');
     }
-    if (parsed.questions.length === 0) {
-      return { created: 0, skippedNoResults: true };
-    }
+    if (questions.length === 0) return { created: 0, quizId: null, quizDate, skippedNoResults: true };
 
-    let created = 0;
-    for (const q of parsed.questions) {
-      const translationGroupId = randomUUID();
-      const contentHashTa = computeContentHash({
-        questionText: q.questionTextTa,
-        optionA: q.optionATa,
-        optionB: q.optionBTa,
-        optionC: q.optionCTa,
-        optionD: q.optionDTa,
-      });
-      await prisma.question.create({
-        data: {
-          questionText: q.questionTextTa,
-          optionA: q.optionATa,
-          optionB: q.optionBTa,
-          optionC: q.optionCTa,
-          optionD: q.optionDTa,
-          correctOption: q.correctOption,
-          explanationTa: q.explanationTa,
-          explanationEn: q.explanationEn,
-          language: 'TA',
-          translationGroupId,
-          subCategoryId,
-          category: QuestionCategory.CURRENT_AFFAIRS,
-          relevanceDate: yesterday,
-          sourceType: SourceType.ORIGINAL,
-          contentHash: contentHashTa,
-        },
-      });
-      const contentHashEn = computeContentHash({
-        questionText: q.questionTextEn,
-        optionA: q.optionAEn,
-        optionB: q.optionBEn,
-        optionC: q.optionCEn,
-        optionD: q.optionDEn,
-      });
-      await prisma.question.create({
-        data: {
-          questionText: q.questionTextEn,
-          optionA: q.optionAEn,
-          optionB: q.optionBEn,
-          optionC: q.optionCEn,
-          optionD: q.optionDEn,
-          correctOption: q.correctOption,
-          explanationTa: q.explanationTa,
-          explanationEn: q.explanationEn,
-          language: 'EN',
-          translationGroupId,
-          subCategoryId,
-          category: QuestionCategory.CURRENT_AFFAIRS,
-          relevanceDate: yesterday,
-          sourceType: SourceType.ORIGINAL,
-          contentHash: contentHashEn,
-        },
-      });
-      created += 2;
-    }
-
-    const inputTokens = data.usageMetadata?.promptTokenCount ?? 0;
-    const outputTokens = data.usageMetadata?.candidatesTokenCount ?? 0;
-    console.log(
-      `[daily-current-affairs] Generated ${parsed.questions.length} events (${created} question rows) for ${yesterdayLabel}. est_cost=$${((inputTokens / 1_000_000) * EST_INPUT_COST_PER_1M + (outputTokens / 1_000_000) * EST_OUTPUT_COST_PER_1M).toFixed(4)}`,
-    );
-    return { created, skippedNoResults: false };
+    const publishAt = istToUtc(quizDate, '07:00');
+    const expiresAt = new Date(publishAt.getTime() + 24 * 60 * 60 * 1000);
+    const quiz = await prisma.dailyQuiz.create({
+      data: {
+        quizDate: new Date(quizDate), quizType: DailyQuizType.DAILY_QUIZ, publishAt, expiresAt,
+        // Quiz-level state only. There is no normal Question-bank DRAFT.
+        status: DailyQuizStatus.SCHEDULED,
+        questions: { create: questions.map((q, index) => ({
+          sequenceNumber: index + 1,
+          questionTextTa: q.questionTextTa, optionATa: q.optionATa, optionBTa: q.optionBTa, optionCTa: q.optionCTa, optionDTa: q.optionDTa,
+          questionTextEn: q.questionTextEn, optionAEn: q.optionAEn, optionBEn: q.optionBEn, optionCEn: q.optionCEn, optionDEn: q.optionDEn,
+          correctOption: q.correctOption as CorrectOption, explanationTa: q.explanationTa, explanationEn: q.explanationEn,
+        })) },
+      },
+      include: { questions: true },
+    });
+    return { created: quiz.questions.length, quizId: quiz.id, quizDate, skippedNoResults: false };
   }
 }
 
