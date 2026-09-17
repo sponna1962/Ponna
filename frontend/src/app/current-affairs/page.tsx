@@ -90,7 +90,7 @@ export default function CurrentAffairsPage() {
   }, [items]);
 
   return (
-    <main style={{ minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
+    <main style={{ maxWidth: 900, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
       <BitterFontLinks />
       <header style={{ background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}`, visibility: menuOpen ? 'hidden' : 'visible' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
