@@ -11,4 +11,40 @@
 // shared pool, reused across every request.
 import { PrismaClient } from '@prisma/client';
 
-export const prisma = new PrismaClient();
+const basePrisma = new PrismaClient();
+
+// Ask Ponna's syllabus tool asks for only `sourceUrl` from the current
+// ELIGIBILITY fact. Older verified facts may point to the official TNPSC
+// document, while the actual syllabus PDF uploaded to PONNA is stored on
+// Cloudinary. For this narrow lookup, prefer the PONNA-hosted PDF when one
+// exists, while retaining the original result as a fallback.
+export const prisma = basePrisma.$extends({
+  name: 'preferPonnaSyllabusPdf',
+  query: {
+    verifiedExamFact: {
+      async findFirst({ args, query }) {
+        const where = (args as any).where;
+        const select = (args as any).select;
+        const isSyllabusPdfLookup =
+          where?.factType === 'ELIGIBILITY' &&
+          where?.sourceUrl?.not === null &&
+          typeof where?.subCategoryId === 'string' &&
+          select?.sourceUrl === true &&
+          Object.keys(select).every((key) => key === 'sourceUrl');
+
+        if (!isSyllabusPdfLookup) return query(args);
+
+        const ponnaPdf = await query({
+          ...args,
+          where: {
+            ...where,
+            sourceUrl: { contains: 'res.cloudinary.com' },
+          },
+        });
+
+        if (ponnaPdf) return ponnaPdf;
+        return query(args);
+      },
+    },
+  },
+});
