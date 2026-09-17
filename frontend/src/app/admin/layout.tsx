@@ -21,7 +21,6 @@ const navItems = [
   { href: '/admin/html-entity-cleanup', label: 'HTML Entity Cleanup' },
   { href: '/admin/daily-quiz', label: 'Daily Quiz' },
   { href: '/admin/live-exam', label: 'Live Exam' },
-  { href: '/admin/current-affairs', label: 'Current Affairs' },
   { href: '/admin/students', label: 'Students' },
   { href: '/admin/plans', label: 'Plans' },
   { href: '/admin/staff', label: 'Staff' },
