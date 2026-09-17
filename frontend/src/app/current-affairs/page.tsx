@@ -57,7 +57,7 @@ export default function CurrentAffairsPage() {
   return (
     <main style={{ minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
       <BitterFontLinks />
-      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'rgba(255,253,247,0.96)', borderBottom: `1px solid ${COLORS.line}`, backdropFilter: 'blur(8px)' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <StudentMenu />
           <div><div style={{ fontSize: 21, fontWeight: 800 }}>நடப்பு நிகழ்வுகள்</div><div style={{ fontSize: 12, color: COLORS.inkMuted }}>தினமும் படித்து தெரிந்துகொள்ளுங்கள்</div></div>
