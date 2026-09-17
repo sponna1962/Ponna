@@ -28,24 +28,44 @@ type GuestQuestion = {
 
 type Message = { role: 'USER' | 'ASSISTANT'; content: string; toolCallsUsed?: string[] };
 
-/** Parses [[OPTIONS: a | b | c]] and [[NAVIGATE: /path | Button label]] markers
- * wherever they occur in an assistant response. NAVIGATE is intentionally not
- * required to be the final text in the response, because Ask Ponna may append
- * explanatory text after a document-download link. */
+/** Parses both markers independently so an assistant response can contain
+ * a document-download button and clickable next-step options together. */
 function parseOptions(content: string): { text: string; options: string[]; navigateTo: { path: string; label: string } | null } {
-  const navMatch = content.match(/\[\[NAVIGATE:\s*(.+?)\s*\|\s*(.+?)\]\]/);
+  let text = content;
+  let options: string[] = [];
+  let navigateTo: { path: string; label: string } | null = null;
+
+  const navMatch = text.match(/\[\[NAVIGATE:\s*(.+?)\s*\|\s*(.+?)\]\]/);
   if (navMatch) {
-    const text = `${content.slice(0, navMatch.index).trim()}${content.slice((navMatch.index ?? 0) + navMatch[0].length).trim() ? `\n\n${content.slice((navMatch.index ?? 0) + navMatch[0].length).trim()}` : ''}`.trim();
-    return { text, options: [], navigateTo: { path: navMatch[1].trim(), label: navMatch[2].trim() } };
+    navigateTo = { path: navMatch[1].trim(), label: navMatch[2].trim() };
+    text = text.replace(navMatch[0], '');
   }
-  const match = content.match(/\[\[OPTIONS:\s*(.+?)\]\]/);
-  if (!match) return { text: content, options: [], navigateTo: null };
-  const text = `${content.slice(0, match.index).trim()}${content.slice((match.index ?? 0) + match[0].length).trim() ? `\n\n${content.slice((match.index ?? 0) + match[0].length).trim()}` : ''}`.trim();
+
+  const optionsMatch = text.match(/\[\[OPTIONS:\s*(.+?)\]\]/);
+  if (optionsMatch) {
+    options = optionsMatch[1].split('|').map((o) => o.trim()).filter(Boolean);
+    text = text.replace(optionsMatch[0], '');
+  }
+
   return {
-    text,
-    options: match[1].split('|').map((o) => o.trim()).filter(Boolean),
-    navigateTo: null,
+    text: text.replace(/\n{3,}/g, '\n\n').trim(),
+    options,
+    navigateTo,
   };
+}
+
+/** Cloudinary's fl_attachment delivery flag tells the CDN to return the PDF
+ * as a download attachment instead of opening it in the browser/PDF viewer. */
+function getDownloadHref(path: string): string {
+  try {
+    const url = new URL(path);
+    if (url.hostname.includes('res.cloudinary.com')) {
+      url.pathname = url.pathname.replace('/upload/', '/upload/fl_attachment/');
+    }
+    return url.toString();
+  } catch {
+    return path;
+  }
 }
 
 export default function AskPonnaPage() {
@@ -377,7 +397,8 @@ export default function AskPonnaPage() {
               {isLastAssistant && navigateTo && (
                 <div style={{ marginTop: 8 }}>
                   <a
-                    href={navigateTo.path}
+                    href={getDownloadHref(navigateTo.path)}
+                    download
                     style={{
                       display: 'inline-block',
                       padding: '10px 18px',
