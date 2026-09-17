@@ -19,9 +19,10 @@ export async function GET(request: NextRequest) {
     return new Response('Only PONNA-hosted Cloudinary PDFs are supported', { status: 400 });
   }
 
-  // Force Cloudinary to send the original PDF as an attachment. This is
-  // more reliable on Android Chrome than relying on the HTML download
-  // attribute for a cross-origin URL.
+  // Force Cloudinary to send the original asset as an attachment. The
+  // PONNA asset is currently stored as an extensionless raw file, so we
+  // validate the actual bytes below instead of trusting Cloudinary's MIME
+  // type (which can otherwise be text/plain/octet-stream on Android).
   source.pathname = source.pathname.includes('/upload/')
     ? source.pathname.replace('/upload/', '/upload/fl_attachment/')
     : source.pathname;
@@ -32,22 +33,22 @@ export async function GET(request: NextRequest) {
       return new Response('PDF is not available', { status: upstream.status });
     }
 
-    const contentType = upstream.headers.get('content-type') || 'application/pdf';
-    if (!contentType.toLowerCase().includes('pdf')) {
-      return new Response('The hosted file is not a PDF', { status: 502 });
+    const bytes = new Uint8Array(await upstream.arrayBuffer());
+    // Every normal PDF starts with the ASCII signature %PDF-. This lets us
+    // safely correct a missing/wrong upstream MIME type without accepting
+    // arbitrary text as a PDF.
+    const signature = new TextDecoder().decode(bytes.slice(0, 5));
+    if (signature !== '%PDF-') {
+      return new Response('The hosted file is not a valid PDF', { status: 502 });
     }
 
-    const originalName = decodeURIComponent(source.pathname.split('/').pop() || 'ponna-syllabus.pdf')
-      .replace(/^fl_attachment\//, '')
-      .replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filename = originalName.toLowerCase().endsWith('.pdf') ? originalName : `${originalName}.pdf`;
-
-    return new Response(await upstream.arrayBuffer(), {
+    return new Response(bytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': 'attachment; filename="ponna-syllabus.pdf"',
         'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch {
