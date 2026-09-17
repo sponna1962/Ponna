@@ -386,7 +386,7 @@ export default function IndexPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
-          <Image src="/logo.png" alt="PONNA.in" width={140} height={39} priority style={{ height: 32, width: 'auto' }} />
+          <Image src="/logo.png" alt="PONNA.in" width={190} height={53} priority style={{ height: 44, width: 'auto' }} />
         </div>
 
         {isLoggedIn ? (

@@ -128,7 +128,7 @@ export function StudentMenu() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <Image src="/logo.png" alt="PONNA.in" width={140} height={39} style={{ height: 32, width: 'auto' }} />
+              <Image src="/logo.png" alt="PONNA.in" width={190} height={53} style={{ height: 44, width: 'auto' }} />
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 4 }}>
                 <CloseIcon size={18} color={COLORS.inkMuted} />
               </button>
