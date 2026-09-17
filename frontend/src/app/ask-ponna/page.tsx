@@ -28,21 +28,21 @@ type GuestQuestion = {
 
 type Message = { role: 'USER' | 'ASSISTANT'; content: string; toolCallsUsed?: string[] };
 
-/** Parses trailing "[[OPTIONS: a | b | c]]" (tappable choices sent as the
- * next chat message) and "[[NAVIGATE: /path | Button label]]" (a tappable
- * link that navigates the browser instead, used for e.g. handing off to
- * the dedicated /diagnostic quiz-taking page) markers the system prompt
- * instructs the AI to use — returns the message with any marker
- * stripped for display, plus whichever one was present (never both). */
+/** Parses [[OPTIONS: a | b | c]] and [[NAVIGATE: /path | Button label]] markers
+ * wherever they occur in an assistant response. NAVIGATE is intentionally not
+ * required to be the final text in the response, because Ask Ponna may append
+ * explanatory text after a document-download link. */
 function parseOptions(content: string): { text: string; options: string[]; navigateTo: { path: string; label: string } | null } {
-  const navMatch = content.match(/\[\[NAVIGATE:\s*(.+?)\s*\|\s*(.+?)\]\]\s*$/);
+  const navMatch = content.match(/\[\[NAVIGATE:\s*(.+?)\s*\|\s*(.+?)\]\]/);
   if (navMatch) {
-    return { text: content.slice(0, navMatch.index).trim(), options: [], navigateTo: { path: navMatch[1].trim(), label: navMatch[2].trim() } };
+    const text = `${content.slice(0, navMatch.index).trim()}${content.slice((navMatch.index ?? 0) + navMatch[0].length).trim() ? `\n\n${content.slice((navMatch.index ?? 0) + navMatch[0].length).trim()}` : ''}`.trim();
+    return { text, options: [], navigateTo: { path: navMatch[1].trim(), label: navMatch[2].trim() } };
   }
-  const match = content.match(/\[\[OPTIONS:\s*(.+?)\]\]\s*$/);
+  const match = content.match(/\[\[OPTIONS:\s*(.+?)\]\]/);
   if (!match) return { text: content, options: [], navigateTo: null };
+  const text = `${content.slice(0, match.index).trim()}${content.slice((match.index ?? 0) + match[0].length).trim() ? `\n\n${content.slice((match.index ?? 0) + match[0].length).trim()}` : ''}`.trim();
   return {
-    text: content.slice(0, match.index).trim(),
+    text,
     options: match[1].split('|').map((o) => o.trim()).filter(Boolean),
     navigateTo: null,
   };
@@ -112,7 +112,7 @@ export default function AskPonnaPage() {
     } else if (prefill) {
       setInput(prefill);
     }
-    setAccessState('available'); // access errors surface on first send instead — keeps this simple for Phase 1
+    setAccessState('available');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkedEnabled, enabled]);
 
@@ -125,9 +125,6 @@ export default function AskPonnaPage() {
     return id;
   }
 
-  /** Sept 2026 (Item 4) — the guest-mode equivalent of send() below,
-   * driving the local language-selection -> 20-question state machine.
-   * Never calls the authenticated /ask-ponna/chat route. */
   async function sendGuest(tappedOption: string) {
     if (sending) return;
     setMessages((prev) => [...prev, { role: 'USER', content: tappedOption }]);
@@ -170,11 +167,6 @@ export default function AskPonnaPage() {
         const letterMatch = tappedOption.match(/^([A-D])\)/);
         const letter = letterMatch ? letterMatch[1] : tappedOption;
 
-        // Sept 2026 (explicit requirement) — the diagnostic never reveals
-        // correct/wrong per question; the answer is still saved and
-        // compared server-side (submitAnswer's own isCorrect
-        // computation, unchanged), just never shown here. The student
-        // sees only Question -> Select Answer -> Next Question.
         await fetch(apiUrl(`/guest-diagnostic/${guestId}/answer`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -188,13 +180,6 @@ export default function AskPonnaPage() {
         } else {
           if (guestId) await fetch(apiUrl(`/guest-diagnostic/${guestId}/complete`), { method: 'POST' });
           setGuestStage('done');
-          // Sept 2026 (explicit requirement) — no score/accuracy/correct-
-          // vs-wrong reveal here either; only signup unlocks the full
-          // report. Message itself is fully in whichever language the
-          // student chose (guestLanguage), matching the same explicit
-          // requirement the report page's own STRINGS lookup follows --
-          // a Tamil-taker gets a fully Tamil completion message, an
-          // English-taker a fully English one, never a mix.
           setMessages((prev) => [
             ...prev,
             {
@@ -226,10 +211,6 @@ export default function AskPonnaPage() {
   async function send(overrideText?: string) {
     const toSend = overrideText ?? input;
     if (!toSend.trim() || sending) return;
-    // Sept 2026 (Item 4) — guest mode branches off entirely here, before
-    // any input-clearing/message-pushing happens in this function (that
-    // work is done inside sendGuest() itself) — never touches
-    // /ask-ponna/chat or its access restriction.
     if (guestMode) {
       await sendGuest(toSend.trim());
       return;
@@ -303,10 +284,6 @@ export default function AskPonnaPage() {
             <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 18 }}>{t.askPonna.emptyState}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                // Scoped exception (explicit instruction) — these four
-                // labels are hardcoded Tamil regardless of the site-wide
-                // English-only UI language, unlike every other string on
-                // this page which still goes through t.askPonna.* as usual.
                 { key: 'learnExam', label: '🎯 தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்', prompt: '🎯 தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்' },
                 { key: 'howToPrepare', label: '📚 எப்படி தயாராக வேண்டும்?', prompt: '📚 எப்படி தயாராக வேண்டும்?' },
                 { key: 'askAnything', label: '💬 உங்கள் கேள்வியைக் கேளுங்கள்', prompt: '💬 உங்கள் கேள்வியைக் கேளுங்கள்' },
@@ -360,12 +337,6 @@ export default function AskPonnaPage() {
                   {text}
                 </div>
               </div>
-              {/* Trust badge (finalized requirement — world-class polish):
-                  shows when this reply was actually grounded in PONNA's
-                  verified exam data, not just the AI's own knowledge —
-                  a visible signal, not just a design principle in code
-                  comments. Derived from real tool-call usage, never
-                  something the AI has to remember to say itself. */}
               {m.role === 'ASSISTANT' &&
                 m.toolCallsUsed?.some((t) =>
                   ['get_exam_info', 'get_exam_syllabus', 'get_exam_full_info', 'get_current_affairs', 'get_previous_cutoffs', 'get_ponna_faq'].includes(t),
@@ -376,18 +347,11 @@ export default function AskPonnaPage() {
                   </span>
                 </div>
               )}
-              {/* Tier 3 (live search) indicator -- small, distinct from the
-                  Tier 1 verified badge above, per Spec v6 Refinement 3:
-                  clearly distinguished but never a large warning block. */}
               {m.role === 'ASSISTANT' && m.toolCallsUsed?.includes('search_current_info') && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 4 }}>
                   <span style={{ fontSize: 10.5, color: '#B4744A', fontWeight: 600 }}>🔍 {t.askPonna.liveSearchBadge}</span>
                 </div>
               )}
-              {/* Tappable quick-reply options — only offered while this is
-                  still the latest assistant message, so tapping an older
-                  message's options never re-derails an already-moved-on
-                  conversation. */}
               {isLastAssistant && options.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                   {options.map((opt) => (
