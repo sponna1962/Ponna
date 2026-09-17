@@ -1,24 +1,5 @@
 'use client';
 
-// Shared student navigation — a slide-out menu (☰) rather than a bottom tab
-// bar, per the agreed design. Used on Home, Dashboard, and Profile pages.
-//
-// Sept 2026 finalized navigation structure (BINDING): only PREPARATION and
-// SUPPORT sections remain in the sidebar — ACCOUNT was removed entirely.
-// "Pass" (student-facing rename of the existing Plan functionality — same
-// page, same data, label only) moved from the old ACCOUNT section into
-// PREPARATION as its final item. Profile / My Devices / Log out moved OUT
-// of this sidebar to the existing top-right avatar menu on the Home page
-// ('/') — not duplicated here.
-//
-// Live Exam and Daily Quiz/Challenge are both fully real, built features
-// as of this pass (not nav-only placeholders) — link straight to them.
-//
-// Custom line icons in the gold/ink palette instead of emoji (which
-// render inconsistently across phones and read as unpolished for an
-// exam-prep brand), Bitter serif for the PONNA.in wordmark, and the
-// shared paper/ink/gold color system.
-
 import { useState } from 'react';
 import Image from 'next/image';
 import { useLanguage } from '../lib/language-context';
@@ -45,10 +26,6 @@ type NavItem = { href: string; label: string; Icon: (p: { size?: number; color?:
 export function StudentMenu() {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
-  // Re-checked fresh every time the menu opens (not once on mount) — this
-  // component stays mounted across a login that happens without a full
-  // page reload (the unified "/" page just flips its own React state), so
-  // a mount-only check would keep showing "logged out" forever afterward.
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   function openMenu() {
@@ -56,15 +33,12 @@ export function StudentMenu() {
     setOpen(true);
   }
 
-  // Logged-out visitors only see PUBLIC items (Home + Support) — PREPARATION
-  // requires a session (it would otherwise just bounce back here on a 401).
-  // Logging in itself happens from the page's own header "Login" button;
-  // logging out happens from the Home page's avatar menu.
   const sections: { heading: string; items: NavItem[] }[] = isLoggedIn
     ? [
         {
           heading: t.menu.sectionPreparation,
           items: [
+            { href: '/current-affairs', label: 'நடப்பு நிகழ்வுகள்', Icon: StudyNotesIcon },
             { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
             { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
             { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
@@ -89,6 +63,7 @@ export function StudentMenu() {
         {
           heading: t.menu.sectionSupport,
           items: [
+            { href: '/current-affairs', label: 'நடப்பு நிகழ்வுகள்', Icon: StudyNotesIcon },
             { href: '/about', label: t.menu.about, Icon: AboutIcon },
             { href: '/help', label: t.menu.help, Icon: HelpIcon },
           ],
@@ -98,59 +73,27 @@ export function StudentMenu() {
   return (
     <>
       <BitterFontLinks />
-      <button
-        onClick={openMenu}
-        aria-label="Menu"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, display: 'flex' }}
-      >
+      <button onClick={openMenu} aria-label="Menu" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, display: 'flex' }}>
         <MenuIcon size={22} color={COLORS.ink} />
       </button>
 
       {open && (
-        <div
-          onClick={() => setOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(26,34,56,0.45)', zIndex: 50 }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              bottom: 0,
-              width: 258,
-              background: COLORS.paper,
-              boxShadow: '2px 0 16px rgba(0,0,0,0.15)',
-              padding: '20px 18px',
-              display: 'flex',
-              flexDirection: 'column',
-              overflowY: 'auto',
-            }}
-          >
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,34,56,0.45)', zIndex: 50 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 258, background: COLORS.paper, boxShadow: '2px 0 16px rgba(0,0,0,0.15)', padding: '20px 18px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
               <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} style={{ height: 42, width: 'auto' }} />
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 4 }}>
                 <CloseIcon size={18} color={COLORS.inkMuted} />
               </button>
             </div>
-
-            {/* Home — always its own standalone top-level item, never under a heading. */}
-            <a
-              href="/"
-              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 15, borderRadius: 8, fontWeight: 600 }}
-            >
+            <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 15, borderRadius: 8, fontWeight: 600 }}>
               <HomeIcon size={19} color={COLORS.gold} /> {t.menu.home}
             </a>
-
             {sections.map((section) => (
               <div key={section.heading} style={{ marginTop: 14 }}>
                 <p style={{ fontSize: 10.5, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, margin: '0 6px 4px' }}>{section.heading}</p>
                 {section.items.map((item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 14.5, borderRadius: 8 }}
-                  >
+                  <a key={item.href} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 14.5, borderRadius: 8 }}>
                     <item.Icon size={18} color={COLORS.gold} /> {item.label}
                   </a>
                 ))}
