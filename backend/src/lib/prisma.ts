@@ -16,16 +16,13 @@ const basePrisma = new PrismaClient();
 function syllabusDownloadUrl(sourceUrl: string): string {
   try {
     const url = new URL(sourceUrl);
-    if (url.hostname === 'res.cloudinary.com' && url.pathname.includes('/upload/')) {
-      // The stored raw Cloudinary asset has no .pdf suffix. Supplying an
-      // attachment filename makes Android/Chrome download an actual .pdf
-      // instead of a nameless raw asset.
-      url.pathname = url.pathname.replace(
-        '/upload/',
-        '/upload/fl_attachment:ponna-syllabus.pdf/',
-      );
+    if (url.hostname === 'res.cloudinary.com') {
+      // Keep the Cloudinary asset private to the implementation. Ask Ponna
+      // exposes a same-origin download endpoint that returns a real PDF with
+      // Content-Disposition: attachment, which is reliable on Android Chrome.
+      return `/api/ask-ponna/syllabus-download?url=${encodeURIComponent(url.toString())}`;
     }
-    return url.toString();
+    return sourceUrl;
   } catch {
     return sourceUrl;
   }
