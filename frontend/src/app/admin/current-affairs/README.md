@@ -1,0 +1,1 @@
+Current Affairs admin entry has moved to Daily Quiz -> Current Affairs. This URL redirects there.
