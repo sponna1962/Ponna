@@ -1950,6 +1950,38 @@ app.post('/admin/diagnostics/setup-group-iv-official-subjects', requireStaffAuth
 // official 15 (the same class of mess already found and fixed in the
 // separate flat Subject model earlier this session -- SyllabusSubject
 // was never specifically checked for the same problem).
+// GET /admin/diagnostics/group-iv-syllabus-topics — Sept 2026, ONE-TIME
+// diagnostic (read-only). Shows the actual topic names inside each
+// SyllabusSubject row for Group IV, so a rename/split/merge plan against
+// the official Syllabus PDF (Code 496) can be made from real data instead
+// of guessing from subject names alone.
+app.get('/admin/diagnostics/group-iv-syllabus-topics', requireStaffAuth, async (_req, res) => {
+  try {
+    const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
+    if (!groupIv) {
+      res.status(404).json({ error: 'Group - IV Sub-Category not found' });
+      return;
+    }
+    const subjects = await prisma.syllabusSubject.findMany({
+      where: { subCategoryId: groupIv.id },
+      include: { topics: { orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] } },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+    res.json({
+      groupIvSubCategoryId: groupIv.id,
+      subjects: subjects.map((s) => ({
+        id: s.id,
+        name: s.name,
+        nameTa: s.nameTa,
+        topics: s.topics.map((t) => ({ id: t.id, name: t.name, nameTa: t.nameTa })),
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to run diagnostic' });
+  }
+});
+
 app.get('/admin/diagnostics/group-iv-syllabus-subjects', requireStaffAuth, async (_req, res) => {
   try {
     const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });

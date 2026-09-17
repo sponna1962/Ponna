@@ -32,6 +32,25 @@ export default function DiagnosticsPage() {
     topicsSkippedAsDuplicate?: number;
     preferencesRepointed?: number;
   } | null>(null);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [topicsResult, setTopicsResult] = useState<{
+    subjects: { id: string; name: string; nameTa: string | null; topics: { id: string; name: string; nameTa: string | null }[] }[];
+  } | null>(null);
+
+  async function runTopicsCheck() {
+    setTopicsLoading(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/group-iv-syllabus-topics');
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to run check');
+        return;
+      }
+      setTopicsResult(body);
+    } finally {
+      setTopicsLoading(false);
+    }
+  }
 
   async function runSyllabusSubjectsCheck() {
     setSyllabusSubjectsLoading(true);
@@ -189,6 +208,34 @@ export default function DiagnosticsPage() {
       )}
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
+
+      {/* Sept 2026 — explicit request: see the actual topic names inside
+          each SyllabusSubject row, so an English+Tamil correction against
+          the official Syllabus PDF (Code 496) can be planned from real
+          data. Read-only. */}
+      <button
+        onClick={runTopicsCheck}
+        disabled={topicsLoading}
+        style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20, marginLeft: 8 }}
+      >
+        {topicsLoading ? 'Running…' : 'Show Topics Inside Each Subject'}
+      </button>
+      {topicsResult && (
+        <div style={{ marginBottom: 20 }}>
+          {topicsResult.subjects.map((s) => (
+            <div key={s.id} style={{ marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
+              <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                {s.name} {s.nameTa ? `(${s.nameTa})` : ''} — {s.topics.length} topic(s)
+              </p>
+              <ul style={{ fontSize: 12, color: '#475569', margin: 0, paddingLeft: 20 }}>
+                {s.topics.map((t) => (
+                  <li key={t.id}>{t.name}{t.nameTa ? ` — ${t.nameTa}` : ''}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
 
       {results && (
         <>
