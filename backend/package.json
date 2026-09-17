@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "ts-node-dev --require ./src/runtime-routes.ts --respawn src/server.ts",
     "build": "tsc",
-    "prebuild": "node -e \"const fs=require('fs');const p='src/server.ts';const s=fs.readFileSync(p,'utf8');const bad='const adaptiveMockService = new AdaptiveMockService();';if(s.includes(bad)){fs.writeFileSync(p,s.replace(bad,'// Use the shared adaptive mock service imported above.'));}\"",
     "prestart": "prisma db push --accept-data-loss --skip-generate && ts-node prisma/seed.ts",
     "start": "node -r ./dist/runtime-routes.js dist/server.js",
     "postinstall": "prisma generate",
