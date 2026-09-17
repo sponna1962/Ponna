@@ -23,6 +23,7 @@ function generateOptionOrder(): string {
   return letters.join('');
 }
 
+export class SubjectPreferenceService {
   /** Every TNPSC exam currently visible to students with at least one
    * verified Subject seeded. */
   async listAvailableExams() {
@@ -101,23 +102,11 @@ function generateOptionOrder(): string {
     return saved;
   }
 
-  /**
-   * Rebuild only the unanswered part of the student's active session.
-   * Answered rows are never deleted or renumbered.
-   */
-  private async reallocateUnansweredTail(
-    userId: string,
-    subCategoryId: string,
-    subjectIds: string[],
-    topicIds: string[],
-  ) {
+  /** Rebuild only the unanswered part of the student's active session. */
+  private async reallocateUnansweredTail(userId: string, subCategoryId: string, subjectIds: string[], topicIds: string[]) {
     const session = await prisma.quizSession.findFirst({
       where: { userId, status: 'IN_PROGRESS' },
-      include: {
-        questions: {
-          orderBy: { sequenceNumber: 'asc' },
-        },
-      },
+      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
     });
 
     if (!session || session.questions.length === 0) return;
@@ -131,10 +120,6 @@ function generateOptionOrder(): string {
 
     const taxonomyFilter = practicePreferenceService.resolveTaxonomyFilter(practicePreference.selections as any);
     const currentSubCategoryId = practicePreferenceService.extractSingleSubCategoryId(practicePreference.selections as any);
-
-    // The Subject Preference belongs to this exact exam. If the student's
-    // current Practice Setup is no longer pointing at that exam, leave the
-    // active session untouched rather than mixing exam scopes.
     if (currentSubCategoryId !== subCategoryId) return;
 
     const questionIds = await allocation.buildSessionQuestionIds(
@@ -146,23 +131,14 @@ function generateOptionOrder(): string {
       { subjectIds, topicIds },
     );
 
-    // If the new preference has fewer eligible questions than the remaining
-    // tail, keep the answered portion intact and shrink the session to the
-    // number of questions that can actually be delivered. Under normal data
-    // conditions this will still be the original 75.
     const targetTotal = answeredCount + questionIds.length;
     if (questionIds.length === 0) {
       throw new SubjectPreferenceError('No unanswered questions are available for the selected Subject/Topic right now.');
     }
 
     await prisma.$transaction([
-      prisma.quizSessionQuestion.deleteMany({
-        where: { sessionId: session.id, answered: false },
-      }),
-      prisma.quizSession.update({
-        where: { id: session.id },
-        data: { totalQuestions: targetTotal, lastActivityAt: new Date() },
-      }),
+      prisma.quizSessionQuestion.deleteMany({ where: { sessionId: session.id, answered: false } }),
+      prisma.quizSession.update({ where: { id: session.id }, data: { totalQuestions: targetTotal, lastActivityAt: new Date() } }),
       prisma.quizSessionQuestion.createMany({
         data: questionIds.map((questionId, index) => ({
           sessionId: session.id,
@@ -176,8 +152,6 @@ function generateOptionOrder(): string {
 
   async clearPreference(userId: string, subCategoryId: string) {
     const deleted = await prisma.studentSubjectTopicPreference.deleteMany({ where: { userId, subCategoryId } });
-    if (deleted.count > 0) {
-      await this.reallocateUnansweredTail(userId, subCategoryId, [], []);
-    }
+    if (deleted.count > 0) await this.reallocateUnansweredTail(userId, subCategoryId, [], []);
   }
 }
