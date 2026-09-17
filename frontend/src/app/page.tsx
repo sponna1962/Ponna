@@ -27,6 +27,7 @@
 // linking flow, not a same-email guess).
 
 import { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 import { RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, GoogleAuthProvider, ConfirmationResult } from 'firebase/auth';
 import { firebaseAuth } from '../lib/firebase';
 import { useLanguage } from '../lib/language-context';
@@ -385,7 +386,7 @@ export default function IndexPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
-          <strong style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 700, color: COLORS.ink }}>PONNA.in</strong>
+          <Image src="/logo.png" alt="PONNA.in" width={140} height={39} priority style={{ height: 32, width: 'auto' }} />
         </div>
 
         {isLoggedIn ? (
