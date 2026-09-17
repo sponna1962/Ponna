@@ -56,9 +56,8 @@ function cleanJson(raw: string): string {
 }
 
 // Exact-text duplicate guard. This is deliberately deterministic and runs
-// AFTER AI generation as a second hard gate. It prevents a question created
-// today from being emitted again tomorrow even if the model ignores the
-// prompt. Whitespace/case/punctuation-only changes are treated as duplicates.
+// AFTER AI generation as a hard gate. Whitespace/case/punctuation-only
+// changes are treated as duplicates.
 function normalizeQuestion(text: string): string {
   return (text ?? '')
     .normalize('NFKC')
@@ -69,8 +68,52 @@ function normalizeQuestion(text: string): string {
     .trim();
 }
 
-function brainPrompt(): string {
-  return `Create ${QUESTIONS_PER_DAY} original TNPSC-style Brain Challenge multiple-choice questions for a daily practice quiz. These must test reasoning and problem-solving, NOT current affairs or news. Mix logical reasoning, number patterns, arithmetic reasoning, analytical thinking, ordering/arrangement, age/time/work/clock reasoning, data interpretation, and observation-based reasoning. Avoid trivia, memorisation-only questions, politics/news facts, and ambiguous wordplay.\n\nEvery question must be solvable from the information stated in the question itself. Use exactly four distinct options and exactly one correct answer. Independently solve every problem before returning it. Make distractors plausible near-misses, not random answers. Vary the underlying concepts; do not repeat the same puzzle with different names or numbers. Return both Tamil and English versions with the same meaning, plus a concise explanation in both languages.\n\nReturn ONLY valid JSON in this exact shape:\n{\"questions\":[{\"questionTextTa\":\"...\",\"optionATa\":\"...\",\"optionBTa\":\"...\",\"optionCTa\":\"...\",\"optionDTa\":\"...\",\"questionTextEn\":\"...\",\"optionAEn\":\"...\",\"optionBEn\":\"...\",\"optionCEn\":\"...\",\"optionDEn\":\"...\",\"correctOption\":\"A\",\"explanationTa\":\"...\",\"explanationEn\":\"...\"}]}\n\nQuality rules: exactly ${QUESTIONS_PER_DAY} questions; four options A-D; exactly one correct option; no duplicate or near-duplicate question concepts; no current-affairs facts; no missing conditions; no unsupported assumptions; arithmetic must be checked independently; explanations must agree with the displayed answer.`;
+function brainPrompt(previousQuestions: string[]): string {
+  const previousText = previousQuestions.length
+    ? previousQuestions.slice(0, 1000).join('\n')
+    : '(none)';
+
+  return `Create exactly ${QUESTIONS_PER_DAY} original TNPSC-style Brain Challenge multiple-choice questions for today's daily challenge.
+
+PURPOSE: This is a reasoning challenge, NOT a current-affairs quiz and NOT a normal memory/trivia quiz. The student should have to think, calculate, compare, infer, arrange, or detect a pattern.
+
+DIFFICULTY: Use ONLY Medium and Hard questions. Target 5 Medium + 5 Hard. Do not generate Easy questions.
+
+MIX THE QUESTION TYPES across the 10 questions. Use a balanced mixture of:
+- logical reasoning
+- number/pattern reasoning
+- arithmetic reasoning
+- ordering and arrangement
+- age/time/work/clock reasoning
+- data interpretation
+- analytical deduction
+- observation/comparison
+- statement/conclusion or condition-based reasoning
+- short puzzle/problem-solving
+Do not use the same category repeatedly when another valid category can be used.
+
+QUALITY RULES:
+1. Every question must be solvable from the information stated in that question.
+2. Exactly four distinct options A-D and exactly one correct answer.
+3. Distractors must be plausible and based on realistic mistakes, not random numbers.
+4. Arithmetic must be independently checked before returning the question.
+5. Avoid ambiguous wording, trick wording, hidden assumptions, culturally dependent clues, and questions with two defensible answers.
+6. Do not use current affairs, politics, recent news, or facts that require outside knowledge.
+7. Do not repeat the same puzzle by changing names, numbers, dates, or wording.
+8. Each question must test a meaningfully different reasoning skill or underlying structure.
+9. Tamil and English versions must have exactly the same logical meaning and answer.
+10. Give a concise explanation showing why the correct answer is correct.
+
+NO-REPEAT RULE — CRITICAL:
+A question created on a previous day must NOT be generated again today. Do not repeat the same wording, translated equivalent, near-identical puzzle, same underlying logic with different numbers/names, or the same question concept with superficial changes. Choose genuinely different puzzles.
+
+PREVIOUS BRAIN CHALLENGE QUESTIONS:
+${previousText}
+
+Return ONLY valid JSON in this exact shape:
+{"questions":[{"questionTextTa":"...","optionATa":"...","optionBTa":"...","optionCTa":"...","optionDTa":"...","questionTextEn":"...","optionAEn":"...","optionBEn":"...","optionCEn":"...","optionDEn":"...","correctOption":"A","explanationTa":"...","explanationEn":"..."}]}
+
+Final checks before returning: exactly 10 questions; approximately 5 Medium and 5 Hard; four options each; one correct answer each; no duplicate or near-duplicate concepts; no previous question reused; no current-affairs facts; all calculations verified.`;
 }
 
 export class DailyCurrentAffairsService {
@@ -174,8 +217,6 @@ export class DailyCurrentAffairsService {
     const verification = await this.verifyCurrentEvents(candidates, start, end);
     const eligible = verification.verified.slice(0, QUESTIONS_PER_DAY);
 
-    // Never pad with old news. If fewer than 10 fresh, verified events exist,
-    // nothing is created. This is the hard guard against stale Current Affairs.
     if (eligible.length < QUESTIONS_PER_DAY) {
       return { created: 0, quizId: null, quizDate, skippedNoResults: true, verification: { step1Discovered: candidates.length, step2Verified: verification.verified.length, rejectedOld: verification.rejectedOld, rejectedUnverified: verification.rejectedUnverified, reason: `Only ${eligible.length} eligible events in the last ${CURRENT_AFFAIRS_WINDOW_HOURS} hours; 10 required. Nothing created.` } };
     }
@@ -184,10 +225,6 @@ export class DailyCurrentAffairsService {
     const generatedQuestions = await this.generateCurrentAffairsQuestions(eligible, previousQuestions);
     const questions = this.removeExactPreviousDuplicates(generatedQuestions, previousQuestions);
 
-    // Hard duplicate gate: if AI repeated any previous question, or produced
-    // duplicate questions in this batch, the duplicate is removed. We never
-    // fill the missing slot with an old question. The quiz is created only
-    // when a full set of 10 genuinely new questions remains.
     if (questions.length < QUESTIONS_PER_DAY) {
       return { created: 0, quizId: null, quizDate, skippedNoResults: true, verification: { step1Discovered: candidates.length, step2Verified: verification.verified.length, eligibleUsed: eligible.length, generated: generatedQuestions.length, acceptedAfterNoRepeat: questions.length, rejectedOld: verification.rejectedOld, rejectedUnverified: verification.rejectedUnverified, reason: `Only ${questions.length} genuinely new questions remained after the no-repeat check; 10 required. Nothing created.` } };
     }
@@ -200,15 +237,66 @@ export class DailyCurrentAffairsService {
     const quizDate = todayIstDateStr();
     const existing = await prisma.dailyQuiz.findUnique({ where: { quizDate_quizType: { quizDate: new Date(quizDate), quizType: DailyQuizType.BRAIN_CHALLENGE } } });
     if (existing) return { created: 0, quizId: existing.id, quizDate, skippedNoResults: false };
-    const questions = await this.generateQuestionsForBrainChallenge();
-    if (questions.length < QUESTIONS_PER_DAY) throw new Error(`AI generated only ${questions.length} Brain Challenge questions; 10 are required, so nothing was created.`);
+
+    // Brain Challenge has its own permanent-in-practice history source:
+    // previous Brain Challenge quiz questions. The prompt handles semantic
+    // similarity while this deterministic gate catches exact repeats.
+    const previousQuestions = await this.previousBrainChallengeQuestions();
+    const generatedQuestions = await this.generateQuestionsForBrainChallenge(previousQuestions);
+    const questions = this.removeExactPreviousDuplicates(generatedQuestions, previousQuestions);
+
+    // Never pad with an old question. If the no-repeat gate leaves fewer than
+    // 10 genuinely new questions, today's Brain Challenge is not created.
+    if (questions.length < QUESTIONS_PER_DAY) {
+      throw new Error(`Only ${questions.length} genuinely new Brain Challenge questions remained after the no-repeat check; 10 are required, so nothing was created.`);
+    }
+
     const quiz = await this.createDailyQuiz(quizDate, DailyQuizType.BRAIN_CHALLENGE, questions);
     return { created: quiz.questions.length, quizId: quiz.id, quizDate, skippedNoResults: false };
   }
 
-  private async generateQuestionsForBrainChallenge(): Promise<GeneratedQuestion[]> {
-    const parsed = await this.gemini(brainPrompt(), false, 10000) as { questions?: GeneratedQuestion[] };
-    return (parsed.questions ?? []).slice(0, QUESTIONS_PER_DAY);
+  private async previousBrainChallengeQuestions(): Promise<string[]> {
+    const rows = await prisma.dailyQuizQuestion.findMany({
+      where: { dailyQuiz: { quizType: DailyQuizType.BRAIN_CHALLENGE } },
+      select: { questionTextTa: true, questionTextEn: true },
+      orderBy: { dailyQuiz: { quizDate: 'desc' } },
+      take: 1000,
+    });
+    return rows.flatMap((r) => [r.questionTextTa, r.questionTextEn]).filter(Boolean);
+  }
+
+  private validateBrainQuestionShape(questions: GeneratedQuestion[]): GeneratedQuestion[] {
+    return questions.filter((q) => {
+      const taOptions = [q.optionATa, q.optionBTa, q.optionCTa, q.optionDTa].map(normalizeQuestion);
+      const enOptions = [q.optionAEn, q.optionBEn, q.optionCEn, q.optionDEn].map(normalizeQuestion);
+      const taDistinct = new Set(taOptions).size === 4 && taOptions.every(Boolean);
+      const enDistinct = new Set(enOptions).size === 4 && enOptions.every(Boolean);
+      return !!q.questionTextTa && !!q.questionTextEn && taDistinct && enDistinct &&
+        ['A', 'B', 'C', 'D'].includes(q.correctOption) && !!q.explanationTa && !!q.explanationEn;
+    });
+  }
+
+  private async reviewBrainChallengeQuestions(questions: GeneratedQuestion[]): Promise<GeneratedQuestion[]> {
+    const compact = questions.map((q, i) => ({
+      n: i + 1, ta: q.questionTextTa,
+      optionsTa: [q.optionATa, q.optionBTa, q.optionCTa, q.optionDTa],
+      en: q.questionTextEn,
+      optionsEn: [q.optionAEn, q.optionBEn, q.optionCEn, q.optionDEn],
+      correct: q.correctOption,
+      explanationTa: q.explanationTa,
+      explanationEn: q.explanationEn,
+    }));
+    const prompt = `BRAIN CHALLENGE QUALITY REVIEW. Review these proposed TNPSC-style reasoning questions independently. Reject any question if the correct answer is wrong, more than one option could be correct, required information is missing, the puzzle is ambiguous, the Tamil and English versions differ in meaning, the explanation conflicts with the answer, or it is trivia/current-affairs rather than reasoning. Also reject near-duplicates that test the same underlying puzzle structure as another item in this batch. Accept only questions that are genuinely solvable and suitable for Medium or Hard difficulty. Return ONLY JSON: {\"acceptedNumbers\":[1,2,...]}.\n\nQUESTIONS:\n${JSON.stringify(compact)}`;
+    const parsed = await this.gemini(prompt, false, 5000) as { acceptedNumbers?: number[] };
+    const accepted = new Set((parsed.acceptedNumbers ?? []).filter((n) => Number.isInteger(n)));
+    return questions.filter((_, i) => accepted.has(i + 1));
+  }
+
+  private async generateQuestionsForBrainChallenge(previousQuestions: string[]): Promise<GeneratedQuestion[]> {
+    const parsed = await this.gemini(brainPrompt(previousQuestions), false, 12000) as { questions?: GeneratedQuestion[] };
+    const shaped = this.validateBrainQuestionShape((parsed.questions ?? []).slice(0, QUESTIONS_PER_DAY));
+    if (shaped.length < QUESTIONS_PER_DAY) return shaped;
+    return this.reviewBrainChallengeQuestions(shaped);
   }
 
   // Backward-compatible entry point for the existing protected admin route.
