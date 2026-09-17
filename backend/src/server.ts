@@ -1973,6 +1973,91 @@ app.get('/admin/diagnostics/group-iv-syllabus-subjects', requireStaffAuth, async
   }
 });
 
+// POST /admin/diagnostics/merge-group-iv-aptitude-duplicate — Sept 2026,
+// ONE-TIME fix (explicit admin request). "Aptitude & Mental Ability" and
+// "Aptitude and Mental Ability" in SyllabusSubject are the same official
+// unit, split into two rows by an "&" vs "and" spelling difference. Merges
+// the smaller row's topics + Tamil name into the richer row, repoints any
+// StudentSubjectTopicPreference.subjectIds referencing the duplicate (topic
+// ids are unaffected since topics are moved, not deleted), then deletes the
+// now-empty duplicate. Idempotent — safe to call more than once (no-ops if
+// the duplicate is already gone).
+app.post('/admin/diagnostics/merge-group-iv-aptitude-duplicate', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try {
+    const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
+    if (!groupIv) {
+      res.status(404).json({ error: 'Group - IV Sub-Category not found' });
+      return;
+    }
+    const canonical = await prisma.syllabusSubject.findFirst({
+      where: { subCategoryId: groupIv.id, name: 'Aptitude & Mental Ability' },
+      include: { topics: true },
+    });
+    const duplicate = await prisma.syllabusSubject.findFirst({
+      where: { subCategoryId: groupIv.id, name: 'Aptitude and Mental Ability' },
+      include: { topics: true },
+    });
+    if (!canonical) {
+      res.status(404).json({ error: '"Aptitude & Mental Ability" row not found' });
+      return;
+    }
+    if (!duplicate) {
+      res.json({ alreadyMerged: true, canonicalId: canonical.id });
+      return;
+    }
+
+    const existingTopicNames = new Set(canonical.topics.map((t) => t.name));
+    const result = await prisma.$transaction(async (tx) => {
+      let topicsMoved = 0;
+      let topicsSkippedAsDuplicate = 0;
+      for (const topic of duplicate.topics) {
+        if (existingTopicNames.has(topic.name)) {
+          // Same topic name already exists under canonical — drop the
+          // duplicate topic row rather than violate @@unique([subjectId, name]).
+          await tx.syllabusTopic.delete({ where: { id: topic.id } });
+          topicsSkippedAsDuplicate += 1;
+        } else {
+          await tx.syllabusTopic.update({ where: { id: topic.id }, data: { subjectId: canonical.id } });
+          topicsMoved += 1;
+        }
+      }
+
+      if (!canonical.nameTa && duplicate.nameTa) {
+        await tx.syllabusSubject.update({ where: { id: canonical.id }, data: { nameTa: duplicate.nameTa } });
+      }
+
+      // Repoint any student preference that selected the duplicate subject id.
+      const affectedPrefs = await tx.studentSubjectTopicPreference.findMany({
+        where: { subCategoryId: groupIv.id, subjectIds: { has: duplicate.id } },
+      });
+      for (const pref of affectedPrefs) {
+        const updatedIds = Array.from(new Set(pref.subjectIds.map((id) => (id === duplicate.id ? canonical.id : id))));
+        await tx.studentSubjectTopicPreference.update({ where: { id: pref.id }, data: { subjectIds: updatedIds } });
+      }
+
+      // Re-point any StudyNote left on the duplicate (rare — dedupe by language).
+      const duplicateNotes = await tx.studyNote.findMany({ where: { subjectId: duplicate.id } });
+      for (const note of duplicateNotes) {
+        const existingNote = await tx.studyNote.findFirst({ where: { subjectId: canonical.id, language: note.language } });
+        if (existingNote) {
+          await tx.studyNote.delete({ where: { id: note.id } });
+        } else {
+          await tx.studyNote.update({ where: { id: note.id }, data: { subjectId: canonical.id } });
+        }
+      }
+
+      await tx.syllabusSubject.delete({ where: { id: duplicate.id } });
+
+      return { topicsMoved, topicsSkippedAsDuplicate, preferencesRepointed: affectedPrefs.length, studyNotesHandled: duplicateNotes.length };
+    });
+
+    res.json({ merged: true, canonicalId: canonical.id, deletedDuplicateId: duplicate.id, ...result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to merge duplicate Aptitude subject' });
+  }
+});
+
 app.get('/admin/diagnostics/group-iv-subject-mismatch', requireStaffAuth, async (_req, res) => {
   try {
     const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });

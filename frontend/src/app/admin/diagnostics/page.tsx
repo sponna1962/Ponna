@@ -24,6 +24,14 @@ export default function DiagnosticsPage() {
     totalSubjects: number;
     subjects: { id: string; name: string; nameTa: string | null; topicCount: number }[];
   } | null>(null);
+  const [mergingAptitude, setMergingAptitude] = useState(false);
+  const [mergeResult, setMergeResult] = useState<{
+    alreadyMerged?: boolean;
+    merged?: boolean;
+    topicsMoved?: number;
+    topicsSkippedAsDuplicate?: number;
+    preferencesRepointed?: number;
+  } | null>(null);
 
   async function runSyllabusSubjectsCheck() {
     setSyllabusSubjectsLoading(true);
@@ -37,6 +45,23 @@ export default function DiagnosticsPage() {
       setSyllabusSubjectsResult(body);
     } finally {
       setSyllabusSubjectsLoading(false);
+    }
+  }
+
+  async function mergeAptitudeDuplicate() {
+    setMergingAptitude(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/merge-group-iv-aptitude-duplicate', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to merge duplicate');
+        return;
+      }
+      setMergeResult(body);
+      // Refresh the table below so the merged result is visible immediately.
+      await runSyllabusSubjectsCheck();
+    } finally {
+      setMergingAptitude(false);
     }
   }
 
@@ -140,6 +165,27 @@ export default function DiagnosticsPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Sept 2026 — explicit request: "Aptitude & Mental Ability" and
+          "Aptitude and Mental Ability" in SyllabusSubject are the same
+          official unit, split by an "&" vs "and" spelling difference.
+          Merges topics + Tamil name into one row, repoints any student
+          preference pointing at the duplicate, then deletes it.
+          Idempotent — safe to click more than once. */}
+      <button
+        onClick={mergeAptitudeDuplicate}
+        disabled={mergingAptitude}
+        style={{ padding: '8px 16px', borderRadius: 6, background: '#b91c1c', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20, marginLeft: 8 }}
+      >
+        {mergingAptitude ? 'Merging…' : 'Merge Duplicate Aptitude Subject'}
+      </button>
+      {mergeResult && (
+        <p style={{ fontSize: 12, color: '#166534', marginBottom: 12 }}>
+          {mergeResult.alreadyMerged
+            ? 'Already merged — no duplicate found.'
+            : `Merged: ${mergeResult.topicsMoved} topic(s) moved, ${mergeResult.topicsSkippedAsDuplicate} dropped as exact duplicates, ${mergeResult.preferencesRepointed} student preference(s) repointed.`}
+        </p>
       )}
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
