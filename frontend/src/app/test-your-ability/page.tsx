@@ -13,6 +13,7 @@
 // is locked/approved content -- unchanged from here on without a
 // further explicit request.
 
+import Image from 'next/image';
 import { DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
 const INK = '#1A2238';
@@ -56,10 +57,7 @@ export default function TestYourAbilityPage() {
       <header style={{ borderBottom: '1px solid #E7E5DD', padding: '18px 24px' }}>
         <div style={{ maxWidth: 460, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <p style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 800, margin: 0, color: INK }}>
-              PONNA<span style={{ color: GOLD }}>.in</span>
-            </p>
-            <p style={{ fontSize: 12, color: MUTED, margin: '2px 0 0' }}>அரசுப் போட்டித் தேர்வுக்கான பயிற்சி</p>
+            <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} style={{ height: 40, width: 'auto' }} />
           </div>
         </div>
       </header>
@@ -134,7 +132,9 @@ export default function TestYourAbilityPage() {
       </div>
 
       <footer style={{ borderTop: '1px solid #E7E5DD', padding: '20px 24px', textAlign: 'center' }}>
-        <p style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: 700, color: INK, margin: '0 0 4px' }}>PONNA.in</p>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+          <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} style={{ height: 32, width: 'auto' }} />
+        </div>
         <p style={{ fontSize: 12.5, color: MUTED, margin: 0 }}>உங்கள் இலக்கு &nbsp;|&nbsp; எங்கள் துணை</p>
       </footer>
     </main>

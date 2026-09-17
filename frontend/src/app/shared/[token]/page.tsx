@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import { apiUrl } from '../../../lib/api-config';
 import { useLanguage } from '../../../lib/language-context';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../../lib/brand-theme';
@@ -38,7 +39,9 @@ export default function SharedProgressPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
-      <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: '20px 0 4px', color: COLORS.ink, textAlign: 'center' }}>PONNA</h1>
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0 4px' }}>
+        <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} style={{ height: 45, width: 'auto' }} />
+      </div>
       <p style={{ fontSize: 12, color: COLORS.inkMuted, textAlign: 'center', marginBottom: 24 }}>{t.sharedProgress.subtitle}</p>
 
       {summary === null && <p style={{ color: COLORS.inkMuted, fontSize: 13, textAlign: 'center' }}>…</p>}
