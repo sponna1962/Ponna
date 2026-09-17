@@ -1,16 +1,10 @@
-// API base URL — points at wherever the backend is actually hosted.
+// API base URL for the deployed PONNA backend.
 //
-// Locally, leave NEXT_PUBLIC_API_URL unset and this falls back to '' (empty
-// string), so calls go to relative paths like `/quiz/start`, and Next.js dev
-// server can proxy them if you set up a rewrite. But since Milestone deploys
-// now put the backend on its own host (e.g. Railway) separate from the
-// frontend (e.g. Vercel), the normal path is: set NEXT_PUBLIC_API_URL in
-// Vercel's project settings to the full Railway URL, e.g.
-//   NEXT_PUBLIC_API_URL=https://ponna-backend.up.railway.app
-// Next.js bakes NEXT_PUBLIC_* variables into the client bundle at build time,
-// so this must be set BEFORE deploying, and changing it requires a redeploy.
-
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+// The frontend is hosted on Vercel and the backend is hosted on Render.
+// NEXT_PUBLIC_API_URL may still override this for local/staging environments,
+// but production must have a concrete backend URL so browser requests do not
+// accidentally go to the Vercel frontend origin.
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ponna.onrender.com';
 
 export function apiUrl(path: string): string {
   // path is expected to start with '/', e.g. '/quiz/start'
