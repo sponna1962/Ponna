@@ -13,6 +13,24 @@ import { PrismaClient } from '@prisma/client';
 
 const basePrisma = new PrismaClient();
 
+function syllabusDownloadUrl(sourceUrl: string): string {
+  try {
+    const url = new URL(sourceUrl);
+    if (url.hostname === 'res.cloudinary.com' && url.pathname.includes('/upload/')) {
+      // The stored raw Cloudinary asset has no .pdf suffix. Supplying an
+      // attachment filename makes Android/Chrome download an actual .pdf
+      // instead of a nameless raw asset.
+      url.pathname = url.pathname.replace(
+        '/upload/',
+        '/upload/fl_attachment:ponna-syllabus.pdf/',
+      );
+    }
+    return url.toString();
+  } catch {
+    return sourceUrl;
+  }
+}
+
 // Ask Ponna's syllabus tool asks for only `sourceUrl` from the current
 // ELIGIBILITY fact. Older verified facts may point to the official TNPSC
 // document, while the actual syllabus PDF uploaded to PONNA is stored on
@@ -42,7 +60,9 @@ export const prisma = basePrisma.$extends({
           },
         });
 
-        if (ponnaPdf) return ponnaPdf;
+        if (ponnaPdf?.sourceUrl) {
+          return { ...ponnaPdf, sourceUrl: syllabusDownloadUrl(ponnaPdf.sourceUrl) };
+        }
         return query(args);
       },
     },
