@@ -10,11 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/cutoff-predictor`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/daily-quiz`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/help`, changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${baseUrl}/live-exam`, changeFrequency: 'weekly', priority: 0.8 },
-    { url: `${baseUrl}/mistakes`, changeFrequency: 'weekly', priority: 0.7 },
-    { url: `${baseUrl}/offline-practice`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/plans`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${baseUrl}/quiz`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/study-notes`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/test-your-ability`, changeFrequency: 'weekly', priority: 0.8 },
   ]
