@@ -111,7 +111,7 @@ export class DailyQuizService {
     const quizDateStr = quiz.quizDate.toISOString().slice(0, 10);
     const publishAt = istToUtc(quizDateStr, publishTimeIst);
     const expiresAt = new Date(publishAt.getTime() + 24 * 60 * 60 * 1000);
-    return prisma.dailyQuiz.update({ where: { id }, data: { publishAt, expiresAt, status: DailyQuizStatus.SCHEDULED } });
+    return prisma.dailyQuiz.update({ where: { id }, data: { publishAt, expiresAt } });
   }
 
   async publishNow(id: string) {
@@ -154,55 +154,69 @@ export class DailyQuizService {
     const quiz = await this.findTodaysQuizByDate(quizType);
     if (!quiz) return { access: 'NOT_AVAILABLE' as const };
     const now = new Date();
-    if (quiz.status === DailyQuizStatus.EXPIRED || now < quiz.publishAt || now >= quiz.expiresAt) return { access: 'NOT_AVAILABLE' as const, quizDate: quiz.quizDate, publishAt: quiz.publishAt, expiresAt: quiz.expiresAt };
-    const attempt = await prisma.dailyQuizAttempt.findUnique({ where: { userId_dailyQuizId: { userId, dailyQuizId: quiz.id } } });
-    if (attempt?.completedAt) return { access: 'COMPLETED' as const, attemptId: attempt.id, score: attempt.score, total: attempt.total, language: attempt.language, completedAt: attempt.completedAt };
-    if (attempt) return { access: 'IN_PROGRESS' as const, attemptId: attempt.id, language: attempt.language };
-    return { access: 'READY' as const, quizId: quiz.id };
+    const isLive = now >= quiz.publishAt && now < quiz.expiresAt;
+    const attempt = await prisma.dailyQuizAttempt.findUnique({ where: { userId_dailyQuizId: { userId, dailyQuizId: quiz.id } }, include: { answers: true } });
+    if (attempt?.completedAt) return { access: 'COMPLETED' as const, quizId: quiz.id, attemptId: attempt.id, totalQuestions: quiz.questions.length, score: attempt.score ?? 0, correctCount: attempt.answers.filter((a) => a.isCorrect).length, incorrectCount: attempt.answers.filter((a) => !a.isCorrect).length };
+    if (!isLive) return { access: 'NOT_AVAILABLE' as const };
+    return { access: 'AVAILABLE' as const, quizId: quiz.id, expiresAt: quiz.expiresAt, totalQuestions: quiz.questions.length, attempt: attempt ? { language: attempt.language, answeredQuestionIds: attempt.answers.map((a) => a.questionId) } : null };
   }
 
-  async startOrResumeAttempt(userId: string, quizType: DailyQuizType, language: Language) {
-    if (!(await this.hasPaidAccess(userId))) throw new DailyQuizError('An active paid plan is required.');
-    const quiz = await this.findTodaysQuizByDate(quizType);
-    if (!quiz) throw new DailyQuizError('No quiz is available today.');
+  async startOrResumeAttempt(userId: string, dailyQuizId: string, language: Language) {
+    if (!(await this.hasPaidAccess(userId))) throw new DailyQuizError('This requires an active Annual Plan.');
+    const quiz = await prisma.dailyQuiz.findUniqueOrThrow({ where: { id: dailyQuizId } });
     const now = new Date();
-    if (quiz.status === DailyQuizStatus.EXPIRED || now < quiz.publishAt || now >= quiz.expiresAt) throw new DailyQuizError('This quiz is not currently available.');
-    const existing = await prisma.dailyQuizAttempt.findUnique({ where: { userId_dailyQuizId: { userId, dailyQuizId: quiz.id } } });
+    if (now < quiz.publishAt || now >= quiz.expiresAt) throw new DailyQuizError('This is not available right now.');
+    const existing = await prisma.dailyQuizAttempt.findUnique({ where: { userId_dailyQuizId: { userId, dailyQuizId } } });
     if (existing) return existing;
-    return prisma.dailyQuizAttempt.create({ data: { userId, dailyQuizId: quiz.id, language, total: quiz.questions.length } });
-  }
-
-  async getAttemptQuestions(userId: string, attemptId: string) {
-    const attempt = await prisma.dailyQuizAttempt.findUniqueOrThrow({ where: { id: attemptId }, include: { dailyQuiz: { include: { questions: { orderBy: { sequenceNumber: 'asc' } } } }, answers: true } });
-    if (attempt.userId !== userId) throw new DailyQuizError('Not allowed.');
-    return attempt;
+    return prisma.dailyQuizAttempt.create({ data: { userId, dailyQuizId, language } });
   }
 
   async submitAnswer(userId: string, attemptId: string, questionId: string, selectedOption: CorrectOption) {
     const attempt = await prisma.dailyQuizAttempt.findUniqueOrThrow({ where: { id: attemptId }, include: { dailyQuiz: true } });
-    if (attempt.userId !== userId) throw new DailyQuizError('Not allowed.');
+    if (attempt.userId !== userId) throw new DailyQuizError('Not your attempt.');
+    if (attempt.completedAt) throw new DailyQuizError('This attempt is already complete.');
+    if (new Date() >= attempt.dailyQuiz.expiresAt) throw new DailyQuizError('This has expired — this attempt can no longer be continued.');
     const question = await prisma.dailyQuizQuestion.findUniqueOrThrow({ where: { id: questionId } });
     if (question.dailyQuizId !== attempt.dailyQuizId) throw new DailyQuizError('Question does not belong to this quiz.');
-    const correct = selectedOption === question.correctOption;
-    await prisma.dailyQuizAnswer.upsert({ where: { attemptId_questionId: { attemptId, questionId } }, create: { attemptId, questionId, selectedOption, isCorrect: correct }, update: { selectedOption, isCorrect: correct } });
-    return { correct, correctOption: question.correctOption, explanationTa: question.explanationTa, explanationEn: question.explanationEn };
+    const alreadyAnswered = await prisma.dailyQuizAnswer.findUnique({ where: { attemptId_questionId: { attemptId, questionId } } });
+    if (alreadyAnswered) return alreadyAnswered;
+    const isCorrect = selectedOption === question.correctOption;
+    const answer = await prisma.dailyQuizAnswer.create({ data: { attemptId, questionId, selectedOption, isCorrect } });
+    await recordStreakActivity(userId);
+    await milestoneService.checkAndAward(userId);
+    return answer;
   }
 
   async completeAttempt(userId: string, attemptId: string) {
-    const attempt = await prisma.dailyQuizAttempt.findUniqueOrThrow({ where: { id: attemptId }, include: { answers: true, dailyQuiz: { include: { questions: true } } } });
-    if (attempt.userId !== userId) throw new DailyQuizError('Not allowed.');
+    const attempt = await prisma.dailyQuizAttempt.findUniqueOrThrow({ where: { id: attemptId }, include: { answers: true } });
+    if (attempt.userId !== userId) throw new DailyQuizError('Not your attempt.');
     const score = attempt.answers.filter((a) => a.isCorrect).length;
-    const total = attempt.dailyQuiz.questions.length;
-    const updated = await prisma.dailyQuizAttempt.update({ where: { id: attemptId }, data: { score, total, completedAt: new Date() } });
-    recordStreakActivity(userId).catch(() => {});
-    milestoneService.check(userId).catch(() => {});
-    return updated;
+    return prisma.dailyQuizAttempt.update({ where: { id: attemptId }, data: { completedAt: new Date(), score } });
   }
 
-  async getCompletedAttempt(userId: string, quizType: DailyQuizType) {
-    const quiz = await this.findTodaysQuizByDate(quizType);
-    if (!quiz) return null;
-    return prisma.dailyQuizAttempt.findUnique({ where: { userId_dailyQuizId: { userId, dailyQuizId: quiz.id } } });
+  async getAttemptQuestions(userId: string, attemptId: string) {
+    const attempt = await prisma.dailyQuizAttempt.findUniqueOrThrow({ where: { id: attemptId }, include: { answers: true, dailyQuiz: { include: { questions: { orderBy: { sequenceNumber: 'asc' } } } } } });
+    if (attempt.userId !== userId) throw new DailyQuizError('Not your attempt.');
+    const answersByQuestionId = new Map<string, DailyQuizAnswer>(attempt.answers.map((a) => [a.questionId, a]));
+    const isTa = attempt.language === 'TA';
+    return {
+      attemptId: attempt.id,
+      language: attempt.language,
+      completedAt: attempt.completedAt,
+      score: attempt.score,
+      questions: attempt.dailyQuiz.questions.map((q) => {
+        const answer = answersByQuestionId.get(q.id);
+        return {
+          id: q.id, sequenceNumber: q.sequenceNumber,
+          questionText: isTa ? q.questionTextTa : q.questionTextEn,
+          optionA: isTa ? q.optionATa : q.optionAEn, optionB: isTa ? q.optionBTa : q.optionBEn,
+          optionC: isTa ? q.optionCTa : q.optionCEn, optionD: isTa ? q.optionDTa : q.optionDEn,
+          answered: !!answer, selectedOption: answer?.selectedOption ?? null, isCorrect: answer?.isCorrect ?? null,
+          correctOption: answer ? q.correctOption : null,
+          explanation: answer ? (isTa ? q.explanationTa : q.explanationEn) : null,
+        };
+      }),
+    };
   }
 }
 
