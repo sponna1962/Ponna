@@ -90,10 +90,10 @@ export default function CurrentAffairsPage() {
   }, [items]);
 
   return (
-    <main style={{ maxWidth: 900, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
       <BitterFontLinks />
       <header style={{ background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}`, visibility: menuOpen ? 'hidden' : 'visible' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <StudentMenu onOpenChange={setMenuOpen} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 21, fontWeight: 800 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: COLORS.inkMuted }}>{s.subtitle}</div></div>
           <div style={{ display: 'flex', border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: 2 }}>
@@ -119,7 +119,7 @@ export default function CurrentAffairsPage() {
         </div>
       </header>
 
-      <section style={{ maxWidth: 900, margin: '0 auto', padding: '22px 18px 70px' }}>
+      <section style={{ padding: '22px 16px 70px' }}>
         <div style={{ background: '#f6efe1', border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '15px 16px', marginBottom: 22 }}>
           <strong>{s.bannerTitle}</strong>
           <div style={{ marginTop: 5, fontSize: 13.5, lineHeight: 1.65, color: COLORS.inkMuted }}>{s.bannerBody}</div>
