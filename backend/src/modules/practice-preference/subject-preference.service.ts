@@ -1,10 +1,8 @@
-// Student Subject & Topic Preference — Stage 1 (finalized requirement).
-// Purely storage + a student-facing picker: fetch the verified syllabus
-// tree for one exam, and save/load the student's optional Subject/Topic
-// preference for it. NOTHING here is read by allocation.service.ts or
-// quota.service.ts yet — that's explicitly Stage 2, done separately once
-// this stage is confirmed working. Existing strict rules (Exam, Subject,
-// Language, Difficulty, No-Repeat) are completely untouched.
+// Student Subject & Topic Preference — Stage 2 (strict allocation boundary).
+// Fetches the verified syllabus tree for one exam and stores the student's
+// optional Subject/Topic preference. When a preference changes, any existing
+// in-progress session is invalidated so the next Start Practice request cannot
+// resume a session created under a different Subject/Topic selection.
 
 import { prisma } from '../../lib/prisma';
 import { scopeAccessService } from '../quota/scope-access.service';
@@ -12,11 +10,8 @@ import { scopeAccessService } from '../quota/scope-access.service';
 export class SubjectPreferenceError extends Error {}
 
 export class SubjectPreferenceService {
-  /** Every TNPSC exam currently visible to students (finalized
-   * requirement — only officially-verified exams, same
-   * studentVisible-filtered set Practice Setup itself uses) with at
-   * least one Subject seeded, so the picker never shows an exam with
-   * nothing to actually choose from. */
+  /** Every TNPSC exam currently visible to students with at least one
+   * verified Subject seeded. */
   async listAvailableExams() {
     return prisma.examSubCategory.findMany({
       where: {
@@ -29,9 +24,7 @@ export class SubjectPreferenceService {
     });
   }
 
-  /** The Subject -> Topic tree for one exam — same shape as the admin
-   * syllabus service returns, just via a student-auth route instead of
-   * an admin one. Only ever returns a studentVisible exam's data. */
+  /** The Subject -> Topic tree for one exam. */
   async getSyllabus(subCategoryId: string) {
     const subCategory = await prisma.examSubCategory.findUnique({
       where: { id: subCategoryId },
@@ -52,27 +45,57 @@ export class SubjectPreferenceService {
     });
   }
 
-  /** Upsert — a student can revisit and change their preference anytime.
-   * Both lists are OPTIONAL (finalized requirement — "Subject/Topic
-   * Preference should be optional"); saving empty arrays is a valid,
-   * explicit "no preference, give me normal full-syllabus coverage"
-   * choice, not an error. */
-  /** Sept 2026 — TNPSC Group IV & VAO Pass restriction (BINDING): Subject
-   * Preference only makes sense across a full Authority's Categories, so a
-   * student whose only active paid coverage is a restricted plan cannot
-   * use it at all, even by calling this endpoint directly. */
+  /**
+   * Saves the optional Subject/Topic preference.
+   *
+   * Critical session-consistency rule: changing Subject/Topic Preference
+   * changes the question-allocation contract. An existing IN_PROGRESS quiz
+   * must therefore never be resumed under the new preference. We invalidate
+   * it here; the next Start Practice call creates a fresh session and the
+   * strict allocator receives the newly saved preference.
+   *
+   * We only invalidate when the actual preference changed, so clicking Done
+   * without changing anything does not disturb a valid in-progress session.
+   */
   async savePreference(userId: string, subCategoryId: string, subjectIds: string[], topicIds: string[]) {
     if (await scopeAccessService.isRestrictedOnly(userId)) {
       throw new SubjectPreferenceError('Subject Preference is not available on the TNPSC Group - IV Pass. Upgrade to the TNPSC Annual Pass to use it.');
     }
-    return prisma.studentSubjectTopicPreference.upsert({
+
+    const normalizedSubjectIds = [...new Set(subjectIds)].sort();
+    const normalizedTopicIds = [...new Set(topicIds)].sort();
+    const existingPreference = await prisma.studentSubjectTopicPreference.findUnique({
       where: { userId_subCategoryId: { userId, subCategoryId } },
-      create: { userId, subCategoryId, subjectIds, topicIds },
-      update: { subjectIds, topicIds },
+      select: { subjectIds: true, topicIds: true },
     });
+
+    const samePreference =
+      JSON.stringify([...(existingPreference?.subjectIds ?? [])].sort()) === JSON.stringify(normalizedSubjectIds) &&
+      JSON.stringify([...(existingPreference?.topicIds ?? [])].sort()) === JSON.stringify(normalizedTopicIds);
+
+    const saved = await prisma.studentSubjectTopicPreference.upsert({
+      where: { userId_subCategoryId: { userId, subCategoryId } },
+      create: { userId, subCategoryId, subjectIds: normalizedSubjectIds, topicIds: normalizedTopicIds },
+      update: { subjectIds: normalizedSubjectIds, topicIds: normalizedTopicIds },
+    });
+
+    if (!samePreference) {
+      await prisma.quizSession.updateMany({
+        where: { userId, status: 'IN_PROGRESS' },
+        data: { status: 'ABANDONED' },
+      });
+    }
+
+    return saved;
   }
 
   async clearPreference(userId: string, subCategoryId: string) {
-    await prisma.studentSubjectTopicPreference.deleteMany({ where: { userId, subCategoryId } });
+    const deleted = await prisma.studentSubjectTopicPreference.deleteMany({ where: { userId, subCategoryId } });
+    if (deleted.count > 0) {
+      await prisma.quizSession.updateMany({
+        where: { userId, status: 'IN_PROGRESS' },
+        data: { status: 'ABANDONED' },
+      });
+    }
   }
 }
