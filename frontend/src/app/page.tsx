@@ -383,10 +383,10 @@ export default function IndexPage() {
       <BitterFontLinks />
       {/* Header — identical whether logged in or not; only the top-right
           element changes. Always present, on every view of this page. */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
-          <Image src="/logo.png" alt="PONNA.in" width={190} height={53} priority style={{ height: 44, width: 'auto' }} />
+          <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} priority style={{ height: 45, width: 'auto' }} />
         </div>
 
         {isLoggedIn ? (
