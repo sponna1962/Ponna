@@ -80,6 +80,21 @@ export default function AdminDailyQuizPage() {
     } finally { setGenerating(false); }
   }
 
+  async function generateBrainChallenge() {
+    setGenerating(true); setGenerateError(null); setGenerateMessage(null);
+    try {
+      const res = await adminFetch('/admin/current-affairs/generate-today', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subCategoryId: 'BRAIN_CHALLENGE' }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Failed to generate Brain Challenge');
+      setGenerateMessage(body.created ? `Generated ${body.created} Brain Challenge questions and placed them directly in Daily Quiz.` : 'Today’s Brain Challenge already exists.');
+      load();
+    } catch (err: any) {
+      setGenerateError(err.message ?? 'Failed to generate Brain Challenge');
+    } finally { setGenerating(false); }
+  }
+
   async function viewQuiz(id: string, label: string) {
     const res = await adminFetch(`/admin/daily-quiz/${id}`);
     const body = await res.json();
@@ -109,7 +124,7 @@ export default function AdminDailyQuizPage() {
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 8 }}>Daily Quiz (Current Affairs &amp; Brain Challenge)</h1>
       <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
-        Current Affairs questions are created, reviewed and published here. They are completely separate from the normal Question Bank and are never saved as Question/DRAFT rows.
+        Current Affairs and Brain Challenge are created, reviewed and published here. AI-generated questions go directly into Daily Quiz and never into the normal Question Bank/DRAFT workflow.
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
@@ -126,6 +141,14 @@ export default function AdminDailyQuizPage() {
         <b style={{ fontSize: 14 }}>AI Current Affairs Generator</b>
         <p style={{ fontSize: 12, color: '#64748b', margin: '6px 0 12px' }}>Generates 10 bilingual questions from the previous day&apos;s real news. The questions go directly into this Daily Quiz — never into Question Bank/DRAFT.</p>
         <button onClick={generateCurrentAffairs} disabled={generating} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600 }}>{generating ? 'Generating…' : "Generate Today's Current Affairs"}</button>
+        {generateMessage && <p style={{ fontSize: 12, color: '#166534', marginTop: 10 }}>{generateMessage}</p>}
+        {generateError && <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 10 }}>{generateError}</p>}
+      </div>}
+
+      {activeType === 'BRAIN_CHALLENGE' && <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginBottom: 20 }}>
+        <b style={{ fontSize: 14 }}>AI Brain Challenge Generator</b>
+        <p style={{ fontSize: 12, color: '#64748b', margin: '6px 0 12px' }}>Generates 10 original bilingual reasoning questions. No news or Current Affairs facts are used. Questions go directly into Brain Challenge Daily Quiz — never into Question Bank/DRAFT.</p>
+        <button onClick={generateBrainChallenge} disabled={generating} style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600 }}>{generating ? 'Generating…' : "Generate Today's Brain Challenge"}</button>
         {generateMessage && <p style={{ fontSize: 12, color: '#166534', marginTop: 10 }}>{generateMessage}</p>}
         {generateError && <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 10 }}>{generateError}</p>}
       </div>}
