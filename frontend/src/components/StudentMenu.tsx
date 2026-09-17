@@ -38,7 +38,6 @@ export function StudentMenu() {
         {
           heading: t.menu.sectionPreparation,
           items: [
-            { href: '/current-affairs', label: 'நடப்பு நிகழ்வுகள்', Icon: StudyNotesIcon },
             { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
             { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
             { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
@@ -63,7 +62,6 @@ export function StudentMenu() {
         {
           heading: t.menu.sectionSupport,
           items: [
-            { href: '/current-affairs', label: 'நடப்பு நிகழ்வுகள்', Icon: StudyNotesIcon },
             { href: '/about', label: t.menu.about, Icon: AboutIcon },
             { href: '/help', label: t.menu.help, Icon: HelpIcon },
           ],
@@ -88,6 +86,9 @@ export function StudentMenu() {
             </div>
             <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 15, borderRadius: 8, fontWeight: 600 }}>
               <HomeIcon size={19} color={COLORS.gold} /> {t.menu.home}
+            </a>
+            <a href="/current-affairs" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 15, borderRadius: 8, fontWeight: 600 }}>
+              <StudyNotesIcon size={19} color={COLORS.gold} /> Current Affairs
             </a>
             {sections.map((section) => (
               <div key={section.heading} style={{ marginTop: 14 }}>
