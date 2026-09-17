@@ -20,8 +20,9 @@
 // shared paper/ink/gold color system.
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useLanguage } from '../lib/language-context';
-import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../lib/brand-theme';
+import { COLORS, BitterFontLinks } from '../lib/brand-theme';
 import {
   HomeIcon,
   PracticeIcon,
@@ -127,7 +128,7 @@ export function StudentMenu() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <strong style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 700, color: COLORS.ink }}>PONNA.in</strong>
+              <Image src="/logo.png" alt="PONNA.in" width={140} height={39} style={{ height: 32, width: 'auto' }} />
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 4 }}>
                 <CloseIcon size={18} color={COLORS.inkMuted} />
               </button>
