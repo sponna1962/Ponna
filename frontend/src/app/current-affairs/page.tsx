@@ -63,7 +63,6 @@ export default function CurrentAffairsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lang, setLang] = useState<'ta' | 'en'>('ta');
-  const [menuOpen, setMenuOpen] = useState(false);
   const s = STRINGS[lang];
 
   useEffect(() => {
@@ -92,9 +91,9 @@ export default function CurrentAffairsPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
       <BitterFontLinks />
-      <header style={{ background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}`, visibility: menuOpen ? 'hidden' : 'visible' }}>
+      <header style={{ background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}` }}>
         <div style={{ padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <StudentMenu onOpenChange={setMenuOpen} />
+          <StudentMenu />
           <div style={{ flex: 1 }}><div style={{ fontSize: 21, fontWeight: 800 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: COLORS.inkMuted }}>{s.subtitle}</div></div>
           <div style={{ display: 'flex', border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: 2 }}>
             {(['ta', 'en'] as const).map((code) => (
