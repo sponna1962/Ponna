@@ -24,10 +24,15 @@ import {
 
 type NavItem = { href: string; label: string; Icon: (p: { size?: number; color?: string }) => React.ReactElement };
 
-export function StudentMenu() {
+export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) {
   const { t } = useLanguage();
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  function setOpen(value: boolean) {
+    setOpenState(value);
+    onOpenChange?.(value);
+  }
 
   function openMenu() {
     setIsLoggedIn(typeof window !== 'undefined' && !!localStorage.getItem('ponna_student_token'));
