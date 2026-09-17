@@ -48,16 +48,17 @@ export class DailyCurrentAffairsService {
     return `Using Google Search, find the ${QUESTIONS_PER_DAY} most significant real news events from Tamil Nadu and India from ${dateLabel} that would be useful Current Affairs learning for a TNPSC Group - IV aspirant. Focus on government, polity, economy, science and technology, environment, important appointments, awards, reports, schemes, court/judicial developments, national/international developments relevant to India, and other exam-relevant factual news. Avoid entertainment and sports trivia.\n\nFor each event, create one TNPSC-style multiple-choice question in Tamil and English with exactly four options, one correct answer, and a short explanation in both languages.\n\nRespond ONLY as JSON:\n{\"questions\":[{\"questionTextTa\":\"...\",\"optionATa\":\"...\",\"optionBTa\":\"...\",\"optionCTa\":\"...\",\"optionDTa\":\"...\",\"questionTextEn\":\"...\",\"optionAEn\":\"...\",\"optionBEn\":\"...\",\"optionCEn\":\"...\",\"optionDEn\":\"...\",\"correctOption\":\"A\",\"explanationTa\":\"...\",\"explanationEn\":\"...\"}]}\n\nOnly use facts supported by the real search results. Do not invent events. Return fewer only if there are genuinely fewer than ${QUESTIONS_PER_DAY} suitable events.`;
   }
 
-  private async generateQuestions(prompt: string): Promise<GeneratedQuestion[]> {
+  private async generateQuestions(prompt: string, useSearch: boolean): Promise<GeneratedQuestion[]> {
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured');
+    const body: any = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 9000 },
+    };
+    if (useSearch) body.tools = [{ google_search: {} }];
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 9000 },
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error(`Gemini request failed: ${response.status} ${await response.text()}`);
     const data = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
@@ -88,30 +89,31 @@ export class DailyCurrentAffairsService {
     });
   }
 
-  /** Generate today's Current Affairs Daily Quiz directly. */
   async generateDailyQuiz(): Promise<{ created: number; quizId: string | null; quizDate: string; skippedNoResults: boolean }> {
     const quizDate = todayIstDateStr();
     const existing = await prisma.dailyQuiz.findUnique({ where: { quizDate_quizType: { quizDate: new Date(quizDate), quizType: DailyQuizType.DAILY_QUIZ } } });
     if (existing) return { created: 0, quizId: existing.id, quizDate, skippedNoResults: false };
-    const questions = await this.generateQuestions(this.buildPrompt(yesterdayLabel()));
+    const questions = await this.generateQuestions(this.buildPrompt(yesterdayLabel()), true);
     if (questions.length === 0) return { created: 0, quizId: null, quizDate, skippedNoResults: true };
     const quiz = await this.createDailyQuiz(quizDate, DailyQuizType.DAILY_QUIZ, questions);
     return { created: quiz.questions.length, quizId: quiz.id, quizDate, skippedNoResults: false };
   }
 
-  /** Generate today's Brain Challenge Daily Quiz directly. */
   async generateBrainChallenge(): Promise<{ created: number; quizId: string | null; quizDate: string; skippedNoResults: boolean }> {
     const quizDate = todayIstDateStr();
     const existing = await prisma.dailyQuiz.findUnique({ where: { quizDate_quizType: { quizDate: new Date(quizDate), quizType: DailyQuizType.BRAIN_CHALLENGE } } });
     if (existing) return { created: 0, quizId: existing.id, quizDate, skippedNoResults: false };
-    const questions = await this.generateQuestions(brainPrompt());
-    if (questions.length < QUESTIONS_PER_DAY) throw new Error(`AI generated only ${questions.length} Brain Challenge questions; 10 are required, so nothing was published.`);
+    const questions = await this.generateQuestions(brainPrompt(), false);
+    if (questions.length < QUESTIONS_PER_DAY) throw new Error(`AI generated only ${questions.length} Brain Challenge questions; 10 are required, so nothing was created.`);
     const quiz = await this.createDailyQuiz(quizDate, DailyQuizType.BRAIN_CHALLENGE, questions);
     return { created: quiz.questions.length, quizId: quiz.id, quizDate, skippedNoResults: false };
   }
 
-  // Backward-compatible entry point for the existing Current Affairs route/cron.
-  async generateDailyBatch(_subCategoryId?: string) {
+  // Backward-compatible entry point for the existing Current Affairs route.
+  // A private sentinel is used by the same protected admin route for the
+  // Brain Challenge button, keeping both generators inside Daily Quiz.
+  async generateDailyBatch(subCategoryId?: string) {
+    if (subCategoryId === 'BRAIN_CHALLENGE') return this.generateBrainChallenge();
     return this.generateDailyQuiz();
   }
 }
