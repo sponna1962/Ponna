@@ -1,1 +1,0 @@
-Current Affairs generation is owned by Daily Quiz. The API endpoint must call DailyCurrentAffairsService.generateDailyQuiz(), not generateDailyBatch().

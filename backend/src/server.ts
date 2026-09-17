@@ -40,6 +40,8 @@ import { questionAuditService } from './modules/audit/question-audit.service';
 import { bulkExplanationService } from './modules/questions/bulk-explanation.service';
 import { studyNotesService } from './modules/admin/study-notes.service';
 import { dailyCurrentAffairsService } from './modules/admin/daily-current-affairs.service';
+import { currentAffairsLearningService } from './modules/admin/current-affairs-learning.service';
+import cron from 'node-cron';
 import { subjectClassificationService } from './modules/questions/subject-classification.service';
 import { questionAuditAdminService } from './modules/audit/question-audit-admin.service';
 import { htmlEntityCleanupService } from './modules/admin/html-entity-cleanup.service';
@@ -992,6 +994,60 @@ app.post('/admin/current-affairs/generate-today', requireStaffAuth, requireRole(
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message ?? 'Failed to generate Current Affairs questions' });
+  }
+});
+
+// Current Affairs — student-learning feed (Sept 2026). AI discovers and
+// independently verifies recent events, writing directly to
+// CurrentAffairsItem — this is informational reading for students, never a
+// normal Question-bank row. Registered directly here as plain Express
+// routes; a previous version lived in a separate runtime-routes.ts file
+// that monkey-patched express.application.get to self-install, which
+// corrupted the request/response objects Express passed to downstream
+// middleware (intermittent "res.status is not a function" crashes) —
+// removed in favor of this ordinary, safe registration.
+app.get('/current-affairs', async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 1200;
+    res.json(await currentAffairsLearningService.list(limit));
+  } catch (err) {
+    console.error('[current-affairs] list failed', err);
+    res.status(500).json({ error: 'Failed to load current affairs' });
+  }
+});
+
+app.get('/admin/current-affairs-learning', requireStaffAuth, async (_req, res) => {
+  try {
+    res.json(await currentAffairsLearningService.list(2000));
+  } catch (err) {
+    console.error('[current-affairs] admin list failed', err);
+    res.status(500).json({ error: 'Failed to load current affairs' });
+  }
+});
+
+app.post('/admin/current-affairs-learning', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await currentAffairsLearningService.create(req.body));
+  } catch (err: any) {
+    res.status(400).json({ error: err.message ?? 'Failed to create current affairs' });
+  }
+});
+
+app.post('/admin/current-affairs-learning/generate', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (_req, res) => {
+  try {
+    res.json(await currentAffairsLearningService.generateDaily());
+  } catch (err: any) {
+    console.error('[current-affairs] AI generation failed', err);
+    res.status(500).json({ error: err.message ?? 'Failed to generate current affairs' });
+  }
+});
+
+app.delete('/admin/current-affairs-learning/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await currentAffairsLearningService.delete(req.params.id);
+    res.json({ deleted: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message ?? 'Failed to delete current affairs' });
   }
 });
 
@@ -3355,6 +3411,20 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`PONNA API listening on :${PORT}`);
   startScheduledJobs();
+  // Automatic daily Current Affairs (student-learning feed) generation.
+  // The service refuses to create a day when it cannot find enough
+  // genuinely new, verified events, so there is no filler. Moved here
+  // (Sept 2026) from a separate runtime-routes.ts that scheduled this at
+  // module-require time via a monkey-patch — see the route registration
+  // above for why that approach was removed.
+  cron.schedule('15 6 * * *', async () => {
+    try {
+      const result = await currentAffairsLearningService.generateDaily();
+      console.log('[cron] Current Affairs learning:', result);
+    } catch (err) {
+      console.error('[cron] Current Affairs learning generation failed', err);
+    }
+  }, { timezone: 'Asia/Kolkata' });
   // Sept 2026 (real bug found while building Bulk Explanation Generator) —
   // resumeStaleRuns() existed on QuestionAuditService but was never
   // actually called anywhere, meaning a run interrupted by a server

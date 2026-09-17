@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "ts-node-dev --require ./src/runtime-routes.ts --respawn src/server.ts",
+    "dev": "ts-node-dev --respawn src/server.ts",
     "build": "tsc",
     "prestart": "prisma db push --accept-data-loss --skip-generate && ts-node prisma/seed.ts",
-    "start": "node -r ./dist/runtime-routes.js dist/server.js",
+    "start": "node dist/server.js",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
