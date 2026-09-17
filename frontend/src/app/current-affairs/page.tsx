@@ -31,7 +31,6 @@ function formatDate(value: string, lang: 'ta' | 'en') {
 
 const STRINGS = {
   ta: {
-    title: 'நடப்பு நிகழ்வுகள்',
     subtitle: 'தினமும் படித்து தெரிந்துகொள்ளுங்கள்',
     bannerTitle: '📖 இது படிப்பதற்கான பகுதி.',
     bannerBody: 'தேர்வுக்கு பயன்படும் முக்கியமான நிகழ்வுகள் மட்டும் சுருக்கமாக வழங்கப்படுகின்றன. புதிய நிகழ்வுகள் மேலே சேரும்; பழைய நிகழ்வுகள் கீழே தொடர்ந்து இருக்கும்.',
@@ -43,7 +42,6 @@ const STRINGS = {
     fallbackCategory: 'நடப்பு நிகழ்வு',
   },
   en: {
-    title: 'Current Affairs',
     subtitle: 'Read and learn every day',
     bannerTitle: '📖 This section is for reading.',
     bannerBody: 'Only the events most relevant for your exam are summarised here. New events are added at the top; older ones stay below.',
@@ -55,6 +53,10 @@ const STRINGS = {
     fallbackCategory: 'Current Affairs',
   },
 } as const;
+// The page title itself stays "Current Affairs" in English regardless of
+// the content-language toggle below (Sept 2026, explicit request) — only
+// the article content and supporting labels switch with the toggle.
+const PAGE_TITLE = 'Current Affairs';
 
 export default function CurrentAffairsPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -92,7 +94,7 @@ export default function CurrentAffairsPage() {
       <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <StudentMenu />
-          <div style={{ flex: 1 }}><div style={{ fontSize: 21, fontWeight: 800 }}>{s.title}</div><div style={{ fontSize: 12, color: COLORS.inkMuted }}>{s.subtitle}</div></div>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 21, fontWeight: 800 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: COLORS.inkMuted }}>{s.subtitle}</div></div>
           <div style={{ display: 'flex', border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: 2 }}>
             {(['ta', 'en'] as const).map((code) => (
               <button
