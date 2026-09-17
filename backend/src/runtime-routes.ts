@@ -6,19 +6,16 @@ import { requireStaffAuth, requireRole } from './modules/admin/staff-auth.servic
 import { currentAffairsLearningService } from './modules/admin/current-affairs-learning.service';
 
 let installed = false;
-// Express' overloaded route methods are intentionally captured as `any` here:
-// runtime-routes patches the prototype before server.ts creates/registers routes.
-// Keeping these references untyped avoids TypeScript resolving `.call()` against
-// Express' overloaded Application signatures instead of the runtime hook.
-const originalGet: any = express.application.get;
-const originalPost: any = express.application.post;
-const originalDelete: any = express.application.delete;
 
 function install(app: any) {
   if (installed) return;
   installed = true;
 
-  originalGet.call(app, '/current-affairs', async (req: any, res: any) => {
+  // Use Express' Router API directly. The previous implementation patched
+  // application.get/post/delete and then called captured overloaded methods;
+  // in production that caused handlers to receive incorrect arguments and
+  // resulted in `res.json is not a function` / `res.status is not a function`.
+  app.route('/current-affairs').get(async (req: any, res: any) => {
     try {
       const limit = Number(req.query.limit) || 1200;
       res.json(await currentAffairsLearningService.list(limit));
@@ -28,55 +25,61 @@ function install(app: any) {
     }
   });
 
-  originalGet.call(app, '/admin/current-affairs-learning', requireStaffAuth, async (_req: any, res: any) => {
-    try {
-      res.json(await currentAffairsLearningService.list(2000));
-    } catch (err) {
-      console.error('[current-affairs] admin list failed', err);
-      res.status(500).json({ error: 'Failed to load current affairs' });
-    }
-  });
+  app.route('/admin/current-affairs-learning').get(
+    requireStaffAuth,
+    async (_req: any, res: any) => {
+      try {
+        res.json(await currentAffairsLearningService.list(2000));
+      } catch (err) {
+        console.error('[current-affairs] admin list failed', err);
+        res.status(500).json({ error: 'Failed to load current affairs' });
+      }
+    },
+  ).post(
+    requireStaffAuth,
+    requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'),
+    async (req: any, res: any) => {
+      try {
+        res.json(await currentAffairsLearningService.create(req.body));
+      } catch (err: any) {
+        res.status(400).json({ error: err.message ?? 'Failed to create current affairs' });
+      }
+    },
+  );
 
-  originalPost.call(app, '/admin/current-affairs-learning/generate', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (_req: any, res: any) => {
-    try {
-      res.json(await currentAffairsLearningService.generateDaily());
-    } catch (err: any) {
-      console.error('[current-affairs] AI generation failed', err);
-      res.status(500).json({ error: err.message ?? 'Failed to generate current affairs' });
-    }
-  });
+  app.route('/admin/current-affairs-learning/generate').post(
+    requireStaffAuth,
+    requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'),
+    async (_req: any, res: any) => {
+      try {
+        res.json(await currentAffairsLearningService.generateDaily());
+      } catch (err: any) {
+        console.error('[current-affairs] AI generation failed', err);
+        res.status(500).json({ error: err.message ?? 'Failed to generate current affairs' });
+      }
+    },
+  );
 
-  originalPost.call(app, '/admin/current-affairs-learning', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: any, res: any) => {
-    try {
-      res.json(await currentAffairsLearningService.create(req.body));
-    } catch (err: any) {
-      res.status(400).json({ error: err.message ?? 'Failed to create current affairs' });
-    }
-  });
-
-  originalDelete.call(app, '/admin/current-affairs-learning/:id', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req: any, res: any) => {
-    try {
-      await currentAffairsLearningService.delete(req.params.id);
-      res.json({ deleted: true });
-    } catch (err: any) {
-      res.status(400).json({ error: err.message ?? 'Failed to delete current affairs' });
-    }
-  });
+  app.route('/admin/current-affairs-learning/:id').delete(
+    requireStaffAuth,
+    requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'),
+    async (req: any, res: any) => {
+      try {
+        await currentAffairsLearningService.delete(req.params.id);
+        res.json({ deleted: true });
+      } catch (err: any) {
+        res.status(400).json({ error: err.message ?? 'Failed to delete current affairs' });
+      }
+    },
+  );
 }
 
 // Hook the first route registration performed by server.ts and install our
 // routes on that exact Express application instance.
+const originalGet: any = express.application.get;
 (express.application as any).get = function patchedGet(this: any, ...args: any[]) {
   install(this);
   return originalGet.apply(this, args);
-};
-(express.application as any).post = function patchedPost(this: any, ...args: any[]) {
-  install(this);
-  return originalPost.apply(this, args);
-};
-(express.application as any).delete = function patchedDelete(this: any, ...args: any[]) {
-  install(this);
-  return originalDelete.apply(this, args);
 };
 
 // Automatic daily generation. The service refuses to create a day when it
