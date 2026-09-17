@@ -1,10 +1,13 @@
 // API base URL for the deployed PONNA backend.
 //
-// The frontend is hosted on Vercel and the backend is hosted on Render.
-// NEXT_PUBLIC_API_URL may still override this for local/staging environments,
-// but production must have a concrete backend URL so browser requests do not
-// accidentally go to the Vercel frontend origin.
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ponna.onrender.com';
+// Production frontend is on Vercel and production backend is on Render.
+// Keep local/staging override support, but never let an old production
+// NEXT_PUBLIC_API_URL (for example, the previous Railway host) break the
+// deployed frontend after the backend migration.
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+export const API_BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://ponna.onrender.com'
+  : configuredApiUrl;
 
 export function apiUrl(path: string): string {
   // path is expected to start with '/', e.g. '/quiz/start'
