@@ -6,9 +6,13 @@ import { requireStaffAuth, requireRole } from './modules/admin/staff-auth.servic
 import { currentAffairsLearningService } from './modules/admin/current-affairs-learning.service';
 
 let installed = false;
-const originalGet = express.application.get;
-const originalPost = express.application.post;
-const originalDelete = express.application.delete;
+// Express' overloaded route methods are intentionally captured as `any` here:
+// runtime-routes patches the prototype before server.ts creates/registers routes.
+// Keeping these references untyped avoids TypeScript resolving `.call()` against
+// Express' overloaded Application signatures instead of the runtime hook.
+const originalGet: any = express.application.get;
+const originalPost: any = express.application.post;
+const originalDelete: any = express.application.delete;
 
 function install(app: any) {
   if (installed) return;
@@ -64,15 +68,15 @@ function install(app: any) {
 // routes on that exact Express application instance.
 (express.application as any).get = function patchedGet(this: any, ...args: any[]) {
   install(this);
-  return originalGet.apply(this, args as any);
+  return originalGet.apply(this, args);
 };
 (express.application as any).post = function patchedPost(this: any, ...args: any[]) {
   install(this);
-  return originalPost.apply(this, args as any);
+  return originalPost.apply(this, args);
 };
 (express.application as any).delete = function patchedDelete(this: any, ...args: any[]) {
   install(this);
-  return originalDelete.apply(this, args as any);
+  return originalDelete.apply(this, args);
 };
 
 // Automatic daily generation. The service refuses to create a day when it
