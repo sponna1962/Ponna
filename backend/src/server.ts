@@ -2247,7 +2247,7 @@ app.post('/admin/diagnostics/fix-group-iv-english-tamil-names', requireStaffAuth
       }
 
       return log;
-    });
+    }, { timeout: 20000 });
 
     res.json({ done: true, log: result });
   } catch (err) {
