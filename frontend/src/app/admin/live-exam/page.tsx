@@ -1,12 +1,10 @@
 'use client';
 
-// Live Exam — Admin Config page (Sept 2026, completes Method 1: draw
-// from the existing question bank). Sets the real exam pattern
-// (question count, duration, marks, negative marking) per Sub-Category —
-// verified against the official notification, never guessed (sourceUrl
-// + verifiedAt exist for exactly this reason). This was previously a
-// real gap: the backend route existed but no admin UI page called it,
-// so Live Exam could never actually be turned on for any exam.
+// Live Exam — Admin Config page.
+// Pattern settings are verified against the official notification. The
+// question paper itself is now assembled by the backend from the exam's
+// stored TNPSC syllabus Subjects, with an even subject-level blueprint and
+// no reuse of questions from previous Live Exams.
 
 import { useEffect, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
@@ -123,12 +121,19 @@ export default function LiveExamAdminPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Live Exam — Exam Pattern Config</h1>
-      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16, maxWidth: 640, lineHeight: 1.6 }}>
-        Live Exam draws questions from the existing Question bank for the selected exam — no separate upload needed here. Set the
-        REAL exam pattern (question count, duration, marking) verified against the official notification. Sept 2026: opens only
-        Saturday-Sunday IST, one attempt per weekend, results released Monday 00:00 IST for everyone who attempted that weekend.
+      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Live Exam — Exam Pattern & Syllabus Blueprint</h1>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12, maxWidth: 760, lineHeight: 1.6 }}>
+        மாணவர்கள் இனி சனி, ஞாயிறு மட்டும் காத்திருக்க வேண்டியதில்லை. Live Exam ஒவ்வொரு வாரமும் திங்கட்கிழமை முதல் ஞாயிற்றுக்கிழமை வரை திறந்திருக்கும். ஒரு மாணவர் ஒரு தேர்வை அந்த வாரத்தில் ஒருமுறை மட்டுமே எழுதலாம். அடுத்த வாரம் புதிய தேர்வு அமையும்.
       </p>
+      <div style={{ border: '1px solid #dbeafe', background: '#f8fbff', borderRadius: 10, padding: 14, maxWidth: 760, marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>சிலபஸ் அடிப்படையிலான கேள்வித்தாள்</div>
+        <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.65 }}>
+          தேர்வில் உள்ள மொத்த கேள்விகள், அந்த தேர்வுக்கான நிர்வாகத்தில் ஏற்கனவே சேமிக்கப்பட்ட அதிகாரப்பூர்வ சிலபஸ் பாடங்களுக்கு சமமாகப் பகிரப்படும். ஒவ்வொரு பாடத்திற்கும் தேவையான அளவு புதிய, சரிபார்க்கப்பட்ட கேள்விகள் இல்லாவிட்டால் தேர்வு தொடங்க அனுமதிக்கப்படாது. முந்தைய Live Exam-ல் பயன்படுத்திய கேள்விகள் மீண்டும் வராது.
+        </div>
+        <div style={{ fontSize: 11, color: '#64748b', marginTop: 8 }}>
+          குறிப்பு: தற்போது கேள்வி வங்கியில் நம்பகமான Subject-level classification உள்ளது. Topic-level classification முழுமையாக முடிந்த பிறகு blueprint-ஐ Topic அளவிலும் கடுமையாகப் பூட்டலாம்.
+        </div>
+      </div>
 
       <select
         value={subCategoryId}
@@ -137,29 +142,27 @@ export default function LiveExamAdminPage() {
       >
         <option value="">Select an exam…</option>
         {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.label}
-          </option>
+          <option key={o.id} value={o.id}>{o.label}</option>
         ))}
       </select>
 
       {subCategoryId && loaded && (
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, maxWidth: 420 }}>
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, maxWidth: 520 }}>
           <div style={{ marginBottom: 6, fontSize: 12, fontWeight: 700, color: config ? '#166534' : '#B4544A' }}>
             {config ? '● Live Exam is ON for this exam' : '○ Not configured yet — Live Exam is OFF'}
           </div>
 
           <label style={{ display: 'block', fontSize: 12, color: '#475569', marginTop: 12 }}>Question count</label>
-          <input type="number" value={questionCount} onChange={(e) => setQuestionCount(Number(e.target.value))} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
+          <input type="number" min={1} value={questionCount} onChange={(e) => setQuestionCount(Number(e.target.value))} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
 
           <label style={{ display: 'block', fontSize: 12, color: '#475569', marginTop: 12 }}>Duration (minutes)</label>
-          <input type="number" value={durationMinutes} onChange={(e) => setDurationMinutes(Number(e.target.value))} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
+          <input type="number" min={1} value={durationMinutes} onChange={(e) => setDurationMinutes(Number(e.target.value))} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
 
           <label style={{ display: 'block', fontSize: 12, color: '#475569', marginTop: 12 }}>Marks per question</label>
-          <input type="number" step="0.5" value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(Number(e.target.value))} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
+          <input type="number" min={0} step="0.5" value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(Number(e.target.value))} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
 
           <label style={{ display: 'block', fontSize: 12, color: '#475569', marginTop: 12 }}>Negative marking fraction (0 = none, 0.25 = 1/4th)</label>
-          <input type="number" step="0.05" value={negativeMarkingFraction} onChange={(e) => setNegativeMarkingFraction(Number(e.target.value))} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
+          <input type="number" min={0} step="0.05" value={negativeMarkingFraction} onChange={(e) => setNegativeMarkingFraction(Number(e.target.value))} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
 
           <label style={{ display: 'block', fontSize: 12, color: '#475569', marginTop: 12 }}>Official notification URL (source)</label>
           <input type="text" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://..." style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }} />
