@@ -1,13 +1,10 @@
 'use client';
 
-// Live Exam — Full-Length Mock Exam Simulation (finalized requirement,
-// ₹999 Annual Plan value-add, item 2 of 3). A genuine timed exam: fixed
-// question count + strict time limit matching the real exam pattern,
-// countdown timer with auto-submit, NO immediate feedback while
-// answering (unlike Daily Quiz/normal Practice — a real exam never tells
-// you if you're right as you go), negative marking if configured, full
-// syllabus coverage (no Subject Preference weighting). One attempt per
-// exam, like the real thing.
+// Live Exam — Full-Length Mock Exam Simulation. A genuine timed exam:
+// fixed question count + strict time limit matching the configured pattern,
+// countdown timer with auto-submit, NO immediate feedback while answering,
+// negative marking if configured, syllabus-based paper, one attempt per exam
+// per week. The student sees only the remaining-time countdown, not a clock.
 
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
@@ -55,9 +52,7 @@ export default function LiveExamPage() {
   const [starting, setStarting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Sept 2026 (student-requested) — every exam that actually has Live
-  // Exam configured, fetched once, shown directly — no hierarchy
-  // navigation needed to find out which exams even have this.
+  // Every exam that actually has Live Exam configured is shown directly.
   const [availableExams, setAvailableExams] = useState<{ subCategoryId: string; name: string; authorityName: string; categoryName: string }[] | null>(null);
   useEffect(() => {
     studentFetch('/live-exam/available-exams')
@@ -158,9 +153,16 @@ export default function LiveExamPage() {
         <StudentMenu />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.menu.liveExam}</h1>
         {state?.access === 'IN_PROGRESS' && (
-          <span style={{ marginLeft: 'auto', fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: 800, color: remainingSeconds < 300 ? '#B4544A' : COLORS.ink }}>
-            {formatTime(remainingSeconds)}
-          </span>
+          <div
+            aria-label={`மீதமுள்ள நேரம் ${formatTime(remainingSeconds)}`}
+            aria-live="polite"
+            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'baseline', gap: 6, whiteSpace: 'nowrap' }}
+          >
+            <span style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: 600, color: COLORS.inkMuted }}>மீதமுள்ள நேரம்</span>
+            <span style={{ fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: 800, color: remainingSeconds < 300 ? '#B4544A' : COLORS.ink }}>
+              {formatTime(remainingSeconds)}
+            </span>
+          </div>
         )}
       </div>
 
@@ -213,19 +215,15 @@ export default function LiveExamPage() {
         </div>
       )}
 
-      {/* Sept 2026 (BINDING) — Live Exam only opens Saturday-Sunday IST. */}
       {state?.access === 'WINDOW_CLOSED' && (
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🗓️ Live Exam திறக்கும் சனி-ஞாயிறு மட்டும்</p>
+          <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🗓️ Live Exam தற்போது கிடைக்கவில்லை</p>
           <p style={{ fontSize: 13, color: COLORS.inkMuted }}>
             அடுத்த வாய்ப்பு: {new Date(state.nextOpensAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
           </p>
         </div>
       )}
 
-      {/* Sept 2026 (BINDING) — results withheld from EVERYONE until Monday
-          00:00 IST, regardless of when within the weekend a student
-          finished, so no one gets an early look. */}
       {state?.access === 'AWAITING_RESULTS' && (
         <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 28, textAlign: 'center', background: COLORS.goldLight }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>✅ Submit ஆகிடுச்சு!</p>
@@ -309,11 +307,6 @@ export default function LiveExamPage() {
             )}
           </div>
 
-          {/* Sept 2026 — collapsible Question Navigator (student
-              request): closed by default so the current question stays
-              the focus; a tap expands the full grid. Answered/unanswered
-              is now a clear green vs default, separate from the current-
-              question border highlight. */}
           <button
             onClick={() => setNavigatorOpen((v) => !v)}
             style={{ marginTop: 20, width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.line}`, background: COLORS.paperAlt, fontSize: 13, fontWeight: 600, color: COLORS.ink, cursor: 'pointer' }}
