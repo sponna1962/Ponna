@@ -369,9 +369,19 @@ export default function IndexPage() {
       const credential = await confirmationRef.current.confirm(otp);
       const firebaseIdToken = await credential.user.getIdToken();
       await attemptLogin(firebaseIdToken);
-    } catch (err) {
-      console.error(err);
-      setError(t.login.verifyError);
+    } catch (err: any) {
+      console.error('OTP verify failed:', err?.code, err?.message, err);
+      // Surface the specific Firebase reason where we have a clearer message
+      // than the generic "wrong code" — expired code and rate-limiting are
+      // both common and need a different action (request a new OTP) than a
+      // genuine typo does.
+      if (err?.code === 'auth/code-expired') {
+        setError(t.login.otpExpiredError ?? t.login.verifyError);
+      } else if (err?.code === 'auth/too-many-requests') {
+        setError(t.login.tooManyRequestsError ?? t.login.verifyError);
+      } else {
+        setError(t.login.verifyError);
+      }
       setLoading(false);
     }
   }

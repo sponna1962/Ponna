@@ -39,6 +39,8 @@ export const translations = {
       verify: 'சரிபார்க்கவும்',
       sendError: 'OTP அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
       verifyError: 'தவறான OTP. மீண்டும் முயற்சிக்கவும்.',
+      otpExpiredError: 'OTP காலாவதியானது. புதிய OTP கோருங்கள்.',
+      tooManyRequestsError: 'அதிக முயற்சிகள் — சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.',
     },
     dashboard: {
       title: 'உங்கள் செயல்திறன்',
@@ -386,6 +388,8 @@ export const translations = {
       verify: 'Verify',
       sendError: 'Could not send OTP. Please try again.',
       verifyError: 'Incorrect OTP. Please try again.',
+      otpExpiredError: 'OTP expired. Please request a new one.',
+      tooManyRequestsError: 'Too many attempts — please try again in a little while.',
     },
     dashboard: {
       title: 'Your Performance',
