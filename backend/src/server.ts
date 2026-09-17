@@ -2090,6 +2090,172 @@ app.post('/admin/diagnostics/merge-group-iv-aptitude-duplicate', requireStaffAut
   }
 });
 
+// POST /admin/diagnostics/fix-group-iv-english-tamil-names — Sept 2026,
+// ONE-TIME comprehensive fix (explicit admin request, against official
+// Syllabus PDF Code 496, dated 12.12.2024). Fixes English AND Tamil names
+// for Group IV SyllabusSubject in one pass:
+//   1. Deletes the "General Studies" row — its 6 "topics" are pure
+//      duplicate unit-header labels for subjects that already exist as
+//      their own rows with real content; nothing of value is lost.
+//   2. Deletes junk unit-header-label topics under "Aptitude & Mental
+//      Ability" and "General English" (their real content topics stay).
+//   3. Renames "History and Culture of India and Tamil Nadu" to the
+//      official "History, Culture of India, and Indian National
+//      Movement" (Unit III), keeping its India-related topics and
+//      absorbing "Indian National Movement"'s 3 topics into it, then
+//      deletes the now-empty "Indian National Movement" row.
+//   4. Creates a new official "History, Culture, Heritage, and
+//      Socio-Political Movements of Tamil Nadu" row (Unit VI) and moves
+//      the Tamil-Nadu-specific topics into it.
+//   5. Renames "Indian Economy" to the official "Indian Economy and
+//      Development Administration in Tamil Nadu".
+//   6. Adds the official Tamil name (nameTa) to every English-named
+//      subject, taken verbatim from the PDF's own Tamil edition.
+// Repoints any StudentSubjectTopicPreference.subjectIds affected by a
+// deleted subject id. Not fully idempotent (running twice after the
+// first success is a safe no-op via existence checks, but this is
+// intended as a one-time fix, not a repeatable job).
+app.post('/admin/diagnostics/fix-group-iv-english-tamil-names', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try {
+    const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
+    if (!groupIv) {
+      res.status(404).json({ error: 'Group - IV Sub-Category not found' });
+      return;
+    }
+    const subjects = await prisma.syllabusSubject.findMany({
+      where: { subCategoryId: groupIv.id },
+      include: { topics: true },
+    });
+    const byName = (name: string) => subjects.find((s) => s.name === name);
+
+    const log: string[] = [];
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Delete the junk "General Studies" duplicate-header row entirely.
+      const generalStudies = byName('General Studies');
+      if (generalStudies) {
+        for (const t of generalStudies.topics) await tx.syllabusTopic.delete({ where: { id: t.id } });
+        const affected = await tx.studentSubjectTopicPreference.findMany({
+          where: { subCategoryId: groupIv.id, subjectIds: { has: generalStudies.id } },
+        });
+        for (const pref of affected) {
+          await tx.studentSubjectTopicPreference.update({
+            where: { id: pref.id },
+            data: { subjectIds: pref.subjectIds.filter((id) => id !== generalStudies.id) },
+          });
+        }
+        await tx.syllabusSubject.delete({ where: { id: generalStudies.id } });
+        log.push(`Deleted junk "General Studies" row (${generalStudies.topics.length} header topics removed).`);
+      }
+
+      // 2. Delete junk unit-header-label topics under Aptitude & General English.
+      const junkTopicNames = [
+        'Unit I: Aptitude — அலகு I: திறனறிவு',
+        'Unit II: Reasoning — அலகு II: காரணவியல்',
+        'Unit I: Grammar',
+        'Unit II: Vocabulary',
+        'Unit III: Writing Skills',
+        'Unit IV: Technical Terms',
+        'Unit V: Reading Comprehension',
+        'Unit VI: Translation',
+        'Unit VII: Literary Works',
+      ];
+      const deletedJunk = await tx.syllabusTopic.deleteMany({
+        where: { name: { in: junkTopicNames }, subject: { subCategoryId: groupIv.id } },
+      });
+      log.push(`Deleted ${deletedJunk.count} junk unit-header-label topics.`);
+
+      // 3. Rename "History and Culture of India and Tamil Nadu" -> official
+      // Unit III name, absorb "Indian National Movement"'s topics into it.
+      const historyIndiaRow = byName('History and Culture of India and Tamil Nadu');
+      const nationalMovementRow = byName('Indian National Movement');
+      const tnSpecificTopicNames = [
+        'Culture and Heritage of Tamil People, India Since Independence',
+        'Growth of Rationalism and the Dravidian Movement in Tamil Nadu',
+        'Political Parties and Populist Schemes',
+      ];
+      if (historyIndiaRow) {
+        // Move TN-specific topics out first (to the new Unit VI row, step 4).
+        const tnTopicIds = historyIndiaRow.topics.filter((t) => tnSpecificTopicNames.includes(t.name)).map((t) => t.id);
+
+        await tx.syllabusSubject.update({
+          where: { id: historyIndiaRow.id },
+          data: {
+            name: 'History, Culture of India, and Indian National Movement',
+            nameTa: 'இந்தியாவின் வரலாறு, பண்பாடு மற்றும் இந்திய தேசிய இயக்கம்',
+          },
+        });
+        log.push('Renamed "History and Culture of India and Tamil Nadu" -> "History, Culture of India, and Indian National Movement".');
+
+        if (nationalMovementRow) {
+          for (const t of nationalMovementRow.topics) {
+            await tx.syllabusTopic.update({ where: { id: t.id }, data: { subjectId: historyIndiaRow.id } });
+          }
+          const affected = await tx.studentSubjectTopicPreference.findMany({
+            where: { subCategoryId: groupIv.id, subjectIds: { has: nationalMovementRow.id } },
+          });
+          for (const pref of affected) {
+            const updated = Array.from(new Set(pref.subjectIds.map((id) => (id === nationalMovementRow.id ? historyIndiaRow.id : id))));
+            await tx.studentSubjectTopicPreference.update({ where: { id: pref.id }, data: { subjectIds: updated } });
+          }
+          await tx.syllabusSubject.delete({ where: { id: nationalMovementRow.id } });
+          log.push(`Absorbed ${nationalMovementRow.topics.length} topics from "Indian National Movement" and deleted that row.`);
+        }
+
+        // 4. Create the official Unit VI row and move TN-specific topics into it.
+        if (tnTopicIds.length > 0) {
+          const tnRow = await tx.syllabusSubject.create({
+            data: {
+              subCategoryId: groupIv.id,
+              name: 'History, Culture, Heritage, and Socio-Political Movements of Tamil Nadu',
+              nameTa: 'தமிழ்நாட்டின் வரலாறு, பண்பாடு, மரபு மற்றும் சமூக - அரசியல் இயக்கங்கள்',
+              sortOrder: historyIndiaRow.sortOrder + 1,
+            },
+          });
+          for (const id of tnTopicIds) {
+            await tx.syllabusTopic.update({ where: { id }, data: { subjectId: tnRow.id } });
+          }
+          log.push(`Created "History, Culture, Heritage, and Socio-Political Movements of Tamil Nadu" with ${tnTopicIds.length} topics.`);
+        }
+      }
+
+      // 5. Rename "Indian Economy" -> official full name.
+      const indianEconomy = byName('Indian Economy');
+      if (indianEconomy) {
+        await tx.syllabusSubject.update({
+          where: { id: indianEconomy.id },
+          data: {
+            name: 'Indian Economy and Development Administration in Tamil Nadu',
+            nameTa: 'இந்தியப் பொருளாதாரம் மற்றும் தமிழ்நாட்டில் வளர்ச்சி நிர்வாகம்',
+          },
+        });
+        log.push('Renamed "Indian Economy" -> "Indian Economy and Development Administration in Tamil Nadu".');
+      }
+
+      // 6. Add official Tamil names to remaining English-named subjects.
+      const tamilNameByEnglish: Record<string, string> = {
+        'General Science': 'பொது அறிவியல்',
+        'Geography': 'புவியியல்',
+        'Indian Polity': 'இந்திய ஆட்சியியல்',
+      };
+      for (const [englishName, tamilName] of Object.entries(tamilNameByEnglish)) {
+        const row = byName(englishName);
+        if (row && !row.nameTa) {
+          await tx.syllabusSubject.update({ where: { id: row.id }, data: { nameTa: tamilName } });
+          log.push(`Added Tamil name to "${englishName}".`);
+        }
+      }
+
+      return log;
+    });
+
+    res.json({ done: true, log: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fix Group IV English/Tamil names' });
+  }
+});
+
 app.get('/admin/diagnostics/group-iv-subject-mismatch', requireStaffAuth, async (_req, res) => {
   try {
     const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });

@@ -36,6 +36,24 @@ export default function DiagnosticsPage() {
   const [topicsResult, setTopicsResult] = useState<{
     subjects: { id: string; name: string; nameTa: string | null; topics: { id: string; name: string; nameTa: string | null }[] }[];
   } | null>(null);
+  const [fixingNames, setFixingNames] = useState(false);
+  const [fixNamesResult, setFixNamesResult] = useState<{ log: string[] } | null>(null);
+
+  async function fixEnglishTamilNames() {
+    setFixingNames(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/fix-group-iv-english-tamil-names', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to fix names');
+        return;
+      }
+      setFixNamesResult(body);
+      await runSyllabusSubjectsCheck();
+    } finally {
+      setFixingNames(false);
+    }
+  }
 
   async function runTopicsCheck() {
     setTopicsLoading(true);
@@ -208,6 +226,23 @@ export default function DiagnosticsPage() {
       )}
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
+
+      {/* Sept 2026 — explicit request: comprehensive English + Tamil name
+          fix against the official Syllabus PDF (Code 496). One-time. */}
+      <button
+        onClick={fixEnglishTamilNames}
+        disabled={fixingNames}
+        style={{ padding: '8px 16px', borderRadius: 6, background: '#b91c1c', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20, marginLeft: 8 }}
+      >
+        {fixingNames ? 'Fixing…' : 'Fix Group IV English + Tamil Subject Names'}
+      </button>
+      {fixNamesResult && (
+        <ul style={{ fontSize: 12, color: '#166534', marginBottom: 20, paddingLeft: 20 }}>
+          {fixNamesResult.log.map((line, i) => (
+            <li key={i}>{line}</li>
+          ))}
+        </ul>
+      )}
 
       {/* Sept 2026 — explicit request: see the actual topic names inside
           each SyllabusSubject row, so an English+Tamil correction against
