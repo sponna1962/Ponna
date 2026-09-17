@@ -78,22 +78,34 @@ const app = express();
 // (finalized requirement). `true` trusts the immediate proxy's
 // X-Forwarded-For header, which is what Render's edge sets.
 app.set('trust proxy', true);
-// CORS: in production the frontend (Vercel + custom domain) and backend
-// (Render) are on different origins, so this can't be left wide-open
-// without a config knob. Set FRONTEND_URL in the backend's environment to
-// a comma-separated list of every origin that calls this API (Vercel URL,
-// custom domain, and its www variant) once deployed; falls back to
-// allowing all origins for local development. Sept 2026 — was a single
-// origin string, which silently CORS-blocked every request once the
-// ponna.in custom domain went live alongside the Vercel URL.
-const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',').map((o) => o.trim()).filter(Boolean)
-  : null;
-app.use(
-  cors({
-    origin: allowedOrigins ?? '*',
-  })
-);
+// CORS: production can be served from the main PONNA domain or its Vercel
+// deployment, while local development can still use localhost. Do not rely
+// on a stale FRONTEND_URL value left over from the old hosting setup.
+const allowedOrigins = new Set([
+  'https://ponna.in',
+  'https://www.ponna.in',
+  'https://ponna-chi.vercel.app',
+]);
+const configuredFrontendUrl = process.env.FRONTEND_URL?.trim();
+if (configuredFrontendUrl) allowedOrigins.add(configuredFrontendUrl.replace(/\/$/, ''));
+app.use(cors({
+  origin: (origin, callback) => {
+    // Non-browser tools and same-origin requests do not send Origin.
+    if (!origin || allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+    // Permit Vercel preview deployments for the PONNA project.
+    if (/^https:\/\/ponna-[a-z0-9-]+\.vercel\.app$/.test(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('CORS origin not allowed'));
+  },
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+}));
 // Captures the raw request body alongside the parsed JSON — needed for
 // verifying the Razorpay webhook signature, which is computed over the raw
 // bytes, not the re-serialized JSON (those can differ in whitespace/key order).
