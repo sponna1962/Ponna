@@ -91,7 +91,7 @@ export default function CurrentAffairsPage() {
   return (
     <main style={{ minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
       <BitterFontLinks />
-      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}` }}>
+      <header style={{ background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <StudentMenu />
           <div style={{ flex: 1 }}><div style={{ fontSize: 21, fontWeight: 800 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: COLORS.inkMuted }}>{s.subtitle}</div></div>
