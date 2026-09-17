@@ -2144,6 +2144,7 @@ app.post('/admin/diagnostics/fix-group-iv-english-tamil-names', requireStaffAuth
             data: { subjectIds: pref.subjectIds.filter((id) => id !== generalStudies.id) },
           });
         }
+        await tx.studyNote.deleteMany({ where: { subjectId: generalStudies.id } });
         await tx.syllabusSubject.delete({ where: { id: generalStudies.id } });
         log.push(`Deleted junk "General Studies" row (${generalStudies.topics.length} header topics removed).`);
       }
@@ -2198,6 +2199,17 @@ app.post('/admin/diagnostics/fix-group-iv-english-tamil-names', requireStaffAuth
             const updated = Array.from(new Set(pref.subjectIds.map((id) => (id === nationalMovementRow.id ? historyIndiaRow.id : id))));
             await tx.studentSubjectTopicPreference.update({ where: { id: pref.id }, data: { subjectIds: updated } });
           }
+          await (async () => {
+            const notes = await tx.studyNote.findMany({ where: { subjectId: nationalMovementRow.id } });
+            for (const note of notes) {
+              const existing = await tx.studyNote.findFirst({ where: { subjectId: historyIndiaRow.id, language: note.language } });
+              if (existing) {
+                await tx.studyNote.delete({ where: { id: note.id } });
+              } else {
+                await tx.studyNote.update({ where: { id: note.id }, data: { subjectId: historyIndiaRow.id } });
+              }
+            }
+          })();
           await tx.syllabusSubject.delete({ where: { id: nationalMovementRow.id } });
           log.push(`Absorbed ${nationalMovementRow.topics.length} topics from "Indian National Movement" and deleted that row.`);
         }
