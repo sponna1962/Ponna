@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useLanguage } from '../lib/language-context';
 import { COLORS, BitterFontLinks } from '../lib/brand-theme';
@@ -75,8 +76,8 @@ export function StudentMenu() {
         <MenuIcon size={22} color={COLORS.ink} />
       </button>
 
-      {open && (
-        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,34,56,0.45)', zIndex: 50 }}>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,34,56,0.45)', zIndex: 999 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 258, background: COLORS.paper, boxShadow: '2px 0 16px rgba(0,0,0,0.15)', padding: '20px 18px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
               <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} style={{ height: 42, width: 'auto' }} />
@@ -101,7 +102,8 @@ export function StudentMenu() {
               </div>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
