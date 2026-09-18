@@ -44,6 +44,47 @@ export default function DiagnosticsPage() {
   const [allLinkageLoading, setAllLinkageLoading] = useState(false);
   const [autoLinking, setAutoLinking] = useState(false);
   const [autoLinkResult, setAutoLinkResult] = useState<any>(null);
+  const [flatSubjectsResult, setFlatSubjectsResult] = useState<any>(null);
+  const [flatSubjectsLoading, setFlatSubjectsLoading] = useState(false);
+  const [manualLink, setManualLink] = useState({ syllabusSubjectId: '', subjectId: '' });
+  const [manualLinking, setManualLinking] = useState(false);
+  const [manualLinkResult, setManualLinkResult] = useState<any>(null);
+
+  async function runFlatSubjectsCheck() {
+    setFlatSubjectsLoading(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/flat-subjects-by-question-count');
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to run check');
+        return;
+      }
+      setFlatSubjectsResult(body);
+    } finally {
+      setFlatSubjectsLoading(false);
+    }
+  }
+
+  async function submitManualLink() {
+    if (!manualLink.syllabusSubjectId || !manualLink.subjectId) return;
+    setManualLinking(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/link-subject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(manualLink),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to link');
+        return;
+      }
+      setManualLinkResult(body);
+      await runAllLinkageCheck();
+    } finally {
+      setManualLinking(false);
+    }
+  }
 
   async function runAllLinkageCheck() {
     setAllLinkageLoading(true);
@@ -351,6 +392,70 @@ export default function DiagnosticsPage() {
           </table>
         </div>
       )}
+
+      {/* Sept 2026 — for SyllabusSubjects with no exact-name match (e.g. the
+          Tamil eligibility test subject), shows every flat Subject with its
+          question counts so an admin can identify the right one to link
+          manually below. */}
+      <button
+        onClick={runFlatSubjectsCheck}
+        disabled={flatSubjectsLoading}
+        style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12 }}
+      >
+        {flatSubjectsLoading ? 'Running…' : 'List Flat Subjects by Question Count'}
+      </button>
+      {flatSubjectsResult && (
+        <div style={{ marginBottom: 12, overflowX: 'auto', maxHeight: 300, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff' }}>
+                <th style={{ padding: 6 }}>Flat Subject</th>
+                <th style={{ padding: 6 }}>Exam</th>
+                <th style={{ padding: 6 }}>Total Questions</th>
+                <th style={{ padding: 6 }}>Tamil Questions</th>
+                <th style={{ padding: 6 }}>id (for manual link)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {flatSubjectsResult.subjects.map((s: any) => (
+                <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: 6, fontWeight: 600 }}>{s.name}</td>
+                  <td style={{ padding: 6, color: '#64748b' }}>{s.exam ?? '—'}</td>
+                  <td style={{ padding: 6 }}>{s.totalQuestions}</td>
+                  <td style={{ padding: 6, fontWeight: s.tamilQuestions > 0 ? 700 : 400, color: s.tamilQuestions > 0 ? '#166534' : undefined }}>{s.tamilQuestions}</td>
+                  <td style={{ padding: 6, fontFamily: 'monospace', fontSize: 10, color: '#94a3b8' }}>{s.id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Manual link — paste a SyllabusSubject id (from the table above) and
+          a flat Subject id (from the table above) to link them by hand,
+          for the cases auto-link couldn't resolve. */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20 }}>
+        <input
+          placeholder="SyllabusSubject id"
+          value={manualLink.syllabusSubjectId}
+          onChange={(e) => setManualLink({ ...manualLink, syllabusSubjectId: e.target.value })}
+          style={{ fontSize: 12, padding: '7px 9px', border: '1px solid #e2e8f0', borderRadius: 6, width: 260 }}
+        />
+        <input
+          placeholder="flat Subject id"
+          value={manualLink.subjectId}
+          onChange={(e) => setManualLink({ ...manualLink, subjectId: e.target.value })}
+          style={{ fontSize: 12, padding: '7px 9px', border: '1px solid #e2e8f0', borderRadius: 6, width: 260 }}
+        />
+        <button
+          onClick={submitManualLink}
+          disabled={manualLinking}
+          style={{ padding: '8px 14px', borderRadius: 6, background: '#166534', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {manualLinking ? 'Linking…' : 'Link'}
+        </button>
+      </div>
+      {manualLinkResult && <p style={{ fontSize: 12, color: '#166534', marginTop: -14, marginBottom: 20 }}>Linked: {manualLinkResult.syllabusSubject}</p>}
 
       {/* Sept 2026 — explicit request: comprehensive English + Tamil name
           fix against the official Syllabus PDF (Code 496). One-time. */}

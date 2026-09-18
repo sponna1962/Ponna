@@ -2119,6 +2119,33 @@ app.post('/admin/diagnostics/auto-link-subjects', requireStaffAuth, requireRole(
 // Manually link one SyllabusSubject to one flat Subject (for cases
 // auto-link couldn't resolve — no exact name match, or more than one flat
 // Subject with that name across different exams).
+// GET /admin/diagnostics/flat-subjects-by-question-count — Sept 2026,
+// ONE-TIME diagnostic (read-only). Lists every flat Subject with its
+// question counts (total and Tamil-language), so an admin can identify
+// which flat Subject actually holds the bulk-imported questions for a
+// SyllabusSubject that has no exact-name match (e.g. "தமிழ் தகுதி மற்றும்
+// மதிப்பீட்டுத் தேர்வு"), then link it manually via /link-subject.
+app.get('/admin/diagnostics/flat-subjects-by-question-count', requireStaffAuth, async (_req, res) => {
+  try {
+    const subjects = await prisma.subject.findMany({
+      include: { subCategory: { select: { name: true } } },
+      orderBy: { name: 'asc' },
+    });
+    const results: any[] = [];
+    for (const s of subjects) {
+      const totalCount = await prisma.question.count({ where: { subjectId: s.id } });
+      const tamilCount = await prisma.question.count({ where: { subjectId: s.id, language: 'TA' } });
+      if (totalCount === 0) continue; // skip empty subjects — noise for this purpose
+      results.push({ id: s.id, name: s.name, exam: s.subCategory?.name ?? null, totalQuestions: totalCount, tamilQuestions: tamilCount });
+    }
+    results.sort((a, b) => b.totalQuestions - a.totalQuestions);
+    res.json({ subjects: results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to run diagnostic' });
+  }
+});
+
 app.post('/admin/diagnostics/link-subject', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
     const { syllabusSubjectId, subjectId } = req.body;
