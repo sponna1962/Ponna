@@ -38,6 +38,23 @@ export default function DiagnosticsPage() {
   } | null>(null);
   const [fixingNames, setFixingNames] = useState(false);
   const [fixNamesResult, setFixNamesResult] = useState<{ log: string[] } | null>(null);
+  const [linkageResult, setLinkageResult] = useState<any>(null);
+  const [linkageLoading, setLinkageLoading] = useState(false);
+
+  async function runLinkageCheck() {
+    setLinkageLoading(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/tamil-subject-question-linkage');
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to run check');
+        return;
+      }
+      setLinkageResult(body);
+    } finally {
+      setLinkageLoading(false);
+    }
+  }
 
   async function fixEnglishTamilNames() {
     setFixingNames(true);
@@ -226,6 +243,24 @@ export default function DiagnosticsPage() {
       )}
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>}
+
+      {/* Sept 2026 — explicit request: student selected only the Tamil
+          Subject Preference and got "no eligible questions" despite ~2000
+          Tamil questions existing. Checks whether questions are linked via
+          syllabusTopicId (what allocation filters on) vs the separate flat
+          Subject.subjectId field. Read-only. */}
+      <button
+        onClick={runLinkageCheck}
+        disabled={linkageLoading}
+        style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20, marginLeft: 8 }}
+      >
+        {linkageLoading ? 'Running…' : 'Check Tamil Subject-Question Linkage'}
+      </button>
+      {linkageResult && (
+        <pre style={{ fontSize: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 20, overflowX: 'auto' }}>
+          {JSON.stringify(linkageResult, null, 2)}
+        </pre>
+      )}
 
       {/* Sept 2026 — explicit request: comprehensive English + Tamil name
           fix against the official Syllabus PDF (Code 496). One-time. */}

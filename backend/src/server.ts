@@ -2034,6 +2034,53 @@ app.post('/admin/diagnostics/setup-group-iv-official-subjects', requireStaffAuth
 // SyllabusSubject row for Group IV, so a rename/split/merge plan against
 // the official Syllabus PDF (Code 496) can be made from real data instead
 // of guessing from subject names alone.
+// GET /admin/diagnostics/tamil-subject-question-linkage — Sept 2026,
+// ONE-TIME diagnostic (read-only). Student reported "no eligible
+// questions" after selecting only "தமிழ் தகுதி மற்றும் மதிப்பீட்டுத் தேர்வு" as a
+// Subject Preference, despite ~2000 Tamil questions existing. Allocation
+// hard-filters by Question.syllabusTopicId belonging to the selected
+// SyllabusSubject's topics — this checks whether the Tamil questions are
+// actually linked that way, or tagged through a different taxonomy
+// (QuestionTaxonomyTag / flat Subject) instead.
+app.get('/admin/diagnostics/tamil-subject-question-linkage', requireStaffAuth, async (_req, res) => {
+  try {
+    const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
+    if (!groupIv) {
+      res.status(404).json({ error: 'Group - IV Sub-Category not found' });
+      return;
+    }
+    const tamilSubject = await prisma.syllabusSubject.findFirst({
+      where: { subCategoryId: groupIv.id, name: { contains: 'தமிழ் தகுதி' } },
+      include: { topics: true },
+    });
+    const totalTamilQuestions = await prisma.question.count({ where: { language: 'TA' } });
+    const withSyllabusTopicId = await prisma.question.count({ where: { language: 'TA', syllabusTopicId: { not: null } } });
+    const linkedToThisSubject = tamilSubject
+      ? await prisma.question.count({ where: { language: 'TA', syllabusTopic: { subjectId: tamilSubject.id } } })
+      : 0;
+    const withFlatSubjectId = await prisma.question.count({ where: { language: 'TA', subjectId: { not: null } } });
+    const flatSubjectSample = await prisma.question.findMany({
+      where: { language: 'TA', subjectId: { not: null } },
+      take: 15,
+      select: { subject: { select: { id: true, name: true } } },
+      distinct: ['subjectId'],
+    });
+    res.json({
+      tamilSyllabusSubjectFound: !!tamilSubject,
+      tamilSyllabusSubjectId: tamilSubject?.id ?? null,
+      tamilSyllabusTopicCount: tamilSubject?.topics.length ?? 0,
+      totalTamilQuestions,
+      tamilQuestionsWithSyllabusTopicId: withSyllabusTopicId,
+      tamilQuestionsLinkedToThisSyllabusSubject: linkedToThisSubject,
+      tamilQuestionsWithFlatSubjectId: withFlatSubjectId,
+      distinctFlatSubjectsTaggedOnTamilQuestions: flatSubjectSample.map((q) => q.subject),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to run diagnostic' });
+  }
+});
+
 app.get('/admin/diagnostics/group-iv-syllabus-topics', requireStaffAuth, async (_req, res) => {
   try {
     const groupIv = await prisma.examSubCategory.findFirst({ where: { name: 'Group - IV' } });
