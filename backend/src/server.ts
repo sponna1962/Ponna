@@ -2034,6 +2034,102 @@ app.post('/admin/diagnostics/setup-group-iv-official-subjects', requireStaffAuth
 // SyllabusSubject row for Group IV, so a rename/split/merge plan against
 // the official Syllabus PDF (Code 496) can be made from real data instead
 // of guessing from subject names alone.
+// GET /admin/diagnostics/subject-linkage-status — Sept 2026, ONE-TIME
+// diagnostic (read-only). Shows, for EVERY SyllabusSubject across every
+// exam, whether it's linked to a flat Subject yet (linkedSubjectId) and how
+// many questions that link would actually pull in. This is the general
+// version of the earlier Tamil-only check — same root cause (two
+// independent subject taxonomies), affecting every subject/exam, not just
+// Group IV Tamil.
+app.get('/admin/diagnostics/subject-linkage-status', requireStaffAuth, async (_req, res) => {
+  try {
+    const syllabusSubjects = await prisma.syllabusSubject.findMany({
+      include: {
+        subCategory: { select: { name: true, category: { select: { name: true } } } },
+        linkedSubject: { select: { id: true, name: true } },
+        _count: { select: { topics: true } },
+      },
+      orderBy: [{ subCategoryId: 'asc' }, { sortOrder: 'asc' }],
+    });
+    const results = await Promise.all(
+      syllabusSubjects.map(async (s) => {
+        const directQuestionCount = await prisma.question.count({ where: { syllabusTopic: { subjectId: s.id } } });
+        const linkedFlatQuestionCount = s.linkedSubjectId
+          ? await prisma.question.count({ where: { subjectId: s.linkedSubjectId } })
+          : 0;
+        // Suggest a candidate flat Subject by exact case-insensitive name
+        // match, for ones not yet linked.
+        let suggestedMatch: { id: string; name: string } | null = null;
+        if (!s.linkedSubjectId) {
+          const candidate = await prisma.subject.findFirst({ where: { name: { equals: s.name, mode: 'insensitive' } } });
+          suggestedMatch = candidate ? { id: candidate.id, name: candidate.name } : null;
+        }
+        return {
+          id: s.id,
+          name: s.name,
+          exam: `${s.subCategory.category.name} — ${s.subCategory.name}`,
+          topicCount: s._count.topics,
+          linkedSubject: s.linkedSubject,
+          directQuestionCount,
+          linkedFlatQuestionCount,
+          totalReachableQuestions: directQuestionCount + linkedFlatQuestionCount,
+          suggestedMatch,
+        };
+      })
+    );
+    res.json({ subjects: results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to run diagnostic' });
+  }
+});
+
+// POST /admin/diagnostics/auto-link-subjects — Sept 2026, ONE-TIME fix
+// (explicit admin request). For every unlinked SyllabusSubject, finds a
+// flat Subject whose name matches exactly (case-insensitive) and links
+// them. Safe/idempotent — only ever sets a link where one doesn't already
+// exist, never overwrites an existing manual link. Ambiguous or unmatched
+// rows are left alone and reported so an admin can link them by hand.
+app.post('/admin/diagnostics/auto-link-subjects', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try {
+    const unlinked = await prisma.syllabusSubject.findMany({ where: { linkedSubjectId: null } });
+    const linked: { syllabusSubject: string; flatSubject: string }[] = [];
+    const stillUnmatched: string[] = [];
+    for (const s of unlinked) {
+      const matches = await prisma.subject.findMany({ where: { name: { equals: s.name, mode: 'insensitive' } } });
+      if (matches.length === 1) {
+        await prisma.syllabusSubject.update({ where: { id: s.id }, data: { linkedSubjectId: matches[0].id } });
+        linked.push({ syllabusSubject: s.name, flatSubject: matches[0].name });
+      } else {
+        stillUnmatched.push(s.name);
+      }
+    }
+    res.json({ linkedCount: linked.length, linked, stillUnmatched });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to auto-link subjects' });
+  }
+});
+
+// POST /admin/diagnostics/link-subject — Sept 2026, ONE-TIME fix helper.
+// Manually link one SyllabusSubject to one flat Subject (for cases
+// auto-link couldn't resolve — no exact name match, or more than one flat
+// Subject with that name across different exams).
+app.post('/admin/diagnostics/link-subject', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const { syllabusSubjectId, subjectId } = req.body;
+    if (!syllabusSubjectId || !subjectId) {
+      res.status(400).json({ error: 'syllabusSubjectId and subjectId are required' });
+      return;
+    }
+    const updated = await prisma.syllabusSubject.update({ where: { id: syllabusSubjectId }, data: { linkedSubjectId: subjectId } });
+    res.json({ linked: true, syllabusSubject: updated.name });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to link subject' });
+  }
+});
+
 // GET /admin/diagnostics/tamil-subject-question-linkage — Sept 2026,
 // ONE-TIME diagnostic (read-only). Student reported "no eligible
 // questions" after selecting only "தமிழ் தகுதி மற்றும் மதிப்பீட்டுத் தேர்வு" as a

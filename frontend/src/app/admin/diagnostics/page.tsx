@@ -40,6 +40,41 @@ export default function DiagnosticsPage() {
   const [fixNamesResult, setFixNamesResult] = useState<{ log: string[] } | null>(null);
   const [linkageResult, setLinkageResult] = useState<any>(null);
   const [linkageLoading, setLinkageLoading] = useState(false);
+  const [allLinkageResult, setAllLinkageResult] = useState<any>(null);
+  const [allLinkageLoading, setAllLinkageLoading] = useState(false);
+  const [autoLinking, setAutoLinking] = useState(false);
+  const [autoLinkResult, setAutoLinkResult] = useState<any>(null);
+
+  async function runAllLinkageCheck() {
+    setAllLinkageLoading(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/subject-linkage-status');
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to run check');
+        return;
+      }
+      setAllLinkageResult(body);
+    } finally {
+      setAllLinkageLoading(false);
+    }
+  }
+
+  async function runAutoLink() {
+    setAutoLinking(true);
+    try {
+      const res = await adminFetch('/admin/diagnostics/auto-link-subjects', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to auto-link');
+        return;
+      }
+      setAutoLinkResult(body);
+      await runAllLinkageCheck();
+    } finally {
+      setAutoLinking(false);
+    }
+  }
 
   async function runLinkageCheck() {
     setLinkageLoading(true);
@@ -260,6 +295,61 @@ export default function DiagnosticsPage() {
         <pre style={{ fontSize: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 20, overflowX: 'auto' }}>
           {JSON.stringify(linkageResult, null, 2)}
         </pre>
+      )}
+
+      {/* Sept 2026 — explicit request: "put a full stop to this problem"
+          across EVERY subject, not just Tamil. Shows linkage status for
+          every SyllabusSubject, and lets an admin auto-link the ones with
+          an exact-name match to a flat Subject in one click. */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <button
+          onClick={runAllLinkageCheck}
+          disabled={allLinkageLoading}
+          style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {allLinkageLoading ? 'Running…' : 'Check ALL Subjects\u2019 Linkage Status'}
+        </button>
+        <button
+          onClick={runAutoLink}
+          disabled={autoLinking}
+          style={{ padding: '8px 16px', borderRadius: 6, background: '#b91c1c', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {autoLinking ? 'Linking…' : 'Auto-Link Subjects (exact name match)'}
+        </button>
+      </div>
+      {autoLinkResult && (
+        <div style={{ fontSize: 12, marginBottom: 12 }}>
+          <p style={{ color: '#166534' }}>Linked {autoLinkResult.linkedCount} subject(s).</p>
+          {autoLinkResult.stillUnmatched?.length > 0 && (
+            <p style={{ color: '#b91c1c' }}>Still unmatched (link manually): {autoLinkResult.stillUnmatched.join(', ')}</p>
+          )}
+        </div>
+      )}
+      {allLinkageResult && (
+        <div style={{ marginBottom: 20, overflowX: 'auto' }}>
+          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
+                <th style={{ padding: 6 }}>Subject</th>
+                <th style={{ padding: 6 }}>Exam</th>
+                <th style={{ padding: 6 }}>Linked Flat Subject</th>
+                <th style={{ padding: 6 }}>Suggested Match</th>
+                <th style={{ padding: 6 }}>Reachable Questions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allLinkageResult.subjects.map((s: any) => (
+                <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9', background: s.totalReachableQuestions === 0 ? '#fef2f2' : undefined }}>
+                  <td style={{ padding: 6, fontWeight: 600 }}>{s.name}</td>
+                  <td style={{ padding: 6, color: '#64748b' }}>{s.exam}</td>
+                  <td style={{ padding: 6 }}>{s.linkedSubject ? s.linkedSubject.name : <span style={{ color: '#b91c1c' }}>not linked</span>}</td>
+                  <td style={{ padding: 6, color: '#64748b' }}>{s.suggestedMatch ? s.suggestedMatch.name : '—'}</td>
+                  <td style={{ padding: 6, fontWeight: 700, color: s.totalReachableQuestions === 0 ? '#b91c1c' : '#166534' }}>{s.totalReachableQuestions}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* Sept 2026 — explicit request: comprehensive English + Tamil name

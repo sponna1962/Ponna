@@ -70,7 +70,7 @@ export class AllocationService {
     const caCap = this.currentAffairsCapFor(sessionSize, settings);
     const selected: string[] = [];
     const hasPreference = !!preference && (preference.subjectIds.length > 0 || preference.topicIds.length > 0);
-    const preferredFilter = hasPreference ? this.resolvePreferredFilter(preference!) : null;
+    const preferredFilter = hasPreference ? await this.resolvePreferredFilter(preference!) : null;
 
     // Current Affairs remains part of the session, but when the student has
     // explicitly selected Subject/Topic Preference it is HARD-SCOPED to that
@@ -163,11 +163,21 @@ export class AllocationService {
   /**
    * Subject preference matches the parent Subject. Topic preference matches
    * the exact Topic. Multiple selected subjects/topics are an OR within the
-   * student's chosen set. A question without a syllabus topic cannot match
-   * a Subject/Topic Preference and therefore cannot enter a strict preferred
-   * session.
+   * student's chosen set.
+   *
+   * Two independent taxonomies both tag questions with a subject: the
+   * SyllabusSubject/SyllabusTopic tree (Question.syllabusTopicId) that this
+   * selector is built from, and the flat Subject a staff member tags a
+   * question with directly (Question.subjectId) — which is how most
+   * bulk-imported questions are actually tagged. A question matches this
+   * preference if EITHER path resolves it: a direct syllabusTopicId/
+   * syllabusTopic.subjectId match, OR its flat subjectId is the one linked
+   * to the selected SyllabusSubject(s) via SyllabusSubject.linkedSubjectId.
+   * Without the second path, a Subject Preference silently returns zero
+   * questions whenever the matching content was tagged the flat-Subject way
+   * — this was a real, reported bug (Sept 2026).
    */
-  private resolvePreferredFilter(preference: { subjectIds: string[]; topicIds: string[] }): Prisma.QuestionWhereInput {
+  private async resolvePreferredFilter(preference: { subjectIds: string[]; topicIds: string[] }): Promise<Prisma.QuestionWhereInput> {
     const or: Prisma.QuestionWhereInput[] = [];
     if (preference.topicIds.length > 0) {
       or.push({ syllabusTopicId: { in: preference.topicIds } });
@@ -175,6 +185,25 @@ export class AllocationService {
     if (preference.subjectIds.length > 0) {
       or.push({ syllabusTopic: { subjectId: { in: preference.subjectIds } } });
     }
+
+    // Resolve linked flat Subjects for: subjects selected directly, and the
+    // parent subject of any topic selected directly (selecting a topic
+    // implies its subject's flat-tagged questions are also in scope).
+    const topicParentSubjectIds = preference.topicIds.length > 0
+      ? (await prisma.syllabusTopic.findMany({ where: { id: { in: preference.topicIds } }, select: { subjectId: true } })).map((t) => t.subjectId)
+      : [];
+    const allSyllabusSubjectIds = Array.from(new Set([...preference.subjectIds, ...topicParentSubjectIds]));
+    if (allSyllabusSubjectIds.length > 0) {
+      const linked = await prisma.syllabusSubject.findMany({
+        where: { id: { in: allSyllabusSubjectIds }, linkedSubjectId: { not: null } },
+        select: { linkedSubjectId: true },
+      });
+      const flatSubjectIds = linked.map((s) => s.linkedSubjectId!).filter(Boolean);
+      if (flatSubjectIds.length > 0) {
+        or.push({ subjectId: { in: flatSubjectIds } });
+      }
+    }
+
     return { OR: or };
   }
 
