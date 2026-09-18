@@ -17,10 +17,17 @@ export const metadata: Metadata = {
 // language state, persisted in localStorage — see lib/language-context.tsx.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ colorScheme: 'light' }}>
       <head>
         <ThemeStyles />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        {/* Sept 2026 — the site has no dark theme; some Android browsers
+            (Samsung Internet, Chrome's "Dark theme for web contents") were
+            auto-inverting/heuristically re-coloring pages, producing
+            washed-out, low-contrast text on devices with OS dark mode on.
+            This tells the browser the site is explicitly light-only, so it
+            stops applying that heuristic. */}
+        <meta name="color-scheme" content="light" />
         {/* Noto Sans Tamil — the browser's default system font renders Tamil
             poorly on many devices (outlined/broken-looking glyphs, especially
             on Windows without a Tamil font installed). Noto Sans covers both
