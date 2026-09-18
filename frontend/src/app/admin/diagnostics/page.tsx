@@ -376,6 +376,7 @@ export default function DiagnosticsPage() {
                 <th style={{ padding: 6 }}>Linked Flat Subject</th>
                 <th style={{ padding: 6 }}>Suggested Match</th>
                 <th style={{ padding: 6 }}>Reachable Questions</th>
+                <th style={{ padding: 6 }}>id (for manual link)</th>
               </tr>
             </thead>
             <tbody>
@@ -386,6 +387,7 @@ export default function DiagnosticsPage() {
                   <td style={{ padding: 6 }}>{s.linkedSubject ? s.linkedSubject.name : <span style={{ color: '#b91c1c' }}>not linked</span>}</td>
                   <td style={{ padding: 6, color: '#64748b' }}>{s.suggestedMatch ? s.suggestedMatch.name : '—'}</td>
                   <td style={{ padding: 6, fontWeight: 700, color: s.totalReachableQuestions === 0 ? '#b91c1c' : '#166534' }}>{s.totalReachableQuestions}</td>
+                  <td style={{ padding: 6, fontFamily: 'monospace', fontSize: 10, color: '#94a3b8' }}>{s.id}</td>
                 </tr>
               ))}
             </tbody>
