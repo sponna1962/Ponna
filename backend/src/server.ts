@@ -2051,32 +2051,36 @@ app.get('/admin/diagnostics/subject-linkage-status', requireStaffAuth, async (_r
       },
       orderBy: [{ subCategoryId: 'asc' }, { sortOrder: 'asc' }],
     });
-    const results = await Promise.all(
-      syllabusSubjects.map(async (s) => {
-        const directQuestionCount = await prisma.question.count({ where: { syllabusTopic: { subjectId: s.id } } });
-        const linkedFlatQuestionCount = s.linkedSubjectId
-          ? await prisma.question.count({ where: { subjectId: s.linkedSubjectId } })
-          : 0;
-        // Suggest a candidate flat Subject by exact case-insensitive name
-        // match, for ones not yet linked.
-        let suggestedMatch: { id: string; name: string } | null = null;
-        if (!s.linkedSubjectId) {
-          const candidate = await prisma.subject.findFirst({ where: { name: { equals: s.name, mode: 'insensitive' } } });
-          suggestedMatch = candidate ? { id: candidate.id, name: candidate.name } : null;
-        }
-        return {
-          id: s.id,
-          name: s.name,
-          exam: `${s.subCategory.category.name} — ${s.subCategory.name}`,
-          topicCount: s._count.topics,
-          linkedSubject: s.linkedSubject,
-          directQuestionCount,
-          linkedFlatQuestionCount,
-          totalReachableQuestions: directQuestionCount + linkedFlatQuestionCount,
-          suggestedMatch,
-        };
-      })
-    );
+    // Sequential, not Promise.all — this runs up to 3 queries per
+    // SyllabusSubject, and firing all of them concurrently across every
+    // subject (dozens, across every exam) exhausted the DB connection pool
+    // (Prisma error P2024) the first time this ran. It's a one-time
+    // diagnostic, not a hot path, so sequential is the right trade-off.
+    const results: any[] = [];
+    for (const s of syllabusSubjects) {
+      const directQuestionCount = await prisma.question.count({ where: { syllabusTopic: { subjectId: s.id } } });
+      const linkedFlatQuestionCount = s.linkedSubjectId
+        ? await prisma.question.count({ where: { subjectId: s.linkedSubjectId } })
+        : 0;
+      // Suggest a candidate flat Subject by exact case-insensitive name
+      // match, for ones not yet linked.
+      let suggestedMatch: { id: string; name: string } | null = null;
+      if (!s.linkedSubjectId) {
+        const candidate = await prisma.subject.findFirst({ where: { name: { equals: s.name, mode: 'insensitive' } } });
+        suggestedMatch = candidate ? { id: candidate.id, name: candidate.name } : null;
+      }
+      results.push({
+        id: s.id,
+        name: s.name,
+        exam: `${s.subCategory.category.name} — ${s.subCategory.name}`,
+        topicCount: s._count.topics,
+        linkedSubject: s.linkedSubject,
+        directQuestionCount,
+        linkedFlatQuestionCount,
+        totalReachableQuestions: directQuestionCount + linkedFlatQuestionCount,
+        suggestedMatch,
+      });
+    }
     res.json({ subjects: results });
   } catch (err) {
     console.error(err);
