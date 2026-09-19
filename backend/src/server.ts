@@ -2046,12 +2046,11 @@ app.get('/admin/diagnostics/subject-linkage-status', requireStaffAuth, async (_r
     const syllabusSubjects = await prisma.syllabusSubject.findMany({
       include: {
         subCategory: { select: { name: true, category: { select: { name: true } } } },
-        linkedSubject: { select: { id: true, name: true } },
         _count: { select: { topics: true } },
       },
       orderBy: [{ subCategoryId: 'asc' }, { sortOrder: 'asc' }],
     });
-    // Sequential, not Promise.all — this runs up to 3 queries per
+    // Sequential, not Promise.all — this runs several queries per
     // SyllabusSubject, and firing all of them concurrently across every
     // subject (dozens, across every exam) exhausted the DB connection pool
     // (Prisma error P2024) the first time this ran. It's a one-time
@@ -2059,13 +2058,16 @@ app.get('/admin/diagnostics/subject-linkage-status', requireStaffAuth, async (_r
     const results: any[] = [];
     for (const s of syllabusSubjects) {
       const directQuestionCount = await prisma.question.count({ where: { syllabusTopic: { subjectId: s.id } } });
-      const linkedFlatQuestionCount = s.linkedSubjectId
-        ? await prisma.question.count({ where: { subjectId: s.linkedSubjectId } })
-        : 0;
+      let linkedFlatQuestionCount = 0;
+      let linkedSubjects: { id: string; name: string }[] = [];
+      if (s.linkedSubjectIds.length > 0) {
+        linkedFlatQuestionCount = await prisma.question.count({ where: { subjectId: { in: s.linkedSubjectIds } } });
+        linkedSubjects = await prisma.subject.findMany({ where: { id: { in: s.linkedSubjectIds } }, select: { id: true, name: true } });
+      }
       // Suggest a candidate flat Subject by exact case-insensitive name
       // match, for ones not yet linked.
       let suggestedMatch: { id: string; name: string } | null = null;
-      if (!s.linkedSubjectId) {
+      if (linkedSubjects.length === 0) {
         const candidate = await prisma.subject.findFirst({ where: { name: { equals: s.name, mode: 'insensitive' } } });
         suggestedMatch = candidate ? { id: candidate.id, name: candidate.name } : null;
       }
@@ -2074,7 +2076,7 @@ app.get('/admin/diagnostics/subject-linkage-status', requireStaffAuth, async (_r
         name: s.name,
         exam: `${s.subCategory.category.name} — ${s.subCategory.name}`,
         topicCount: s._count.topics,
-        linkedSubject: s.linkedSubject,
+        linkedSubjects,
         directQuestionCount,
         linkedFlatQuestionCount,
         totalReachableQuestions: directQuestionCount + linkedFlatQuestionCount,
@@ -2096,13 +2098,13 @@ app.get('/admin/diagnostics/subject-linkage-status', requireStaffAuth, async (_r
 // rows are left alone and reported so an admin can link them by hand.
 app.post('/admin/diagnostics/auto-link-subjects', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
   try {
-    const unlinked = await prisma.syllabusSubject.findMany({ where: { linkedSubjectId: null } });
+    const unlinked = await prisma.syllabusSubject.findMany({ where: { linkedSubjectIds: { isEmpty: true } } });
     const linked: { syllabusSubject: string; flatSubject: string }[] = [];
     const stillUnmatched: string[] = [];
     for (const s of unlinked) {
       const matches = await prisma.subject.findMany({ where: { name: { equals: s.name, mode: 'insensitive' } } });
       if (matches.length === 1) {
-        await prisma.syllabusSubject.update({ where: { id: s.id }, data: { linkedSubjectId: matches[0].id } });
+        await prisma.syllabusSubject.update({ where: { id: s.id }, data: { linkedSubjectIds: [matches[0].id] } });
         linked.push({ syllabusSubject: s.name, flatSubject: matches[0].name });
       } else {
         stillUnmatched.push(s.name);
@@ -2115,10 +2117,6 @@ app.post('/admin/diagnostics/auto-link-subjects', requireStaffAuth, requireRole(
   }
 });
 
-// POST /admin/diagnostics/link-subject — Sept 2026, ONE-TIME fix helper.
-// Manually link one SyllabusSubject to one flat Subject (for cases
-// auto-link couldn't resolve — no exact name match, or more than one flat
-// Subject with that name across different exams).
 // GET /admin/diagnostics/flat-subjects-by-question-count — Sept 2026,
 // ONE-TIME diagnostic (read-only). Lists every flat Subject with its
 // question counts (total and Tamil-language), so an admin can identify
@@ -2146,15 +2144,30 @@ app.get('/admin/diagnostics/flat-subjects-by-question-count', requireStaffAuth, 
   }
 });
 
+// POST /admin/diagnostics/link-subject — Sept 2026, ONE-TIME fix helper.
+// Manually link one SyllabusSubject to one or more flat Subjects (for cases
+// auto-link couldn't resolve — no exact name match, more than one flat
+// Subject with that name across different exams, or a SyllabusSubject that
+// genuinely maps to several flat Subjects, e.g. "Aptitude & Mental Ability"
+// -> "Aptitude" + "Reasoning"). Pass subjectId (one) or subjectIds (many) —
+// ADDS to any existing links rather than replacing them, so this can be
+// called more than once to build up the list.
 app.post('/admin/diagnostics/link-subject', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
-    const { syllabusSubjectId, subjectId } = req.body;
-    if (!syllabusSubjectId || !subjectId) {
-      res.status(400).json({ error: 'syllabusSubjectId and subjectId are required' });
+    const { syllabusSubjectId, subjectId, subjectIds } = req.body;
+    const idsToAdd: string[] = subjectIds && Array.isArray(subjectIds) ? subjectIds : subjectId ? [subjectId] : [];
+    if (!syllabusSubjectId || idsToAdd.length === 0) {
+      res.status(400).json({ error: 'syllabusSubjectId and subjectId (or subjectIds) are required' });
       return;
     }
-    const updated = await prisma.syllabusSubject.update({ where: { id: syllabusSubjectId }, data: { linkedSubjectId: subjectId } });
-    res.json({ linked: true, syllabusSubject: updated.name });
+    const existing = await prisma.syllabusSubject.findUnique({ where: { id: syllabusSubjectId }, select: { linkedSubjectIds: true } });
+    if (!existing) {
+      res.status(404).json({ error: 'SyllabusSubject not found' });
+      return;
+    }
+    const merged = Array.from(new Set([...existing.linkedSubjectIds, ...idsToAdd]));
+    const updated = await prisma.syllabusSubject.update({ where: { id: syllabusSubjectId }, data: { linkedSubjectIds: merged } });
+    res.json({ linked: true, syllabusSubject: updated.name, linkedSubjectIds: updated.linkedSubjectIds });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to link subject' });

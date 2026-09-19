@@ -1064,7 +1064,6 @@ model Subject {
   subCategory   ExamSubCategory? @relation(fields: [subCategoryId], references: [id])
   questions     Question[]
   subjectClassificationResults SubjectClassificationResult[]
-  linkedFromSyllabusSubjects SyllabusSubject[]
 
   @@unique([name, subCategoryId])
 }
@@ -1146,17 +1145,20 @@ model SyllabusSubject {
   topics        SyllabusTopic[]
   studyNotes    StudyNote[]
   // Sept 2026 — links this Subject Preference entry to the flat `Subject`
-  // that questions are actually tagged with (Question.subjectId). These are
-  // two independent taxonomies that grew separately: SyllabusSubject/Topic
-  // drives the Subject/Topic Preference selector and per-topic weighting,
-  // while flat Subject is what admins tag individual questions with. Without
-  // this link, a student selecting a Subject Preference gets ZERO questions
-  // whenever the matching questions were tagged via flat Subject instead of
-  // syllabusTopicId (the far more common case for bulk-imported questions) —
-  // this is the root cause behind "no eligible questions" despite thousands
-  // of tagged questions existing. See allocation.service.ts.
-  linkedSubjectId String?
-  linkedSubject   Subject?        @relation(fields: [linkedSubjectId], references: [id])
+  // row(s) that questions are actually tagged with (Question.subjectId).
+  // These are two independent taxonomies that grew separately:
+  // SyllabusSubject/Topic drives the Subject/Topic Preference selector and
+  // per-topic weighting, while flat Subject is what admins tag individual
+  // questions with. Without this link, a student selecting a Subject
+  // Preference gets ZERO questions whenever the matching questions were
+  // tagged via flat Subject instead of syllabusTopicId (the far more common
+  // case for bulk-imported questions) — this is the root cause behind "no
+  // eligible questions" despite thousands of tagged questions existing.
+  // An array, not a single id: some SyllabusSubjects (e.g. "Aptitude &
+  // Mental Ability") correspond to MULTIPLE flat Subjects that were tagged
+  // separately (e.g. "Aptitude" and "Reasoning" as two distinct flat rows).
+  // See allocation.service.ts.
+  linkedSubjectIds String[] @default([])
 
   @@unique([subCategoryId, name])
 }

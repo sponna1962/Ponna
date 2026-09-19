@@ -69,10 +69,11 @@ export default function DiagnosticsPage() {
     if (!manualLink.syllabusSubjectId || !manualLink.subjectId) return;
     setManualLinking(true);
     try {
+      const subjectIds = manualLink.subjectId.split(',').map((s) => s.trim()).filter(Boolean);
       const res = await adminFetch('/admin/diagnostics/link-subject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(manualLink),
+        body: JSON.stringify({ syllabusSubjectId: manualLink.syllabusSubjectId, subjectIds }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -384,7 +385,7 @@ export default function DiagnosticsPage() {
                 <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9', background: s.totalReachableQuestions === 0 ? '#fef2f2' : undefined }}>
                   <td style={{ padding: 6, fontWeight: 600 }}>{s.name}</td>
                   <td style={{ padding: 6, color: '#64748b' }}>{s.exam}</td>
-                  <td style={{ padding: 6 }}>{s.linkedSubject ? s.linkedSubject.name : <span style={{ color: '#b91c1c' }}>not linked</span>}</td>
+                  <td style={{ padding: 6 }}>{s.linkedSubjects?.length > 0 ? s.linkedSubjects.map((ls: any) => ls.name).join(' + ') : <span style={{ color: '#b91c1c' }}>not linked</span>}</td>
                   <td style={{ padding: 6, color: '#64748b' }}>{s.suggestedMatch ? s.suggestedMatch.name : '—'}</td>
                   <td style={{ padding: 6, fontWeight: 700, color: s.totalReachableQuestions === 0 ? '#b91c1c' : '#166534' }}>{s.totalReachableQuestions}</td>
                   <td style={{ padding: 6, fontFamily: 'monospace', fontSize: 10, color: '#94a3b8' }}>{s.id}</td>
@@ -444,7 +445,7 @@ export default function DiagnosticsPage() {
           style={{ fontSize: 12, padding: '7px 9px', border: '1px solid #e2e8f0', borderRadius: 6, width: 260 }}
         />
         <input
-          placeholder="flat Subject id"
+          placeholder="flat Subject id(s), comma-separated"
           value={manualLink.subjectId}
           onChange={(e) => setManualLink({ ...manualLink, subjectId: e.target.value })}
           style={{ fontSize: 12, padding: '7px 9px', border: '1px solid #e2e8f0', borderRadius: 6, width: 260 }}

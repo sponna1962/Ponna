@@ -195,10 +195,10 @@ export class AllocationService {
     const allSyllabusSubjectIds = Array.from(new Set([...preference.subjectIds, ...topicParentSubjectIds]));
     if (allSyllabusSubjectIds.length > 0) {
       const linked = await prisma.syllabusSubject.findMany({
-        where: { id: { in: allSyllabusSubjectIds }, linkedSubjectId: { not: null } },
-        select: { linkedSubjectId: true },
+        where: { id: { in: allSyllabusSubjectIds } },
+        select: { linkedSubjectIds: true },
       });
-      const flatSubjectIds = linked.map((s) => s.linkedSubjectId!).filter(Boolean);
+      const flatSubjectIds = Array.from(new Set(linked.flatMap((s) => s.linkedSubjectIds)));
       if (flatSubjectIds.length > 0) {
         or.push({ subjectId: { in: flatSubjectIds } });
       }
