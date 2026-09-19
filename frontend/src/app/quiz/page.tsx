@@ -5,6 +5,14 @@ import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
 
+// Sept 2026 (explicit request) — some official syllabi include a subject
+// that is only a valid exam choice for differently-abled candidates, taken
+// INSTEAD OF the standard subject everyone else takes (e.g. Group IV's
+// English track vs the Tamil Eligibility Test everyone else must take).
+// Hidden by default in the Subject Preference picker, behind a toggle, so
+// it doesn't confuse the vast majority of students it doesn't apply to.
+const DISABILITY_ONLY_SUBJECT_NAMES = new Set(['General English']);
+
 // Practice Setup + Start — implements the finalized structure:
 //   Exam Type/Purpose → Exam Authority (multi) → Category (multi, per
 //   Authority) → Sub-Category (multi, where applicable) → Difficulty →
@@ -716,6 +724,7 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [draftIds, setDraftIds] = useState<Set<string>>(new Set());
+  const [showDisabilityTrack, setShowDisabilityTrack] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -780,12 +789,29 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{t.practiceSetup.chooseSubjects}</h3>
             <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{t.practiceSetup.subjectPreferenceNote}</p>
 
-            {subjects.map((s) => (
+            {subjects.filter((s) => showDisabilityTrack || !DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)).map((s) => (
               <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
                 <input type="checkbox" checked={draftIds.has(s.id)} onChange={() => toggleDraft(s.id)} />
                 {s.name}
               </label>
             ))}
+
+            {/* Sept 2026 (explicit request) — some syllabi include a subject
+                that's only a valid choice for differently-abled candidates
+                (e.g. Group IV's General English track, vs the standard
+                Tamil Eligibility Test everyone else takes). Hidden by
+                default so it doesn't clutter/confuse the list for
+                everyone; a toggle reveals it for the students it applies
+                to. */}
+            {!showDisabilityTrack && subjects.some((s) => DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)) && (
+              <button
+                type="button"
+                onClick={() => setShowDisabilityTrack(true)}
+                style={{ background: 'none', border: 'none', padding: '10px 0', fontSize: 12.5, color: '#0f172a', textDecoration: 'underline', cursor: 'pointer' }}
+              >
+                {t.practiceSetup.showDisabilityTrack}
+              </button>
+            )}
 
             <button
               onClick={done}
