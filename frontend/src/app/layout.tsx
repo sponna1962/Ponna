@@ -5,12 +5,31 @@ import { ThemeStyles } from '../lib/brand-theme';
 import { InstallPrompt } from '../components/InstallPrompt';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.ponna.in'),
   title: 'PONNA.in — TNPSC & TNTET Exam Practice | Previous Papers, Instant Answers',
   description:
     'Practice for TNPSC and TNTET with previous exam questions, expert-designed practice questions, and instant answers after every question. Affordable exam preparation for Tamil Nadu students — practice anytime, in Tamil or English.',
-  keywords: ['TNPSC practice', 'TNTET practice', 'TNPSC previous papers', 'TNTET previous papers', 'TNPSC online test', 'TNTET online test', 'PONNA'],
+  alternates: { canonical: '/' },
   manifest: '/manifest.json',
   themeColor: '#0f172a',
+};
+
+// Organization + WebSite structured data (Sept 2026 SEO requirement) — site-
+// wide, once, in the root layout. Page-specific structured data (e.g.
+// BreadcrumbList) is added per-page instead.
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'PONNA.in',
+  url: 'https://www.ponna.in',
+  logo: 'https://www.ponna.in/logo-compact.png',
+  description: 'Online exam practice platform for TNPSC and TNTET aspirants in Tamil Nadu.',
+};
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'PONNA.in',
+  url: 'https://www.ponna.in',
 };
 
 // LanguageProvider (§4.5) wraps the whole app here so every page shares one
@@ -39,6 +58,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       </head>
       <body style={{ fontFamily: "'Noto Sans Tamil', 'Noto Sans', -apple-system, sans-serif", margin: 0 }}>
         <ThemeProvider>

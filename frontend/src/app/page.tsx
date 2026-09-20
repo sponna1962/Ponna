@@ -564,6 +564,14 @@ export default function IndexPage() {
           >
             பயிற்சியைத் தொடங்குங்கள் / Start Practising
           </button>
+
+          {/* Sept 2026 SEO requirement — internal linking to the new TNPSC
+              Group 4 / TNTET landing pages from the home page. */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24, fontSize: 12.5 }}>
+            <a href="/tnpsc-group-4" style={{ color: COLORS.inkMuted, textDecoration: 'underline' }}>TNPSC Group 4</a>
+            <a href="/tntet" style={{ color: COLORS.inkMuted, textDecoration: 'underline' }}>TNTET</a>
+            <a href="/current-affairs" style={{ color: COLORS.inkMuted, textDecoration: 'underline' }}>Current Affairs</a>
+          </div>
         </div>
       )}
 
