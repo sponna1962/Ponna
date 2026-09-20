@@ -15,6 +15,7 @@
 // motif behind the hero; elsewhere, quiet hairline rules divide sections.
 
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
+import { StudentMenu } from '../../components/StudentMenu';
 
 function H2({ children }: { children: React.ReactNode }) {
   return (
@@ -37,17 +38,19 @@ export default function AboutPage() {
     <>
       <BitterFontLinks />
       <main style={{ background: COLORS.paper, color: COLORS.ink, paddingBottom: 80 }}>
-        {/* Simple top bar — no menu chrome needed, just a way back */}
-        <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 24px 0' }}>
-          <a href="/" style={{ fontSize: 14, color: COLORS.inkMuted, textDecoration: 'none' }}>
-          ← PONNA.in
-        </a>
-      </div>
+        {/* Sept 2026 (explicit request) — use the same common PONNA header
+            (StudentMenu drawer) as every other app/support page, instead of
+            a standalone "back to home" link that made this page feel like a
+            separate marketing site. */}
+        <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 24px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <StudentMenu />
+          <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink }}>About PONNA</span>
+        </div>
 
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', padding: '48px 0 40px' }}>
-        {/* Ruled-notebook motif — the one signature device, used once */}
-        <svg
+        {/* ── Hero ─────────────────────────────────────────────────────── */}
+        <div style={{ position: 'relative', overflow: 'hidden', padding: '48px 0 40px' }}>
+          {/* Ruled-notebook motif — the one signature device, used once */}
+          <svg
           aria-hidden
           viewBox="0 0 640 200"
           preserveAspectRatio="none"
