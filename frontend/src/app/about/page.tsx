@@ -30,7 +30,7 @@ function Rule() {
 }
 
 function Section({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return <section style={{ maxWidth: 640, margin: '0 auto', padding: '0 24px', ...style }}>{children}</section>;
+  return <section style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px', ...style }}>{children}</section>;
 }
 
 export default function AboutPage() {
@@ -42,7 +42,7 @@ export default function AboutPage() {
             (StudentMenu drawer) as every other app/support page, instead of
             a standalone "back to home" link that made this page feel like a
             separate marketing site. */}
-        <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 24px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
           <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink }}>About PONNA</span>
         </div>
@@ -54,7 +54,7 @@ export default function AboutPage() {
           aria-hidden
           viewBox="0 0 640 200"
           preserveAspectRatio="none"
-          style={{ position: 'absolute', top: 40, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 640, height: 200, opacity: 0.5, pointerEvents: 'none' }}
+          style={{ position: 'absolute', top: 40, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, height: 200, opacity: 0.5, pointerEvents: 'none' }}
         >
           <line x1="0" y1="40" x2="560" y2="40" stroke={COLORS.goldLight} strokeWidth="2" />
           <line x1="0" y1="80" x2="620" y2="80" stroke={COLORS.goldLight} strokeWidth="2" />
