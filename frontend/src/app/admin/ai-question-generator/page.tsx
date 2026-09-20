@@ -53,10 +53,6 @@ export default function AiQuestionGeneratorPage() {
       .catch(() => setSubjects([]));
   }, [subCategory]);
 
-  useEffect(() => {
-    if (forcedLanguageMode) setLanguageMode(forcedLanguageMode);
-  }, [forcedLanguageMode]);
-
   async function loadRuns() {
     const r = await adminFetch('/admin/ai-question-generator/runs?limit=20');
     if (r.ok) setRuns(await r.json());
@@ -71,6 +67,10 @@ export default function AiQuestionGeneratorPage() {
     return null;
   }, [subjectName]);
   const effectiveLanguageMode = forcedLanguageMode ?? languageMode;
+
+  useEffect(() => {
+    if (forcedLanguageMode) setLanguageMode(forcedLanguageMode);
+  }, [forcedLanguageMode]);
 
   function toggle(t: string) {
     setTypes(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
