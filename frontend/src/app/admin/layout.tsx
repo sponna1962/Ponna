@@ -14,6 +14,7 @@ const navItems = [
   { href: '/admin/bulk-explanation', label: 'Bulk Explanation Generator' },
   { href: '/admin/subject-classification', label: 'Subject Classification' },
   { href: '/admin/study-notes', label: 'Study Notes' },
+  { href: '/admin/ai-question-generator', label: 'AI Question Generator' },
   { href: '/admin/html-entity-cleanup', label: 'HTML Entity Cleanup' },
   { href: '/admin/daily-quiz', label: 'Daily Quiz' },
   { href: '/admin/current-affairs-learning', label: 'Current Affairs — Learning' },
