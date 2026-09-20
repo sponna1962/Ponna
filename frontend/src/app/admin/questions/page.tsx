@@ -787,7 +787,7 @@ function AdminQuestionsPageInner() {
                 {q.authority ? `${q.authority.name}${q.examCategory ? ' → ' + q.examCategory.name : ''}${q.subCategory ? ' → ' + q.subCategory.name : ''}` : '—'}
                 {q.examYear && <div>{q.examYear}</div>}
               </td>
-              <td style={{ padding: 10, color: '#64748b', fontSize: 12 }}>{SOURCE_TYPES.find((s) => s.value === q.sourceType)?.label ?? q.sourceType}</td>
+              <td style={{ padding: 10, fontSize: 12, fontWeight: q.subject ? 600 : 400, color: q.subject ? '#0f172a' : '#94a3b8' }}>{q.subject?.name ?? '—'}</td>\n              <td style={{ padding: 10, color: '#64748b', fontSize: 12 }}>{SOURCE_TYPES.find((s) => s.value === q.sourceType)?.label ?? q.sourceType}</td>
               <td style={{ padding: 10 }}>
                 <select value={q.difficulty ?? ''} onChange={(e) => setDifficulty(q.id, e.target.value)}>
                   <option value="">—</option>
