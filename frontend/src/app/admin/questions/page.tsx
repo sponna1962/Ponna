@@ -743,7 +743,7 @@ function AdminQuestionsPageInner() {
               <button onClick={classifySelected} style={{ fontSize: 12, padding: '6px 12px' }}>Classify Selected with AI</button>
               <button onClick={() => bulkSetDifficulty('MEDIUM')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Medium</button>
               <button onClick={() => bulkSetDifficulty('HARD')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Hard</button>
-              <button onClick={openBulkEdit} style={{ fontSize: 12, padding: '6px 12px' }}>✏️ Bulk Edit Metadata</button>
+              <button onClick={openBulkEdit} style={{ fontSize: 12, padding: '6px 12px', fontWeight: 600 }}>📚 Assign / Edit Subject</button>
               <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
               <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
               <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
@@ -764,6 +764,7 @@ function AdminQuestionsPageInner() {
             <th style={{ padding: 10 }}>Question</th>
             <th style={{ padding: 10 }}>Lang</th>
             <th style={{ padding: 10 }}>Classification</th>
+            <th style={{ padding: 10 }}>Subject</th>
             <th style={{ padding: 10 }}>Source</th>
             <th style={{ padding: 10 }}>Difficulty</th>
             <th style={{ padding: 10 }}>AI Suggestion</th>
@@ -806,7 +807,7 @@ function AdminQuestionsPageInner() {
             </tr>
           ))}
           {questions.length === 0 && (
-            <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No questions in this status.</td></tr>
+            <tr><td colSpan={9} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No questions in this status.</td></tr>
           )}
         </tbody>
       </table>
@@ -974,7 +975,7 @@ function AdminQuestionsPageInner() {
             <h2 style={{ fontSize: 16, marginBottom: 4 }}>✏️ Bulk Edit Metadata</h2>
             <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
               Applies to all {selected.size} selected questions. Leave a field blank to leave it unchanged — this only edits the fields
-              you actually fill in. Authority itself and question content/options aren't editable here.
+              you actually fill in. Authority itself and question content/options aren't editable here. Use Subject below to assign the selected Draft questions to the relevant subject.
             </p>
 
             {bulkError && <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 12 }}>{bulkError}</p>}
@@ -1010,7 +1011,7 @@ function AdminQuestionsPageInner() {
                   <input value={bulkExamName} onChange={(e) => setBulkExamName(e.target.value)} placeholder="(leave unchanged)" style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 220 }} />
                 </label>
                 <div style={{ marginBottom: 8 }}>
-                  <SubjectInput value={bulkSubjectName} onChange={setBulkSubjectName} subCategoryId={taxonomyFilter.subCategoryId || undefined} />
+                  <SubjectInput value={bulkSubjectName} onChange={setBulkSubjectName} subCategoryId={bulkTaxonomy.subCategoryId || taxonomyFilter.subCategoryId || undefined} />
                 </div>
                 <label style={{ fontSize: 13, display: 'block', marginBottom: 16 }}>
                   Source Name:{' '}
