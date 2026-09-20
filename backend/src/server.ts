@@ -1892,20 +1892,38 @@ app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthed
 // in Render's environment to whatever you enter into Meta's form; it is
 // never sent back to a client and never logged.
 app.get('/api/whatsapp/webhook', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
+  // Normalized defensively: Render/Meta env-var or query-string values can
+  // pick up stray whitespace (a trailing newline from copy-paste is a very
+  // common, invisible cause of an otherwise-correct token "mismatching").
+  // hub.mode/hub.verify_token are read as string | string[] | undefined by
+  // Express's query parser — take the first element if an array ever shows
+  // up (duplicate query keys), rather than failing a strict === on an array.
+  const rawMode = req.query['hub.mode'];
+  const rawToken = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
-  const expectedToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+  const mode = (Array.isArray(rawMode) ? rawMode[0] : rawMode)?.toString().trim();
+  const receivedToken = (Array.isArray(rawToken) ? rawToken[0] : rawToken)?.toString().trim();
+  const expectedToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim();
 
   if (!expectedToken) {
     console.error('[whatsapp-webhook] WHATSAPP_WEBHOOK_VERIFY_TOKEN is not configured');
     return res.sendStatus(500);
   }
-  if (mode === 'subscribe' && token === expectedToken) {
+  if (mode === 'subscribe' && receivedToken === expectedToken) {
     console.log('[whatsapp-webhook] Verification handshake succeeded');
     return res.status(200).send(challenge);
   }
-  console.warn('[whatsapp-webhook] Verification handshake failed (mode or token mismatch)');
+  // Diagnostic detail WITHOUT ever printing either token's actual value —
+  // lengths and a masked first/last character are enough to tell "wrong
+  // token" apart from "extra whitespace" or "wrong mode" from Render logs,
+  // without exposing the secret in them.
+  const mask = (s?: string) => (s ? `${s[0]}${'*'.repeat(Math.max(0, s.length - 2))}${s.length > 1 ? s[s.length - 1] : ''} (len ${s.length})` : '(none)');
+  console.warn('[whatsapp-webhook] Verification handshake failed', {
+    modeReceived: mode ?? '(none)',
+    modeExpected: 'subscribe',
+    receivedTokenMasked: mask(receivedToken),
+    expectedTokenMasked: mask(expectedToken),
+  });
   res.sendStatus(403);
 });
 
