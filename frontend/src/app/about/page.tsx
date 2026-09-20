@@ -44,7 +44,7 @@ export default function AboutPage() {
             separate marketing site. */}
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
-          <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink }}>About PONNA</span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: COLORS.ink }}>About PONNA</span>
         </div>
 
         {/* ── Hero ─────────────────────────────────────────────────────── */}
