@@ -302,7 +302,7 @@ function AdminQuestionsPageInner() {
   const [bulkSourceName, setBulkSourceName] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
-  const [bulkResult, setBulkResult] = useState<{ count: number } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ count: number; published?: number; skippedNoDifficulty?: number } | null>(null);
 
   function openBulkEdit() {
     setBulkTaxonomy(emptyTaxonomy);
@@ -345,6 +345,70 @@ function AdminQuestionsPageInner() {
     }
     setBulkResult(await res.json());
     loadQuestions();
+  }
+
+  async function applyBulkEditAndPublish() {
+    const fields: Record<string, string> = {};
+    if (bulkSourceType) fields.sourceType = bulkSourceType;
+    if (bulkTaxonomy.categoryId) fields.categoryId = bulkTaxonomy.categoryId;
+    if (bulkTaxonomy.subCategoryId) fields.subCategoryId = bulkTaxonomy.subCategoryId;
+    if (bulkExamName.trim()) fields.examName = bulkExamName.trim();
+    if (bulkSubjectName.trim()) fields.subjectName = bulkSubjectName.trim();
+    if (bulkSourceName.trim()) fields.sourceName = bulkSourceName.trim();
+
+    // Save & Publish is the final editorial step from this modal. Require a
+    // Subject here so an AI-generated Draft cannot be published accidentally
+    // without the intended subject assignment.
+    if (!bulkSubjectName.trim()) {
+      setBulkError('Save & Publish requires a Subject. Select the relevant Subject first.');
+      return;
+    }
+
+    setBulkSaving(true);
+    setBulkError(null);
+
+    const saveRes = await adminFetch('/admin/questions/bulk-update-metadata', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: Array.from(selected),
+        ...fields,
+        additionalTags: bulkAdditionalTags.length > 0 ? bulkAdditionalTags : undefined,
+      }),
+    });
+
+    if (!saveRes.ok) {
+      const body = await saveRes.json().catch(() => ({}));
+      setBulkSaving(false);
+      setBulkError(body.error ?? 'Failed to save changes');
+      return;
+    }
+
+    const saveBody = await saveRes.json();
+
+    const publishRes = await adminFetch('/admin/questions/bulk-publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    });
+
+    setBulkSaving(false);
+
+    if (!publishRes.ok) {
+      const body = await publishRes.json().catch(() => ({}));
+      setBulkError(body.error ?? 'Saved, but publishing failed');
+      loadQuestions();
+      return;
+    }
+
+    const body = await publishRes.json();
+    setBulkResult({
+      count: Number(saveBody.count ?? selected.size),
+      published: Number(body.count ?? 0),
+      skippedNoDifficulty: Number(body.skippedNoDifficulty ?? 0),
+    });
+    loadQuestions();
+    loadPendingAiCount();
   }
 
   function startEdit(q: Question) {
@@ -1026,9 +1090,20 @@ function AdminQuestionsPageInner() {
                   <button
                     onClick={applyBulkEdit}
                     disabled={bulkSaving}
-                    style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                    style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600 }}
                   >
-                    {bulkSaving ? 'Saving…' : `Apply to ${selected.size} questions`}
+                    {bulkSaving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Save the Subject and other changes, then publish ${selected.size} selected question(s)?`)) {
+                        applyBulkEditAndPublish();
+                      }
+                    }}
+                    disabled={bulkSaving}
+                    style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#166534', color: '#fff', fontWeight: 600 }}
+                  >
+                    {bulkSaving ? 'Saving & Publishing…' : '💾 Save & Publish'}
                   </button>
                 </div>
               </>
@@ -1036,7 +1111,24 @@ function AdminQuestionsPageInner() {
 
             {bulkResult && (
               <>
-                <p style={{ fontSize: 14, marginBottom: 16 }}>✅ Updated {bulkResult.count} questions.</p>
+                <p style={{ fontSize: 14, marginBottom: 8 }}>
+                  ✅ Saved {bulkResult.count} question(s).
+                </p>
+                {bulkResult.published !== undefined && (
+                  <p style={{ fontSize: 14, marginBottom: 8 }}>
+                    🟢 Published: <b>{bulkResult.published}</b>
+                    {bulkResult.skippedNoDifficulty ? ' · Skipped: ' + bulkResult.skippedNoDifficulty + ' — Difficulty not set' : ''}
+                  </p>
+                )}
+                {bulkResult.skippedNoDifficulty ? (
+                  <p style={{ fontSize: 12, color: '#b45309', marginBottom: 16 }}>
+                    Set Difficulty for the skipped questions, then publish them from the Questions page.
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+                    The selected questions are now saved and published.
+                  </p>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button onClick={() => setBulkEditOpen(false)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff' }}>
                     Close
