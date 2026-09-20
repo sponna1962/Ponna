@@ -923,6 +923,8 @@ app.post('/admin/ai-question-generator/generate', requireStaffAuth, requireRole(
       subjectId,
       syllabusTopicId,
       sourceName,
+      subjectName,
+      languageMode,
     } = req.body;
 
     const result = await aiQuestionGeneratorService.generate({
@@ -935,6 +937,8 @@ app.post('/admin/ai-question-generator/generate', requireStaffAuth, requireRole(
       subjectId,
       syllabusTopicId,
       sourceName,
+      subjectName,
+      languageMode,
     });
 
     res.json(result);
@@ -962,6 +966,8 @@ app.post('/admin/ai-question-generator/generate-pdf', requireStaffAuth, requireR
       subjectId: req.body.subjectId || undefined,
       syllabusTopicId: req.body.syllabusTopicId || undefined,
       sourceName: req.body.sourceName || req.file.originalname,
+      subjectName: req.body.subjectName || undefined,
+      languageMode: req.body.languageMode || undefined,
     });
 
     res.json(result);

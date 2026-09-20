@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
 
 type Node = { id: string; name: string; categories?: Node[]; subCategories?: Node[] };
+type Subject = { id: string; name: string; subCategoryId: string | null };
+
 type Run = {
   id: string; sourceName: string | null; exam: string; requestedCount: number;
   generatedCount: number; skippedCount: number; requestedDifficulty: string;
@@ -26,6 +28,9 @@ export default function AiQuestionGeneratorPage() {
   const [difficulty, setDifficulty] = useState('ADVANCED');
   const [count, setCount] = useState('20');
   const [sourceName, setSourceName] = useState('');
+  const [subjectName, setSubjectName] = useState('');
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [languageMode, setLanguageMode] = useState<'TA_ONLY'|'EN_ONLY'|'BILINGUAL'>('BILINGUAL');
   const [types, setTypes] = useState<string[]>(TYPES.map(x => x[0]).filter(x => x !== 'STANDARD_MCq'));
   const [tree, setTree] = useState<Node[]>([]);
   const [authority, setAuthority] = useState('');
@@ -40,6 +45,14 @@ export default function AiQuestionGeneratorPage() {
     loadRuns();
   }, []);
 
+  useEffect(() => {
+    if (!subCategory) { setSubjects([]); setSubjectName(''); return; }
+    adminFetch('/admin/subjects?subCategoryId=' + encodeURIComponent(subCategory))
+      .then(r => r.ok ? r.json() : [])
+      .then((rows: Subject[]) => setSubjects(rows))
+      .catch(() => setSubjects([]));
+  }, [subCategory]);
+
   async function loadRuns() {
     const r = await adminFetch('/admin/ai-question-generator/runs?limit=20');
     if (r.ok) setRuns(await r.json());
@@ -47,6 +60,17 @@ export default function AiQuestionGeneratorPage() {
 
   const categories = useMemo(() => tree.find(x => x.id === authority)?.categories ?? [], [tree, authority]);
   const subs = useMemo(() => categories.find(x => x.id === category)?.subCategories ?? [], [categories, category]);
+  const forcedLanguageMode = useMemo(() => {
+    const s = subjectName.trim().toLocaleLowerCase();
+    if (['english','english language','english literature'].includes(s)) return 'EN_ONLY' as const;
+    if (['தமிழ்','தமிழ்மொழி','தமிழ் மொழி','தமிழ் இலக்கியம்','tamil','tamil language','tamil literature'].includes(s)) return 'TA_ONLY' as const;
+    return null;
+  }, [subjectName]);
+  const effectiveLanguageMode = forcedLanguageMode ?? languageMode;
+
+  useEffect(() => {
+    if (forcedLanguageMode) setLanguageMode(forcedLanguageMode);
+  }, [forcedLanguageMode]);
 
   function toggle(t: string) {
     setTypes(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
@@ -67,6 +91,7 @@ export default function AiQuestionGeneratorPage() {
         const f = new FormData();
         f.append('file', file!); f.append('count', String(n)); f.append('exam', exam);
         f.append('difficulty', difficulty); f.append('questionTypes', JSON.stringify(types));
+        f.append('languageMode', effectiveLanguageMode); if (subjectName.trim()) f.append('subjectName', subjectName.trim());
         if (subCategory) f.append('subCategoryId', subCategory);
         if (sourceName.trim()) f.append('sourceName', sourceName.trim());
         r = await adminFetch('/admin/ai-question-generator/generate-pdf', { method: 'POST', body: f });
@@ -74,14 +99,15 @@ export default function AiQuestionGeneratorPage() {
         r = await adminFetch('/admin/ai-question-generator/generate', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sourceText: source, count: n, exam, difficulty, questionTypes: types,
+            sourceText: source, count: n, exam, difficulty, questionTypes: types, languageMode: effectiveLanguageMode,
+            subjectName: subjectName.trim() || undefined,
             subCategoryId: subCategory || undefined, sourceName: sourceName.trim() || undefined,
           }),
         });
       }
       const body = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(body.error || 'Generation failed');
-      setMessage(body.generated + ' கேள்வித் தொகுப்புகள் உருவாக்கப்பட்டன. ' + body.skipped + ' நிராகரிக்கப்பட்டன. அனைத்தும் DRAFT.');
+      setMessage(body.generated + (effectiveLanguageMode === 'BILINGUAL' ? ' கேள்வித் தொகுப்புகள்' : ' கேள்விகள்') + ' உருவாக்கப்பட்டன. ' + body.skipped + ' நிராகரிக்கப்பட்டன. அனைத்தும் DRAFT.');
       await loadRuns();
     } catch (e: any) {
       setMessage(e.message || 'Generation failed');
@@ -94,7 +120,7 @@ export default function AiQuestionGeneratorPage() {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <div>
           <h1 style={{margin:0,fontSize:24}}>AI Question Generator</h1>
-          <p style={{color:'#64748b',fontSize:13}}>Gemini மூலம் source material-ல் இருந்து தமிழ் + English கேள்விகள். AI verification முடிந்த பிறகு DRAFT ஆக மட்டும் சேமிக்கப்படும்.</p>
+          <p style={{color:'#64748b',fontSize:13}}>Gemini மூலம் source material-ல் இருந்து தேர்ந்தெடுத்த மொழியில் கேள்விகள். AI verification முடிந்த பிறகு DRAFT ஆக மட்டும் சேமிக்கப்படும்.</p>
         </div>
         <Link href="/admin/questions?status=DRAFT" style={link}>DRAFT Question Bank →</Link>
       </div>
@@ -118,7 +144,14 @@ export default function AiQuestionGeneratorPage() {
         <div style={grid}>
           <label style={label}>Exam<select value={exam} onChange={e=>setExam(e.target.value)} style={input}><option>TNPSC</option><option>UPSC</option><option>OTHER</option></select></label>
           <label style={label}>Difficulty<select value={difficulty} onChange={e=>setDifficulty(e.target.value)} style={input}><option>BASIC</option><option>MODERATE</option><option>ADVANCED</option><option>EXPERT</option></select></label>
-          <label style={label}>Question pairs<input type="number" min="1" max="100" value={count} onChange={e=>setCount(e.target.value)} style={input}/></label>
+          <label style={label}>{effectiveLanguageMode === 'BILINGUAL' ? 'Question pairs' : 'Questions'}<input type="number" min="1" max="100" value={count} onChange={e=>setCount(e.target.value)} style={input}/></label>
+        </div>
+        <div style={{marginTop:12}}>
+          <div style={grid}>
+            <label style={label}>Subject<select value={subjectName} onChange={e=>setSubjectName(e.target.value)} disabled={!subCategory} style={input}><option value="">Not selected</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select></label>
+            <label style={label}>Language<select value={effectiveLanguageMode} onChange={e=>setLanguageMode(e.target.value as 'TA_ONLY'|'EN_ONLY'|'BILINGUAL')} disabled={!!forcedLanguageMode} style={input}><option value="BILINGUAL">Tamil + English</option><option value="TA_ONLY">Tamil Only</option><option value="EN_ONLY">English Only</option></select></label>
+          </div>
+          {forcedLanguageMode && <p style={{...muted,marginTop:7}}>{forcedLanguageMode === 'TA_ONLY' ? 'தமிழ் பாடம் தேர்வு செய்யப்பட்டதால் தமிழ் மட்டும் உருவாக்கப்படும்.' : 'English பாடம் தேர்வு செய்யப்பட்டதால் English மட்டும் உருவாக்கப்படும்.'}</p>}
         </div>
         <div style={{marginTop:14}}><div style={label}>Question Types</div><div style={{display:'flex',gap:7,flexWrap:'wrap',marginTop:8}}>
           {TYPES.map(([v,l])=><button key={v} onClick={()=>toggle(v)} style={pill(types.includes(v))}>{l}</button>)}
@@ -130,7 +163,7 @@ export default function AiQuestionGeneratorPage() {
         <div style={grid}>
           <label style={label}>Authority<select value={authority} onChange={e=>{setAuthority(e.target.value);setCategory('');setSubCategory('')}} style={input}><option value="">Not selected</option>{tree.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
           <label style={label}>Category<select value={category} disabled={!authority} onChange={e=>{setCategory(e.target.value);setSubCategory('')}} style={input}><option value="">Not selected</option>{categories.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
-          <label style={label}>Sub-Category / Exam<select value={subCategory} disabled={!category} onChange={e=>setSubCategory(e.target.value)} style={input}><option value="">Not selected</option>{subs.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+          <label style={label}>Sub-Category / Exam<select value={subCategory} disabled={!category} onChange={e=>{setSubCategory(e.target.value);setSubjectName('')}} style={input}><option value="">Not selected</option>{subs.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
         </div>
       </section>
 

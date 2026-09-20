@@ -15,6 +15,8 @@ type QuestionType =
   | 'INCORRECT_STATEMENT'
   | 'APPLICATION';
 
+type LanguageMode = 'TA_ONLY' | 'EN_ONLY' | 'BILINGUAL';
+
 interface GeneratedQuestion {
   questionTamil: string;
   questionEnglish: string;
@@ -39,6 +41,8 @@ interface GeneratorRequest {
   subjectId?: string;
   syllabusTopicId?: string;
   sourceName?: string;
+  subjectName?: string;
+  languageMode?: LanguageMode;
 }
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -106,6 +110,42 @@ function similarity(a: string, b: string): number {
   return intersection / (aa.size + bb.size - intersection);
 }
 
+function normalizeLanguageMode(value: unknown): LanguageMode {
+  const v = String(value ?? '').toUpperCase();
+  if (v === 'TA_ONLY' || v === 'EN_ONLY' || v === 'BILINGUAL') return v;
+  return 'BILINGUAL';
+}
+
+function subjectLanguageMode(subjectName?: string): LanguageMode | null {
+  const s = String(subjectName ?? '').trim().toLocaleLowerCase();
+  if (!s) return null;
+  if (['english', 'english language', 'english literature'].includes(s)) return 'EN_ONLY';
+  if (['தமிழ்', 'தமிழ்மொழி', 'தமிழ் மொழி', 'தமிழ் இலக்கியம்', 'tamil', 'tamil language', 'tamil literature'].includes(s)) return 'TA_ONLY';
+  return null;
+}
+
+function hasTamilScript(text: string): boolean {
+  return /[\u0B80-\u0BFF]/u.test(text);
+}
+
+function hasLatinLetters(text: string): boolean {
+  return /[A-Za-z]/.test(text);
+}
+
+function validateLanguagePurity(q: GeneratedQuestion, mode: LanguageMode): void {
+  const content = [
+    q.questionTamil, q.questionEnglish,
+    ...q.optionsTamil, ...q.optionsEnglish,
+    q.explanationTamil, q.explanationEnglish,
+  ].join(' ');
+  if (mode === 'EN_ONLY' && hasTamilScript(content)) {
+    throw new Error('English-only question contains Tamil script.');
+  }
+  if (mode === 'TA_ONLY' && hasLatinLetters(content)) {
+    throw new Error('Tamil-only question contains Latin letters.');
+  }
+}
+
 function validateQuestion(q: any): GeneratedQuestion {
   const ta = Array.isArray(q.optionsTamil) ? q.optionsTamil : [];
   const en = Array.isArray(q.optionsEnglish) ? q.optionsEnglish : [];
@@ -139,6 +179,13 @@ function validateQuestion(q: any): GeneratedQuestion {
 }
 
 function generationPrompt(input: GeneratorRequest, batchCount: number, source: string): string {
+  const effectiveMode = subjectLanguageMode(input.subjectName) ?? normalizeLanguageMode(input.languageMode);
+  const languageRules = effectiveMode === 'TA_ONLY'
+    ? 'LANGUAGE MODE: TAMIL ONLY. Every question, option and explanation must contain only Tamil text. No Latin/English letters anywhere. Numerals and punctuation are allowed. Because the database schema requires both language fields, repeat the same Tamil content in the English-named fields; it must still be Tamil only.'
+    : effectiveMode === 'EN_ONLY'
+      ? 'LANGUAGE MODE: ENGLISH ONLY. Every question, option and explanation must contain only English text. No Tamil Unicode characters anywhere. Because the database schema requires both language fields, repeat the same English content in the Tamil-named fields; it must still be English only.'
+      : 'LANGUAGE MODE: BILINGUAL. Generate Tamil and English versions with exactly the same meaning.';
+
   const types = (input.questionTypes?.length ? input.questionTypes : [
     'STATEMENT_BASED',
     'INCORRECT_STATEMENT',
@@ -158,14 +205,17 @@ Create exactly ${batchCount} NEW multiple-choice questions from the source mater
 
 Exam target: ${input.exam}
 Difficulty: ${input.difficulty}
+Subject: ${input.subjectName || 'Not specified'}
 Allowed question types: ${types}
+
+${languageRules}
 
 NON-NEGOTIABLE RULES:
 1. Use only facts/concepts supported by the source. Never invent a fact.
 2. Every question must have exactly ONE unambiguously correct option.
 3. All four options must be plausible; avoid silly distractors.
-4. Tamil and English must express exactly the same meaning.
-5. Give a clear, factually correct explanation in BOTH languages.
+4. In BILINGUAL mode, Tamil and English must express exactly the same meaning.
+5. Give a clear, factually correct explanation. In single-language mode, every content field must stay in the selected language only.
 6. Prefer reasoning, comparison, chronology, statement combinations, exceptions and application over simple recall when the source supports them.
 7. Do not create two questions testing the same knowledge point.
 8. Do not merely change wording of another question.
@@ -174,7 +224,8 @@ NON-NEGOTIABLE RULES:
 11. The answer letter must refer to the same position in Tamil and English options.
 12. Keep Tamil natural and exam-appropriate; do not mix unnecessary English into Tamil.
 13. Keep English precise and grammatical.
-14. "sourceBasis" must briefly identify the source fact/concept used.
+14. Never introduce the other script into a single-language question, including options and explanations.
+15. "sourceBasis" must briefly identify the source fact/concept used.
 
 Return ONLY a JSON array. No markdown. Each object must have exactly:
 {
@@ -192,7 +243,7 @@ Return ONLY a JSON array. No markdown. Each object must have exactly:
 }`;
 }
 
-function verificationPrompt(source: string, questions: GeneratedQuestion[]): string {
+function verificationPrompt(source: string, questions: GeneratedQuestion[], languageMode: LanguageMode): string {
   return `Act as a strict final examiner and fact-checker.
 
 SOURCE MATERIAL:
@@ -203,8 +254,9 @@ ${source}
 Review the following generated questions. For EVERY question:
 - Verify the correct answer from the source.
 - Verify there is exactly one correct answer.
-- Verify Tamil and English are semantically equivalent.
-- Verify every option is correctly translated.
+- Verify Tamil and English are semantically equivalent when BILINGUAL.
+- Verify every option is correctly translated when BILINGUAL.
+- Enforce this language rule: ${languageMode === 'TA_ONLY' ? 'Tamil only; no Latin letters.' : languageMode === 'EN_ONLY' ? 'English only; no Tamil Unicode characters.' : 'both languages are required.'}
 - Verify both explanations are correct and actually explain the answer.
 - Reject questions whose answer cannot be established from the source.
 - Reject questions that test the same knowledge point as another question in this batch.
@@ -255,7 +307,7 @@ export class AiQuestionGeneratorService {
     };
   }
 
-  private async findPotentialDuplicates(questions: GeneratedQuestion[], subCategoryId?: string): Promise<Set<number>> {
+  private async findPotentialDuplicates(questions: GeneratedQuestion[], subCategoryId?: string, languageMode: LanguageMode = 'BILINGUAL'): Promise<Set<number>> {
     const existing = await prisma.question.findMany({
       where: {
         ...(subCategoryId ? { subCategoryId } : {}),
@@ -269,9 +321,11 @@ export class AiQuestionGeneratorService {
     const duplicateIndexes = new Set<number>();
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
-      const candidates = existing.filter((x) => x.language === Language.TA);
-      if (candidates.some((x) => similarity(q.questionTamil, x.questionText) >= 0.82)) duplicateIndexes.add(i);
-      if (i > 0 && questions.slice(0, i).some((p) => similarity(q.questionTamil, p.questionTamil) >= 0.82)) duplicateIndexes.add(i);
+      const targetLanguage = languageMode === 'EN_ONLY' ? Language.EN : Language.TA;
+      const targetText = languageMode === 'EN_ONLY' ? q.questionEnglish : q.questionTamil;
+      const candidates = existing.filter((x) => x.language === targetLanguage);
+      if (candidates.some((x) => similarity(targetText, x.questionText) >= 0.82)) duplicateIndexes.add(i);
+      if (i > 0 && questions.slice(0, i).some((p) => similarity(targetText, languageMode === 'EN_ONLY' ? p.questionEnglish : p.questionTamil) >= 0.82)) duplicateIndexes.add(i);
     }
     return duplicateIndexes;
   }
@@ -280,6 +334,9 @@ export class AiQuestionGeneratorService {
     if (!input.sourceText?.trim()) throw new Error('sourceText is required.');
     if (input.sourceText.length > MAX_SOURCE_CHARS) throw new Error(`Source text is too large. Maximum is ${MAX_SOURCE_CHARS} characters.`);
     if (!Number.isInteger(input.count) || input.count < 1 || input.count > 100) throw new Error('count must be between 1 and 100.');
+    const languageMode = subjectLanguageMode(input.subjectName) ?? normalizeLanguageMode(input.languageMode);
+    const forcedMode = subjectLanguageMode(input.subjectName);
+    if (forcedMode && input.languageMode && normalizeLanguageMode(input.languageMode) !== forcedMode) throw new Error(`Subject "${input.subjectName}" requires ${forcedMode === 'TA_ONLY' ? 'Tamil-only' : 'English-only'} generation.`);
 
     const run = await prisma.aiQuestionGenerationRun.create({
       data: {
@@ -294,6 +351,16 @@ export class AiQuestionGeneratorService {
       },
     });
 
+    let resolvedSubjectId = input.subjectId;
+    if (!resolvedSubjectId && input.subjectName?.trim() && input.subCategoryId) {
+      const existingSubject = await prisma.subject.findFirst({ where: { name: input.subjectName.trim(), subCategoryId: input.subCategoryId }, select: { id: true } });
+      resolvedSubjectId = existingSubject?.id;
+      if (!resolvedSubjectId) {
+        const createdSubject = await prisma.subject.create({ data: { name: input.subjectName.trim(), subCategoryId: input.subCategoryId } });
+        resolvedSubjectId = createdSubject.id;
+      }
+    }
+
     let totalGenerated = 0;
     let skipped = 0;
     let totalInputTokens = 0;
@@ -303,27 +370,27 @@ export class AiQuestionGeneratorService {
     try {
       for (let offset = 0; offset < input.count; offset += BATCH_SIZE) {
         const target = Math.min(BATCH_SIZE, input.count - offset);
-        const generatedResponse = await this.callGemini(generationPrompt(input, target, input.sourceText));
+        const generatedResponse = await this.callGemini(generationPrompt({ ...input, languageMode }, target, input.sourceText));
         totalInputTokens += generatedResponse.inputTokens;
         totalOutputTokens += generatedResponse.outputTokens;
         lastModel = generatedResponse.model;
         const generatedRaw = parseArray(generatedResponse.text);
         let generated: GeneratedQuestion[] = [];
         for (const item of generatedRaw) {
-          try { generated.push(validateQuestion(item)); } catch { skipped++; }
+          try { const q = validateQuestion(item); validateLanguagePurity(q, languageMode); generated.push(q); } catch { skipped++; }
         }
 
-        const verificationResponse = await this.callGemini(verificationPrompt(input.sourceText, generated));
+        const verificationResponse = await this.callGemini(verificationPrompt(input.sourceText, generated, languageMode));
         totalInputTokens += verificationResponse.inputTokens;
         totalOutputTokens += verificationResponse.outputTokens;
         lastModel = verificationResponse.model;
         const verifiedRaw = parseArray(verificationResponse.text);
         const verified: GeneratedQuestion[] = [];
         for (const item of verifiedRaw) {
-          try { verified.push(validateQuestion(item)); } catch { skipped++; }
+          try { const q = validateQuestion(item); validateLanguagePurity(q, languageMode); verified.push(q); } catch { skipped++; }
         }
 
-        const duplicateIndexes = await this.findPotentialDuplicates(verified, input.subCategoryId);
+        const duplicateIndexes = await this.findPotentialDuplicates(verified, input.subCategoryId, languageMode);
         for (let i = 0; i < verified.length; i++) {
           if (duplicateIndexes.has(i)) {
             skipped++;
@@ -360,7 +427,7 @@ export class AiQuestionGeneratorService {
           });
 
           const exists = await prisma.question.findFirst({
-            where: { contentHash: { in: [taHash, enHash] } },
+            where: { contentHash: languageMode === 'EN_ONLY' ? enHash : taHash },
             select: { id: true },
           });
           if (exists) {
@@ -368,60 +435,34 @@ export class AiQuestionGeneratorService {
             continue;
           }
 
-          await prisma.$transaction([
-            prisma.question.create({
-              data: {
-                questionText: q.questionTamil,
-                optionA: q.optionsTamil[0],
-                optionB: q.optionsTamil[1],
-                optionC: q.optionsTamil[2],
-                optionD: q.optionsTamil[3],
-                correctOption: q.correctOption,
-                explanationTa: q.explanationTamil,
-                explanationEn: q.explanationEnglish,
-                language: Language.TA,
-                translationGroupId: groupId,
-                subCategoryId: input.subCategoryId,
-                subjectId: input.subjectId,
-                syllabusTopicId: input.syllabusTopicId,
-                sourceType: 'ORIGINAL',
-                sourceName: input.sourceName ?? 'AI-generated from supplied study material',
-                internalNotes: commonNotes,
-                difficulty: dbDiff,
-                aiSuggestedDifficulty: dbDiff,
-                aiConfidence: 85,
-                status: 'DRAFT',
-                contentHash: taHash,
-                sourceBatchId: batchId,
-              },
-            }),
-            prisma.question.create({
-              data: {
-                questionText: q.questionEnglish,
-                optionA: q.optionsEnglish[0],
-                optionB: q.optionsEnglish[1],
-                optionC: q.optionsEnglish[2],
-                optionD: q.optionsEnglish[3],
-                correctOption: q.correctOption,
-                explanationTa: q.explanationTamil,
-                explanationEn: q.explanationEnglish,
-                language: Language.EN,
-                translationGroupId: groupId,
-                subCategoryId: input.subCategoryId,
-                subjectId: input.subjectId,
-                syllabusTopicId: input.syllabusTopicId,
-                sourceType: 'ORIGINAL',
-                sourceName: input.sourceName ?? 'AI-generated from supplied study material',
-                internalNotes: commonNotes,
-                difficulty: dbDiff,
-                aiSuggestedDifficulty: dbDiff,
-                aiConfidence: 85,
-                status: 'DRAFT',
-                contentHash: enHash,
-                sourceBatchId: batchId,
-              },
-            }),
-          ]);
+          const baseData = {
+            correctOption: q.correctOption,
+            explanationTa: languageMode === 'TA_ONLY' ? q.explanationTamil : q.explanationTamil,
+            explanationEn: languageMode === 'EN_ONLY' ? q.explanationEnglish : q.explanationEnglish,
+            translationGroupId: groupId,
+            subCategoryId: input.subCategoryId,
+            subjectId: resolvedSubjectId,
+            syllabusTopicId: input.syllabusTopicId,
+            sourceType: 'ORIGINAL' as const,
+            sourceName: input.sourceName ?? 'AI-generated from supplied study material',
+            internalNotes: commonNotes,
+            difficulty: dbDiff,
+            aiSuggestedDifficulty: dbDiff,
+            aiConfidence: 85,
+            status: 'DRAFT' as const,
+            sourceBatchId: batchId,
+          };
+
+          if (languageMode === 'BILINGUAL') {
+            await prisma.$transaction([
+              prisma.question.create({ data: { ...baseData, questionText: q.questionTamil, optionA: q.optionsTamil[0], optionB: q.optionsTamil[1], optionC: q.optionsTamil[2], optionD: q.optionsTamil[3], language: Language.TA, contentHash: taHash } }),
+              prisma.question.create({ data: { ...baseData, questionText: q.questionEnglish, optionA: q.optionsEnglish[0], optionB: q.optionsEnglish[1], optionC: q.optionsEnglish[2], optionD: q.optionsEnglish[3], language: Language.EN, contentHash: enHash } }),
+            ]);
+          } else if (languageMode === 'TA_ONLY') {
+            await prisma.question.create({ data: { ...baseData, questionText: q.questionTamil, optionA: q.optionsTamil[0], optionB: q.optionsTamil[1], optionC: q.optionsTamil[2], optionD: q.optionsTamil[3], language: Language.TA, contentHash: taHash } });
+          } else {
+            await prisma.question.create({ data: { ...baseData, questionText: q.questionEnglish, optionA: q.optionsEnglish[0], optionB: q.optionsEnglish[1], optionC: q.optionsEnglish[2], optionD: q.optionsEnglish[3], language: Language.EN, contentHash: enHash } });
+          }
           totalGenerated++;
         }
       }
