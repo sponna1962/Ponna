@@ -7,7 +7,7 @@ import { LegalFooter } from '../components/LegalFooter';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.ponna.in'),
-  title: 'PONNA.in — TNPSC & TNTET Exam Practice | Previous Papers, Instant Answers',
+  title: 'PONNA.in – TNPSC & TNTET Online Practice | Previous Year Questions',
   description:
     'Practice for TNPSC and TNTET with previous exam questions, expert-designed practice questions, and instant answers after every question. Affordable exam preparation for Tamil Nadu students — practice anytime, in Tamil or English.',
   alternates: { canonical: '/' },
@@ -30,7 +30,8 @@ const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'PONNA.in',
-  url: 'https://www.ponna.in',
+  alternateName: 'PONNA',
+  url: 'https://www.ponna.in/',
 };
 
 // LanguageProvider (§4.5) wraps the whole app here so every page shares one
