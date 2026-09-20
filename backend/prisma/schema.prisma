@@ -507,6 +507,44 @@ enum ExplanationRunStatus {
   FAILED
 }
 
+// ── AI Question Generation (Sept 2026) ─────────────────────────────────
+// Backend-only generation ledger. Questions themselves are stored in the
+// existing Question table as DRAFT pairs (TA + EN), linked by sourceBatchId.
+// This run record makes generation auditable and gives admins cost/status data.
+enum AiQuestionGenerationStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum AiQuestionGenerationExam {
+  TNPSC
+  UPSC
+  OTHER
+}
+
+model AiQuestionGenerationRun {
+  id                 String                       @id @default(uuid())
+  label              String
+  exam               AiQuestionGenerationExam
+  requestedDifficulty String
+  requestedCount     Int
+  generatedCount     Int                          @default(0)
+  skippedCount       Int                          @default(0)
+  sourceName         String?
+  sourceText         String
+  model              String?
+  inputTokens        Int                          @default(0)
+  outputTokens       Int                          @default(0)
+  estimatedCostUsd   Float?
+  status             AiQuestionGenerationStatus   @default(RUNNING)
+  errorMessage       String?
+  createdAt          DateTime                     @default(now())
+  completedAt        DateTime?
+
+  @@index([status, createdAt])
+}
+
 // ── Study Notes (Sept 2026, Group IV first) ─────────────────────────────
 // Explicit request after a competitor review (Testbook.com): AI-
 // generated, admin-verified summary notes per official syllabus

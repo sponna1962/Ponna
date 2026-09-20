@@ -39,6 +39,7 @@ import { QuestionReportService } from './modules/questions/question-report.servi
 import { questionAuditService } from './modules/audit/question-audit.service';
 import { bulkExplanationService } from './modules/questions/bulk-explanation.service';
 import { studyNotesService } from './modules/admin/study-notes.service';
+import { aiQuestionGeneratorService } from './modules/ai/ai-question-generator.service';
 import { dailyCurrentAffairsService } from './modules/admin/daily-current-affairs.service';
 import { currentAffairsLearningService } from './modules/admin/current-affairs-learning.service';
 import cron from 'node-cron';
@@ -903,6 +904,96 @@ app.post('/admin/bulk-explanation/runs/:id/cancel', requireStaffAuth, requireRol
 
 // ── Subject Classification (Sept 2026, Group IV first) ─────────────────
 // See schema.prisma's own header comment on SubjectClassificationRun.
+
+// ── AI Question Generator (Sept 2026) ─────────────────────────────────
+// Backend-only admin API. Generates bilingual TA/EN question pairs from
+// supplied source material using Gemini, verifies them with a second Gemini
+// pass, rejects duplicates, and stores accepted pairs as DRAFT questions.
+// Nothing is auto-published.
+
+app.post('/admin/ai-question-generator/generate', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    const {
+      sourceText,
+      count,
+      exam,
+      difficulty,
+      questionTypes,
+      subCategoryId,
+      subjectId,
+      syllabusTopicId,
+      sourceName,
+      subjectName,
+      languageMode,
+    } = req.body;
+
+    const result = await aiQuestionGeneratorService.generate({
+      sourceText,
+      count: Number(count),
+      exam,
+      difficulty,
+      questionTypes,
+      subCategoryId,
+      subjectId,
+      syllabusTopicId,
+      sourceName,
+      subjectName,
+      languageMode,
+    });
+
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to generate questions' });
+  }
+});
+
+app.post('/admin/ai-question-generator/generate-pdf', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'A PDF file is required.' });
+      return;
+    }
+
+    const sourceText = await aiQuestionGeneratorService.extractPdf(req.file.buffer);
+    const result = await aiQuestionGeneratorService.generate({
+      sourceText,
+      count: Number(req.body.count),
+      exam: req.body.exam,
+      difficulty: req.body.difficulty,
+      questionTypes: req.body.questionTypes ? JSON.parse(req.body.questionTypes) : undefined,
+      subCategoryId: req.body.subCategoryId || undefined,
+      subjectId: req.body.subjectId || undefined,
+      syllabusTopicId: req.body.syllabusTopicId || undefined,
+      sourceName: req.body.sourceName || req.file.originalname,
+      subjectName: req.body.subjectName || undefined,
+      languageMode: req.body.languageMode || undefined,
+    });
+
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to generate questions from PDF' });
+  }
+});
+
+app.get('/admin/ai-question-generator/runs', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await aiQuestionGeneratorService.listRuns(Number(req.query.limit) || 50));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load AI question generation runs' });
+  }
+});
+
+app.get('/admin/ai-question-generator/runs/:runId', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    res.json(await aiQuestionGeneratorService.getRun(req.params.runId));
+  } catch (err) {
+    console.error(err);
+    res.status(404).json({ error: 'Generation run not found' });
+  }
+});
 
 // ── Study Notes (Sept 2026, Group IV first) ─────────────────────────────
 // See schema.prisma's own header comment on StudyNote.

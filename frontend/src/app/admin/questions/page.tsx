@@ -302,7 +302,7 @@ function AdminQuestionsPageInner() {
   const [bulkSourceName, setBulkSourceName] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
-  const [bulkResult, setBulkResult] = useState<{ count: number } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ count: number; published?: number; skippedNoDifficulty?: number } | null>(null);
 
   function openBulkEdit() {
     setBulkTaxonomy(emptyTaxonomy);
@@ -345,6 +345,70 @@ function AdminQuestionsPageInner() {
     }
     setBulkResult(await res.json());
     loadQuestions();
+  }
+
+  async function applyBulkEditAndPublish() {
+    const fields: Record<string, string> = {};
+    if (bulkSourceType) fields.sourceType = bulkSourceType;
+    if (bulkTaxonomy.categoryId) fields.categoryId = bulkTaxonomy.categoryId;
+    if (bulkTaxonomy.subCategoryId) fields.subCategoryId = bulkTaxonomy.subCategoryId;
+    if (bulkExamName.trim()) fields.examName = bulkExamName.trim();
+    if (bulkSubjectName.trim()) fields.subjectName = bulkSubjectName.trim();
+    if (bulkSourceName.trim()) fields.sourceName = bulkSourceName.trim();
+
+    // Save & Publish is the final editorial step from this modal. Require a
+    // Subject here so an AI-generated Draft cannot be published accidentally
+    // without the intended subject assignment.
+    if (!bulkSubjectName.trim()) {
+      setBulkError('Save & Publish requires a Subject. Select the relevant Subject first.');
+      return;
+    }
+
+    setBulkSaving(true);
+    setBulkError(null);
+
+    const saveRes = await adminFetch('/admin/questions/bulk-update-metadata', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: Array.from(selected),
+        ...fields,
+        additionalTags: bulkAdditionalTags.length > 0 ? bulkAdditionalTags : undefined,
+      }),
+    });
+
+    if (!saveRes.ok) {
+      const body = await saveRes.json().catch(() => ({}));
+      setBulkSaving(false);
+      setBulkError(body.error ?? 'Failed to save changes');
+      return;
+    }
+
+    const saveBody = await saveRes.json();
+
+    const publishRes = await adminFetch('/admin/questions/bulk-publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    });
+
+    setBulkSaving(false);
+
+    if (!publishRes.ok) {
+      const body = await publishRes.json().catch(() => ({}));
+      setBulkError(body.error ?? 'Saved, but publishing failed');
+      loadQuestions();
+      return;
+    }
+
+    const body = await publishRes.json();
+    setBulkResult({
+      count: Number(saveBody.count ?? selected.size),
+      published: Number(body.count ?? 0),
+      skippedNoDifficulty: Number(body.skippedNoDifficulty ?? 0),
+    });
+    loadQuestions();
+    loadPendingAiCount();
   }
 
   function startEdit(q: Question) {
@@ -581,6 +645,14 @@ function AdminQuestionsPageInner() {
           >
             🧮 Auto-Classify (heuristic)
           </button>
+          {statusFilter === 'DRAFT' && (
+            <Link
+              href="/admin/questions/upload?targetStatus=DRAFT"
+              style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #0f766e', background: '#ecfdf5', color: '#0f766e', fontSize: 14, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+            >
+              ⬆ Bulk Upload to Draft
+            </Link>
+          )}
           <button
             onClick={() => (showForm ? setShowForm(false) : startAdd())}
             style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
@@ -735,7 +807,7 @@ function AdminQuestionsPageInner() {
               <button onClick={classifySelected} style={{ fontSize: 12, padding: '6px 12px' }}>Classify Selected with AI</button>
               <button onClick={() => bulkSetDifficulty('MEDIUM')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Medium</button>
               <button onClick={() => bulkSetDifficulty('HARD')} style={{ fontSize: 12, padding: '6px 12px' }}>Set Difficulty: Hard</button>
-              <button onClick={openBulkEdit} style={{ fontSize: 12, padding: '6px 12px' }}>✏️ Bulk Edit Metadata</button>
+              <button onClick={openBulkEdit} style={{ fontSize: 12, padding: '6px 12px', fontWeight: 600 }}>📚 Assign / Edit Subject</button>
               <button onClick={() => bulkAction('bulk-publish')} style={{ fontSize: 12, padding: '6px 12px' }}>Publish Selected</button>
               <button onClick={() => bulkAction('bulk-disable')} style={{ fontSize: 12, padding: '6px 12px' }}>Disable Selected</button>
               <button onClick={() => bulkAction('bulk-delete')} style={{ fontSize: 12, padding: '6px 12px', color: '#dc2626' }}>Delete Selected</button>
@@ -756,6 +828,7 @@ function AdminQuestionsPageInner() {
             <th style={{ padding: 10 }}>Question</th>
             <th style={{ padding: 10 }}>Lang</th>
             <th style={{ padding: 10 }}>Classification</th>
+            <th style={{ padding: 10 }}>Subject</th>
             <th style={{ padding: 10 }}>Source</th>
             <th style={{ padding: 10 }}>Difficulty</th>
             <th style={{ padding: 10 }}>AI Suggestion</th>
@@ -778,6 +851,7 @@ function AdminQuestionsPageInner() {
                 {q.authority ? `${q.authority.name}${q.examCategory ? ' → ' + q.examCategory.name : ''}${q.subCategory ? ' → ' + q.subCategory.name : ''}` : '—'}
                 {q.examYear && <div>{q.examYear}</div>}
               </td>
+              <td style={{ padding: 10, fontSize: 12, fontWeight: q.subject ? 600 : 400, color: q.subject ? '#0f172a' : '#94a3b8' }}>{q.subject?.name ?? '—'}</td>
               <td style={{ padding: 10, color: '#64748b', fontSize: 12 }}>{SOURCE_TYPES.find((s) => s.value === q.sourceType)?.label ?? q.sourceType}</td>
               <td style={{ padding: 10 }}>
                 <select value={q.difficulty ?? ''} onChange={(e) => setDifficulty(q.id, e.target.value)}>
@@ -798,7 +872,7 @@ function AdminQuestionsPageInner() {
             </tr>
           ))}
           {questions.length === 0 && (
-            <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No questions in this status.</td></tr>
+            <tr><td colSpan={9} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No questions in this status.</td></tr>
           )}
         </tbody>
       </table>
@@ -966,7 +1040,7 @@ function AdminQuestionsPageInner() {
             <h2 style={{ fontSize: 16, marginBottom: 4 }}>✏️ Bulk Edit Metadata</h2>
             <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
               Applies to all {selected.size} selected questions. Leave a field blank to leave it unchanged — this only edits the fields
-              you actually fill in. Authority itself and question content/options aren't editable here.
+              you actually fill in. Authority itself and question content/options aren't editable here. Use Subject below to assign the selected Draft questions to the relevant subject.
             </p>
 
             {bulkError && <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 12 }}>{bulkError}</p>}
@@ -1002,7 +1076,7 @@ function AdminQuestionsPageInner() {
                   <input value={bulkExamName} onChange={(e) => setBulkExamName(e.target.value)} placeholder="(leave unchanged)" style={{ padding: 4, borderRadius: 4, border: '1px solid #cbd5e1', minWidth: 220 }} />
                 </label>
                 <div style={{ marginBottom: 8 }}>
-                  <SubjectInput value={bulkSubjectName} onChange={setBulkSubjectName} subCategoryId={taxonomyFilter.subCategoryId || undefined} />
+                  <SubjectInput value={bulkSubjectName} onChange={setBulkSubjectName} subCategoryId={bulkTaxonomy.subCategoryId || taxonomyFilter.subCategoryId || undefined} />
                 </div>
                 <label style={{ fontSize: 13, display: 'block', marginBottom: 16 }}>
                   Source Name:{' '}
@@ -1016,9 +1090,20 @@ function AdminQuestionsPageInner() {
                   <button
                     onClick={applyBulkEdit}
                     disabled={bulkSaving}
-                    style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600 }}
+                    style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', fontWeight: 600 }}
                   >
-                    {bulkSaving ? 'Saving…' : `Apply to ${selected.size} questions`}
+                    {bulkSaving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Save the Subject and other changes, then publish ${selected.size} selected question(s)?`)) {
+                        applyBulkEditAndPublish();
+                      }
+                    }}
+                    disabled={bulkSaving}
+                    style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#166534', color: '#fff', fontWeight: 600 }}
+                  >
+                    {bulkSaving ? 'Saving & Publishing…' : '💾 Save & Publish'}
                   </button>
                 </div>
               </>
@@ -1026,7 +1111,24 @@ function AdminQuestionsPageInner() {
 
             {bulkResult && (
               <>
-                <p style={{ fontSize: 14, marginBottom: 16 }}>✅ Updated {bulkResult.count} questions.</p>
+                <p style={{ fontSize: 14, marginBottom: 8 }}>
+                  ✅ Saved {bulkResult.count} question(s).
+                </p>
+                {bulkResult.published !== undefined && (
+                  <p style={{ fontSize: 14, marginBottom: 8 }}>
+                    🟢 Published: <b>{bulkResult.published}</b>
+                    {bulkResult.skippedNoDifficulty ? ' · Skipped: ' + bulkResult.skippedNoDifficulty + ' — Difficulty not set' : ''}
+                  </p>
+                )}
+                {bulkResult.skippedNoDifficulty ? (
+                  <p style={{ fontSize: 12, color: '#b45309', marginBottom: 16 }}>
+                    Set Difficulty for the skipped questions, then publish them from the Questions page.
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+                    The selected questions are now saved and published.
+                  </p>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button onClick={() => setBulkEditOpen(false)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff' }}>
                     Close
