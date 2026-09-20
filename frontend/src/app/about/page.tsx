@@ -257,6 +257,21 @@ export default function AboutPage() {
           Start Practising
         </a>
       </Section>
+
+      {/* ── Company Information (Sept 2026 — Meta Business Verification) ── */}
+      <Section style={{ marginTop: 56 }}>
+        <Rule />
+        <p style={{ fontSize: 12, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.6, margin: '0 0 8px' }}>
+          COMPANY INFORMATION
+        </p>
+        <p style={{ fontSize: 13.5, color: COLORS.inkMuted, lineHeight: 1.8, margin: 0 }}>
+          PONNA.in is a brand of ARLENA (OPC) PRIVATE LIMITED.
+          <br />
+          CIN: U63122TN2026OPC197880
+          <br />
+          © 2026 ARLENA (OPC) PRIVATE LIMITED. All rights reserved.
+        </p>
+      </Section>
       </main>
     </>
   );

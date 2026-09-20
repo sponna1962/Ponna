@@ -3,6 +3,7 @@ import { LanguageProvider } from '../lib/language-context';
 import { ThemeProvider } from '../lib/theme-context';
 import { ThemeStyles } from '../lib/brand-theme';
 import { InstallPrompt } from '../components/InstallPrompt';
+import { LegalFooter } from '../components/LegalFooter';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.ponna.in'),
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <LanguageProvider>
             {children}
+            <LegalFooter />
             {/* Sept 2026 finalized requirement — global, on every page, not
                 buried in Help & Support. See InstallPrompt.tsx for the
                 real-PWA-only / no-nagging / already-installed rules. */}
