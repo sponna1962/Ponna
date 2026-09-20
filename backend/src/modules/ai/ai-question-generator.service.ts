@@ -303,13 +303,21 @@ export class AiQuestionGeneratorService {
     try {
       for (let offset = 0; offset < input.count; offset += BATCH_SIZE) {
         const target = Math.min(BATCH_SIZE, input.count - offset);
-        const generatedRaw = parseArray((await this.callGemini(generationPrompt(input, target, input.sourceText))).text);
+        const generatedResponse = await this.callGemini(generationPrompt(input, target, input.sourceText));
+        totalInputTokens += generatedResponse.inputTokens;
+        totalOutputTokens += generatedResponse.outputTokens;
+        lastModel = generatedResponse.model;
+        const generatedRaw = parseArray(generatedResponse.text);
         let generated: GeneratedQuestion[] = [];
         for (const item of generatedRaw) {
           try { generated.push(validateQuestion(item)); } catch { skipped++; }
         }
 
-        const verifiedRaw = parseArray((await this.callGemini(verificationPrompt(input.sourceText, generated))).text);
+        const verificationResponse = await this.callGemini(verificationPrompt(input.sourceText, generated));
+        totalInputTokens += verificationResponse.inputTokens;
+        totalOutputTokens += verificationResponse.outputTokens;
+        lastModel = verificationResponse.model;
+        const verifiedRaw = parseArray(verificationResponse.text);
         const verified: GeneratedQuestion[] = [];
         for (const item of verifiedRaw) {
           try { verified.push(validateQuestion(item)); } catch { skipped++; }
