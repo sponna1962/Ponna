@@ -7,6 +7,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
+import crypto from 'crypto';
 import { SessionService } from './modules/quiz/session.service';
 import { PracticePreferenceService, InvalidSelectionError } from './modules/practice-preference/practice-preference.service';
 import { RankingService } from './modules/ranking/ranking.service';
@@ -1879,6 +1880,92 @@ app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthed
       return res.status(400).json({ error: err.message, code: 'PROFILE_INCOMPLETE' });
     }
     res.status(400).json({ error: err.message ?? 'Failed to create payment order' });
+  }
+});
+
+// GET /api/whatsapp/webhook — Meta's one-time webhook verification
+// handshake when you save the Callback URL in Meta Developer > WhatsApp >
+// Configuration. Meta calls this with hub.mode=subscribe, hub.verify_token
+// (whatever you typed into that form), and hub.challenge (a random string
+// it expects echoed back verbatim, as plain text, if the token matches).
+// The verify token is your own choice — set WHATSAPP_WEBHOOK_VERIFY_TOKEN
+// in Render's environment to whatever you enter into Meta's form; it is
+// never sent back to a client and never logged.
+app.get('/api/whatsapp/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  const expectedToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+
+  if (!expectedToken) {
+    console.error('[whatsapp-webhook] WHATSAPP_WEBHOOK_VERIFY_TOKEN is not configured');
+    return res.sendStatus(500);
+  }
+  if (mode === 'subscribe' && token === expectedToken) {
+    console.log('[whatsapp-webhook] Verification handshake succeeded');
+    return res.status(200).send(challenge);
+  }
+  console.warn('[whatsapp-webhook] Verification handshake failed (mode or token mismatch)');
+  res.sendStatus(403);
+});
+
+// POST /api/whatsapp/webhook — called BY Meta for every incoming WhatsApp
+// message and every delivery/read status update on messages PONNA sent
+// (see whatsapp-adapter.ts). Verifies the request genuinely came from Meta
+// via the X-Hub-Signature-256 header (HMAC-SHA256 of the raw body, keyed
+// with the Meta App's App Secret — WHATSAPP_APP_SECRET), matching the same
+// raw-body-verification pattern used for the Razorpay webhook above.
+// Meta expects a fast 200 OK regardless of whether anything was actually
+// done with the event, and retries on non-2xx — so this always acks after
+// logging, even for event shapes it doesn't yet act on. No business logic
+// consumes incoming messages yet; this is the extension point for that.
+app.post('/api/whatsapp/webhook', (req, res) => {
+  try {
+    const signature = req.headers['x-hub-signature-256'] as string | undefined;
+    const appSecret = process.env.WHATSAPP_APP_SECRET;
+    const rawBody = (req as any).rawBody as Buffer | undefined;
+
+    if (appSecret) {
+      if (!signature || !rawBody) {
+        console.warn('[whatsapp-webhook] Missing signature or raw body');
+        return res.sendStatus(401);
+      }
+      const expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
+      const signatureBuf = Buffer.from(signature);
+      const expectedBuf = Buffer.from(expected);
+      const validSignature = signatureBuf.length === expectedBuf.length && crypto.timingSafeEqual(signatureBuf, expectedBuf);
+      if (!validSignature) {
+        console.warn('[whatsapp-webhook] Signature verification failed');
+        return res.sendStatus(401);
+      }
+    } else {
+      // Not yet configured — acked but flagged loudly, since an unverified
+      // webhook accepts events from anyone who finds the URL.
+      console.warn('[whatsapp-webhook] WHATSAPP_APP_SECRET not set — signature NOT verified');
+    }
+
+    // Log only non-sensitive shape/metadata — never the access token (this
+    // endpoint never even sees it; that's only used when PONNA calls OUT
+    // to Meta in whatsapp-adapter.ts) and never full message body text.
+    const entries = req.body?.entry ?? [];
+    for (const entry of entries) {
+      for (const change of entry.changes ?? []) {
+        const value = change.value ?? {};
+        for (const msg of value.messages ?? []) {
+          console.log('[whatsapp-webhook] Incoming message', { from: msg.from, type: msg.type, id: msg.id });
+        }
+        for (const status of value.statuses ?? []) {
+          console.log('[whatsapp-webhook] Status update', { id: status.id, status: status.status, recipient: status.recipient_id });
+        }
+      }
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('[whatsapp-webhook] Processing failed:', err);
+    // Still 200 — Meta retries aggressively on non-2xx and a malformed or
+    // unexpected payload shape shouldn't trigger a retry storm.
+    res.sendStatus(200);
   }
 });
 
