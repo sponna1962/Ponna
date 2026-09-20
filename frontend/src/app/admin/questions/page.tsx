@@ -581,6 +581,14 @@ function AdminQuestionsPageInner() {
           >
             🧮 Auto-Classify (heuristic)
           </button>
+          {statusFilter === 'DRAFT' && (
+            <Link
+              href="/admin/questions/upload?targetStatus=DRAFT"
+              style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #0f766e', background: '#ecfdf5', color: '#0f766e', fontSize: 14, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+            >
+              ⬆ Bulk Upload to Draft
+            </Link>
+          )}
           <button
             onClick={() => (showForm ? setShowForm(false) : startAdd())}
             style={{ padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', border: 'none' }}
