@@ -2025,7 +2025,14 @@ app.post('/admin/auth/login', async (req, res) => {
     const { email, password } = req.body;
     const result = await staffAuthService.login(email, password);
     res.json(result);
-  } catch {
+  } catch (err) {
+    // Sept 2026 — this previously swallowed EVERY failure (a genuine wrong
+    // password, but also a DB error, a Prisma Client mismatch, or any other
+    // bug) behind the same generic "Invalid credentials" response, making a
+    // real backend problem indistinguishable from a typo from the outside.
+    // Logging the real error server-side (never sent to the client) is what
+    // makes that diagnosable from Render's Runtime logs.
+    console.error('[admin-login] Login failed:', err);
     res.status(401).json({ error: 'Invalid credentials' });
   }
 });
