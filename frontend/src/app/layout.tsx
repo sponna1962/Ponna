@@ -41,7 +41,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" style={{ colorScheme: 'light' }}>
       <head>
         <ThemeStyles />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        {/* Sept 2026 — removed maximum-scale=1 (was blocking pinch-to-zoom,
+            an accessibility failure per Lighthouse/WCAG 1.4.4 for
+            low-vision users). initial-scale is enough to size the layout
+            correctly on load without disabling zoom. */}
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* Sept 2026 — the site has no dark theme; some Android browsers
             (Samsung Internet, Chrome's "Dark theme for web contents") were
             auto-inverting/heuristically re-coloring pages, producing
