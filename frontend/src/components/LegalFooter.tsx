@@ -6,7 +6,10 @@
 // mobile-app-style layout of any existing screen.
 export function LegalFooter() {
   return (
-    <footer style={{ padding: '18px 20px 24px', textAlign: 'center', fontSize: 11.5, color: '#94a3b8', lineHeight: 1.6 }}>
+    // Sept 2026 — darkened from #94a3b8 (2.56:1 on a white/paper background)
+    // to #64748b (4.76:1) to fix Lighthouse's contrast accessibility
+    // failure on every page, since this footer renders site-wide.
+    <footer style={{ padding: '18px 20px 24px', textAlign: 'center', fontSize: 11.5, color: '#64748b', lineHeight: 1.6 }}>
       <p style={{ margin: 0 }}>PONNA.in is a brand of ARLENA (OPC) PRIVATE LIMITED.</p>
       <p style={{ margin: '2px 0 0' }}>CIN: U63122TN2026OPC197880</p>
       <p style={{ margin: '2px 0 0' }}>© 2026 ARLENA (OPC) PRIVATE LIMITED. All rights reserved.</p>
