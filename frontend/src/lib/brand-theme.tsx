@@ -55,15 +55,14 @@ export function ThemeStyles() {
 
 export const DISPLAY_FONT = "'Bitter', 'Noto Sans Tamil', 'Noto Sans', serif";
 
-// Sept 2026 — the two preconnects below were removed: the root layout
-// (app/layout.tsx) already preconnects to fonts.googleapis.com and
-// fonts.gstatic.com for the Noto Sans stylesheet, and Lighthouse flags
-// more than 4 total <link rel="preconnect"> tags as wasteful. Every page
-// that renders <BitterFontLinks /> also renders inside that root layout,
-// so the connection is already warmed — only the actual stylesheet
-// request (which the preconnects can't replace) needs to stay here.
+// Sept 2026 — Bitter is now requested from the root layout's single
+// Google Fonts <link> (merged alongside Noto Sans, one stylesheet
+// request instead of two — Lighthouse flagged the second request as a
+// render-blocking ~750ms cost). Every page renders inside that root
+// layout, so Bitter is already loading by the time any page mounts;
+// this is kept as a no-op export so the 27 call sites across the app
+// don't all need touching, and so a future per-page font can reuse the
+// same call shape.
 export function BitterFontLinks() {
-  return (
-    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  );
+  return null;
 }

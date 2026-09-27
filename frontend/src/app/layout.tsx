@@ -60,8 +60,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             stays visually consistent with Tamil rather than font-switching. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Bitter (the slab-serif display face used site-wide via
+            BitterFontLinks, brand-theme.tsx) is merged into this same
+            request rather than loaded as a second <link rel="stylesheet">
+            — Lighthouse flagged two separate Google Fonts CSS requests as
+            render-blocking (~750ms each). One request, one round trip. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700;800&family=Bitter:wght@400;600;700;800&display=swap"
           rel="stylesheet"
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
