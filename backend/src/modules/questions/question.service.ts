@@ -648,6 +648,12 @@ export class QuestionService {
         prisma.mockExamQuestion.deleteMany({ where: { questionId: { in: batch } } }),
         prisma.adaptiveMockQuestion.deleteMany({ where: { questionId: { in: batch } } }),
         prisma.diagnosticAnswer.deleteMany({ where: { questionId: { in: batch } } }),
+        // Oct 2026 — these two were missing, so force-deleting any question
+        // that had ever been run through AI subject-classification, or
+        // answered by a guest (no-login) diagnostic quiz, failed with a
+        // foreign-key violation instead of actually deleting it.
+        prisma.subjectClassificationResult.deleteMany({ where: { questionId: { in: batch } } }),
+        prisma.guestDiagnosticAnswer.deleteMany({ where: { questionId: { in: batch } } }),
         prisma.userQuestionHistory.deleteMany({ where: { questionId: { in: batch } } }),
         prisma.quizSessionQuestion.deleteMany({ where: { questionId: { in: batch } } }),
         prisma.question.deleteMany({ where: { id: { in: batch } } }),
