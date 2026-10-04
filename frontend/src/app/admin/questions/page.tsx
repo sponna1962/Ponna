@@ -318,6 +318,11 @@ function AdminQuestionsPageInner() {
 
   async function applyBulkEdit() {
     const fields: Record<string, string> = {};
+    // Oct 2026 — the Authority dropdown in this same taxonomy picker was
+    // silently dropped here (only Category/Sub-Category made it into the
+    // save payload), so re-assigning a batch of questions to the right
+    // Authority appeared to work in the UI but never actually saved.
+    if (bulkTaxonomy.authorityId) fields.authorityId = bulkTaxonomy.authorityId;
     if (bulkSourceType) fields.sourceType = bulkSourceType;
     if (bulkTaxonomy.categoryId) fields.categoryId = bulkTaxonomy.categoryId;
     if (bulkTaxonomy.subCategoryId) fields.subCategoryId = bulkTaxonomy.subCategoryId;
@@ -349,6 +354,7 @@ function AdminQuestionsPageInner() {
 
   async function applyBulkEditAndPublish() {
     const fields: Record<string, string> = {};
+    if (bulkTaxonomy.authorityId) fields.authorityId = bulkTaxonomy.authorityId;
     if (bulkSourceType) fields.sourceType = bulkSourceType;
     if (bulkTaxonomy.categoryId) fields.categoryId = bulkTaxonomy.categoryId;
     if (bulkTaxonomy.subCategoryId) fields.subCategoryId = bulkTaxonomy.subCategoryId;

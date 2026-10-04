@@ -269,6 +269,7 @@ export class QuestionService {
   async bulkUpdateMetadata(
     ids: string[],
     fields: {
+      authorityId?: string;
       sourceType?: SourceType;
       categoryId?: string;
       subCategoryId?: string;
@@ -284,6 +285,13 @@ export class QuestionService {
   ) {
     const subjectId = fields.subjectName !== undefined ? await this.resolveSubjectId(fields.subjectName, fields.subCategoryId) : undefined;
     const data: Record<string, unknown> = {};
+    // Oct 2026 — the taxonomy picker in the bulk-edit UI lets an admin pick
+    // an Authority (e.g. a batch of questions with no primary Authority set
+    // yet), but this primary field was previously dropped on save — only
+    // Category/Sub-Category made it through. additionalTags already covered
+    // "also applies to" secondary tags; this is the missing "set the
+    // primary Authority" case.
+    if (fields.authorityId !== undefined) data.authorityId = fields.authorityId || null;
     if (fields.sourceType !== undefined) data.sourceType = fields.sourceType;
     if (fields.categoryId !== undefined) data.categoryId = fields.categoryId || null;
     if (fields.subCategoryId !== undefined) data.subCategoryId = fields.subCategoryId || null;
