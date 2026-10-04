@@ -31,6 +31,7 @@ import { daysRemaining, shouldShowRemainingDays, formatValidUntil } from '../../
 declare global {
   interface Window {
     Razorpay: any;
+    fbq: (...args: any[]) => void;
   }
 }
 
@@ -244,6 +245,14 @@ function PlansPageInner() {
         order_id: order.orderId,
         name: 'PONNA',
         handler: function () {
+          // Oct 2026 — Meta Pixel Purchase event, fired the moment Razorpay's
+          // checkout confirms the charge client-side (before our webhook has
+          // necessarily processed it — see create-order comment above). Good
+          // enough signal for ad-campaign optimization; value/currency come
+          // straight from the order Razorpay already confirmed against.
+          if (typeof window.fbq === 'function') {
+            window.fbq('track', 'Purchase', { value: order.amount / 100, currency: order.currency });
+          }
           window.location.href = '/plans?payment=processing';
         },
         modal: {

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { LanguageProvider } from '../lib/language-context';
 import { ThemeProvider } from '../lib/theme-context';
 import { ThemeStyles } from '../lib/brand-theme';
@@ -71,6 +72,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
+        {/* Oct 2026 — Meta (Facebook/Instagram) Pixel, site-wide, for the
+            upcoming ad campaign. Dataset "PONNA.in" (id 1701775234737355),
+            created in Events Manager. Fires PageView on every route via
+            Next.js's <Script> with the default "afterInteractive" strategy,
+            so it loads after the page is interactive without blocking
+            first paint. A Purchase event is fired separately on successful
+            Razorpay payment (see payment success flow) — not from here. */}
+        <Script id="meta-pixel" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '1701775234737355');
+            fbq('track', 'PageView');
+          `}
+        </Script>
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1701775234737355&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
       </head>
       <body style={{ fontFamily: "'Noto Sans Tamil', 'Noto Sans', -apple-system, sans-serif", margin: 0 }}>
         <ThemeProvider>
