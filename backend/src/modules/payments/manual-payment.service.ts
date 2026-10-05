@@ -8,6 +8,7 @@
 // until the owner decides to turn it on. UPI_PAYEE_NAME is optional.
 
 import { prisma } from '../../lib/prisma';
+import type { ManualPaymentStatus } from '@prisma/client';
 import { isProfileComplete } from '../profile/profile.service';
 import { milestoneService } from '../practice-preference/milestone.service';
 import { ProfileIncompleteError } from './payment.service';
@@ -63,7 +64,8 @@ export class ManualPaymentService {
   }
 
   listForAdmin(status?: string) {
-    const where = status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED' ? { status } : {};
+    const where: { status?: ManualPaymentStatus } =
+      status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED' ? { status } : {};
     return prisma.manualPayment.findMany({
       where,
       orderBy: { createdAt: 'desc' },
