@@ -177,6 +177,9 @@ type SheetContent = {
   freeNote?: string;
 };
 
+type UpiSheetData = { planId: string; planName: string; amount: number; upiId: string; payeeName: string };
+type UpiSubmission = { id: string; planId: string; amount: string | number; status: 'PENDING' | 'APPROVED' | 'REJECTED'; adminNote?: string | null; createdAt?: string };
+
 function PlansPageInner() {
   const { t, lang } = useLanguage();
   const searchParams = useSearchParams();
@@ -188,6 +191,16 @@ function PlansPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetContent | null>(null);
   const [moreFeaturesFor, setMoreFeaturesFor] = useState<{ title: string } | null>(null);
+  // Oct 2026 — interim manual UPI payment (see backend manual-payment.service).
+  const [upiSheet, setUpiSheet] = useState<UpiSheetData | null>(null);
+  const [upiSubmissions, setUpiSubmissions] = useState<UpiSubmission[]>([]);
+
+  useEffect(() => {
+    studentFetch('/payments/upi-submissions')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setUpiSubmissions(Array.isArray(d) ? d : []))
+      .catch(() => setUpiSubmissions([]));
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -223,6 +236,18 @@ function PlansPageInner() {
     setLoadingPlan(planId);
 
     try {
+      // Oct 2026 — when UPI_ID is configured on the server, pay by UPI and
+      // submit the transaction ID for approval instead of opening Razorpay.
+      const upiInfo = await studentFetch('/payments/upi-info')
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      if (upiInfo?.enabled) {
+        const plan = plans.find((x) => x.id === planId);
+        const amount = Number(plan?.launchPrice ?? plan?.regularPrice ?? 0);
+        setUpiSheet({ planId, planName: displayName(plan?.name ?? ''), amount, upiId: upiInfo.upiId, payeeName: upiInfo.payeeName });
+        return;
+      }
+
       const res = await studentFetch('/payments/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -282,6 +307,21 @@ function PlansPageInner() {
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+
+      {upiSubmissions.some((u) => u.status === 'PENDING') && (
+        <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', color: '#92400E', borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
+          {lang === 'ta'
+            ? 'உங்கள் UPI பணம் சரிபார்ப்பில் உள்ளது. உறுதி செய்யப்பட்டதும் உங்கள் பாஸ் செயல்படும்.'
+            : 'Your UPI payment is being verified. Your pass will activate as soon as it is confirmed.'}
+        </div>
+      )}
+      {upiSubmissions.some((u) => u.status === 'REJECTED') && !upiSubmissions.some((u) => u.status === 'PENDING' || u.status === 'APPROVED') && (
+        <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#991B1B', borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
+          {lang === 'ta'
+            ? 'உங்கள் முந்தைய UPI பதிவு ஏற்கப்படவில்லை. சரியான பரிவர்த்தனை எண்ணுடன் மீண்டும் முயலவும் அல்லது ponna@arlena.in-க்கு எழுதவும்.'
+            : 'Your last UPI submission could not be verified. Please try again with the correct transaction ID, or email ponna@arlena.in.'}
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: activeSubs.length > 0 ? 16 : 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -509,6 +549,18 @@ function PlansPageInner() {
         />
       )}
 
+      {upiSheet && (
+        <UpiPaySheet
+          data={upiSheet}
+          lang={lang}
+          onClose={() => setUpiSheet(null)}
+          onSubmitted={(sub) => {
+            setUpiSubmissions((prev) => [sub, ...prev]);
+            setUpiSheet(null);
+          }}
+        />
+      )}
+
       {moreFeaturesFor && <MoreFeaturesSheet title={moreFeaturesFor.title} onClose={() => setMoreFeaturesFor(null)} lang={lang} />}
     </main>
   );
@@ -667,6 +719,129 @@ function MoreFeaturesSheet({ title, onClose, lang }: { title: string; onClose: (
         >
           {lang === 'ta' ? 'மூடு' : 'Close'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// Oct 2026 — interim manual UPI payment sheet. The student pays the business
+// UPI ID in their UPI app, then enters the 12-digit UPI transaction ID (UTR);
+// an admin verifies the money arrived and approves. The pass is NOT active
+// until that approval — the backend only creates the Subscription then.
+function UpiPaySheet({
+  data,
+  lang,
+  onClose,
+  onSubmitted,
+}: {
+  data: UpiSheetData;
+  lang: string;
+  onClose: () => void;
+  onSubmitted: (s: UpiSubmission) => void;
+}) {
+  const [utr, setUtr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const ta = lang === 'ta';
+
+  const payLink = `upi://pay?pa=${encodeURIComponent(data.upiId)}&pn=${encodeURIComponent(data.payeeName)}&am=${data.amount}&cu=INR&tn=${encodeURIComponent('PONNA ' + data.planName)}`;
+
+  async function submit() {
+    setErr(null);
+    setBusy(true);
+    try {
+      const res = await studentFetch('/payments/upi-submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: data.planId, utr }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (body.code === 'PROFILE_INCOMPLETE') {
+          window.location.href = '/profile?complete=1';
+          return;
+        }
+        throw new Error(body.error ?? (ta ? 'சமர்ப்பிக்க முடியவில்லை' : 'Could not submit'));
+      }
+      // Meta Pixel — a submitted payment is the strongest conversion signal
+      // we have until a gateway is live; value matches the plan price.
+      if (typeof window.fbq === 'function') {
+        window.fbq('track', 'Purchase', { value: data.amount, currency: 'INR' });
+      }
+      onSubmitted({ id: body.id, planId: data.planId, amount: data.amount, status: 'PENDING' });
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: COLORS.paper, color: COLORS.ink, width: '100%', maxWidth: 480, borderRadius: '16px 16px 0 0', padding: 20, maxHeight: '90dvh', overflowY: 'auto' }}
+      >
+        <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 20, margin: '0 0 4px' }}>{data.planName}</h2>
+        <p style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 800 }}>₹{data.amount}</p>
+
+        <ol style={{ paddingLeft: 18, margin: '0 0 16px', fontSize: 14, lineHeight: 1.7 }}>
+          <li>{ta ? `கீழே உள்ள UPI ID-க்கு ₹${data.amount} செலுத்துங்கள்.` : `Pay ₹${data.amount} to the UPI ID below.`}</li>
+          <li>{ta ? 'உங்கள் UPI செயலியில் காட்டும் 12 இலக்க பரிவர்த்தனை எண்ணை (UTR) கீழே உள்ளிடுங்கள்.' : 'Enter the 12-digit transaction ID (UTR) from your UPI app below.'}</li>
+          <li>{ta ? 'நாங்கள் சரிபார்த்ததும் உங்கள் பாஸ் செயல்படும்.' : 'Your pass activates once we verify the payment.'}</li>
+        </ol>
+
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 12, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: COLORS.inkMuted }}>UPI ID</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <strong style={{ fontSize: 16, wordBreak: 'break-all' }}>{data.upiId}</strong>
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(data.upiId).then(() => setCopied(true)).catch(() => {});
+              }}
+              style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${COLORS.line}`, background: 'transparent', color: COLORS.ink, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}
+            >
+              {copied ? (ta ? 'நகலெடுத்தது' : 'Copied') : ta ? 'நகலெடு' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <a
+          href={payLink}
+          style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, fontWeight: 600, fontSize: 15, textDecoration: 'none', marginBottom: 16 }}
+        >
+          {ta ? 'UPI செயலியில் செலுத்து' : 'Pay with UPI app'}
+        </a>
+
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+          {ta ? 'UPI பரிவர்த்தனை எண் (12 இலக்கம்)' : 'UPI transaction ID (12 digits)'}
+        </label>
+        <input
+          value={utr}
+          onChange={(e) => setUtr(e.target.value.replace(/\D/g, '').slice(0, 12))}
+          inputMode="numeric"
+          placeholder="123456789012"
+          style={{ width: '100%', boxSizing: 'border-box', padding: 12, fontSize: 16, borderRadius: 8, border: `1px solid ${COLORS.line}`, background: 'transparent', color: COLORS.ink, marginBottom: 10 }}
+        />
+        {err && <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 10px' }}>{err}</p>}
+
+        <button
+          onClick={submit}
+          disabled={busy || utr.length !== 12}
+          style={{ width: '100%', padding: 14, borderRadius: 10, background: COLORS.gold, color: '#1a1a1a', border: 'none', fontWeight: 700, fontSize: 15, cursor: 'pointer', opacity: busy || utr.length !== 12 ? 0.5 : 1 }}
+        >
+          {busy ? '…' : ta ? 'சமர்ப்பி' : 'Submit'}
+        </button>
+        <button onClick={onClose} style={{ width: '100%', padding: 12, background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 14, cursor: 'pointer', marginTop: 4 }}>
+          {ta ? 'மூடு' : 'Close'}
+        </button>
+        <p style={{ fontSize: 11, color: COLORS.inkMuted, margin: '8px 0 0', textAlign: 'center' }}>
+          {ta ? 'சிக்கல் இருந்தால்: ponna@arlena.in' : 'Need help? ponna@arlena.in'}
+        </p>
       </div>
     </div>
   );

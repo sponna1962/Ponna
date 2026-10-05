@@ -21,6 +21,7 @@ const navItems = [
   { href: '/admin/live-exam', label: 'Live Exam' },
   { href: '/admin/students', label: 'Students' },
   { href: '/admin/plans', label: 'Plans' },
+  { href: '/admin/manual-payments', label: 'UPI Payments' },
   { href: '/admin/staff', label: 'Staff' },
   { href: '/admin/settings', label: 'Settings' },
 ];

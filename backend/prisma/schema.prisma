@@ -156,6 +156,7 @@ model User {
   createdAt      DateTime  @default(now())
 
   subscriptions      Subscription[]
+  manualPayments     ManualPayment[]
   quizSessions       QuizSession[]
   answerHistory       UserQuestionHistory[]
   performanceSummary  UserPerformanceSummary[]
@@ -884,6 +885,7 @@ model Plan {
   subCategoryScopes PlanSubCategoryScope[]
 
   subscriptions   Subscription[]
+  manualPayments  ManualPayment[]
 }
 
 // Join table: which specific Sub-Category(ies) an exclusive/restricted Plan
@@ -980,6 +982,37 @@ model Subscription {
 enum SubscriptionStatus {
   ACTIVE
   EXPIRED
+}
+
+// Oct 2026 — interim manual UPI payments, used while no payment gateway
+// (Razorpay/PayU/Instamojo) approval is available yet. The student pays to
+// the business UPI ID outside the app and submits the UPI transaction
+// reference (UTR); an admin verifies the money arrived and approves, which
+// creates the normal Subscription. utr is unique so one payment can never
+// activate two plans.
+model ManualPayment {
+  id             String              @id @default(uuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  planId         String
+  plan           Plan                @relation(fields: [planId], references: [id])
+  amount         Decimal             @db.Decimal(10, 2) // price at submission time
+  utr            String              @unique
+  status         ManualPaymentStatus @default(PENDING)
+  adminNote      String?
+  subscriptionId String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime            @default(now())
+
+  @@index([status, createdAt])
+  @@index([userId])
+}
+
+enum ManualPaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ─────────────────────────────────────────────────────────

@@ -34,6 +34,7 @@ import { StudentManagementService } from './modules/admin/student-management.ser
 import { PlansService } from './modules/admin/plans.service';
 import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
+import { ManualPaymentService, ManualPaymentError } from './modules/payments/manual-payment.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
@@ -143,6 +144,7 @@ const settingsService = new SettingsService();
 const studentManagementService = new StudentManagementService();
 const plansService = new PlansService();
 const paymentService = new PaymentService();
+const manualPaymentService = new ManualPaymentService();
 const studentAuthService = new StudentAuthService();
 const profilePhotoService = new ProfilePhotoService();
 const questionReportService = new QuestionReportService();
@@ -1880,6 +1882,56 @@ app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthed
       return res.status(400).json({ error: err.message, code: 'PROFILE_INCOMPLETE' });
     }
     res.status(400).json({ error: err.message ?? 'Failed to create payment order' });
+  }
+});
+
+// ── Manual UPI payments (Oct 2026, interim until a gateway is approved) ──
+// GET  /payments/upi-info             — is UPI enabled, and which UPI ID to pay
+// POST /payments/upi-submit {planId, utr} — student submits the UPI reference
+// GET  /payments/upi-submissions      — the student's own submissions + status
+app.get('/payments/upi-info', requireStudentAuth, (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(manualPaymentService.getInfo());
+});
+
+app.post('/payments/upi-submit', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const mp = await manualPaymentService.submit(req.studentUserId!, req.body.planId, req.body.utr);
+    res.json({ id: mp.id, status: mp.status });
+  } catch (err: any) {
+    if (err instanceof ProfileIncompleteError) {
+      return res.status(400).json({ error: err.message, code: 'PROFILE_INCOMPLETE' });
+    }
+    if (!(err instanceof ManualPaymentError)) console.error(err);
+    res.status(400).json({ error: err instanceof ManualPaymentError || err instanceof ProfileIncompleteError ? err.message : 'Could not submit payment' });
+  }
+});
+
+app.get('/payments/upi-submissions', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(await manualPaymentService.listForUser(req.studentUserId!));
+});
+
+// Admin: review queue + approve/reject (SUPER_ADMIN only — this grants paid access)
+app.get('/admin/manual-payments', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  res.json(await manualPaymentService.listForAdmin(req.query.status as string | undefined));
+});
+
+app.post('/admin/manual-payments/:id/approve', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req: AuthedRequest, res) => {
+  try {
+    res.json(await manualPaymentService.approve(req.params.id, req.staff!.staffId));
+  } catch (err: any) {
+    if (!(err instanceof ManualPaymentError)) console.error(err);
+    res.status(400).json({ error: err instanceof ManualPaymentError ? err.message : 'Approval failed' });
+  }
+});
+
+app.post('/admin/manual-payments/:id/reject', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req: AuthedRequest, res) => {
+  try {
+    res.json(await manualPaymentService.reject(req.params.id, req.staff!.staffId, req.body?.note));
+  } catch (err: any) {
+    if (!(err instanceof ManualPaymentError)) console.error(err);
+    res.status(400).json({ error: err instanceof ManualPaymentError ? err.message : 'Rejection failed' });
   }
 });
 
