@@ -146,6 +146,7 @@ export class StudentManagementService {
     await prisma.device.deleteMany({ where: { userId } });
     await prisma.questionReport.deleteMany({ where: { userId } });
     await prisma.studentPracticePreference.deleteMany({ where: { userId } });
+    await prisma.manualPayment.deleteMany({ where: { userId } });
     await prisma.subscription.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
   }
