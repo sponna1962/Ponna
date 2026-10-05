@@ -131,12 +131,10 @@ export default function TestYourAbilityPage() {
         </div>
       </div>
 
-      <footer style={{ borderTop: '1px solid #E7E5DD', padding: '20px 24px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-          <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} style={{ height: 32, width: 'auto' }} />
-        </div>
-        <p style={{ fontSize: 12.5, color: MUTED, margin: 0 }}>உங்கள் இலக்கு &nbsp;|&nbsp; எங்கள் துணை</p>
-      </footer>
+      {/* Oct 2026 — by explicit request nothing appears below the
+          "Home-க்கு செல்ல" link on this welcome screen (the page's own logo
+          footer is removed here, and the global legal footer is hidden on
+          this route in LegalFooter.tsx). */}
     </main>
   );
 }

@@ -1,10 +1,22 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
+
 // Legal/company-identity footer (Sept 2026 — explicit request for Meta
 // Business Verification). Meta's verification crawler needs the legal
 // entity name visible on the website; the PONNA brand/domain/logo stay
 // exactly as they are — this is additive, not a rebrand. Kept minimal and
 // unobtrusive (small text, bottom of page) so it doesn't disrupt the
 // mobile-app-style layout of any existing screen.
+//
+// Oct 2026 — hidden on the first-visit welcome screen only, by explicit
+// request (nothing below its "Home-க்கு செல்ல" link). Every other page,
+// including Home and the policy pages, still shows it.
+const HIDDEN_ON = ['/test-your-ability'];
+
 export function LegalFooter() {
+  const pathname = usePathname();
+  if (pathname && HIDDEN_ON.includes(pathname)) return null;
   return (
     // Sept 2026 — darkened from #94a3b8 (2.56:1 on a white/paper background)
     // to #64748b (4.76:1) to fix Lighthouse's contrast accessibility
