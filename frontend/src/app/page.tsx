@@ -518,7 +518,7 @@ export default function IndexPage() {
               href="/ask-ponna"
               style={{ display: 'block', border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 14, marginBottom: 20, textDecoration: 'none', background: COLORS.paperAlt }}
             >
-              <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.ink, marginBottom: 4 }}>🎯 {t.askPonna.examPrepButton}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.ink, marginBottom: 4 }}>{t.askPonna.examPrepButton}</p>
               <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.index.askPonnaPromptBody}</p>
             </a>
           )}
