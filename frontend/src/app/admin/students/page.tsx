@@ -89,6 +89,23 @@ export default function StudentsPage() {
     load();
   }
 
+  /** Super Admin only — corrects the account's display name. */
+  async function changeName(id: string, currentName: string | null) {
+    const newName = prompt(`Enter the corrected name for this account (currently: ${currentName ?? 'none'}):`);
+    if (!newName?.trim()) return;
+    const res = await adminFetch(`/admin/students/${id}/change-name`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newName: newName.trim() }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed: ${body.error ?? 'Only Super Admin can change this'}`);
+      return;
+    }
+    load();
+  }
+
   /** Super Admin only — edits the account's contact email, keeping all
    * history/data. Does not change which Google account they sign in with. */
   async function changeEmail(id: string, currentEmail: string | null) {
@@ -186,6 +203,9 @@ export default function StudentsPage() {
                   </button>
                   <button onClick={() => changePhone(s.id, s.phone)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
                     Change Phone
+                  </button>
+                  <button onClick={() => changeName(s.id, s.name)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
+                    Change Name
                   </button>
                   <button onClick={() => changeEmail(s.id, s.email)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
                     Change Email

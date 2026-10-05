@@ -3811,6 +3811,15 @@ app.post('/admin/students/:id/change-phone', requireStaffAuth, requireRole('SUPE
   }
 });
 
+// POST /admin/students/:id/change-name  { newName } — Super Admin only.
+app.post('/admin/students/:id/change-name', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    res.json(await studentManagementService.changeName(req.params.id, req.body.newName));
+  } catch (err: any) {
+    res.status(400).json({ error: err.message ?? 'Failed to change name' });
+  }
+});
+
 // POST /admin/students/:id/change-email  { newEmail } — Super Admin only.
 // Edits the account's contact email, keeping all its history/data.
 app.post('/admin/students/:id/change-email', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {

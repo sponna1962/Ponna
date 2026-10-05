@@ -107,6 +107,13 @@ export class StudentManagementService {
     return prisma.user.update({ where: { id: userId }, data: { phone: newPhone }, select: { id: true, phone: true } });
   }
 
+  /** Super Admin only — corrects the display name on an existing account (Oct 2026). */
+  async changeName(userId: string, newNameRaw: string) {
+    const name = String(newNameRaw ?? '').trim().replace(/\s+/g, ' ');
+    if (name.length < 2 || name.length > 80) throw new Error('Please enter a name between 2 and 80 characters.');
+    return prisma.user.update({ where: { id: userId }, data: { name }, select: { id: true, name: true } });
+  }
+
   /**
    * Super Admin only — changes the email address on an EXISTING account,
    * keeping all its history/data (Oct 2026, same trusted-override idea as
