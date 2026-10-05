@@ -66,7 +66,11 @@ export class CustomerNotifyService {
   private async email(to: string | null, name: string | null, subject: string, lines: string[]) {
     const key = process.env.BREVO_API_KEY;
     const from = process.env.MAIL_FROM?.trim();
-    if (!key || !from || !to) return;
+    if (!key || !from || !to) {
+      // Logged (not thrown) so a missing setting is easy to spot in Render logs.
+      console.log(`Customer email skipped: ${!key ? 'BREVO_API_KEY not set' : !from ? 'MAIL_FROM not set' : 'this account has no email address'}`);
+      return;
+    }
     const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#0f172a">
       <p>வணக்கம் ${esc(name ?? '')},</p>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}
       <p style="color:#64748b;font-size:12px">PONNA.in · ARLENA (OPC) PRIVATE LIMITED</p></div>`;
@@ -76,6 +80,7 @@ export class CustomerNotifyService {
       body: JSON.stringify({ sender: { name: 'PONNA.in', email: from }, to: [{ email: to, name: name ?? undefined }], subject, htmlContent: html }),
     });
     if (!res.ok) console.error('Brevo email failed:', res.status, await res.text().catch(() => ''));
+    else console.log(`Customer email sent to ${to}: ${subject}`);
   }
 }
 
