@@ -13,6 +13,7 @@ import { isProfileComplete } from '../profile/profile.service';
 import { milestoneService } from '../practice-preference/milestone.service';
 import { ProfileIncompleteError } from './payment.service';
 import { adminAlertService } from './admin-alert.service';
+import { customerNotifyService } from './customer-notify.service';
 
 export class ManualPaymentError extends Error {}
 
@@ -69,6 +70,7 @@ export class ManualPaymentService {
       `💰 PONNA: புதிய UPI பணம் ₹${price}`,
       `${plan.name}\n${user.name ?? '—'} · ${user.phone ?? '—'} · ${user.email ?? '—'}\nUTR ${utr}\nவங்கியில் சரிபார்த்து Approve செய்யுங்கள்.`,
     );
+    customerNotifyService.paymentEvent(userId, planId, 'RECEIVED', utr, price.toString());
     return created;
   }
 
@@ -129,9 +131,10 @@ export class ManualPaymentService {
         where: { id },
         data: { status: 'APPROVED', subscriptionId: subscription.id, reviewedById: staffId, reviewedAt: new Date() },
       });
-      return { userId: mp.userId, subscriptionId: subscription.id };
+      return { userId: mp.userId, subscriptionId: subscription.id, planId: mp.planId, utr: mp.utr, amount: mp.amount.toString() };
     });
 
+    customerNotifyService.paymentEvent(result.userId, result.planId, 'APPROVED', result.utr, result.amount);
     milestoneService.checkAndAward(result.userId).catch((err) => console.error('Milestone check failed after manual payment:', err));
     return result;
   }
@@ -139,9 +142,11 @@ export class ManualPaymentService {
   async reject(id: string, staffId: string, note?: string) {
     const mp = await prisma.manualPayment.findUniqueOrThrow({ where: { id } });
     if (mp.status !== 'PENDING') throw new ManualPaymentError(`Already ${mp.status.toLowerCase()}.`);
-    return prisma.manualPayment.update({
+    const updated = await prisma.manualPayment.update({
       where: { id },
       data: { status: 'REJECTED', adminNote: note?.slice(0, 300) || null, reviewedById: staffId, reviewedAt: new Date() },
     });
+    customerNotifyService.paymentEvent(mp.userId, mp.planId, 'REJECTED', mp.utr, mp.amount.toString(), updated.adminNote);
+    return updated;
   }
 }
