@@ -195,13 +195,55 @@ function PlansPageInner() {
   // Oct 2026 — interim manual UPI payment (see backend manual-payment.service).
   const [upiSheet, setUpiSheet] = useState<UpiSheetData | null>(null);
   const [upiSubmissions, setUpiSubmissions] = useState<UpiSubmission[]>([]);
+  const [upiLoaded, setUpiLoaded] = useState(false);
 
   useEffect(() => {
     studentFetch('/payments/upi-submissions')
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setUpiSubmissions(Array.isArray(d) ? d : []))
-      .catch(() => setUpiSubmissions([]));
+      .catch(() => setUpiSubmissions([]))
+      .finally(() => setUpiLoaded(true));
   }, []);
+
+  // While a submission is waiting for approval, check every 15s; the moment
+  // the owner approves, reload so the student sees their active pass without
+  // having to do anything.
+  const hasPendingUpi = upiSubmissions.some((u) => u.status === 'PENDING');
+  useEffect(() => {
+    if (!hasPendingUpi) return;
+    const timer = setInterval(() => {
+      studentFetch('/payments/upi-submissions')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!Array.isArray(d)) return;
+          if (d.some((u: UpiSubmission) => u.status === 'APPROVED') && !upiSubmissions.some((u) => u.status === 'APPROVED')) {
+            window.location.reload();
+          } else {
+            setUpiSubmissions(d);
+          }
+        })
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [hasPendingUpi, upiSubmissions]);
+
+  // The student tapped "Pay with UPI app", left to their UPI app, and came
+  // back (the browser may have reloaded this page meanwhile) — reopen the
+  // payment screen so they can enter the transaction ID right away.
+  useEffect(() => {
+    if (!plansLoaded || !upiLoaded || upiSheet) return;
+    let draft: string | null = null;
+    try {
+      draft = localStorage.getItem('ponna_upi_draft');
+    } catch {}
+    if (!draft) return;
+    if (upiSubmissions.some((u) => u.planId === draft && u.status !== 'REJECTED')) {
+      try { localStorage.removeItem('ponna_upi_draft'); } catch {}
+      return;
+    }
+    if (plans.some((p) => p.id === draft && p.active && !p.isFree)) buy(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plansLoaded, upiLoaded]);
 
   useEffect(() => {
     Promise.all([
@@ -325,8 +367,11 @@ function PlansPageInner() {
       {upiSubmissions.some((u) => u.status === 'REJECTED') && !upiSubmissions.some((u) => u.status === 'PENDING' || u.status === 'APPROVED') && (
         <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#991B1B', borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
           {lang === 'ta'
-            ? 'உங்கள் முந்தைய UPI பதிவு ஏற்கப்படவில்லை. சரியான பரிவர்த்தனை எண்ணுடன் மீண்டும் முயலவும் அல்லது ponna@arlena.in-க்கு எழுதவும்.'
+            ? 'உங்கள் முந்தைய UPI பதிவை உறுதிப்படுத்த முடியவில்லை. சரியான பரிவர்த்தனை எண்ணுடன் மீண்டும் முயலவும் அல்லது ponna@arlena.in-க்கு எழுதவும்.'
             : 'Your last UPI submission could not be verified. Please try again with the correct transaction ID, or email ponna@arlena.in.'}
+          {upiSubmissions.find((u) => u.status === 'REJECTED')?.adminNote && (
+            <div style={{ marginTop: 6, fontWeight: 600 }}>{upiSubmissions.find((u) => u.status === 'REJECTED')?.adminNote}</div>
+          )}
         </div>
       )}
 
@@ -754,6 +799,10 @@ function UpiPaySheet({
 
   const payLink = `upi://pay?pa=${encodeURIComponent(data.upiId)}&pn=${encodeURIComponent(data.payeeName)}&am=${data.amount}&cu=INR&tn=${encodeURIComponent('PONNA ' + data.planName)}`;
 
+  function clearDraft() {
+    try { localStorage.removeItem('ponna_upi_draft'); } catch {}
+  }
+
   async function submit() {
     setErr(null);
     setBusy(true);
@@ -776,6 +825,7 @@ function UpiPaySheet({
       if (typeof window.fbq === 'function') {
         window.fbq('track', 'Purchase', { value: data.amount, currency: 'INR' });
       }
+      clearDraft();
       onSubmitted({ id: body.id, planId: data.planId, amount: data.amount, status: 'PENDING' });
     } catch (e: any) {
       setErr(e.message);
@@ -786,7 +836,7 @@ function UpiPaySheet({
 
   return (
     <div
-      onClick={onClose}
+      onClick={() => { clearDraft(); onClose(); }}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}
     >
       <div
@@ -831,6 +881,9 @@ function UpiPaySheet({
 
         <a
           href={payLink}
+          onClick={() => {
+            try { localStorage.setItem('ponna_upi_draft', data.planId); } catch {}
+          }}
           style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, fontWeight: 600, fontSize: 15, textDecoration: 'none', marginBottom: 16 }}
         >
           {ta ? 'UPI செயலியில் செலுத்து' : 'Pay with UPI app'}
@@ -845,6 +898,11 @@ function UpiPaySheet({
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
           {ta ? 'UPI பரிவர்த்தனை எண் (12 இலக்கம்)' : 'UPI transaction ID (12 digits)'}
         </label>
+        <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: '0 0 6px', lineHeight: 1.5 }}>
+          {ta
+            ? 'பணம் செலுத்திய பின் உங்கள் UPI செயலியில் "UPI Ref No / UTR / Transaction ID" என்று காட்டும் 12 இலக்க எண். எழுத்துகள் இல்லாமல் எண்கள் மட்டும் (Google Pay-ல் "UPI transaction ID").'
+            : 'After paying, find the 12-digit number your UPI app shows as "UPI Ref No / UTR / Transaction ID" (in Google Pay: "UPI transaction ID"). Digits only, no letters.'}
+        </p>
         <input
           value={utr}
           onChange={(e) => setUtr(e.target.value.replace(/\D/g, '').slice(0, 12))}
@@ -861,13 +919,77 @@ function UpiPaySheet({
         >
           {busy ? '…' : ta ? 'சமர்ப்பி' : 'Submit'}
         </button>
-        <button onClick={onClose} style={{ width: '100%', padding: 12, background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 14, cursor: 'pointer', marginTop: 4 }}>
+        <ProblemReport ta={ta} />
+        <button onClick={() => { clearDraft(); onClose(); }} style={{ width: '100%', padding: 12, background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 14, cursor: 'pointer', marginTop: 4 }}>
           {ta ? 'மூடு' : 'Close'}
         </button>
         <p style={{ fontSize: 11, color: COLORS.inkMuted, margin: '8px 0 0', textAlign: 'center' }}>
           {ta ? 'சிக்கல் இருந்தால்: ponna@arlena.in' : 'Need help? ponna@arlena.in'}
         </p>
       </div>
+    </div>
+  );
+}
+
+// "I paid but something went wrong" — tells the owner immediately (Telegram /
+// push alert on the backend) and shows a mail fallback in case even that fails.
+function ProblemReport({ ta }: { ta: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  async function send() {
+    setState('sending');
+    try {
+      const res = await studentFetch('/payments/upi-problem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg }),
+      });
+      setState(res.ok ? 'sent' : 'error');
+    } catch {
+      setState('error');
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{ width: '100%', padding: 10, background: 'none', border: 'none', color: COLORS.gold, fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 6 }}
+      >
+        {ta ? 'பணம் செலுத்தியும் சிக்கலா? எங்களுக்குத் தெரிவியுங்கள்' : 'Paid but facing a problem? Tell us'}
+      </button>
+    );
+  }
+  if (state === 'sent') {
+    return (
+      <p style={{ fontSize: 13, color: '#166534', background: '#DCFCE7', borderRadius: 8, padding: 10, margin: '8px 0' }}>
+        {ta ? 'தகவல் எங்களுக்குக் கிடைத்தது. விரைவில் உங்களைத் தொடர்பு கொள்கிறோம்.' : 'We have your message and will get back to you soon.'}
+      </p>
+    );
+  }
+  return (
+    <div style={{ margin: '8px 0' }}>
+      <textarea
+        value={msg}
+        onChange={(e) => setMsg(e.target.value)}
+        rows={3}
+        placeholder={ta ? 'என்ன நடந்தது? (எ.கா. பணம் கழிந்தது, எண்ணை உள்ளிட முடியவில்லை)' : 'What happened? (e.g. money was debited but I could not submit)'}
+        style={{ width: '100%', boxSizing: 'border-box', padding: 10, fontSize: 14, borderRadius: 8, border: `1px solid ${COLORS.line}`, background: 'transparent', color: COLORS.ink }}
+      />
+      <button
+        onClick={send}
+        disabled={state === 'sending' || msg.trim().length < 3}
+        style={{ width: '100%', padding: 10, borderRadius: 8, border: `1px solid ${COLORS.line}`, background: 'transparent', color: COLORS.ink, fontWeight: 600, cursor: 'pointer', marginTop: 6, opacity: msg.trim().length < 3 ? 0.5 : 1 }}
+      >
+        {state === 'sending' ? '…' : ta ? 'அனுப்பு' : 'Send'}
+      </button>
+      {state === 'error' && (
+        <p style={{ fontSize: 12, color: '#b91c1c', margin: '6px 0 0' }}>
+          {ta ? 'அனுப்ப முடியவில்லை. தயவுசெய்து ponna@arlena.in-க்கு எழுதுங்கள்.' : 'Could not send. Please email ponna@arlena.in.'}
+        </p>
+      )}
     </div>
   );
 }

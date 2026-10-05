@@ -1917,6 +1917,20 @@ app.get('/payments/upi-submissions', requireStudentAuth, async (req: StudentAuth
   res.json(await manualPaymentService.listForUser(req.studentUserId!));
 });
 
+// POST /payments/upi-problem {message} — "I paid but something went wrong"
+app.post('/payments/upi-problem', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    await manualPaymentService.reportProblem(req.studentUserId!, req.body?.message);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err instanceof ManualPaymentError ? err.message : 'Could not send your message' });
+  }
+});
+
+app.get('/admin/manual-payments/pending-count', requireStaffAuth, async (_req, res) => {
+  res.json({ count: await manualPaymentService.pendingCount() });
+});
+
 // Admin: review queue + approve/reject (SUPER_ADMIN only — this grants paid access)
 app.get('/admin/manual-payments', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   res.json(await manualPaymentService.listForAdmin(req.query.status as string | undefined));

@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useRequireStaffAuth } from '../../lib/use-require-staff-auth';
+import { adminFetch } from '../../lib/admin-fetch';
 
 const navItems = [
   { href: '/admin/questions', label: 'Questions' },
@@ -38,6 +39,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isLoginPage = pathname === '/admin/login';
   const [tnpscMenuOpen, setTnpscMenuOpen] = useState(false);
   const checked = useRequireStaffAuth(isLoginPage);
+  // Oct 2026 — number of UPI payments waiting for approval, shown as a red
+  // badge on the "UPI Payments" menu and in the browser tab title, so a new
+  // payment is noticed even when that page is not open.
+  const [pendingUpi, setPendingUpi] = useState(0);
+  useEffect(() => {
+    if (isLoginPage || !checked) return;
+    let stop = false;
+    const load = () =>
+      adminFetch('/admin/manual-payments/pending-count')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (!stop && d && typeof d.count === 'number') setPendingUpi(d.count); })
+        .catch(() => {});
+    load();
+    const timer = setInterval(load, 30000);
+    return () => { stop = true; clearInterval(timer); };
+  }, [isLoginPage, checked, pathname]);
+  useEffect(() => {
+    if (isLoginPage) return;
+    document.title = pendingUpi > 0 ? `(${pendingUpi}) PONNA Admin — UPI payments waiting` : 'PONNA Admin';
+  }, [pendingUpi, isLoginPage]);
 
   function logout() {
     localStorage.removeItem('ponna_staff_token');
@@ -54,7 +75,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', background: '#0f172a' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
           <strong style={{ color: '#fff', fontSize: 16 }}>PONNA Admin</strong>
-          {navItems.map((item) => <Link key={item.href} href={item.href} style={{ color: '#cbd5e1', fontSize: 14, textDecoration: 'none' }}>{item.label}</Link>)}
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} style={{ color: '#cbd5e1', fontSize: 14, textDecoration: 'none' }}>
+              {item.label}
+              {item.href === '/admin/manual-payments' && pendingUpi > 0 && (
+                <span style={{ marginLeft: 6, background: '#dc2626', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{pendingUpi}</span>
+              )}
+            </Link>
+          ))}
           <div style={{ position: 'relative' }}>
             <button onClick={() => setTnpscMenuOpen((v) => !v)} style={{ background: 'transparent', border: 'none', color: tnpscActive ? '#fff' : '#cbd5e1', fontSize: 14, fontWeight: tnpscActive ? 700 : 400, cursor: 'pointer', padding: 0 }}>TNPSC ▾</button>
             {tnpscMenuOpen && (

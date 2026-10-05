@@ -22,6 +22,13 @@ type Row = {
   plan: { name: string };
 };
 
+function waitingText(iso: string): { text: string; late: boolean } {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return { text: `waiting ${mins} min`, late: false };
+  const h = Math.floor(mins / 60);
+  return { text: `waiting ${h}h ${mins % 60}m`, late: h >= 2 };
+}
+
 const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
   PENDING: { bg: '#fef3c7', fg: '#92400e' },
   APPROVED: { bg: '#dcfce7', fg: '#166534' },
@@ -46,13 +53,18 @@ export default function ManualPaymentsPage() {
 
   useEffect(() => {
     load();
+    const timer = setInterval(load, 30000); // new payments appear without refreshing
+    return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   async function act(row: Row, action: 'approve' | 'reject') {
     const who = row.user.name || row.user.phone || row.user.email || 'this student';
     if (action === 'approve' && !window.confirm(`Approve ₹${row.amount} (UTR ${row.utr}) from ${who}?\nOnly approve if this exact amount and UTR shows in your bank/UPI history.`)) return;
-    const note = action === 'reject' ? window.prompt('Reason (optional, internal note):') ?? undefined : undefined;
+    const note =
+      action === 'reject'
+        ? window.prompt('Reason — the student will SEE this (e.g. "Amount not received, please check the transaction ID"):') ?? undefined
+        : undefined;
     if (action === 'reject' && note === undefined) return;
 
     setBusyId(row.id);
@@ -108,7 +120,13 @@ export default function ManualPaymentsPage() {
           <div key={r.id} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: c.fg, background: c.bg, padding: '3px 10px', borderRadius: 12 }}>{r.status}</span>
-              <span style={{ fontSize: 12, color: '#94a3b8' }}>{new Date(r.createdAt).toLocaleString()}</span>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                {new Date(r.createdAt).toLocaleString()}
+                {r.status === 'PENDING' && (() => {
+                  const w = waitingText(r.createdAt);
+                  return <strong style={{ marginLeft: 8, color: w.late ? '#b91c1c' : '#92400e' }}>{w.text}</strong>;
+                })()}
+              </span>
             </div>
             <p style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>
               ₹{r.amount} <span style={{ fontSize: 13, fontWeight: 400, color: '#64748b' }}>— {r.plan.name}</span>
@@ -119,7 +137,7 @@ export default function ManualPaymentsPage() {
             <p style={{ fontSize: 13, color: '#475569', margin: '0 0 8px' }}>
               {r.user.name ?? '—'} · {r.user.phone ?? '—'} · {r.user.email ?? '—'}
             </p>
-            {r.adminNote && <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px' }}>Note: {r.adminNote}</p>}
+            {r.adminNote && <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px' }}>Shown to student: {r.adminNote}</p>}
             {r.status === 'PENDING' && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button

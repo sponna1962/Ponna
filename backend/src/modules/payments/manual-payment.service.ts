@@ -12,6 +12,7 @@ import type { ManualPaymentStatus } from '@prisma/client';
 import { isProfileComplete } from '../profile/profile.service';
 import { milestoneService } from '../practice-preference/milestone.service';
 import { ProfileIncompleteError } from './payment.service';
+import { adminAlertService } from './admin-alert.service';
 
 export class ManualPaymentError extends Error {}
 
@@ -45,12 +46,46 @@ export class ManualPaymentService {
     if (!price) throw new ManualPaymentError(`No price set for ${plan.name}.`);
 
     const duplicate = await prisma.manualPayment.findUnique({ where: { utr } });
-    if (duplicate) throw new ManualPaymentError('This transaction ID has already been submitted.');
+    if (duplicate) {
+      // Same UTR twice is either an honest double-tap (same student) or an
+      // attempt to reuse someone else's payment — the owner should know.
+      const sameUser = duplicate.userId === userId;
+      adminAlertService.notify(
+        sameUser ? 'ℹ️ PONNA: UTR மீண்டும் சமர்ப்பிக்கப்பட்டது' : '⚠️ PONNA: வேறொருவரின் UTR பயன்படுத்த முயற்சி',
+        `${user.name ?? '—'} · ${user.phone ?? user.email ?? '—'}\nUTR ${utr} (${duplicate.status})`,
+      );
+      throw new ManualPaymentError(
+        sameUser
+          ? 'You have already submitted this transaction ID. We are verifying it.'
+          : 'This transaction ID has already been used. Please check the number in your UPI app, or email ponna@arlena.in.',
+      );
+    }
 
     const pending = await prisma.manualPayment.findFirst({ where: { userId, planId, status: 'PENDING' } });
     if (pending) throw new ManualPaymentError('You already have a payment waiting for approval for this plan.');
 
-    return prisma.manualPayment.create({ data: { userId, planId, amount: price, utr } });
+    const created = await prisma.manualPayment.create({ data: { userId, planId, amount: price, utr } });
+    adminAlertService.notify(
+      `💰 PONNA: புதிய UPI பணம் ₹${price}`,
+      `${plan.name}\n${user.name ?? '—'} · ${user.phone ?? '—'} · ${user.email ?? '—'}\nUTR ${utr}\nவங்கியில் சரிபார்த்து Approve செய்யுங்கள்.`,
+    );
+    return created;
+  }
+
+  /** Student-reported problem (e.g. "I paid but cannot submit"). Alerts the owner at once. */
+  async reportProblem(userId: string, message: string) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const text = String(message ?? '').trim().slice(0, 500);
+    if (!text) throw new ManualPaymentError('Please describe the problem.');
+    adminAlertService.notify(
+      '🆘 PONNA: வாடிக்கையாளர் உதவி கோருகிறார்',
+      `${user.name ?? '—'} · ${user.phone ?? '—'} · ${user.email ?? '—'}\n${text}`,
+      '/admin/students',
+    );
+  }
+
+  pendingCount() {
+    return prisma.manualPayment.count({ where: { status: 'PENDING' } });
   }
 
   /** The student's own submissions, so the Plans page can show "waiting for approval". */
