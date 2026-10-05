@@ -3897,7 +3897,7 @@ app.listen(PORT, () => {
   // (Sept 2026) from a separate runtime-routes.ts that scheduled this at
   // module-require time via a monkey-patch — see the route registration
   // above for why that approach was removed.
-  cron.schedule('15 6 * * *', async () => {
+  cron.schedule('30 16 * * *', async () => {
     try {
       const result = await currentAffairsLearningService.generateDaily();
       console.log('[cron] Current Affairs learning:', result);
