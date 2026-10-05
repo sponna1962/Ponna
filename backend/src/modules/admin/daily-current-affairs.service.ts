@@ -52,7 +52,15 @@ function isoWindow() {
 }
 
 function cleanJson(raw: string): string {
-  const stripped = raw.replace(/^```json\s*|\s*```$/g, '').trim();
+  // Oct 2026 — Google Search grounding sprinkles citation markers such as
+  // "[1]", "[2.4.5]" or "[1, 3]" through the reply, sometimes outside the
+  // JSON strings, which breaks parsing. No expected field is a bare number
+  // array, so drop them, and tolerate trailing commas.
+  const stripped = raw
+    .replace(/^```(?:json)?\s*|\s*```$/g, '')
+    .replace(/\s*\[\d+(?:[.,\s]+\d+)*\]/g, '')
+    .replace(/,(\s*[}\]])/g, '$1')
+    .trim();
   // Oct 2026 — models using Google Search often wrap the JSON in a sentence
   // ("Here is the JSON: {...}") or add citations after it; keep only the
   // outermost {...} so such replies still parse.
@@ -123,7 +131,16 @@ Final checks before returning: exactly 10 questions; approximately 5 Medium and 
 }
 
 export class DailyCurrentAffairsService {
+  // One automatic retry: a malformed reply is usually a one-off.
   private async gemini(prompt: string, useGoogleSearch: boolean, maxOutputTokens = 9000): Promise<any> {
+    try { return await this.geminiOnce(prompt, useGoogleSearch, maxOutputTokens); }
+    catch (err: any) {
+      if (!/invalid JSON|cut off/.test(String(err?.message))) throw err;
+      return this.geminiOnce(prompt, useGoogleSearch, maxOutputTokens);
+    }
+  }
+
+  private async geminiOnce(prompt: string, useGoogleSearch: boolean, maxOutputTokens = 9000): Promise<any> {
     // Reasoning tokens count against this limit on newer Gemini models, so
     // give every call double the requested budget to avoid mid-JSON cut-offs.
     maxOutputTokens = maxOutputTokens * 2;
