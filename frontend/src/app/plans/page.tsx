@@ -836,6 +836,12 @@ function UpiPaySheet({
           {ta ? 'UPI செயலியில் செலுத்து' : 'Pay with UPI app'}
         </a>
 
+        <div style={{ background: '#FEF3C7', color: '#92400E', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
+          {ta
+            ? 'ஏற்கெனவே பணம் செலுத்திவிட்டீர்களா, ஆனால் எண்ணை உள்ளிட முடியவில்லையா? மீண்டும் செலுத்த வேண்டாம். இதே திரையை மீண்டும் திறந்து, உங்கள் UPI செயலியின் வரலாற்றில் உள்ள 12 இலக்க பரிவர்த்தனை எண்ணை மட்டும் கீழே உள்ளிடுங்கள்.'
+            : 'Already paid but could not enter the ID? Do not pay again. Reopen this screen and enter only the 12-digit transaction ID from your UPI app history below.'}
+        </div>
+
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
           {ta ? 'UPI பரிவர்த்தனை எண் (12 இலக்கம்)' : 'UPI transaction ID (12 digits)'}
         </label>
