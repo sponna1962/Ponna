@@ -211,7 +211,7 @@ export class DailyCurrentAffairsService {
   }
 
   private async createDailyQuiz(quizDate: string, quizType: DailyQuizType, questions: GeneratedQuestion[]) {
-    const publishAt = istToUtc(quizDate, '07:00');
+    const publishAt = istToUtc(quizDate, '18:00');
     const expiresAt = new Date(publishAt.getTime() + 24 * 60 * 60 * 1000);
     return prisma.dailyQuiz.create({
       data: {

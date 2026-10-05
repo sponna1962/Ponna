@@ -78,7 +78,9 @@ export function startScheduledJobs() {
   // cannot be established, nothing is created; old news is never used as filler.
   // Generated questions go directly to DailyQuiz/DailyQuizQuestion and NEVER
   // to the normal Question/DRAFT bank.
-  cron.schedule('30 6 * * *', async () => {
+  // 5 PM IST daily (explicit timezone, independent of server clock); the
+  // quiz is published at 6 PM IST and stays live until 6 PM the next day.
+  cron.schedule('0 17 * * *', async () => {
     try {
       const result = await dailyCurrentAffairsService.generateDailyBatch();
       if (result.skippedNoResults) {
@@ -87,7 +89,11 @@ export function startScheduledJobs() {
         console.log(`[cron] Daily Current Affairs: created ${result.created} verified Daily Quiz questions`);
       }
     } catch (err) { console.error('[cron] Daily Current Affairs generation failed:', err); }
-  });
+    try {
+      const brain = await dailyCurrentAffairsService.generateBrainChallenge();
+      console.log(`[cron] Brain Challenge: created ${brain.created}${brain.skippedNoResults ? ' (skipped)' : ''}`);
+    } catch (err) { console.error('[cron] Brain Challenge generation failed:', err); }
+  }, { timezone: 'Asia/Kolkata' });
 
   console.log('Scheduled jobs started: abandonment sweep, rank recomputation, suspicious-usage sweep, Daily Quiz status sweep, WhatsApp reminder sweep, push practice reminder sweep, Live Exam weekend reminder, and 48-hour verified Daily Current Affairs generation');
 }

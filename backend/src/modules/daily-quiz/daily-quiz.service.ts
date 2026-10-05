@@ -145,6 +145,15 @@ export class DailyQuizService {
   }
 
   private async findTodaysQuizByDate(quizType: DailyQuizType) {
+    // 6 PM -> next 6 PM cycle: the quiz that is live right now wins, even
+    // after IST midnight has changed the calendar date.
+    const now = new Date();
+    const live = await prisma.dailyQuiz.findFirst({
+      where: { quizType, publishAt: { lte: now }, expiresAt: { gt: now } },
+      orderBy: { publishAt: 'desc' },
+      include: { questions: { orderBy: { sequenceNumber: 'asc' } } },
+    });
+    if (live) return live;
     const todayStr = todayIstDateStr();
     return prisma.dailyQuiz.findUnique({ where: { quizDate_quizType: { quizDate: new Date(todayStr), quizType } }, include: { questions: { orderBy: { sequenceNumber: 'asc' } } } });
   }
