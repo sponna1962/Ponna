@@ -569,7 +569,8 @@ export default function IndexPage() {
               Group 4 / TNTET landing pages from the home page. */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24, fontSize: 12.5 }}>
             <a href="/tnpsc-group-4" style={{ color: COLORS.inkMuted, textDecoration: 'underline' }}>TNPSC Group 4</a>
-            <a href="/tntet" style={{ color: COLORS.inkMuted, textDecoration: 'underline' }}>TNTET</a>
+            {/* Oct 2026 — TNTET link hidden from the home page until TNTET
+                practice questions exist (page itself stays live for SEO). */}
             <a href="/current-affairs" style={{ color: COLORS.inkMuted, textDecoration: 'underline' }}>Current Affairs</a>
           </div>
         </div>
