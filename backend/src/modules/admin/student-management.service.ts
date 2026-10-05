@@ -137,18 +137,44 @@ export class StudentManagementService {
    * frontend before calling this.
    */
   async deleteStudentAccount(userId: string): Promise<void> {
-    await prisma.dailyQuizAnswer.deleteMany({ where: { attempt: { userId } } });
-    await prisma.dailyQuizAttempt.deleteMany({ where: { userId } });
-    await prisma.quizSessionQuestion.deleteMany({ where: { session: { userId } } });
-    await prisma.quizSession.deleteMany({ where: { userId } });
-    await prisma.userQuestionHistory.deleteMany({ where: { userId } });
-    await prisma.userPerformanceSummary.deleteMany({ where: { userId } });
-    await prisma.device.deleteMany({ where: { userId } });
-    await prisma.questionReport.deleteMany({ where: { userId } });
-    await prisma.studentPracticePreference.deleteMany({ where: { userId } });
-    await prisma.manualPayment.deleteMany({ where: { userId } });
-    await prisma.subscription.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    // Oct 2026 — one transaction, so a failure halfway never leaves a
+    // half-deleted student. Every table that references User is listed here
+    // (the relations have no ON DELETE CASCADE, so anything missing makes the
+    // final user delete fail with a foreign-key error). When adding a new
+    // table that points at User, add it here too.
+    await prisma.$transaction(async (tx: any) => {
+      await tx.dailyQuizAnswer.deleteMany({ where: { attempt: { userId } } });
+      await tx.dailyQuizAttempt.deleteMany({ where: { userId } });
+      await tx.quizSessionQuestion.deleteMany({ where: { session: { userId } } });
+      await tx.quizSession.deleteMany({ where: { userId } });
+      await tx.userQuestionHistory.deleteMany({ where: { userId } });
+      await tx.userPerformanceSummary.deleteMany({ where: { userId } });
+      await tx.device.deleteMany({ where: { userId } });
+      await tx.questionReport.deleteMany({ where: { userId } });
+      await tx.studentPracticePreference.deleteMany({ where: { userId } });
+      await tx.studentSubjectTopicPreference.deleteMany({ where: { userId } });
+      await tx.offlinePackItem.deleteMany({ where: { pack: { userId } } });
+      await tx.offlinePack.deleteMany({ where: { userId } });
+      await tx.askPonnaMessage.deleteMany({ where: { conversation: { userId } } });
+      await tx.askPonnaConversation.deleteMany({ where: { userId } });
+      await tx.mistakeReview.deleteMany({ where: { userId } });
+      await tx.mockExamQuestion.deleteMany({ where: { attempt: { userId } } });
+      await tx.mockExamAttempt.deleteMany({ where: { userId } });
+      await tx.adaptiveMockQuestion.deleteMany({ where: { attempt: { userId } } });
+      await tx.adaptiveMockAttempt.deleteMany({ where: { userId } });
+      await tx.diagnosticAnswer.deleteMany({ where: { attempt: { userId } } });
+      await tx.diagnosticAttempt.deleteMany({ where: { userId } });
+      await tx.shareToken.deleteMany({ where: { userId } });
+      await tx.pushSubscription.deleteMany({ where: { userId } });
+      await tx.studentMilestone.deleteMany({ where: { userId } });
+      // Referrals: conversions this student earned or was the subject of, and
+      // anyone who signed up through them simply loses the "referred by" link.
+      await tx.referralConversion.deleteMany({ where: { OR: [{ referrerId: userId }, { refereeId: userId }] } });
+      await tx.user.updateMany({ where: { referredById: userId }, data: { referredById: null } });
+      await tx.manualPayment.deleteMany({ where: { userId } });
+      await tx.subscription.deleteMany({ where: { userId } });
+      await tx.user.delete({ where: { id: userId } });
+    });
   }
 
   async getStudentDetail(userId: string) {
