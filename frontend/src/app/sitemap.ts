@@ -12,6 +12,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/daily-quiz`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/help`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/plans`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${baseUrl}/terms`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${baseUrl}/privacy`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${baseUrl}/refund-policy`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${baseUrl}/shipping-policy`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${baseUrl}/contact`, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/study-notes`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/test-your-ability`, changeFrequency: 'weekly', priority: 0.8 },
     // TNPSC Group 4 & TNTET SEO landing pages (Sept 2026)

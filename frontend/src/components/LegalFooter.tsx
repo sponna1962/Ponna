@@ -12,6 +12,9 @@ export function LegalFooter() {
     <footer style={{ padding: '18px 20px 24px', textAlign: 'center', fontSize: 11.5, color: '#64748b', lineHeight: 1.6 }}>
       <p style={{ margin: 0 }}>PONNA.in is a brand of ARLENA (OPC) PRIVATE LIMITED.</p>
       <p style={{ margin: '2px 0 0' }}>CIN: U63122TN2026OPC197880</p>
+      <p style={{ margin: '6px 0 0' }}>
+        <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/refund-policy">Refund Policy</a> · <a href="/shipping-policy">Delivery</a> · <a href="/contact">Contact</a>
+      </p>
       <p style={{ margin: '2px 0 0' }}>© 2026 ARLENA (OPC) PRIVATE LIMITED. All rights reserved.</p>
     </footer>
   );
