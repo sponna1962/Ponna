@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { useLanguage } from '../../lib/language-context';
@@ -807,6 +808,18 @@ function UpiPaySheet({
             >
               {copied ? (ta ? 'நகலெடுத்தது' : 'Copied') : ta ? 'நகலெடு' : 'Copy'}
             </button>
+          </div>
+        </div>
+
+        {/* QR for the amount-prefilled UPI link — scan with any UPI app
+            (GPay, PhonePe, Paytm…). Always on a white tile so it scans in
+            any theme. Phone users can just tap the button below instead. */}
+        <div style={{ textAlign: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'inline-block', background: '#fff', padding: 10, borderRadius: 10, border: `1px solid ${COLORS.line}` }}>
+            <QRCodeSVG value={payLink} size={168} level="M" />
+          </div>
+          <div style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 6 }}>
+            {ta ? 'எந்த UPI செயலியிலும் ஸ்கேன் செய்து செலுத்தலாம்' : 'Scan with any UPI app to pay'} · ₹{data.amount}
           </div>
         </div>
 
