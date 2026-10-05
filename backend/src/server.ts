@@ -3811,6 +3811,16 @@ app.post('/admin/students/:id/change-phone', requireStaffAuth, requireRole('SUPE
   }
 });
 
+// POST /admin/students/:id/change-email  { newEmail } — Super Admin only.
+// Edits the account's contact email, keeping all its history/data.
+app.post('/admin/students/:id/change-email', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    res.json(await studentManagementService.changeEmail(req.params.id, req.body.newEmail));
+  } catch (err: any) {
+    res.status(400).json({ error: err.message ?? 'Failed to change email' });
+  }
+});
+
 // DELETE /admin/students/:id — Super Admin only. Permanently deletes the
 // account and everything tied to it. Irreversible.
 app.delete('/admin/students/:id', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {

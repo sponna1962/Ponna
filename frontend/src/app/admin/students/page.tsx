@@ -89,6 +89,25 @@ export default function StudentsPage() {
     load();
   }
 
+  /** Super Admin only — edits the account's contact email, keeping all
+   * history/data. Does not change which Google account they sign in with. */
+  async function changeEmail(id: string, currentEmail: string | null) {
+    const newEmail = prompt(`Enter the new email address for this account (currently: ${currentEmail ?? 'none'}):`);
+    if (!newEmail?.trim()) return;
+    if (!confirm(`Change this account's email to ${newEmail.trim()}? All history/data stays — only the email changes.`)) return;
+    const res = await adminFetch(`/admin/students/${id}/change-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newEmail: newEmail.trim() }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed: ${body.error ?? 'Only Super Admin can change this'}`);
+      return;
+    }
+    load();
+  }
+
   /** Super Admin only — permanently deletes the account and everything
    * tied to it. Irreversible, so this asks the admin to type the exact
    * account identifier back before proceeding, not just a yes/no click. */
@@ -167,6 +186,9 @@ export default function StudentsPage() {
                   </button>
                   <button onClick={() => changePhone(s.id, s.phone)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
                     Change Phone
+                  </button>
+                  <button onClick={() => changeEmail(s.id, s.email)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
+                    Change Email
                   </button>
                   <button
                     onClick={() => deleteStudent(s.id, s.name ?? s.phone ?? s.email ?? s.id)}

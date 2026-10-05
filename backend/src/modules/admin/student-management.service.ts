@@ -108,6 +108,26 @@ export class StudentManagementService {
   }
 
   /**
+   * Super Admin only — changes the email address on an EXISTING account,
+   * keeping all its history/data (Oct 2026, same trusted-override idea as
+   * changePhoneNumber). This edits the account's contact/profile email only:
+   * it does NOT change which Google account the student signs in with (a
+   * student who already signs in through Google keeps doing so by their
+   * Firebase identity, which this never touches).
+   */
+  async changeEmail(userId: string, newEmailRaw: string) {
+    const newEmail = String(newEmailRaw ?? '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      throw new Error('Please enter a valid email address.');
+    }
+    const conflict = await prisma.user.findUnique({ where: { email: newEmail } });
+    if (conflict && conflict.id !== userId) {
+      throw new Error(`${newEmail} is already used by a different account. Remove/reassign that account's email first.`);
+    }
+    return prisma.user.update({ where: { id: userId }, data: { email: newEmail }, select: { id: true, email: true } });
+  }
+
+  /**
    * Super Admin only — permanently deletes a student account and every
    * record tied to it: Devices, Subscriptions, Practice Preference, quiz
    * history (QuizSession + its QuizSessionQuestion rows,
