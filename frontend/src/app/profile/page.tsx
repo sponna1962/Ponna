@@ -103,6 +103,7 @@ export default function ProfilePage() {
   const [phoneLinkMessage, setPhoneLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const phoneConfirmationRef = useRef<ConfirmationResult | null>(null);
   const phoneRecaptchaRef = useRef<HTMLDivElement>(null);
+  const phoneVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const [resettingHistory, setResettingHistory] = useState(false);
   const [milestones, setMilestones] = useState<{ type: string; label: string; emoji: string; achievedAt: string }[]>([]);
   const [pushStatus, setPushStatus] = useState<{ configured: boolean; subscribed: boolean; vapidPublicKey: string | null } | null>(null);
@@ -366,12 +367,21 @@ export default function ProfilePage() {
         return;
       }
       const fullPhone = normalized.startsWith('+') ? normalized : `+91${normalized}`;
+      // Oct 2026 — a RecaptchaVerifier can only be rendered once per element;
+      // a second attempt (retry after an error, or after Cancel) threw
+      // "reCAPTCHA has already been rendered in this element". Always clear the
+      // previous verifier and the container first.
+      try { phoneVerifierRef.current?.clear(); } catch { /* already cleared */ }
+      if (phoneRecaptchaRef.current) phoneRecaptchaRef.current.innerHTML = '';
       const verifier = new RecaptchaVerifier(firebaseAuth, phoneRecaptchaRef.current!, { size: 'invisible' });
+      phoneVerifierRef.current = verifier;
       phoneConfirmationRef.current = await linkWithPhoneNumber(firebaseAuth.currentUser, fullPhone, verifier);
       setPhoneToVerify(fullPhone);
       setPhoneLinkStep('enterOtp');
     } catch (err: any) {
       console.error(err);
+      try { phoneVerifierRef.current?.clear(); } catch { /* ignore */ }
+      phoneVerifierRef.current = null;
       setPhoneLinkMessage({ ok: false, text: err.message ?? t.login.sendError });
     } finally {
       setVerifyingPhone(false);

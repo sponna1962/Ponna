@@ -64,6 +64,7 @@ export default function IndexPage() {
   const [removingDeviceId, setRemovingDeviceId] = useState<string | null>(null);
   const confirmationRef = useRef<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+  const verifierRef = useRef<RecaptchaVerifier | null>(null);
 
   // Logged-in extras
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
@@ -349,12 +350,19 @@ export default function IndexPage() {
     setError(null);
     setLoading(true);
     try {
+      // Oct 2026 — one RecaptchaVerifier per element: clear any previous one
+      // so a retry (or "send again") never hits "already been rendered".
+      try { verifierRef.current?.clear(); } catch { /* already cleared */ }
+      if (recaptchaContainerRef.current) recaptchaContainerRef.current.innerHTML = '';
       const verifier = new RecaptchaVerifier(firebaseAuth, recaptchaContainerRef.current!, { size: 'invisible' });
+      verifierRef.current = verifier;
       const fullPhone = phone.startsWith('+') ? phone : `+91${phone}`;
       confirmationRef.current = await signInWithPhoneNumber(firebaseAuth, fullPhone, verifier);
       setOtpSent(true);
     } catch (err) {
       console.error(err);
+      try { verifierRef.current?.clear(); } catch { /* ignore */ }
+      verifierRef.current = null;
       setError(t.login.sendError);
     } finally {
       setLoading(false);
