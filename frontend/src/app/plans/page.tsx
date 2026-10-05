@@ -246,7 +246,7 @@ function PlansPageInner() {
         // Profile must be complete BEFORE paying, so nobody pays and then
         // gets bounced to the Profile page with their payment unrecorded.
         if (upiInfo.profileComplete === false) {
-          window.location.href = '/profile?complete=1';
+          window.location.href = '/profile?complete=1&next=plans';
           return;
         }
         const plan = plans.find((x) => x.id === planId);
@@ -263,7 +263,7 @@ function PlansPageInner() {
       if (!res.ok) {
         const body = await res.json();
         if (body.code === 'PROFILE_INCOMPLETE') {
-          window.location.href = '/profile?complete=1';
+          window.location.href = '/profile?complete=1&next=plans';
           return;
         }
         throw new Error(body.error ?? t.plans.paymentError);
@@ -766,7 +766,7 @@ function UpiPaySheet({
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (body.code === 'PROFILE_INCOMPLETE') {
-          window.location.href = '/profile?complete=1';
+          window.location.href = '/profile?complete=1&next=plans';
           return;
         }
         throw new Error(body.error ?? (ta ? 'சமர்ப்பிக்க முடியவில்லை' : 'Could not submit'));

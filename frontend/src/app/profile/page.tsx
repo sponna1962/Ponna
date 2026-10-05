@@ -61,11 +61,17 @@ export default function ProfilePage() {
   const { t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [cameFromGate, setCameFromGate] = useState(false);
+  // Oct 2026 — after completing the profile, return to wherever the gate
+  // came from. Whitelisted (never an arbitrary URL): the Plans page sends
+  // next=plans so a student who clicked "Get Pass" lands back there to pay.
+  const [afterGateUrl, setAfterGateUrl] = useState('/quiz');
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setCameFromGate(new URLSearchParams(window.location.search).get('complete') === '1');
+      const q = new URLSearchParams(window.location.search);
+      setCameFromGate(q.get('complete') === '1');
+      if (q.get('next') === 'plans') setAfterGateUrl('/plans');
     }
   }, []);
 
@@ -261,7 +267,7 @@ export default function ProfilePage() {
       setProfile((p) => (p ? { ...p, profileComplete: result.profileComplete } : p));
       setSaved(true);
       if (cameFromGate && profile?.phone) {
-        window.location.href = '/quiz';
+        window.location.href = afterGateUrl;
         return;
       }
     } else {
@@ -393,7 +399,7 @@ export default function ProfilePage() {
       setPhoneLinkStep('idle');
       setProfile((p) => (p ? { ...p, phone: verifiedPhone } : p));
       if (cameFromGate && profile?.email) {
-        window.location.href = '/quiz';
+        window.location.href = afterGateUrl;
         return;
       }
     } catch (err: any) {
