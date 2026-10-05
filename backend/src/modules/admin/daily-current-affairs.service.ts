@@ -52,7 +52,13 @@ function isoWindow() {
 }
 
 function cleanJson(raw: string): string {
-  return raw.replace(/^```json\s*|\s*```$/g, '').trim();
+  const stripped = raw.replace(/^```json\s*|\s*```$/g, '').trim();
+  // Oct 2026 — models using Google Search often wrap the JSON in a sentence
+  // ("Here is the JSON: {...}") or add citations after it; keep only the
+  // outermost {...} so such replies still parse.
+  const first = stripped.indexOf('{');
+  const last = stripped.lastIndexOf('}');
+  return first >= 0 && last > first ? stripped.slice(first, last + 1) : stripped;
 }
 
 // Exact-text duplicate guard. This is deliberately deterministic and runs
@@ -118,6 +124,9 @@ Final checks before returning: exactly 10 questions; approximately 5 Medium and 
 
 export class DailyCurrentAffairsService {
   private async gemini(prompt: string, useGoogleSearch: boolean, maxOutputTokens = 9000): Promise<any> {
+    // Reasoning tokens count against this limit on newer Gemini models, so
+    // give every call double the requested budget to avoid mid-JSON cut-offs.
+    maxOutputTokens = maxOutputTokens * 2;
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured');
     const body: any = {
       contents: [{ parts: [{ text: prompt }] }],
@@ -128,10 +137,22 @@ export class DailyCurrentAffairsService {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error(`Gemini request failed: ${response.status} ${await response.text()}`);
-    const data = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+    const data = await response.json() as { candidates?: { finishReason?: string; content?: { parts?: { text?: string; thought?: boolean }[] } }[] };
+    const candidate = data.candidates?.[0];
+    // Oct 2026 — join EVERY non-"thought" text part. The answer can be split
+    // across several parts (and newer models put reasoning in separate
+    // thought parts), so reading only parts[0] could return a fragment.
+    const raw = (candidate?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? '').join('') || '{}';
     try { return JSON.parse(cleanJson(raw)); }
-    catch { throw new Error('AI returned invalid JSON for the Daily Quiz'); }
+    catch {
+      console.error(`Daily Quiz AI JSON parse failed (finishReason=${candidate?.finishReason}, ${raw.length} chars). Start: ${raw.slice(0, 200)} … End: ${raw.slice(-200)}`);
+      // Cut off at the token limit is the most common cause — say so, so the
+      // admin knows it is a retry-able size problem, not a broken setup.
+      if (candidate?.finishReason === 'MAX_TOKENS') {
+        throw new Error('AI reply was cut off before finishing (too long). Please press Generate again.');
+      }
+      throw new Error(`AI returned invalid JSON for the Daily Quiz (finish reason: ${candidate?.finishReason ?? 'unknown'}). Please press Generate again.`);
+    }
   }
 
   /** STEP 1 — discover only events inside the rolling 48-hour eligibility window. */
