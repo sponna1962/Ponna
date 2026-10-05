@@ -73,7 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
         {/* Oct 2026 — Meta (Facebook/Instagram) Pixel, site-wide, for the
-            upcoming ad campaign. Dataset "PONNA.in" (id 1701775234737355),
+            upcoming ad campaign. Dataset "PONNA.in" (id 1759774275257553),
             created in Events Manager. Fires PageView on every route via
             Next.js's <Script> with the default "afterInteractive" strategy,
             so it loads after the page is interactive without blocking
@@ -89,7 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             t.src=v;s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '1701775234737355');
+            fbq('init', '1759774275257553');
             fbq('track', 'PageView');
           `}
         </Script>
@@ -98,7 +98,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             height="1"
             width="1"
             style={{ display: 'none' }}
-            src="https://www.facebook.com/tr?id=1701775234737355&ev=PageView&noscript=1"
+            src="https://www.facebook.com/tr?id=1759774275257553&ev=PageView&noscript=1"
             alt=""
           />
         </noscript>
