@@ -113,7 +113,7 @@ export default function StudentsPage() {
    * account identifier back before proceeding, not just a yes/no click. */
   async function deleteStudent(id: string, label: string) {
     const typed = prompt(`This permanently deletes "${label}" and ALL its data (subscriptions, quiz history, Daily Quiz attempts, everything) — this cannot be undone.\n\nType the account's name/phone/email exactly to confirm:`);
-    if (typed?.trim() !== label) {
+    if (typed?.trim() !== label.trim()) {
       if (typed !== null) alert('Did not match — nothing was deleted.');
       return;
     }
