@@ -531,33 +531,7 @@ export default function IndexPage() {
             </a>
           )}
 
-          {isLoggedIn && activeSubs && activeSubs.length > 0 && (
-            <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 12, marginBottom: 20, background: COLORS.goldLight }}>
-              <p style={{ fontSize: 11, color: '#7A5A14', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
-                செயலில் உள்ள திட்டங்கள் / Active Plans
-              </p>
-              {activeSubs.map((s) => {
-                const showDays = shouldShowRemainingDays(s.validUntil);
-                const days = daysRemaining(s.validUntil);
-                return (
-                  <div key={s.id} style={{ marginBottom: 6 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontSize: 13 }}>
-                      <span style={{ color: COLORS.ink, fontWeight: 600 }}>{s.plan.name}</span>
-                      <span style={{ color: COLORS.inkMuted, whiteSpace: 'nowrap' }}>Valid until {formatValidUntil(s.validUntil)}</span>
-                    </div>
-                    {showDays && (
-                      <div style={{ fontSize: 11, fontWeight: 700, color: days <= 7 ? '#B91C1C' : '#92400E', marginTop: 1 }}>
-                        {days} {days === 1 ? 'day' : 'days'} remaining
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              <a href="/plans" style={{ display: 'inline-block', marginTop: 4, fontSize: 12, fontWeight: 700, color: '#7A5A14', textDecoration: 'none' }}>
-                View Plan →
-              </a>
-            </div>
-          )}
+          {/* Oct 2026 — "Active Plans" card removed from the home screen by explicit request (plan details remain on /plans). */}
 
           {/* Sept 2026 — Weak-Area Alert (BINDING, careful design — see
               weak-area.service.ts's own header comment for the sample-
