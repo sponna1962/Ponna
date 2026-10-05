@@ -74,6 +74,7 @@ import { adaptiveMockService } from './modules/quiz/adaptive-mock.service';
 import { DiagnosticService } from './modules/quiz/diagnostic.service';
 import { DailyQuizType } from '@prisma/client';
 import { prisma } from './lib/prisma';
+import { isProfileComplete } from './modules/profile/profile.service';
 import { ProfileService } from './modules/profile/profile.service';
 
 const app = express();
@@ -1889,9 +1890,13 @@ app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthed
 // GET  /payments/upi-info             — is UPI enabled, and which UPI ID to pay
 // POST /payments/upi-submit {planId, utr} — student submits the UPI reference
 // GET  /payments/upi-submissions      — the student's own submissions + status
-app.get('/payments/upi-info', requireStudentAuth, (_req, res) => {
+app.get('/payments/upi-info', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   res.set('Cache-Control', 'no-store');
-  res.json(manualPaymentService.getInfo());
+  // profileComplete lets the Plans page send the student to finish their
+  // profile BEFORE they pay — never after (they'd have paid with nothing
+  // recorded). The submit endpoint still enforces it server-side.
+  const user = await prisma.user.findUnique({ where: { id: req.studentUserId! } });
+  res.json({ ...manualPaymentService.getInfo(), profileComplete: user ? isProfileComplete(user) : false });
 });
 
 app.post('/payments/upi-submit', requireStudentAuth, async (req: StudentAuthedRequest, res) => {

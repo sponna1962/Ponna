@@ -243,6 +243,12 @@ function PlansPageInner() {
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null);
       if (upiInfo?.enabled) {
+        // Profile must be complete BEFORE paying, so nobody pays and then
+        // gets bounced to the Profile page with their payment unrecorded.
+        if (upiInfo.profileComplete === false) {
+          window.location.href = '/profile?complete=1';
+          return;
+        }
         const plan = plans.find((x) => x.id === planId);
         const amount = Number(plan?.launchPrice ?? plan?.regularPrice ?? 0);
         setUpiSheet({ planId, planName: displayName(plan?.name ?? ''), amount, upiId: upiInfo.upiId, payeeName: upiInfo.payeeName });
