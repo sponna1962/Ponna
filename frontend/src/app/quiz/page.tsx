@@ -695,7 +695,7 @@ export default function QuizStartPage() {
             )}
 
             {fixedSubCategoryId && examSelectionComplete && (
-              <SubjectPreferenceField subCategoryId={fixedSubCategoryId} t={t} resetOnFreshVisit />
+              <SubjectPreferenceField subCategoryId={fixedSubCategoryId} t={t} resetOnFreshVisit practiceLanguage={language} />
             )}
 
             <button
@@ -770,9 +770,9 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 // modal, saves immediately on "Done" (topicIds always sent empty — this
 // phase never touches topic-level preference). Reuses Stage 1's existing
 // /subject-preference/* routes as-is, no backend changes needed here.
-type PrefSubject = { id: string; name: string };
+type PrefSubject = { id: string; name: string; nameTa?: string | null };
 
-function SubjectPreferenceField({ subCategoryId, t, resetOnFreshVisit }: { subCategoryId: string; t: any; resetOnFreshVisit?: boolean }) {
+function SubjectPreferenceField({ subCategoryId, t, resetOnFreshVisit, practiceLanguage }: { subCategoryId: string; t: any; resetOnFreshVisit?: boolean; practiceLanguage?: 'TA' | 'EN' | '' }) {
   const [subjects, setSubjects] = useState<PrefSubject[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -806,7 +806,7 @@ function SubjectPreferenceField({ subCategoryId, t, resetOnFreshVisit }: { subCa
     reset.then(() => Promise.all([
       studentFetch(`/subject-preference/${subCategoryId}/syllabus`).then((r) => r.json()),
       studentFetch(`/subject-preference/${subCategoryId}`).then((r) => r.json()),
-    ]).then(([syllabus, pref]: [{ id: string; name: string }[], { subjectIds?: string[] }]) => {
+    ]).then(([syllabus, pref]: [PrefSubject[], { subjectIds?: string[] }]) => {
       setSubjects(syllabus);
       setSelectedIds(new Set(pref.subjectIds ?? []));
     }));
@@ -865,7 +865,7 @@ function SubjectPreferenceField({ subCategoryId, t, resetOnFreshVisit }: { subCa
             {subjects.filter((s) => showDisabilityTrack || !DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)).map((s) => (
               <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid var(--color-line)' }}>
                 <input type="checkbox" checked={draftIds.has(s.id)} onChange={() => toggleDraft(s.id)} />
-                {s.name}
+                {practiceLanguage === 'TA' && s.nameTa ? s.nameTa : s.name}
               </label>
             ))}
 
