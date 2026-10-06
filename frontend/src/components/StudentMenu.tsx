@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useLanguage } from '../lib/language-context';
+import { studentFetch } from '../lib/student-fetch';
 import { COLORS, BitterFontLinks } from '../lib/brand-theme';
 import { HERO_ART_SVG } from '../app/test-your-ability/hero-art';
 import {
@@ -29,6 +30,8 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
   const { t } = useLanguage();
   const [open, setOpenState] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // null = not known yet (nothing shown, avoids a flash of the big Pass button)
+  const [hasPass, setHasPass] = useState<boolean | null>(null);
 
   function setOpen(value: boolean) {
     setOpenState(value);
@@ -36,8 +39,15 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
   }
 
   function openMenu() {
-    setIsLoggedIn(typeof window !== 'undefined' && !!localStorage.getItem('ponna_student_token'));
+    const loggedIn = typeof window !== 'undefined' && !!localStorage.getItem('ponna_student_token');
+    setIsLoggedIn(loggedIn);
     setOpen(true);
+    if (loggedIn) {
+      studentFetch('/students/me/subscriptions')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => setHasPass(Array.isArray(d) ? d.length > 0 : false))
+        .catch(() => setHasPass(false));
+    }
   }
 
   const sections: { heading: string; items: NavItem[] }[] = isLoggedIn
@@ -116,13 +126,19 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
             </div>
 
             <div style={{ flex: 'none', background: COLORS.paper }}>
-              {isLoggedIn && (
+              {isLoggedIn && hasPass === false && (
                 <a href="/plans" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '6px 14px 10px', padding: '10px 14px', borderRadius: 14, background: 'linear-gradient(135deg,#F3C65A,#D99A1E)', color: '#2b1c00', textDecoration: 'none', boxShadow: '0 8px 18px -10px rgba(176,122,16,0.8)' }}>
                   <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <PlansIcon size={20} color="#2b1c00" />
                   </span>
                   <b style={{ fontSize: 17 }}>{t.menu.plans}</b>
                   <span style={{ marginLeft: 'auto', fontSize: 24, lineHeight: 1 }}>›</span>
+                </a>
+              )}
+              {isLoggedIn && hasPass === true && (
+                <a href="/plans" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 16px 8px', padding: '7px 12px', borderRadius: 999, border: '1.5px solid #E2B04A', background: COLORS.goldLight, color: COLORS.ink, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
+                  <span style={{ color: 'var(--color-ok)', fontWeight: 800 }}>✓</span> {t.menu.plans} · Active
+                  <span style={{ marginLeft: 'auto', fontSize: 18, lineHeight: 1 }}>›</span>
                 </a>
               )}
               <div aria-hidden="true" style={{ position: 'relative', height: 38, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }} />
