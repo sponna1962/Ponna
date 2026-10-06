@@ -49,36 +49,41 @@ export default function StudyNotesPage() {
   }, [selectedExamId, language]);
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40, background: COLORS.paper, minHeight: '100dvh' }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40, background: COLORS.paper, color: COLORS.ink, minHeight: '100dvh' }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
-        <StudentMenu />
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 20, margin: 0 }}>Study Notes</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <StudentMenu iconColor="#fff" />
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Study Notes</h1>
       </div>
 
       {!selectedExamId && (
         <div style={{ padding: '0 16px' }}>
-          <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 14 }}>தேர்வைத் தேர்வு செய்யுங்கள் / Select an exam</p>
+          <p style={{ fontSize: 14.5, color: COLORS.inkMuted, margin: '0 0 14px' }}>தேர்வைத் தேர்வு செய்யுங்கள் / Select an exam</p>
           {loading && <p style={{ fontSize: 13, color: COLORS.inkMuted }}>…</p>}
           {!loading && !exam && <p style={{ fontSize: 13, color: COLORS.inkMuted }}>No exam is currently available.</p>}
           {exam && (
             <button
               onClick={() => setSelectedExamId(exam.id)}
               style={{
-                display: 'block',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
                 width: '100%',
                 textAlign: 'left',
                 padding: 16,
-                borderRadius: 12,
-                border: `1.5px solid ${COLORS.line}`,
+                borderRadius: 16,
+                border: `1px solid ${COLORS.line}`,
+                borderLeft: '5px solid #E2B04A',
                 background: 'var(--color-card)',
                 cursor: 'pointer',
-                fontSize: 15,
+                fontSize: 16.5,
                 fontWeight: 700,
                 color: COLORS.ink,
               }}
             >
-              {exam.name}
+              <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--color-goldDisc)', display: 'grid', placeItems: 'center', fontSize: 20, flex: 'none' }}>🎯</span>
+              <span style={{ flex: 1 }}>{exam.name}</span>
+              <span aria-hidden="true" style={{ fontSize: 26, color: 'var(--color-gold)' }}>›</span>
             </button>
           )}
         </div>
@@ -91,24 +96,25 @@ export default function StudyNotesPage() {
               setSelectedExamId(null);
               setOpenId(null);
             }}
-            style={{ fontSize: 12.5, color: COLORS.inkMuted, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 12 }}
+            style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-gold)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 14 }}
           >
             ← வேறு தேர்வு / Change exam
           </button>
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 6, background: 'var(--color-field)', border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: 4, marginBottom: 16 }}>
             {(['TA', 'EN'] as const).map((l) => (
               <button
                 key={l}
                 onClick={() => setLanguage(l)}
                 style={{
-                  padding: '6px 14px',
-                  borderRadius: 20,
-                  border: `1.5px solid ${language === l ? COLORS.ink : COLORS.line}`,
-                  background: language === l ? COLORS.ink : '#fff',
-                  color: language === l ? '#fff' : COLORS.ink,
-                  fontSize: 13,
-                  fontWeight: 600,
+                  flex: 1,
+                  padding: 9,
+                  borderRadius: 999,
+                  border: 'none',
+                  background: language === l ? 'var(--color-btn)' : 'transparent',
+                  color: language === l ? 'var(--color-btnText)' : COLORS.inkMuted,
+                  fontSize: 14,
+                  fontWeight: 700,
                   cursor: 'pointer',
                 }}
               >
@@ -121,28 +127,30 @@ export default function StudyNotesPage() {
           {!notesLoading && notes.length === 0 && <p style={{ fontSize: 13, color: COLORS.inkMuted }}>Study notes coming soon.</p>}
 
           {notes.map((note) => (
-            <div key={note.subjectId} style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+            <div key={note.subjectId} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderLeft: openId === note.subjectId ? '5px solid #E2B04A' : `1px solid ${COLORS.line}`, borderRadius: 16, marginBottom: 10, overflow: 'hidden' }}>
               <button
                 onClick={() => setOpenId(openId === note.subjectId ? null : note.subjectId)}
                 style={{
                   width: '100%',
                   textAlign: 'left',
-                  padding: 14,
+                  padding: '14px 16px',
                   background: 'transparent',
                   border: 'none',
-                  fontSize: 14.5,
+                  fontSize: 15.5,
                   fontWeight: 700,
                   color: COLORS.ink,
                   cursor: 'pointer',
                   display: 'flex',
-                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
                 }}
               >
-                <span>{language === 'TA' && note.subjectNameTa ? note.subjectNameTa : note.subjectName}</span>
-                <span style={{ color: COLORS.inkMuted }}>{openId === note.subjectId ? '−' : '+'}</span>
+                <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--color-goldDisc)', display: 'grid', placeItems: 'center', fontSize: 16, flex: 'none' }}>📘</span>
+                <span style={{ flex: 1 }}>{language === 'TA' && note.subjectNameTa ? note.subjectNameTa : note.subjectName}</span>
+                <span style={{ color: 'var(--color-gold)', fontSize: 22, fontWeight: 600 }}>{openId === note.subjectId ? '−' : '+'}</span>
               </button>
               {openId === note.subjectId && (
-                <div style={{ padding: '0 14px 16px', fontSize: 13.5, lineHeight: 1.75, color: COLORS.ink, whiteSpace: 'pre-wrap' }}>{note.content}</div>
+                <div style={{ padding: '0 16px 16px 62px', fontSize: 15, lineHeight: 1.85, color: COLORS.ink, whiteSpace: 'pre-wrap' }}>{note.content}</div>
               )}
             </div>
           ))}
