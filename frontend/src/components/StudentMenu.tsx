@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useLanguage } from '../lib/language-context';
 import { COLORS, BitterFontLinks } from '../lib/brand-theme';
+import { HERO_ART_SVG } from '../app/test-your-ability/hero-art';
 import {
   HomeIcon,
   PracticeIcon,
@@ -44,8 +45,8 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
         {
           heading: t.menu.sectionPreparation,
           items: [
-            { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
             { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
+            { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
             { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
             { href: '/study-notes', label: t.menu.studyNotes, Icon: StudyNotesIcon },
             { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
@@ -53,7 +54,6 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
             { href: '/adaptive-mock', label: t.menu.adaptiveMock, Icon: PracticeIcon },
             { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
             { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
-            { href: '/plans', label: t.menu.plans, Icon: PlansIcon },
           ],
         },
         {
@@ -82,34 +82,75 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
       </button>
 
       {open && typeof document !== 'undefined' && createPortal(
-        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,34,56,0.45)', zIndex: 999 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 258, background: COLORS.paper, boxShadow: '2px 0 16px rgba(0,0,0,0.15)', padding: '20px 18px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} style={{ height: 42, width: 'auto' }} />
-              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 4 }}>
-                <CloseIcon size={18} color={COLORS.inkMuted} />
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,47,51,0.5)', zIndex: 999 }}>
+          {/* Oct 2026 redesign: teal header band, gold icon discs, current-page highlight,
+              gold Pass button + thin sunrise strip pinned at the bottom. Same links/labels. */}
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 'min(78vw, 320px)', background: COLORS.paper, boxShadow: '8px 0 30px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(180deg,#0c2f3f,#1c6b6b)', padding: '16px 16px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #E2B04A', flex: 'none' }}>
+              <div style={{ background: '#fefefe', borderRadius: 8, padding: '4px 10px', display: 'flex' }}>
+                <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} style={{ height: 32, width: 'auto' }} />
+              </div>
+              <button onClick={() => setOpen(false)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.14)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                <CloseIcon size={16} color="#fff" />
               </button>
             </div>
-            <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 15, borderRadius: 8, fontWeight: 600 }}>
-              <HomeIcon size={19} color={COLORS.gold} /> {t.menu.home}
-            </a>
-            <a href="/current-affairs" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 15, borderRadius: 8, fontWeight: 600 }}>
-              <StudyNotesIcon size={19} color={COLORS.gold} /> Current Affairs
-            </a>
-            {sections.map((section) => (
-              <div key={section.heading} style={{ marginTop: 14 }}>
-                <p style={{ fontSize: 10.5, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, margin: '0 6px 4px' }}>{section.heading}</p>
-                {section.items.map((item) => (
-                  <a key={item.href} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 6px', color: COLORS.ink, textDecoration: 'none', fontSize: 14.5, borderRadius: 8 }}>
-                    <item.Icon size={18} color={COLORS.gold} /> {item.label}
-                  </a>
-                ))}
-              </div>
-            ))}
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px 10px' }}>
+              {[
+                { href: '/', label: t.menu.home, Icon: HomeIcon, bold: true },
+                { href: '/current-affairs', label: 'Current Affairs', Icon: StudyNotesIcon, bold: true },
+              ].map((item) => (
+                <MenuRow key={item.href} href={item.href} label={item.label} Icon={item.Icon} bold={item.bold} />
+              ))}
+              {sections.map((section) => (
+                <div key={section.heading}>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, fontWeight: 700, color: '#1c6b6b', letterSpacing: 1.6, margin: '10px 12px 2px' }}>
+                    {section.heading}
+                    <span style={{ flex: 1, borderTop: '1.5px solid #e2d6b4' }} />
+                  </p>
+                  {section.items.map((item) => (
+                    <MenuRow key={item.href} href={item.href} label={item.label} Icon={item.Icon} />
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ flex: 'none', background: COLORS.paper }}>
+              {isLoggedIn && (
+                <a href="/plans" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '6px 14px 10px', padding: '10px 14px', borderRadius: 14, background: 'linear-gradient(135deg,#F3C65A,#D99A1E)', color: '#2b1c00', textDecoration: 'none', boxShadow: '0 8px 18px -10px rgba(176,122,16,0.8)' }}>
+                  <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <PlansIcon size={20} color="#2b1c00" />
+                  </span>
+                  <b style={{ fontSize: 17 }}>{t.menu.plans}</b>
+                  <span style={{ marginLeft: 'auto', fontSize: 24, lineHeight: 1 }}>›</span>
+                </a>
+              )}
+              <div aria-hidden="true" style={{ position: 'relative', height: 38, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }} />
+            </div>
           </div>
         </div>,
         document.body
       )}
     </>
+  );
+}
+
+function MenuRow({ href, label, Icon, bold }: { href: string; label: string; Icon: NavItem['Icon']; bold?: boolean }) {
+  const active = typeof window !== 'undefined' && window.location.pathname === href;
+  return (
+    <a
+      href={href}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14, padding: '4px 12px', borderRadius: 12, textDecoration: 'none',
+        color: '#0F2F33', fontSize: 16, fontWeight: active || bold ? 700 : 500,
+        background: active ? '#fff' : 'transparent',
+        boxShadow: active ? 'inset 4px 0 0 #E2B04A, 0 1px 0 #eadfc4' : 'none',
+      }}
+    >
+      <span style={{ width: 32, height: 32, borderRadius: '50%', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? '#0F2F33' : '#F3E7C7' }}>
+        <Icon size={18} color={active ? '#FFE9A8' : '#B07A10'} />
+      </span>
+      {label}
+    </a>
   );
 }
