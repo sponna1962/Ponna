@@ -217,7 +217,7 @@ export const translations = {
       viewReview: 'பதில்களைப் பார்க்கவும்',
       resultsSubtitle: 'இன்றைய Daily Quiz முடிந்தது',
       backHome: 'முகப்புக்கு செல்லவும்',
-      brainChallenge: 'Brain Challenge',
+      brainChallenge: 'மூளைச் சவால்',
       currentAffairs: 'நடப்பு நிகழ்வுகள்',
     },
     quiz: {
