@@ -106,8 +106,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ fontFamily: "'Noto Sans Tamil', 'Noto Sans', -apple-system, sans-serif", margin: 0 }}>
         <ThemeProvider>
           <LanguageProvider>
-            {children}
-            <LegalFooter />
+            {/* Oct 2026 — footer pinned to the bottom of the screen while a page is
+                still loading, so it never flashes at the top and jumps down. */}
+            <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1 }}>{children}</div>
+              <LegalFooter />
+            </div>
             {/* Sept 2026 finalized requirement — global, on every page, not
                 buried in Help & Support. See InstallPrompt.tsx for the
                 real-PWA-only / no-nagging / already-installed rules. */}

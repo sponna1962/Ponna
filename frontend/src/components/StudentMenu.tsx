@@ -123,6 +123,12 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
                   ))}
                 </div>
               ))}
+              <div style={{ margin: '14px 12px 4px', paddingTop: 10, borderTop: '1px solid ' + COLORS.line, fontSize: 11.5, color: COLORS.inkMuted, lineHeight: 1.9 }}>
+                {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Refund', '/refund-policy'], ['Delivery', '/shipping-policy'], ['Contact', '/contact']].map(([label, href]) => (
+                  <a key={href} href={href} style={{ color: 'inherit', textDecoration: 'underline', marginRight: 10 }}>{label}</a>
+                ))}
+                <br />ARLENA (OPC) PRIVATE LIMITED
+              </div>
             </div>
 
             <div style={{ flex: 'none', background: COLORS.paper }}>
