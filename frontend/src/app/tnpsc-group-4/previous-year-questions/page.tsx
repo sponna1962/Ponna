@@ -29,7 +29,7 @@ export default function Page() {
         </p>
         <a
           href="/quiz"
-          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, fontWeight: 700, textDecoration: 'none', fontSize: 15, marginBottom: 20 }}
+          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, textDecoration: 'none', fontSize: 15, marginBottom: 20 }}
         >
           Previous Year Questions Practice செய்யுங்கள்
         </a>

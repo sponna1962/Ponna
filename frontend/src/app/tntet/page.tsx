@@ -36,13 +36,13 @@ export default function TntetPage() {
       <Section>
         <H2>இரண்டு Papers</H2>
         <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderRadius: 12 }}>
+          <div style={{ padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', background: 'var(--color-card)', borderRadius: 14 }}>
             <strong style={{ fontSize: 15 }}>Paper 1 — Classes 1 to 5 (Primary)</strong>
             <p style={{ fontSize: 13.5, color: COLORS.inkMuted, margin: '4px 0 0' }}>
               Child Development & Pedagogy, Language I, Language II, Mathematics, Environmental Studies — 150 questions, 150 marks.
             </p>
           </div>
-          <div style={{ padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderRadius: 12 }}>
+          <div style={{ padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', background: 'var(--color-card)', borderRadius: 14 }}>
             <strong style={{ fontSize: 15 }}>Paper 2 — Classes 6 to 8 (Upper Primary)</strong>
             <p style={{ fontSize: 13.5, color: COLORS.inkMuted, margin: '4px 0 0' }}>
               Child Development & Pedagogy, Language I, Language II, Mathematics & Science or Social Science — 150 questions, 150 marks.
@@ -58,10 +58,10 @@ export default function TntetPage() {
       <Section>
         <H2>Paper-வாரியான Practice</H2>
         <div style={{ display: 'grid', gap: 10 }}>
-          <a href="/tntet/paper-1" style={{ display: 'block', padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderRadius: 12, textDecoration: 'none', color: COLORS.ink }}>
+          <a href="/tntet/paper-1" style={{ display: 'block', padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', background: 'var(--color-card)', borderRadius: 14, textDecoration: 'none', color: COLORS.ink }}>
             <strong style={{ fontSize: 15 }}>TNTET Paper 1 Syllabus & Practice →</strong>
           </a>
-          <a href="/tntet/paper-2" style={{ display: 'block', padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderRadius: 12, textDecoration: 'none', color: COLORS.ink }}>
+          <a href="/tntet/paper-2" style={{ display: 'block', padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', background: 'var(--color-card)', borderRadius: 14, textDecoration: 'none', color: COLORS.ink }}>
             <strong style={{ fontSize: 15 }}>TNTET Paper 2 Syllabus & Practice →</strong>
           </a>
         </div>
@@ -70,7 +70,7 @@ export default function TntetPage() {
       <Section>
         <a
           href="/quiz"
-          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, fontWeight: 700, textDecoration: 'none', fontSize: 15 }}
+          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, textDecoration: 'none', fontSize: 15 }}
         >
           இலவசமாக Practice தொடங்குங்கள் / Start Practising Free
         </a>

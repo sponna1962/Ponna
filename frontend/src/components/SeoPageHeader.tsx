@@ -11,13 +11,15 @@ import { COLORS } from '../lib/brand-theme';
 
 export function SeoPageHeader() {
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '18px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-        <Image src="/logo-compact.png" alt="PONNA.in" width={140} height={37} style={{ height: 34, width: 'auto' }} />
-      </a>
-      <a href="/quiz" style={{ fontSize: 13, fontWeight: 700, color: COLORS.paper, background: COLORS.ink, borderRadius: 999, padding: '8px 16px', textDecoration: 'none' }}>
-        Start Practising
-      </a>
+    <div style={{ background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', background: '#fefefe', borderRadius: 10, padding: '4px 10px' }}>
+          <Image src="/logo-compact.png" alt="PONNA.in" width={140} height={37} style={{ height: 30, width: 'auto' }} />
+        </a>
+        <a href="/quiz" style={{ fontSize: 13, fontWeight: 800, color: '#2b1c00', background: '#E2B04A', borderRadius: 999, padding: '8px 16px', textDecoration: 'none' }}>
+          Start Practising
+        </a>
+      </div>
     </div>
   );
 }

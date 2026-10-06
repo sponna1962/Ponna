@@ -37,12 +37,12 @@ export default function Page() {
         </p>
         <div style={{ display: 'grid', gap: 8, marginBottom: 24 }}>
           {SUBJECTS.map((s) => (
-            <div key={s} style={{ padding: '10px 14px', border: `1px solid ${COLORS.line}`, borderRadius: 8, fontSize: 14 }}>{s}</div>
+            <div key={s} style={{ padding: '10px 14px', border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', background: 'var(--color-card)', borderRadius: 12, fontSize: 14 }}>{s}</div>
           ))}
         </div>
         <a
           href="/quiz"
-          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, fontWeight: 700, textDecoration: 'none', fontSize: 15, marginBottom: 20 }}
+          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, textDecoration: 'none', fontSize: 15, marginBottom: 20 }}
         >
           Subject-வாரியாக Practice செய்யுங்கள்
         </a>
