@@ -18,7 +18,7 @@ import { PracticePreferenceService } from './practice-preference.service';
 import { backfillStreakForDates } from './streak.service';
 import { MistakeReviewService } from '../questions/mistake-review.service';
 
-const PACK_SIZE = 20;
+const PACK_SIZE = 75; // = PAID_DAILY_LIMIT; a pack uses the whole day's quota (reserved at download)
 
 const quota = new QuotaService();
 const allocation = new AllocationService();
