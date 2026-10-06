@@ -258,7 +258,7 @@ export default function QuizSessionPage() {
         </div>
       </div>
 
-      <div style={{ padding: '16px 16px 0', flex: 1 }}>
+      <div style={{ padding: '16px 16px 0' }}>
         {(['A', 'B', 'C', 'D'] as const).map((letter) => {
           const text = { A: display.optionA, B: display.optionB, C: display.optionC, D: display.optionD }[letter];
           const isSelected = selected === letter;
@@ -317,13 +317,13 @@ export default function QuizSessionPage() {
           anywhere here per explicit design decision. Absent entirely when
           this question has no explanation yet. */}
       {answered && explanation && (
-        <div style={{ padding: '0 16px 8px 16px' }}>
+        <div style={{ padding: '4px 16px 8px 16px' }}>
           {!showExplanation ? (
             <button
               onClick={() => setShowExplanation(true)}
-              style={{ background: 'none', border: 'none', padding: '0 4px', color: 'var(--color-gold)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center', background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 14, padding: '13px 16px', color: 'var(--color-ink)', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
             >
-              ஏன் இது சரி?
+              <span aria-hidden="true">💡</span> ஏன் இது சரி?
             </button>
           ) : (
             <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderLeft: '4px solid #E2B04A', borderRadius: 12, padding: '12px 14px', fontSize: 14.5, color: 'var(--color-inkMuted)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
