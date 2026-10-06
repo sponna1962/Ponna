@@ -18,7 +18,7 @@ export default function Page() {
       <p>+91 99653 99896</p>
       <H>Business</H>
       <p>PONNA.in, a brand of ARLENA (OPC) PRIVATE LIMITED<br />CIN: U63122TN2026OPC197880<br />Director: HARSHA S S</p>
-      <p>We reply within 2 working days. For payment issues please include your registered email address and payment reference.</p>
+      <p>We reply within 2 hours. For payment issues please include your registered email address and payment reference.</p>
     </PolicyPage>
   );
 }
