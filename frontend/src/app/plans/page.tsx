@@ -353,19 +353,33 @@ function PlansPageInner() {
   const otherAvailablePlans = plans.filter((p) => !p.isFree && p.active && !activePlanIds.has(p.id));
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
+      {/* Oct 2026 redesign — teal header band; presentation only, all logic unchanged. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px 22px', background: 'linear-gradient(180deg, var(--color-head1, #0c2f3f), var(--color-head2, #1c6b6b))', borderBottom: '3px solid #E2B04A' }}>
+        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 800, margin: 0, color: '#fff', flex: 1 }}>{lang === 'ta' ? 'எனது பாஸ்கள்' : 'My Passes'}</h1>
+        {/* Free chip sits in the header when there is no Active pass yet; once
+            Active passes exist it moves below them (unchanged behaviour). */}
+        {freePlan && activeSubs.length === 0 && (
+          <a href="/quiz" style={{ flex: '0 0 auto', background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 20, padding: '6px 13px', fontSize: 12.5, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+            {t.plans.freeChipLabel}
+          </a>
+        )}
+      </div>
+
+      <div style={{ padding: 16 }}>
       {upiSubmissions.some((u) => u.status === 'PENDING') && (
-        <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', color: '#92400E', borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
+        <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', color: '#92400E', borderRadius: 14, padding: '13px 14px', fontSize: 13.5, marginBottom: 14, lineHeight: 1.6 }}>
           {lang === 'ta'
             ? 'உங்கள் UPI பணம் சரிபார்ப்பில் உள்ளது. உறுதி செய்யப்பட்டதும் உங்கள் பாஸ் செயல்படும்.'
             : 'Your UPI payment is being verified. Your pass will activate as soon as it is confirmed.'}
         </div>
       )}
       {upiSubmissions.some((u) => u.status === 'REJECTED') && !upiSubmissions.some((u) => u.status === 'PENDING' || u.status === 'APPROVED') && (
-        <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#991B1B', borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
+        <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#991B1B', borderRadius: 14, padding: '13px 14px', fontSize: 13.5, marginBottom: 14, lineHeight: 1.6 }}>
           {lang === 'ta'
             ? 'உங்கள் முந்தைய UPI பதிவை உறுதிப்படுத்த முடியவில்லை. சரியான பரிவர்த்தனை எண்ணுடன் மீண்டும் முயலவும் அல்லது ponna@arlena.in-க்கு எழுதவும்.'
             : 'Your last UPI submission could not be verified. Please try again with the correct transaction ID, or email ponna@arlena.in.'}
@@ -374,40 +388,6 @@ function PlansPageInner() {
           )}
         </div>
       )}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: activeSubs.length > 0 ? 16 : 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <StudentMenu />
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: 700, margin: 0, color: COLORS.ink }}>{lang === 'ta' ? 'எனது பாஸ்கள்' : 'My Passes'}</h1>
-        </div>
-
-        {/* Free chip lives right next to the title when there's nothing
-            else competing for that row (no Active plans yet) — saves a
-            whole row of vertical space. Once Active plans exist, it moves
-            down into the chip strip below instead, since the title row
-            would otherwise get cramped or wrap. Direct navigation to
-            /quiz — no sheet, there's nothing more to say about Free
-            beyond "5 questions/day", already on the chip itself. */}
-        {freePlan && activeSubs.length === 0 && (
-          <a
-            href="/quiz"
-            style={{
-              flex: '0 0 auto',
-              background: COLORS.paperAlt,
-              border: `1px solid ${COLORS.line}`,
-              borderRadius: 20,
-              padding: '6px 12px',
-              fontSize: 12,
-              fontWeight: 600,
-              color: COLORS.inkMuted,
-              whiteSpace: 'nowrap',
-              textDecoration: 'none',
-            }}
-          >
-            {t.plans.freeChipLabel}
-          </a>
-        )}
-      </div>
 
       {!plansLoaded && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>Loading…</p>}
 
@@ -440,11 +420,12 @@ function PlansPageInner() {
                       display: 'block',
                       width: '100%',
                       textAlign: 'left',
-                      background: COLORS.goldLight,
+                      background: `linear-gradient(135deg, ${COLORS.goldLight}, var(--color-card, ${COLORS.paper}))`,
                       border: `1px solid ${COLORS.gold}`,
-                      borderRadius: 14,
-                      padding: 14,
-                      marginBottom: 8,
+                      borderLeft: '6px solid #1e8a3b',
+                      borderRadius: 16,
+                      padding: '15px 16px',
+                      marginBottom: 14,
                       cursor: 'pointer',
                       boxSizing: 'border-box',
                     }}
@@ -454,8 +435,8 @@ function PlansPageInner() {
                       {price != null && <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.inkMuted, flexShrink: 0, whiteSpace: 'nowrap' }}>₹{price}</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#166534', background: '#DCFCE7', borderRadius: 20, padding: '2px 9px' }}>
-                        Active
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: '#166534', background: '#DCFCE7', borderRadius: 20, padding: '3px 10px' }}>
+                        ✓ Active
                       </span>
                       <span style={{ fontSize: 12, color: COLORS.inkMuted }}>Valid until {formatValidUntil(s.validUntil)}</span>
                     </div>
@@ -493,17 +474,8 @@ function PlansPageInner() {
 
           {otherAvailablePlans.length > 0 && (
             <>
-              <h2
-                style={{
-                  fontFamily: FONT_FAMILY,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: COLORS.ink,
-                  margin: '0 0 12px',
-                  paddingBottom: 6,
-                  borderBottom: `2px solid ${COLORS.goldLight}`,
-                }}
-              >
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: 700, color: COLORS.ink, margin: '6px 0 14px' }}>
+                <span style={{ width: 5, height: 20, borderRadius: 3, background: '#E2B04A' }} />
                 {lang === 'ta' ? 'உங்கள் பாஸைத் தேர்வு செய்யவும்' : 'Choose Your Pass'}
               </h2>
 
@@ -515,28 +487,33 @@ function PlansPageInner() {
                     key={p.id}
                     id={`plan-${p.id}`}
                     style={{
-                      background: COLORS.paper,
-                      border: `1.5px solid ${p.id === highlightPlanId ? COLORS.gold : COLORS.line}`,
-                      borderRadius: 16,
-                      padding: 20,
-                      marginBottom: 16,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      background: 'var(--color-card, ' + COLORS.paper + ')',
+                      border: `1.5px solid ${p.id === highlightPlanId ? '#E2B04A' : COLORS.line}`,
+                      boxShadow: p.id === highlightPlanId ? '0 0 0 3px rgba(226,176,74,0.25), 0 12px 30px -20px rgba(15,47,51,0.55)' : '0 12px 30px -20px rgba(15,47,51,0.55)',
+                      borderRadius: 20,
+                      padding: '22px 18px 18px',
+                      marginBottom: 18,
                     }}
                   >
-                    <div style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 800, color: COLORS.ink, marginBottom: 4 }}>{displayName(p.name)}</div>
+                    {hasLaunch && (
+                      <div style={{ position: 'absolute', top: 0, right: 0, background: 'linear-gradient(135deg,#F3C65A,#D99A1E)', color: '#2b1c00', fontSize: 11.5, fontWeight: 800, padding: '6px 14px 6px 18px', borderBottomLeftRadius: 14 }}>
+                        {t.plans.launchPrice}
+                      </div>
+                    )}
+                    <div style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 800, color: COLORS.ink, marginBottom: 4, marginRight: hasLaunch ? 76 : 0 }}>{displayName(p.name)}</div>
 
                     {features && (
                       <div style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 14 }}>{features.description}</div>
                     )}
 
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 16, padding: '12px 14px', borderRadius: 14, background: COLORS.goldLight }}>
                       {hasLaunch ? (
                         <>
-                          <span style={{ fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: 800, color: COLORS.gold }}>₹{p.launchPrice}</span>
+                          <span style={{ fontFamily: FONT_FAMILY, fontSize: 32, fontWeight: 800, color: COLORS.gold }}>₹{p.launchPrice}</span>
                           <span style={{ fontSize: 13, color: COLORS.inkMuted }}>{t.plans.perYear}</span>
                           <span style={{ fontSize: 13, color: COLORS.inkMuted, textDecoration: 'line-through' }}>₹{p.regularPrice}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: '#7A5A14', background: COLORS.goldLight, padding: '2px 8px', borderRadius: 4 }}>
-                            {t.plans.launchPrice}
-                          </span>
                         </>
                       ) : (
                         <span style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 800 }}>
@@ -548,8 +525,8 @@ function PlansPageInner() {
                     {features && (
                       <div style={{ marginBottom: 10 }}>
                         {features.mainBullets.map((b) => (
-                          <div key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, fontSize: 14, color: COLORS.ink, lineHeight: 1.4 }}>
-                            <span style={{ color: COLORS.gold, fontWeight: 700, flexShrink: 0 }}>✓</span>
+                          <div key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10, fontSize: 14.5, color: COLORS.ink, lineHeight: 1.45 }}>
+                            <span style={{ width: 22, height: 22, borderRadius: '50%', background: COLORS.goldLight, color: COLORS.gold, fontWeight: 800, fontSize: 12, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>
                             <span>{b}</span>
                           </div>
                         ))}
@@ -571,7 +548,7 @@ function PlansPageInner() {
                     <button
                       onClick={() => buy(p.id)}
                       disabled={loadingPlan === p.id}
-                      style={{ width: '100%', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}
+                      style={{ width: '100%', padding: 16, borderRadius: 14, background: 'var(--color-btn, ' + COLORS.ink + ')', color: 'var(--color-btnText, ' + COLORS.paper + ')', border: 'none', fontWeight: 700, fontSize: 16.5, cursor: 'pointer', boxShadow: '0 10px 22px -12px rgba(15,47,51,0.7)' }}
                     >
                       {loadingPlan === p.id ? '…' : features?.buttonLabel ?? buyButtonLabel(p.name)}
                     </button>
@@ -590,6 +567,7 @@ function PlansPageInner() {
       )}
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13, marginTop: 12 }}>{error}</p>}
+      </div>
 
       {sheet && (
         <PlanSheet
@@ -759,8 +737,8 @@ function MoreFeaturesSheet({ title, onClose, lang }: { title: string; onClose: (
         </p>
 
         {MORE_FEATURES.map((item) => (
-          <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, fontSize: 14, color: COLORS.ink, lineHeight: 1.4 }}>
-            <span style={{ color: COLORS.gold, fontWeight: 700, flexShrink: 0 }}>✓</span>
+          <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10, fontSize: 14.5, color: COLORS.ink, lineHeight: 1.45 }}>
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: COLORS.goldLight, color: COLORS.gold, fontWeight: 800, fontSize: 12, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>
             <span>{item}</span>
           </div>
         ))}
