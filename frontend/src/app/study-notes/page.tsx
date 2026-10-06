@@ -71,7 +71,7 @@ export default function StudyNotesPage() {
                 padding: 16,
                 borderRadius: 12,
                 border: `1.5px solid ${COLORS.line}`,
-                background: '#fff',
+                background: 'var(--color-card)',
                 cursor: 'pointer',
                 fontSize: 15,
                 fontWeight: 700,

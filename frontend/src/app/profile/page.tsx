@@ -454,7 +454,7 @@ export default function ProfilePage() {
       {/* Oct 2026 redesign — teal header, avatar on a gold ring, sectioned cards, sticky Save.
           All behaviour is unchanged; only presentation. */}
       <header style={{ background: 'linear-gradient(180deg, var(--color-head1), var(--color-head2))', padding: '14px 16px 64px', color: '#fff', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '3px solid #E2B04A' }}>
-        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <StudentMenu iconColor="#fff" />
         <strong style={{ fontSize: 17 }}>{t.profile.title}</strong>
         <div style={{ flex: 1 }} />
         <Switch on={theme === 'dark'} onClick={toggleTheme} label={t.profile.darkMode} onColor="#E2B04A" offColor="rgba(255,255,255,0.25)" />

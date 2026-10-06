@@ -98,7 +98,7 @@ export default function MistakesPage() {
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, paddingBottom: 30, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
-        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.mistakes.title}</h1>
       </div>
       <div style={{ padding: '0 16px' }}>

@@ -408,7 +408,9 @@ export default function IndexPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
-          <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority style={{ height: 38, width: 'auto', mixBlendMode: 'multiply' }} />
+          <span style={{ display: 'flex', background: '#fefefe', borderRadius: 8, padding: '3px 10px', border: '1px solid var(--color-line)' }}>
+            <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority style={{ height: 32, width: 'auto' }} />
+          </span>
         </div>
 
         {isLoggedIn ? (

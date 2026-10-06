@@ -26,7 +26,7 @@ import {
 
 type NavItem = { href: string; label: string; Icon: (p: { size?: number; color?: string }) => React.ReactElement };
 
-export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) {
+export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open: boolean) => void; iconColor?: string }) {
   const { t } = useLanguage();
   const [open, setOpenState] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -88,7 +88,7 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
     <>
       <BitterFontLinks />
       <button onClick={openMenu} aria-label="Menu" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, display: 'flex' }}>
-        <MenuIcon size={22} color={COLORS.ink} />
+        <MenuIcon size={22} color={iconColor ?? COLORS.ink} />
       </button>
 
       {open && typeof document !== 'undefined' && createPortal(

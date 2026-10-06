@@ -459,7 +459,7 @@ export default function QuizStartPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 18, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
-        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <StudentMenu iconColor="#fff" />
         <h1 style={{ fontSize: 19, margin: 0 }}>{t.quiz.title}</h1>
         {/* Sept 2026 — Offline Practice entry point. Deliberately not a
             new sidebar item (nav structure is finalized) — lives here

@@ -270,7 +270,7 @@ export default function AskPonnaPage() {
       <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
         <BitterFontLinks />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
-          <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+          <StudentMenu iconColor="#fff" />
           <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: '#E2B04A', color: '#2b1c00', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16, boxShadow: '0 0 0 2px rgba(255,233,168,0.4)' }}>P</span>
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
       </div>
@@ -287,7 +287,7 @@ export default function AskPonnaPage() {
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', display: 'flex', flexDirection: 'column', color: COLORS.ink }}>
       <BitterFontLinks />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
-        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <StudentMenu iconColor="#fff" />
         <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: '#E2B04A', color: '#2b1c00', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16, boxShadow: '0 0 0 2px rgba(255,233,168,0.4)' }}>P</span>
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
       </div>

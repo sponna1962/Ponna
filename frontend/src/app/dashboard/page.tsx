@@ -144,7 +144,7 @@ export default function DashboardPage() {
       <BitterFontLinks />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 70px', background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
-        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <StudentMenu iconColor="#fff" />
         {photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photoUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E2B04A' }} />

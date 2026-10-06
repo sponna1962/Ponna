@@ -36,7 +36,7 @@ export default function TestYourAbilityPage() {
   const answered = picked !== null;
 
   return (
-    <main style={{ minHeight: '100dvh', background: PAPER, color: INK }}>
+    <main style={{ minHeight: '100dvh', background: PAPER, color: INK, ['--color-paper' as string]: PAPER } as React.CSSProperties}>
       <style>{`
         .ty-opt:not(:disabled):hover { border-color: ${TEAL}; background: #f3f7f1; }
       `}</style>

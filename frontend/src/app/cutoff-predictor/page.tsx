@@ -101,7 +101,7 @@ export default function CutoffPredictorPage() {
       </div>
       <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 16, lineHeight: 1.5 }}>{t.cutoffPredictor.note}</p>
 
-      <section style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 16, marginBottom: 18, background: '#fff' }}>
+      <section style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 16, marginBottom: 18, background: 'var(--color-card)' }}>
         <p style={{ fontSize: 14, fontWeight: 700, margin: '0 0 8px' }}>{label.purpose}</p>
         <p style={{ fontSize: 12.5, lineHeight: 1.55, color: COLORS.inkMuted, margin: '0 0 12px' }}>{label.purposeBody}</p>
         <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 7px' }}>{label.steps}</p>

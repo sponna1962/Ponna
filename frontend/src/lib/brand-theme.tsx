@@ -52,6 +52,7 @@ export function ThemeStyles() {
         --color-okBg: #E4F4E2;
         --color-badBg: #FCE9E6;
       }
+      html, body { background: var(--color-paper); color: var(--color-ink); }
       [data-theme='dark'] {
         --color-paper: #14161F;
         --color-paperAlt: #1D2030;

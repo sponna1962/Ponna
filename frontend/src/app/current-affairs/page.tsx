@@ -145,11 +145,11 @@ export default function CurrentAffairsPage() {
               const relevance = relevanceNote?.split('\n').find((line) => line.startsWith(s.relevanceLabel))?.replace(s.relevanceLabel, '').trim();
               const memory = relevanceNote?.split('\n').find((line) => line.startsWith(s.memoryLabel))?.replace(s.memoryLabel, '').trim();
               return (
-                <article key={item.id} style={{ background: '#fff', border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '17px 17px 15px', marginBottom: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.035)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}><span style={{ fontSize: 11, fontWeight: 800, color: COLORS.gold, background: '#fbf3df', borderRadius: 999, padding: '4px 9px' }}>{category}</span><span style={{ fontSize: 11, color: COLORS.inkMuted }}>#{index + 1}</span></div>
+                <article key={item.id} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '17px 17px 15px', marginBottom: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.035)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}><span style={{ fontSize: 11, fontWeight: 800, color: COLORS.gold, background: 'var(--color-goldDisc)', borderRadius: 999, padding: '4px 9px' }}>{category}</span><span style={{ fontSize: 11, color: COLORS.inkMuted }}>#{index + 1}</span></div>
                   <h3 style={{ margin: '0 0 9px', fontSize: 18, lineHeight: 1.35 }}>{title}</h3>
                   <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.75 }}>{summary}</p>
-                  {relevance && <div style={{ marginTop: 12, padding: '9px 11px', background: '#f7f9fc', borderRadius: 9, fontSize: 13, lineHeight: 1.55 }}><strong>{s.relevanceLabel}</strong> {relevance}</div>}
+                  {relevance && <div style={{ marginTop: 12, padding: '9px 11px', background: 'var(--color-field)', borderRadius: 9, fontSize: 13, lineHeight: 1.55 }}><strong>{s.relevanceLabel}</strong> {relevance}</div>}
                   {memory && <div style={{ marginTop: 7, fontSize: 12.5, color: COLORS.inkMuted }}><strong>{s.memoryLabel}</strong> {memory}</div>}
                   {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 10, fontSize: 12, color: COLORS.gold, textDecoration: 'none', fontWeight: 700 }}>{s.source}</a>}
                 </article>
