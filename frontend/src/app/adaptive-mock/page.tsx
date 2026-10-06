@@ -98,125 +98,131 @@ export default function AdaptiveMockPage() {
     setResult({ score: body.score, totalMarks: body.totalMarks });
   }
 
+  const card: React.CSSProperties = { background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${COLORS.gold}`, borderRadius: 16, padding: '22px 18px', textAlign: 'center' };
+  const bigBtn: React.CSSProperties = { width: '100%', padding: 15, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, border: 'none', fontWeight: 700, fontSize: 16, textDecoration: 'none', display: 'block', boxSizing: 'border-box', textAlign: 'center' };
+  const chipStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: 999, background: COLORS.field, border: `1px solid ${COLORS.line}`, fontSize: 12.5, fontWeight: 700, color: COLORS.inkMuted };
+  const cur = questions && questions[currentIndex];
+  const inQuiz = state?.access === 'IN_PROGRESS' && !!cur && !result;
+
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: inQuiz ? 96 : 24 }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <StudentMenu />
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>Adaptive Mock Test</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: `3px solid #E2B04A`, color: '#fff' }}>
+        <StudentMenu iconColor="#fff" />
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Adaptive Mock Test</h1>
       </div>
+      <div style={{ padding: 16 }}>
 
       {!state && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
       {state?.access === 'FREE_LOCKED' && (
-        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 24, background: COLORS.goldLight, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 Annual Plan தேவை</p>
-          <a href="/plans" style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
-            {t.dailyQuiz.viewPlans}
-          </a>
+        <div style={card}>
+          <p style={{ fontSize: 16, fontWeight: 700, color: COLORS.ink, margin: '0 0 16px' }}>🔒 Annual Plan தேவை</p>
+          <a href="/plans" style={bigBtn}>{t.dailyQuiz.viewPlans}</a>
         </div>
       )}
 
       {state?.access === 'NO_PREFERENCE' && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
+        <div style={card}>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>முதலில் Practice Setup-ஐ முடியுங்க.</p>
-          <a href="/quiz" style={{ display: 'inline-block', marginTop: 12, color: COLORS.gold, fontWeight: 600, fontSize: 13 }}>
-            Practice Setup →
-          </a>
+          <a href="/quiz" style={{ ...bigBtn, marginTop: 16 }}>Practice Setup →</a>
         </div>
       )}
 
       {state?.access === 'READY' && !result && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, marginBottom: 8 }}>உங்க level-க்கு ஏத்த Mock Test</p>
-          <p style={{ fontSize: 12, color: COLORS.inkMuted, marginBottom: 16, lineHeight: 1.5 }}>
-            உங்க recent accuracy-ஐ பார்த்து, Medium/Hard mix தானாக adjust ஆகும் — 20 questions, 25 minutes, immediate feedback.
+        <div style={card}>
+          <p style={{ fontSize: 18, fontWeight: 700, color: COLORS.ink, margin: '0 0 12px' }}>உங்க level-க்கு ஏத்த Mock Test</p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
+            <span style={chipStyle}>20 questions</span>
+            <span style={chipStyle}>25 minutes</span>
+            <span style={chipStyle}>immediate feedback</span>
+          </div>
+          <p style={{ fontSize: 13.5, color: COLORS.inkMuted, margin: '0 0 18px', lineHeight: 1.6 }}>
+            உங்க recent accuracy-ஐ பார்த்து, Medium/Hard mix தானாக adjust ஆகும்.
           </p>
-          <button onClick={start} disabled={starting} style={{ padding: '12px 28px', borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600 }}>
+          <button onClick={start} disabled={starting} style={bigBtn}>
             {starting ? '…' : 'Start Adaptive Mock'}
           </button>
         </div>
       )}
 
-      {state?.access === 'IN_PROGRESS' && questions && questions[currentIndex] && !result && (
+      {inQuiz && cur && questions && (
         <div>
-          <p style={{ fontSize: 13, color: COLORS.inkMuted, fontWeight: 600, marginBottom: 12 }}>
+          <div style={{ fontSize: 14, color: COLORS.inkMuted, fontWeight: 700, marginBottom: 10 }}>
             {currentIndex + 1} / {questions.length}
-          </p>
-          <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, lineHeight: 1.5, marginBottom: 16, whiteSpace: 'pre-wrap' }}>{questions[currentIndex].questionText}</p>
+          </div>
+          <div style={{ height: 8, background: COLORS.line, borderRadius: 4, overflow: 'hidden', marginBottom: 14 }}>
+            <div style={{ height: '100%', width: `${((currentIndex + 1) / questions.length) * 100}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)' }} />
+          </div>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${COLORS.gold}`, borderRadius: 16, padding: 18, fontSize: cur.questionText.length > 140 ? 16.5 : 17.5, fontWeight: 600, color: COLORS.ink, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{cur.questionText}</div>
 
           {(['A', 'B', 'C', 'D'] as const).map((letter) => {
-            const q = questions[currentIndex];
+            const q = cur;
             const text = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }[letter];
             const isSelected = q.selectedOption === letter;
+            const showRes = isSelected && lastAnswerCorrect !== null;
+            const good = showRes && lastAnswerCorrect;
+            const badSel = showRes && !lastAnswerCorrect;
+            const accent = good ? COLORS.ok : badSel ? COLORS.bad : isSelected ? COLORS.gold : COLORS.line;
             return (
               <div
                 key={letter}
                 onClick={() => !q.selectedOption && selectOption(q.questionId, letter)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '12px 14px',
-                  border: `1.5px solid ${isSelected ? COLORS.ink : COLORS.line}`,
-                  borderRadius: 10,
-                  marginBottom: 8,
-                  fontSize: 14,
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                  border: `1.5px solid ${accent}`, borderRadius: 14, marginBottom: 10, fontSize: 15.5,
                   cursor: q.selectedOption ? 'default' : 'pointer',
-                  background: isSelected ? COLORS.paperAlt : COLORS.paper,
+                  background: good ? COLORS.okBg : badSel ? COLORS.badBg : COLORS.card,
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.inkMuted }}>{letter}.</span>
+                <span style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12.5, background: good ? COLORS.ok : badSel ? COLORS.bad : COLORS.field, border: `1.5px solid ${good ? COLORS.ok : badSel ? COLORS.bad : COLORS.line}`, color: showRes ? '#fff' : COLORS.inkMuted }}>
+                  {good ? '✓' : badSel ? '✕' : letter}
+                </span>
                 <span style={{ flex: 1, color: COLORS.ink }}>{text}</span>
               </div>
             );
           })}
 
-          {questions[currentIndex].selectedOption && lastAnswerCorrect !== null && (
-            <p style={{ fontSize: 13, fontWeight: 700, color: lastAnswerCorrect ? '#166534' : '#B4544A', marginBottom: 8 }}>
+          {cur.selectedOption && lastAnswerCorrect !== null && (
+            <div style={{ padding: '10px 14px', borderRadius: 12, fontWeight: 700, fontSize: 14.5, background: lastAnswerCorrect ? COLORS.okBg : COLORS.badBg, color: lastAnswerCorrect ? COLORS.ok : COLORS.bad }}>
               {lastAnswerCorrect ? '✓ சரி!' : '✕ தப்பு'}
-            </p>
+            </div>
           )}
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            <button
-              onClick={() => {
-                setLastAnswerCorrect(null);
-                setCurrentIndex(Math.max(0, currentIndex - 1));
-              }}
-              disabled={currentIndex === 0}
-              style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.paper, color: COLORS.ink }}
-            >
-              Previous
-            </button>
-            {currentIndex < questions.length - 1 ? (
-              <button
-                onClick={() => {
-                  setLastAnswerCorrect(null);
-                  setCurrentIndex(currentIndex + 1);
-                }}
-                style={{ flex: 1, padding: 12, borderRadius: 10, border: 'none', background: COLORS.ink, color: COLORS.paper, fontWeight: 600 }}
-              >
-                Next
-              </button>
-            ) : (
-              <button onClick={finishAttempt} style={{ flex: 1, padding: 12, borderRadius: 10, border: 'none', background: '#166534', color: '#fff', fontWeight: 600 }}>
-                Finish
-              </button>
-            )}
-          </div>
         </div>
       )}
 
       {result && (
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontFamily: FONT_FAMILY, fontSize: 42, fontWeight: 800, color: COLORS.gold, margin: '20px 0 4px' }}>
+        <div style={card}>
+          <p style={{ fontFamily: FONT_FAMILY, fontSize: 42, fontWeight: 800, color: COLORS.gold, margin: '8px 0 4px' }}>
             {result.score} / {result.totalMarks}
           </p>
-          <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 24 }}>Adaptive Mock முடிஞ்சுது!</p>
-          <a href="/" style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600 }}>
-            {t.dailyQuiz.backHome}
-          </a>
+          <p style={{ fontSize: 13.5, color: COLORS.inkMuted, margin: '0 0 22px' }}>Adaptive Mock முடிஞ்சுது!</p>
+          <a href="/" style={bigBtn}>{t.dailyQuiz.backHome}</a>
+        </div>
+      )}
+      </div>
+
+      {inQuiz && questions && (
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, maxWidth: 480, margin: '0 auto', display: 'flex', gap: 10, padding: '14px 16px 16px', background: `linear-gradient(transparent, ${COLORS.paper} 40%)` }}>
+          <button
+            onClick={() => { setLastAnswerCorrect(null); setCurrentIndex(Math.max(0, currentIndex - 1)); }}
+            disabled={currentIndex === 0}
+            style={{ flex: 1, padding: 15, borderRadius: 14, border: `1.5px solid ${COLORS.line}`, background: COLORS.card, color: COLORS.ink, fontWeight: 700, fontSize: 15.5, opacity: currentIndex === 0 ? 0.5 : 1 }}
+          >
+            Previous
+          </button>
+          {currentIndex < questions.length - 1 ? (
+            <button
+              onClick={() => { setLastAnswerCorrect(null); setCurrentIndex(currentIndex + 1); }}
+              style={{ flex: 1, padding: 15, borderRadius: 14, border: 'none', background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, fontSize: 15.5 }}
+            >
+              Next
+            </button>
+          ) : (
+            <button onClick={finishAttempt} style={{ flex: 1, padding: 15, borderRadius: 14, border: 'none', background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, fontSize: 15.5 }}>
+              Finish
+            </button>
+          )}
         </div>
       )}
     </main>
