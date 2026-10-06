@@ -26,6 +26,7 @@
 // link Google from their Profile (the secure, explicitly-authenticated
 // linking flow, not a same-email guess).
 
+import { HERO_ART_SVG } from './test-your-ability/hero-art';
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import { RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, GoogleAuthProvider, ConfirmationResult } from 'firebase/auth';
@@ -42,6 +43,9 @@ import { daysRemaining, shouldShowRemainingDays, formatValidUntil } from '../lib
 type View = 'main' | 'chooseMethod' | 'phone' | 'deviceLimit';
 type ActiveSubscription = { id: string; cycleEnd: string; validUntil: string; plan: { name: string; nameTa: string | null } };
 type DeviceInfo = { deviceId: string; label: string | null; lastSeenAt: string };
+
+// Oct 2026 — pill-style quick links on the home screen.
+const PILL_LINK = { background: '#fff', border: '1.5px solid #e2d6b4', borderRadius: 999, padding: '10px 18px', fontWeight: 700, fontSize: 14.5, color: '#1c6b6b', textDecoration: 'none' } as const;
 
 export default function IndexPage() {
   const { t } = useLanguage();
@@ -404,7 +408,7 @@ export default function IndexPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu />
-          <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} priority style={{ height: 45, width: 'auto' }} />
+          <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority style={{ height: 38, width: 'auto', mixBlendMode: 'multiply' }} />
         </div>
 
         {isLoggedIn ? (
@@ -501,23 +505,26 @@ export default function IndexPage() {
       {/* Body — one of three views. 'main' looks identical logged-in or
           logged-out except for the Active Plans block. */}
       {view === 'main' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Oct 2026 — sunrise-over-paddy-fields banner (same illustration as the welcome screen). */}
+        <div aria-hidden="true" style={{ position: 'relative', height: 210, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '6px 24px 24px' }}>
           {loggedOutElsewhere && (
             <div style={{ background: COLORS.goldLight, border: `1px solid ${COLORS.gold}`, borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 13, color: '#5C4009' }}>
               {t.login.sessionInvalidated}
             </div>
           )}
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 27, fontWeight: 800, lineHeight: 1.3, marginBottom: 4, whiteSpace: 'pre-line', color: COLORS.ink }}>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 34, fontWeight: 800, lineHeight: 1.4, marginBottom: 4, whiteSpace: 'pre-line', color: '#0F2F33' }}>
             வெற்றியின்{'\n'}முதல் படி.
           </h1>
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: 700, lineHeight: 1.3, marginBottom: 16, whiteSpace: 'pre-line', color: COLORS.gold }}>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 700, lineHeight: 1.35, marginBottom: 16, whiteSpace: 'pre-line', color: '#B07A10' }}>
             The first step{'\n'}to success.
           </h1>
 
-          <p style={{ fontSize: 15, color: COLORS.inkMuted, marginBottom: 4, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 17, color: COLORS.ink, marginBottom: 4, lineHeight: 1.7 }}>
             போட்டித் தேர்வுகள் மற்றும் நுழைவுத் தேர்வுகளுக்கான பயிற்சி இணையதளம்.
           </p>
-          <p style={{ fontSize: 14, color: COLORS.inkMuted, marginBottom: 20, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 14.5, color: COLORS.inkMuted, marginBottom: 22, lineHeight: 1.6 }}>
             A practice platform for competitive and entrance exam aspirants.
           </p>
 
@@ -542,19 +549,20 @@ export default function IndexPage() {
               goes straight to Start Practice. */}
           <button
             onClick={handleStartPractising}
-            style={{ display: 'block', width: '100%', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
+            style={{ display: 'block', width: '100%', textAlign: 'center', padding: 16, borderRadius: 14, background: '#0F2F33', color: '#FFE9A8', border: 'none', fontWeight: 700, fontSize: 17, lineHeight: 1.5, cursor: 'pointer', boxShadow: '0 8px 20px -10px rgba(15,47,51,.6)' }}
           >
             பயிற்சியைத் தொடங்குங்கள் / Start Practising
           </button>
 
           {/* Sept 2026 SEO requirement — internal linking to the new TNPSC
               Group 4 / TNTET landing pages from the home page. */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24, fontSize: 12.5 }}>
-            <a href="/tnpsc-group-4" style={{ color: COLORS.inkMuted, textDecoration: 'underline' }}>TNPSC Group 4</a>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+            <a href="/tnpsc-group-4" style={PILL_LINK}>TNPSC Group 4</a>
             {/* Oct 2026 — TNTET link hidden from the home page until TNTET
                 practice questions exist (page itself stays live for SEO). */}
-            <a href="/current-affairs" style={{ color: COLORS.inkMuted, textDecoration: 'underline' }}>Current Affairs</a>
+            <a href="/current-affairs" style={PILL_LINK}>Current Affairs</a>
           </div>
+        </div>
         </div>
       )}
 
