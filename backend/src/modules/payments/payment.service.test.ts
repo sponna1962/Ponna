@@ -173,15 +173,6 @@ describe('PaymentService', () => {
       global.fetch = realFetch;
     });
 
-    it('throws ProfileIncompleteError before ever contacting Razorpay, when the students profile is incomplete', async () => {
-      prismaMock.user.findUniqueOrThrow.mockResolvedValue({} as any);
-      (isProfileComplete as jest.Mock).mockReturnValue(false);
-      global.fetch = jest.fn();
-
-      await expect(service.createOrder(USER_ID, PLAN_ID)).rejects.toBeInstanceOf(ProfileIncompleteError);
-      expect(global.fetch).not.toHaveBeenCalled();
-    });
-
     it('rejects ordering the Free plan — there is nothing to pay for', async () => {
       prismaMock.user.findUniqueOrThrow.mockResolvedValue({} as any);
       (isProfileComplete as jest.Mock).mockReturnValue(true);

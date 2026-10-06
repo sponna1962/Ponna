@@ -38,8 +38,9 @@ export class ManualPaymentService {
       throw new ManualPaymentError('Please enter the 12-digit UPI transaction ID (UTR) shown in your UPI app.');
     }
 
+    // Nov 2026 — profile is no longer required BEFORE paying; it is asked for
+    // while the payment awaits approval, and required before practice starts.
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    if (!isProfileComplete(user)) throw new ProfileIncompleteError();
 
     const plan = await prisma.plan.findUniqueOrThrow({ where: { id: planId } });
     if (plan.isFree || !plan.active) throw new ManualPaymentError(`${plan.name} is not available for purchase.`);

@@ -196,6 +196,14 @@ function PlansPageInner() {
   const [upiSheet, setUpiSheet] = useState<UpiSheetData | null>(null);
   const [upiSubmissions, setUpiSubmissions] = useState<UpiSubmission[]>([]);
   const [upiLoaded, setUpiLoaded] = useState(false);
+  const [profileDone, setProfileDone] = useState(true);
+
+  useEffect(() => {
+    studentFetch('/students/me/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => { if (p && p.profileComplete === false) setProfileDone(false); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     studentFetch('/payments/upi-submissions')
@@ -285,12 +293,7 @@ function PlansPageInner() {
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null);
       if (upiInfo?.enabled) {
-        // Profile must be complete BEFORE paying, so nobody pays and then
-        // gets bounced to the Profile page with their payment unrecorded.
-        if (upiInfo.profileComplete === false) {
-          window.location.href = '/profile?complete=1&next=plans';
-          return;
-        }
+        // Profile is no longer required before paying — payment comes first.
         const plan = plans.find((x) => x.id === planId);
         const amount = Number(plan?.launchPrice ?? plan?.regularPrice ?? 0);
         setUpiSheet({ planId, planName: displayName(plan?.name ?? ''), amount, upiId: upiInfo.upiId, payeeName: upiInfo.payeeName });
@@ -304,10 +307,6 @@ function PlansPageInner() {
       });
       if (!res.ok) {
         const body = await res.json();
-        if (body.code === 'PROFILE_INCOMPLETE') {
-          window.location.href = '/profile?complete=1&next=plans';
-          return;
-        }
         throw new Error(body.error ?? t.plans.paymentError);
       }
       const order = await res.json();
@@ -372,10 +371,23 @@ function PlansPageInner() {
 
       <div style={{ padding: 16 }}>
       {upiSubmissions.some((u) => u.status === 'PENDING') && (
-        <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', color: '#92400E', borderRadius: 14, padding: '13px 14px', fontSize: 13.5, marginBottom: 14, lineHeight: 1.6 }}>
-          {lang === 'ta'
-            ? 'உங்கள் UPI பணம் சரிபார்ப்பில் உள்ளது. உறுதி செய்யப்பட்டதும் உங்கள் பாஸ் செயல்படும்.'
-            : 'Your UPI payment is being verified. Your pass will activate as soon as it is confirmed.'}
+        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 18, marginBottom: 14 }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: COLORS.ink, margin: '0 0 6px' }}>{lang === 'ta' ? '✓ பணம் பதிவானது' : '✓ Payment recorded'}</p>
+          <p style={{ fontSize: 13.5, color: COLORS.inkMuted, lineHeight: 1.65, margin: '0 0 10px' }}>
+            {lang === 'ta'
+              ? 'உங்கள் UPI பணம் சரிபார்ப்பில் உள்ளது. உறுதி செய்யப்பட்டதும் உங்கள் பாஸ் செயல்படும்.'
+              : 'Your UPI payment is being verified. Your pass will activate as soon as it is confirmed.'}
+          </p>
+          {!profileDone && (
+            <>
+              <p style={{ fontSize: 13.5, color: COLORS.ink, fontWeight: 600, lineHeight: 1.6, margin: '0 0 12px' }}>
+                {lang === 'ta' ? 'அதுவரை உங்கள் Profile-ஐ நிரப்புங்கள் — பயிற்சி தொடங்க அது தேவை.' : 'Meanwhile, please complete your Profile — it is needed to start practice.'}
+              </p>
+              <a href="/profile?complete=1" style={{ display: 'block', padding: 15, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, textAlign: 'center', fontWeight: 700, fontSize: 16, textDecoration: 'none' }}>
+                {lang === 'ta' ? 'Profile-ஐ நிரப்புங்கள் →' : 'Complete your Profile →'}
+              </a>
+            </>
+          )}
         </div>
       )}
       {upiSubmissions.some((u) => u.status === 'REJECTED') && !upiSubmissions.some((u) => u.status === 'PENDING' || u.status === 'APPROVED') && (
@@ -792,10 +804,6 @@ function UpiPaySheet({
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (body.code === 'PROFILE_INCOMPLETE') {
-          window.location.href = '/profile?complete=1&next=plans';
-          return;
-        }
         throw new Error(body.error ?? (ta ? 'சமர்ப்பிக்க முடியவில்லை' : 'Could not submit'));
       }
       // Meta Pixel — a submitted payment is the strongest conversion signal

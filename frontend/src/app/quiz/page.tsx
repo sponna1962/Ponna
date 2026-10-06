@@ -89,6 +89,7 @@ export default function QuizStartPage() {
   const [error, setError] = useState<string | null>(null);
   // Free-fallback upgrade prompt (finalized requirement) — set only when
   // the just-saved selection isn't covered by any active paid Plan.
+  const [profileGate, setProfileGate] = useState(false);
   const [accessPrompt, setAccessPrompt] = useState<{ applicablePlanId: string | null } | null>(null);
 
   // Sept 2026 — TNPSC Group IV & VAO Pass (finalized requirement): a
@@ -398,6 +399,18 @@ export default function QuizStartPage() {
    * straight to starting, and the prompt must never appear in that case.
    */
   async function startWithAccessCheck() {
+    // Profile must be complete before practice starts (it is no longer
+    // required before payment, so a paid student may still need it here).
+    try {
+      const pr = await studentFetch('/students/me/profile');
+      if (pr.ok) {
+        const prof = await pr.json();
+        if (prof.profileComplete === false) {
+          setProfileGate(true);
+          return;
+        }
+      }
+    } catch {}
     const statusRes = await studentFetch('/quiz/access-status');
     if (statusRes.ok) {
       const status = await statusRes.json();
@@ -485,6 +498,15 @@ export default function QuizStartPage() {
         {/* Free-fallback upgrade prompt (finalized requirement) — shown for
             EITHER "Start Practising" entry point above, never for both/none
             inconsistently, since it's driven by one shared piece of state. */}
+        {profileGate && (
+          <div style={{ marginTop: 16, padding: '26px 18px', textAlign: 'center', borderRadius: 16, background: 'var(--color-card)', border: '1px solid var(--color-line)', borderTop: '4px solid #E2B04A' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>📝</div>
+            <p style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px', color: 'var(--color-ink)' }}>பயிற்சியைத் தொடங்கும் முன்</p>
+            <p style={{ fontSize: 14, lineHeight: 1.65, margin: '0 0 18px', color: 'var(--color-inkMuted)' }}>உங்கள் Profile-ஐ நிரப்புங்கள். உங்கள் Pass பாதுகாப்பாக உள்ளது — Profile முடிந்ததும் உடனே பயிற்சியைத் தொடங்கலாம்.</p>
+            <a href="/profile?complete=1" style={{ display: 'block', padding: 15, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 16, textDecoration: 'none' }}>Profile-ஐ நிரப்புங்கள் →</a>
+          </div>
+        )}
+
         {accessPrompt && (
           <div style={{ marginTop: 16, padding: 16, borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a' }}>
             <p style={{ fontSize: 14, color: '#92400e', marginBottom: 4, fontWeight: 600 }}>{t.practiceSetup.noActivePlan}</p>

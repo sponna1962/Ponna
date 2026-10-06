@@ -42,10 +42,7 @@ export class PaymentService {
    * action that shouldn't be bypassable by calling the API directly.
    */
   async createOrder(userId: string, planId: string) {
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    if (!isProfileComplete(user)) {
-      throw new ProfileIncompleteError();
-    }
+    // Profile is no longer required before paying (asked afterwards, before practice).
 
     if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
       throw new Error('Razorpay is not configured — set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.');
