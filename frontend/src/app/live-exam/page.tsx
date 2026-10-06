@@ -147,25 +147,26 @@ export default function LiveExamPage() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, paddingBottom: state?.access === 'IN_PROGRESS' ? 100 : 30, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <StudentMenu />
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.menu.liveExam}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <StudentMenu iconColor="#fff" />
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.menu.liveExam}</h1>
         {state?.access === 'IN_PROGRESS' && (
           <div
             aria-label={`மீதமுள்ள நேரம் ${formatTime(remainingSeconds)}`}
             aria-live="polite"
-            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'baseline', gap: 6, whiteSpace: 'nowrap' }}
+            style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1, whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,233,168,0.5)', borderRadius: 999, padding: '5px 12px' }}
           >
-            <span style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: 600, color: COLORS.inkMuted }}>மீதமுள்ள நேரம்</span>
-            <span style={{ fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: 800, color: remainingSeconds < 300 ? '#B4544A' : COLORS.ink }}>
+            <span style={{ fontFamily: FONT_FAMILY, fontSize: 9.5, fontWeight: 600, color: '#FFE9A8' }}>மீதமுள்ள நேரம்</span>
+            <span style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 800, color: remainingSeconds < 300 ? '#ffb4a8' : '#fff' }}>
               {formatTime(remainingSeconds)}
             </span>
           </div>
         )}
       </div>
 
+      <div style={{ padding: '0 16px' }}>
       {state?.access !== 'IN_PROGRESS' && (
         <div style={{ marginBottom: 20 }}>
           {availableExams === null && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
@@ -177,18 +178,25 @@ export default function LiveExamPage() {
                   key={e.subCategoryId}
                   onClick={() => handleSelect(e.subCategoryId, e.name)}
                   style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
                     textAlign: 'left',
-                    padding: '12px 14px',
-                    borderRadius: 8,
-                    border: `1px solid ${selectedExamId === e.subCategoryId ? COLORS.ink : COLORS.line}`,
-                    background: selectedExamId === e.subCategoryId ? COLORS.paperAlt : COLORS.paper,
+                    padding: '13px 16px',
+                    borderRadius: 16,
+                    border: selectedExamId === e.subCategoryId ? '1.5px solid #E2B04A' : `1px solid ${COLORS.line}`,
+                    background: 'var(--color-card)',
                     cursor: 'pointer',
                   }}
                 >
-                  <p style={{ fontWeight: 700, fontSize: 14, color: COLORS.ink, margin: 0 }}>{e.name}</p>
-                  <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: '2px 0 0' }}>
-                    {e.authorityName} → {e.categoryName}
-                  </p>
+                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-goldDisc)', display: 'grid', placeItems: 'center', flex: 'none' }}>🎯</span>
+                  <span style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 700, fontSize: 15.5, color: COLORS.ink, margin: 0 }}>{e.name}</p>
+                    <p style={{ fontSize: 12.5, color: COLORS.inkMuted, margin: '2px 0 0' }}>
+                      {e.authorityName} → {e.categoryName}
+                    </p>
+                  </span>
+                  {selectedExamId === e.subCategoryId && <span aria-hidden="true" style={{ color: 'var(--color-ok)', fontWeight: 800, fontSize: 20 }}>✓</span>}
                 </button>
               ))}
             </div>
@@ -200,23 +208,23 @@ export default function LiveExamPage() {
       {selectedExamId && !state && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
       {state?.access === 'FREE_LOCKED' && (
-        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 24, background: COLORS.goldLight, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 {t.liveExamPage.lockedTitle}</p>
-          <p style={{ fontSize: 13, color: '#5C4009', marginBottom: 16 }}>{t.liveExamPage.lockedBody}</p>
-          <a href="/plans" style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
+        <div style={{ border: '1.5px solid #E2B04A', borderRadius: 16, padding: 22, background: COLORS.goldLight, textAlign: 'center' }}>
+          <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 {t.liveExamPage.lockedTitle}</p>
+          <p style={{ fontSize: 13.5, color: COLORS.inkMuted, marginBottom: 16 }}>{t.liveExamPage.lockedBody}</p>
+          <a href="/plans" style={{ display: 'inline-block', padding: '11px 24px', borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 14.5 }}>
             {t.dailyQuiz.viewPlans}
           </a>
         </div>
       )}
 
       {state?.access === 'NOT_CONFIGURED' && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: 28, textAlign: 'center', background: 'var(--color-card)' }}>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.liveExamPage.notConfigured}</p>
         </div>
       )}
 
       {state?.access === 'WINDOW_CLOSED' && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: 28, textAlign: 'center', background: 'var(--color-card)' }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🗓️ Live Exam தற்போது கிடைக்கவில்லை</p>
           <p style={{ fontSize: 13, color: COLORS.inkMuted }}>
             அடுத்த வாய்ப்பு: {new Date(state.nextOpensAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
@@ -225,24 +233,31 @@ export default function LiveExamPage() {
       )}
 
       {state?.access === 'AWAITING_RESULTS' && (
-        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 28, textAlign: 'center', background: COLORS.goldLight }}>
+        <div style={{ border: '1.5px solid #E2B04A', borderRadius: 16, padding: 28, textAlign: 'center', background: COLORS.goldLight }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>✅ Submit ஆகிடுச்சு!</p>
-          <p style={{ fontSize: 13, color: '#5C4009' }}>
+          <p style={{ fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.7 }}>
             இந்த வார Live Exam-ல் பங்கேற்ற அனைவருக்கும் ஒரே நேரத்தில், <strong>திங்கள் அன்று</strong> result வெளியாகும்.
           </p>
         </div>
       )}
 
       {state?.access === 'READY' && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, marginBottom: 12 }}>{t.liveExamPage.readyTitle}</p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 20, fontSize: 13, color: COLORS.inkMuted }}>
-            <span>{state.config.questionCount} {t.liveExamPage.questions}</span>
-            <span>{state.config.durationMinutes} {t.liveExamPage.minutes}</span>
-            {state.config.negativeMarkingFraction > 0 && <span>-{state.config.negativeMarkingFraction} {t.liveExamPage.negMark}</span>}
+        <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: '20px 16px', textAlign: 'center' }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: COLORS.ink, margin: '0 0 14px' }}>{t.liveExamPage.readyTitle}</p>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            {[
+              { n: String(state.config.questionCount), l: t.liveExamPage.questions },
+              { n: String(state.config.durationMinutes), l: t.liveExamPage.minutes },
+              ...(state.config.negativeMarkingFraction > 0 ? [{ n: `-${state.config.negativeMarkingFraction}`, l: t.liveExamPage.negMark }] : []),
+            ].map((x) => (
+              <div key={x.l} style={{ flex: 1, background: 'var(--color-field)', border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: '10px 4px' }}>
+                <b style={{ display: 'block', fontSize: 20, color: COLORS.ink }}>{x.n}</b>
+                <small style={{ fontSize: 12, color: COLORS.inkMuted }}>{x.l}</small>
+              </div>
+            ))}
           </div>
-          <p style={{ fontSize: 12, color: '#B4544A', marginBottom: 16 }}>{t.liveExamPage.oneAttemptWarning}</p>
-          <button onClick={start} disabled={starting} style={{ padding: '12px 28px', borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600 }}>
+          <p style={{ fontSize: 13, color: 'var(--color-bad)', background: 'var(--color-badBg)', borderRadius: 12, padding: '10px 12px', margin: '0 0 16px', lineHeight: 1.6 }}>{t.liveExamPage.oneAttemptWarning}</p>
+          <button onClick={start} disabled={starting} style={{ display: 'block', width: '100%', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 17, boxShadow: '0 10px 24px -10px rgba(15,47,51,0.7)' }}>
             {starting ? '…' : t.liveExamPage.startExam}
           </button>
         </div>
@@ -250,10 +265,15 @@ export default function LiveExamPage() {
 
       {state?.access === 'IN_PROGRESS' && questions && questions[currentIndex] && (
         <div>
-          <p style={{ fontSize: 13, color: COLORS.inkMuted, fontWeight: 600, marginBottom: 12 }}>
+          <p style={{ fontSize: 14, color: COLORS.inkMuted, fontWeight: 700, marginBottom: 10 }}>
             {currentIndex + 1} / {questions.length}
           </p>
-          <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, lineHeight: 1.5, marginBottom: 16, whiteSpace: 'pre-wrap' }}>{questions[currentIndex].questionText}</p>
+          <div style={{ height: 8, background: 'var(--color-line)', borderRadius: 4, overflow: 'hidden', marginBottom: 14 }}>
+            <div style={{ height: '100%', width: `${((currentIndex + 1) / questions.length) * 100}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)', borderRadius: 4 }} />
+          </div>
+          <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 18, marginBottom: 14 }}>
+            <p style={{ fontSize: questions[currentIndex].questionText.length > 140 ? 16.5 : 18, fontWeight: 600, color: COLORS.ink, lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>{questions[currentIndex].questionText}</p>
+          </div>
 
           {(['A', 'B', 'C', 'D'] as const).map((letter) => {
             const q = questions[currentIndex];
@@ -266,56 +286,32 @@ export default function LiveExamPage() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
+                  gap: 12,
                   padding: '12px 14px',
-                  border: `1.5px solid ${isSelected ? COLORS.ink : COLORS.line}`,
-                  borderRadius: 10,
-                  marginBottom: 8,
-                  fontSize: 14,
+                  border: `1.5px solid ${isSelected ? 'var(--color-ink)' : COLORS.line}`,
+                  borderRadius: 14,
+                  marginBottom: 10,
+                  fontSize: 15.5,
+                  lineHeight: 1.55,
                   cursor: 'pointer',
-                  background: isSelected ? COLORS.paperAlt : COLORS.paper,
+                  background: 'var(--color-card)',
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.inkMuted }}>{letter}.</span>
+                <span style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12.5, background: isSelected ? 'var(--color-ink)' : 'var(--color-field)', border: `1.5px solid ${isSelected ? 'var(--color-ink)' : COLORS.line}`, color: isSelected ? 'var(--color-paper)' : COLORS.inkMuted }}>{letter}</span>
                 <span style={{ flex: 1, color: COLORS.ink }}>{text}</span>
               </div>
             );
           })}
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            <button
-              onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-              disabled={currentIndex === 0}
-              style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.paper, color: COLORS.ink }}
-            >
-              {t.liveExamPage.previous}
-            </button>
-            {currentIndex < questions.length - 1 ? (
-              <button
-                onClick={() => setCurrentIndex(currentIndex + 1)}
-                style={{ flex: 1, padding: 12, borderRadius: 10, border: 'none', background: COLORS.ink, color: COLORS.paper, fontWeight: 600 }}
-              >
-                {t.liveExamPage.next}
-              </button>
-            ) : (
-              <button
-                onClick={() => submitExam((state as any).attemptId)}
-                style={{ flex: 1, padding: 12, borderRadius: 10, border: 'none', background: '#B4544A', color: '#fff', fontWeight: 600 }}
-              >
-                {t.liveExamPage.submitExam}
-              </button>
-            )}
-          </div>
-
           <button
             onClick={() => setNavigatorOpen((v) => !v)}
-            style={{ marginTop: 20, width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.line}`, background: COLORS.paperAlt, fontSize: 13, fontWeight: 600, color: COLORS.ink, cursor: 'pointer' }}
+            style={{ marginTop: 8, width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 16, border: `1px solid ${COLORS.line}`, background: 'var(--color-card)', fontSize: 14, fontWeight: 700, color: COLORS.ink, cursor: 'pointer' }}
           >
             {navigatorOpen ? '▾' : '▸'} Question Navigator ({questions.filter((q) => q.selectedOption).length}/{questions.length} answered)
           </button>
 
           {navigatorOpen && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 10 }}>
               {questions.map((q, i) => (
                 <button
                   key={q.id}
@@ -324,13 +320,13 @@ export default function LiveExamPage() {
                     setNavigatorOpen(false);
                   }}
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 6,
-                    border: `2px solid ${i === currentIndex ? COLORS.ink : q.selectedOption ? '#166534' : COLORS.line}`,
-                    background: q.selectedOption ? '#DCFCE7' : COLORS.paper,
-                    color: q.selectedOption ? '#166534' : COLORS.ink,
-                    fontSize: 12,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    border: `2px solid ${i === currentIndex ? 'var(--color-ink)' : q.selectedOption ? 'var(--color-ok)' : COLORS.line}`,
+                    background: q.selectedOption ? 'var(--color-okBg)' : 'var(--color-card)',
+                    color: q.selectedOption ? 'var(--color-ok)' : COLORS.ink,
+                    fontSize: 13,
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}
@@ -340,21 +336,49 @@ export default function LiveExamPage() {
               ))}
             </div>
           )}
+
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '14px 16px 16px', background: 'linear-gradient(transparent, var(--color-paper) 35%)', zIndex: 5 }}>
+            <div style={{ display: 'flex', gap: 10, maxWidth: 448, margin: '0 auto' }}>
+              <button
+                onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                disabled={currentIndex === 0}
+                style={{ flex: 1, padding: 15, borderRadius: 14, border: `1.5px solid ${COLORS.line}`, background: 'var(--color-card)', color: COLORS.ink, fontWeight: 700, fontSize: 16, opacity: currentIndex === 0 ? 0.5 : 1 }}
+              >
+                {t.liveExamPage.previous}
+              </button>
+              {currentIndex < questions.length - 1 ? (
+                <button
+                  onClick={() => setCurrentIndex(currentIndex + 1)}
+                  style={{ flex: 1, padding: 15, borderRadius: 14, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 16 }}
+                >
+                  {t.liveExamPage.next}
+                </button>
+              ) : (
+                <button
+                  onClick={() => submitExam((state as any).attemptId)}
+                  style={{ flex: 1, padding: 15, borderRadius: 14, border: 'none', background: '#B4544A', color: '#fff', fontWeight: 700, fontSize: 16 }}
+                >
+                  {t.liveExamPage.submitExam}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {state?.access === 'COMPLETED' && (
         <div style={{ textAlign: 'center' }}>
-          {state.wasExpired && <p style={{ fontSize: 12, color: '#B4544A', marginBottom: 8 }}>{t.liveExamPage.timeUpNotice}</p>}
-          <p style={{ fontFamily: FONT_FAMILY, fontSize: 42, fontWeight: 800, color: COLORS.gold, margin: '20px 0 4px' }}>
+          {state.wasExpired && <p style={{ fontSize: 13, color: 'var(--color-bad)', marginBottom: 8 }}>{t.liveExamPage.timeUpNotice}</p>}
+          <p style={{ fontFamily: FONT_FAMILY, fontSize: 50, fontWeight: 800, color: COLORS.gold, margin: '20px 0 4px' }}>
             {state.score} / {state.totalMarks}
           </p>
-          <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 24 }}>{t.liveExamPage.examComplete}</p>
-          <a href="/" style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600 }}>
+          <p style={{ fontSize: 14.5, color: COLORS.inkMuted, marginBottom: 24 }}>{t.liveExamPage.examComplete}</p>
+          <a href="/" style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 16.5 }}>
             {t.dailyQuiz.backHome}
           </a>
         </div>
       )}
+      </div>
     </main>
   );
 }
