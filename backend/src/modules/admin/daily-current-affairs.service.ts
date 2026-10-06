@@ -131,13 +131,17 @@ Final checks before returning: exactly 10 questions; approximately 5 Medium and 
 }
 
 export class DailyCurrentAffairsService {
-  // One automatic retry: a malformed reply is usually a one-off.
+  // Up to 3 attempts: a malformed reply is usually a one-off.
   private async gemini(prompt: string, useGoogleSearch: boolean, maxOutputTokens = 9000): Promise<any> {
-    try { return await this.geminiOnce(prompt, useGoogleSearch, maxOutputTokens); }
-    catch (err: any) {
-      if (!/invalid JSON|cut off/.test(String(err?.message))) throw err;
-      return this.geminiOnce(prompt, useGoogleSearch, maxOutputTokens);
+    let lastErr: any;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try { return await this.geminiOnce(prompt, useGoogleSearch, maxOutputTokens); }
+      catch (err: any) {
+        lastErr = err;
+        if (!/invalid JSON|cut off/.test(String(err?.message))) throw err;
+      }
     }
+    throw lastErr;
   }
 
   private async geminiOnce(prompt: string, useGoogleSearch: boolean, maxOutputTokens = 9000): Promise<any> {
@@ -150,6 +154,9 @@ export class DailyCurrentAffairsService {
       generationConfig: { temperature: 0.1, maxOutputTokens },
     };
     if (useGoogleSearch) body.tools = [{ google_search: {} }];
+    // Without Google Search the API can be told to return strict JSON, which
+    // avoids unescaped quotes/newlines in Tamil text breaking the parse.
+    else body.generationConfig.responseMimeType = 'application/json';
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
@@ -160,7 +167,9 @@ export class DailyCurrentAffairsService {
     // across several parts (and newer models put reasoning in separate
     // thought parts), so reading only parts[0] could return a fragment.
     const raw = (candidate?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? '').join('') || '{}';
-    try { return JSON.parse(cleanJson(raw)); }
+    // Strict-JSON replies (no search) are parsed as-is first, so legitimate
+    // bracketed numbers in puzzle text are never stripped by cleanJson.
+    try { if (!useGoogleSearch) { try { return JSON.parse(raw); } catch { /* fall back to cleanJson */ } } return JSON.parse(cleanJson(raw)); }
     catch {
       console.error(`Daily Quiz AI JSON parse failed (finishReason=${candidate?.finishReason}, ${raw.length} chars). Start: ${raw.slice(0, 200)} … End: ${raw.slice(-200)}`);
       // Cut off at the token limit is the most common cause — say so, so the
