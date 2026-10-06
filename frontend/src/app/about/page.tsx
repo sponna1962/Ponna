@@ -19,14 +19,14 @@ import { StudentMenu } from '../../components/StudentMenu';
 
 function H2({ children }: { children: React.ReactNode }) {
   return (
-    <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 700, color: COLORS.ink, margin: '0 0 16px', lineHeight: 1.25 }}>
+    <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, color: COLORS.ink, margin: '0 0 12px', lineHeight: 1.25 }}>
       {children}
     </h2>
   );
 }
 
 function Rule() {
-  return <div style={{ height: 1, background: COLORS.line, margin: '56px 0' }} />;
+  return <div style={{ height: 1, background: COLORS.line, margin: '32px 0' }} />;
 }
 
 function Section({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -42,13 +42,15 @@ export default function AboutPage() {
             (StudentMenu drawer) as every other app/support page, instead of
             a standalone "back to home" link that made this page feel like a
             separate marketing site. */}
-        <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <StudentMenu />
-          <span style={{ fontSize: 20, fontWeight: 700, color: COLORS.ink }}>About PONNA</span>
+        <div style={{ background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: '3px solid #E2B04A' }}>
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <StudentMenu iconColor="#fff" />
+            <span style={{ fontSize: 19, fontWeight: 700, color: '#fff' }}>About PONNA</span>
+          </div>
         </div>
 
         {/* ── Hero ─────────────────────────────────────────────────────── */}
-        <div style={{ position: 'relative', overflow: 'hidden', padding: '48px 0 40px' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', padding: '32px 0 24px' }}>
           {/* Ruled-notebook motif — the one signature device, used once */}
           <svg
           aria-hidden
@@ -125,7 +127,7 @@ export default function AboutPage() {
       <Rule />
 
       {/* ── Our Commitment to Quality ────────────────────────────────── */}
-      <Section>
+      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 16 }}>
         <H2>Our Commitment to Quality</H2>
         <p style={{ fontSize: 16, lineHeight: 1.75, color: COLORS.inkMuted, marginBottom: 16 }}>
           We are committed to continuously improving our question bank and maintaining the accuracy, relevance, and
@@ -136,12 +138,12 @@ export default function AboutPage() {
           As examination patterns, syllabi, and requirements evolve, we aim to continuously update and improve our
           content so that students can practise with material that remains relevant to their preparation.
         </p>
-      </Section>
+      </div></Section>
 
       <Rule />
 
       {/* ── Our Approach — a genuine sequence, so a step treatment fits ── */}
-      <Section>
+      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 16 }}>
         <H2>Our Approach</H2>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
           {['Learn', 'Practise', 'Check', 'Improve'].map((step, i, arr) => (
@@ -156,12 +158,12 @@ export default function AboutPage() {
         <p style={{ fontSize: 16, lineHeight: 1.75, color: COLORS.inkMuted }}>
           Practice should be a regular part of exam preparation, not something students do only before an examination.
         </p>
-      </Section>
+      </div></Section>
 
       <Rule />
 
       {/* ── Who Can Use PONNA — kept small, tag-style, not oversized cards ── */}
-      <Section>
+      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 16 }}>
         <H2>Who Can Use PONNA?</H2>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {['Competitive & Employment Examinations', 'Higher Education & Entrance Examinations', 'Eligibility Examinations'].map((label) => (
@@ -181,15 +183,15 @@ export default function AboutPage() {
             </span>
           ))}
         </div>
-      </Section>
+      </div></Section>
 
       {/* ── Our Social Purpose — full-bleed band, the emotional core ─── */}
-      <div style={{ background: COLORS.ink, color: COLORS.paper, padding: '56px 0', margin: '56px 0' }}>
+      <div style={{ background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderTop: '3px solid #E2B04A', borderBottom: '3px solid #E2B04A', color: '#fff', padding: '36px 0', margin: '32px 0' }}>
         <Section>
-          <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 700, color: COLORS.goldLight, margin: '0 0 20px', lineHeight: 1.3 }}>
+          <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 700, color: '#FFE9A8', margin: '0 0 20px', lineHeight: 1.3 }}>
             Quality Practice Should Not Be Limited by Cost
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18, fontSize: 16, lineHeight: 1.75, color: '#D7D9E4' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18, fontSize: 16, lineHeight: 1.75, color: '#e5f1f0' }}>
             <p>Many students prepare for competitive and entrance examinations without access to expensive coaching programs.</p>
             <p>
               PONNA aims to provide an affordable option for regular exam practice, so that students can access quality
@@ -208,7 +210,7 @@ export default function AboutPage() {
       {/* ── Why PONNA — simple icon+label grid, no card chrome ─────────── */}
       <Section>
         <H2>Why PONNA?</H2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24, marginTop: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 16 }}>
           {[
             { icon: <IconPaper />, label: 'Previous Examination Questions' },
             { icon: <IconCap />, label: 'Teacher & Subject Expert–Designed Questions' },
@@ -218,7 +220,7 @@ export default function AboutPage() {
             { icon: <IconCoin />, label: 'Affordable Preparation' },
             { icon: <IconRefresh />, label: 'Continuous Improvement' },
           ].map((item) => (
-            <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 10, background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 12, padding: 12 }}>
               {item.icon}
               <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, lineHeight: 1.4 }}>{item.label}</span>
             </div>
@@ -247,14 +249,14 @@ export default function AboutPage() {
         <a
           href="/"
           style={{
-            display: 'inline-block',
-            padding: '14px 32px',
-            borderRadius: 8,
-            background: COLORS.ink,
-            color: COLORS.paper,
+            display: 'block',
+            padding: 15,
+            borderRadius: 14,
+            background: COLORS.btn,
+            color: COLORS.btnText,
             textDecoration: 'none',
-            fontWeight: 600,
-            fontSize: 15,
+            fontWeight: 700,
+            fontSize: 16,
           }}
         >
           Start Practising
@@ -292,61 +294,61 @@ function IconBase({ children }: { children: React.ReactNode }) {
 function IconPaper() {
   return (
     <IconBase>
-      <rect x="5" y="3" width="18" height="22" rx="1.5" stroke="#A8791F" strokeWidth="1.6" />
-      <line x1="9" y1="9" x2="19" y2="9" stroke="#A8791F" strokeWidth="1.6" />
-      <line x1="9" y1="14" x2="19" y2="14" stroke="#A8791F" strokeWidth="1.6" />
-      <line x1="9" y1="19" x2="15" y2="19" stroke="#A8791F" strokeWidth="1.6" />
+      <rect x="5" y="3" width="18" height="22" rx="1.5" stroke={COLORS.gold} strokeWidth="1.6" />
+      <line x1="9" y1="9" x2="19" y2="9" stroke={COLORS.gold} strokeWidth="1.6" />
+      <line x1="9" y1="14" x2="19" y2="14" stroke={COLORS.gold} strokeWidth="1.6" />
+      <line x1="9" y1="19" x2="15" y2="19" stroke={COLORS.gold} strokeWidth="1.6" />
     </IconBase>
   );
 }
 function IconCap() {
   return (
     <IconBase>
-      <path d="M14 5L25 10L14 15L3 10L14 5Z" stroke="#A8791F" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M8 12.5V18C8 18 10.5 20.5 14 20.5C17.5 20.5 20 18 20 18V12.5" stroke="#A8791F" strokeWidth="1.6" />
+      <path d="M14 5L25 10L14 15L3 10L14 5Z" stroke={COLORS.gold} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M8 12.5V18C8 18 10.5 20.5 14 20.5C17.5 20.5 20 18 20 18V12.5" stroke={COLORS.gold} strokeWidth="1.6" />
     </IconBase>
   );
 }
 function IconCheck() {
   return (
     <IconBase>
-      <circle cx="14" cy="14" r="10.5" stroke="#A8791F" strokeWidth="1.6" />
-      <path d="M9.5 14.2L12.5 17.2L18.5 10.8" stroke="#A8791F" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="14" cy="14" r="10.5" stroke={COLORS.gold} strokeWidth="1.6" />
+      <path d="M9.5 14.2L12.5 17.2L18.5 10.8" stroke={COLORS.gold} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </IconBase>
   );
 }
 function IconSteps() {
   return (
     <IconBase>
-      <rect x="4" y="18" width="6" height="6" stroke="#A8791F" strokeWidth="1.6" />
-      <rect x="11" y="12" width="6" height="12" stroke="#A8791F" strokeWidth="1.6" />
-      <rect x="18" y="5" width="6" height="19" stroke="#A8791F" strokeWidth="1.6" />
+      <rect x="4" y="18" width="6" height="6" stroke={COLORS.gold} strokeWidth="1.6" />
+      <rect x="11" y="12" width="6" height="12" stroke={COLORS.gold} strokeWidth="1.6" />
+      <rect x="18" y="5" width="6" height="19" stroke={COLORS.gold} strokeWidth="1.6" />
     </IconBase>
   );
 }
 function IconClock() {
   return (
     <IconBase>
-      <circle cx="14" cy="14" r="10.5" stroke="#A8791F" strokeWidth="1.6" />
-      <path d="M14 8V14L18 17" stroke="#A8791F" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="14" cy="14" r="10.5" stroke={COLORS.gold} strokeWidth="1.6" />
+      <path d="M14 8V14L18 17" stroke={COLORS.gold} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </IconBase>
   );
 }
 function IconCoin() {
   return (
     <IconBase>
-      <circle cx="14" cy="14" r="10.5" stroke="#A8791F" strokeWidth="1.6" />
-      <path d="M14 9V19M11 17.2C11 18.5 12.3 19.3 14 19.3C15.9 19.3 17 18.4 17 17.1C17 14.5 11 15.5 11 12.9C11 11.6 12.1 10.7 14 10.7C15.5 10.7 16.6 11.3 16.9 12.4" stroke="#A8791F" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="14" cy="14" r="10.5" stroke={COLORS.gold} strokeWidth="1.6" />
+      <path d="M14 9V19M11 17.2C11 18.5 12.3 19.3 14 19.3C15.9 19.3 17 18.4 17 17.1C17 14.5 11 15.5 11 12.9C11 11.6 12.1 10.7 14 10.7C15.5 10.7 16.6 11.3 16.9 12.4" stroke={COLORS.gold} strokeWidth="1.4" strokeLinecap="round" />
     </IconBase>
   );
 }
 function IconRefresh() {
   return (
     <IconBase>
-      <path d="M22 14C22 18.4 18.4 22 14 22C10.7 22 7.9 20 6.7 17.1" stroke="#A8791F" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M6 14C6 9.6 9.6 6 14 6C17.3 6 20.1 8 21.3 10.9" stroke="#A8791F" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M6.7 12.5L6.7 17.1L11.3 17.1" stroke="#A8791F" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M21.3 15.5L21.3 10.9L16.7 10.9" stroke="#A8791F" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M22 14C22 18.4 18.4 22 14 22C10.7 22 7.9 20 6.7 17.1" stroke={COLORS.gold} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M6 14C6 9.6 9.6 6 14 6C17.3 6 20.1 8 21.3 10.9" stroke={COLORS.gold} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M6.7 12.5L6.7 17.1L11.3 17.1" stroke={COLORS.gold} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21.3 15.5L21.3 10.9L16.7 10.9" stroke={COLORS.gold} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </IconBase>
   );
 }
