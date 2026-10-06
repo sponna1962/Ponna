@@ -76,6 +76,9 @@ export default function CurrentAffairsPage() {
     return () => window.removeEventListener('resize', measure);
   }, []);
   const [joinedAt, setJoinedAt] = useState<string | null>(null);
+  // null = not known yet; false = logged-out visitor (read-only, last 7 days)
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [lang, setLang] = useState<'ta' | 'en'>('ta');
   const s = STRINGS[lang];
 
@@ -94,23 +97,32 @@ export default function CurrentAffairsPage() {
   // News is shown only from the day the student joined (first login)
   // onward — older news is hidden. Logged-out visitors see everything.
   useEffect(() => {
+    // Logged-out visitors can read this page: skip the profile call (a 401 there
+    // would redirect them to the home page).
+    if (!localStorage.getItem('ponna_student_token')) { setLoggedIn(false); return; }
+    setLoggedIn(true);
     studentFetch('/students/me/profile')
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => { if (p?.createdAt) setJoinedAt(dateKey(p.createdAt)); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setProfileLoaded(true));
   }, []);
 
   const grouped = useMemo(() => {
     const groups: { date: string; items: Item[] }[] = [];
+    if (loggedIn === null || (loggedIn && !profileLoaded)) return groups; // avoid flashing old news
+    // Logged-out visitors: last 7 days only. Students: from their join day onward.
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const fromKey = loggedIn ? joinedAt : sevenDaysAgo;
     for (const item of items) {
-      if (joinedAt && dateKey(item.date) < joinedAt) continue;
+      if (fromKey && dateKey(item.date) < fromKey) continue;
       const key = dateKey(item.date);
       const last = groups[groups.length - 1];
       if (!last || last.date !== key) groups.push({ date: key, items: [item] });
       else last.items.push(item);
     }
     return groups;
-  }, [items, joinedAt]);
+  }, [items, joinedAt, loggedIn, profileLoaded]);
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
@@ -151,7 +163,7 @@ export default function CurrentAffairsPage() {
 
         {loading && <p style={{ color: COLORS.inkMuted }}>{s.loading}</p>}
         {error && <p style={{ color: 'var(--color-bad)' }}>{error}</p>}
-        {!loading && !error && grouped.length === 0 && <p style={{ color: COLORS.inkMuted }}>{s.empty}</p>}
+        {!loading && !error && loggedIn !== null && (!loggedIn || profileLoaded) && grouped.length === 0 && <p style={{ color: COLORS.inkMuted }}>{s.empty}</p>}
 
         {grouped.map((group) => (
           <section key={group.date} style={{ marginBottom: 32 }}>
@@ -182,6 +194,12 @@ export default function CurrentAffairsPage() {
             })}
           </section>
         ))}
+        {loggedIn === false && (
+          <div style={{ marginTop: 8, padding: 16, textAlign: 'center', background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16 }}>
+            <p style={{ margin: '0 0 10px', fontSize: 14.5, lineHeight: 1.6 }}>மேலும் செய்திகளையும் பயிற்சிகளையும் பெற Login செய்யுங்கள்.</p>
+            <a href="/?startLogin=1" style={{ display: 'block', padding: 13, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 15.5, textDecoration: 'none' }}>Login / Sign up</a>
+          </div>
+        )}
       </section>
     </main>
   );
