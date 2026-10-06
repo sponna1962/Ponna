@@ -514,10 +514,10 @@ export default function IndexPage() {
               {t.login.sessionInvalidated}
             </div>
           )}
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 34, fontWeight: 800, lineHeight: 1.4, marginBottom: 4, whiteSpace: 'pre-line', color: '#0F2F33' }}>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 34, fontWeight: 800, lineHeight: 1.4, marginBottom: 4, whiteSpace: 'pre-line', color: COLORS.ink }}>
             வெற்றியின்{'\n'}முதல் படி.
           </h1>
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 700, lineHeight: 1.35, marginBottom: 16, whiteSpace: 'pre-line', color: '#B07A10' }}>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 700, lineHeight: 1.35, marginBottom: 16, whiteSpace: 'pre-line', color: COLORS.gold }}>
             The first step{'\n'}to success.
           </h1>
 
@@ -571,7 +571,7 @@ export default function IndexPage() {
         {/* Oct 2026 — same sunrise banner as the home/welcome screens (entry pages only, by decision). */}
         <div aria-hidden="true" style={{ position: 'relative', height: 210, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '14px 24px 40px' }}>
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: 700, margin: '0 0 24px', color: '#0F2F33' }}>{t.login.title}</h1>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: 700, margin: '0 0 24px', color: COLORS.ink }}>{t.login.title}</h1>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <button

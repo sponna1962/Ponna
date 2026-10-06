@@ -114,9 +114,9 @@ export function StudentMenu({ onOpenChange }: { onOpenChange?: (open: boolean) =
               ))}
               {sections.map((section) => (
                 <div key={section.heading}>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, fontWeight: 700, color: '#1c6b6b', letterSpacing: 1.6, margin: '10px 12px 2px' }}>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, fontWeight: 700, color: 'var(--color-teal)', letterSpacing: 1.6, margin: '10px 12px 2px' }}>
                     {section.heading}
-                    <span style={{ flex: 1, borderTop: '1.5px solid #e2d6b4' }} />
+                    <span style={{ flex: 1, borderTop: '1.5px solid var(--color-line)' }} />
                   </p>
                   {section.items.map((item) => (
                     <MenuRow key={item.href} href={item.href} label={item.label} Icon={item.Icon} />
@@ -164,13 +164,13 @@ function MenuRow({ href, label, Icon, bold }: { href: string; label: string; Ico
       href={href}
       style={{
         display: 'flex', alignItems: 'center', gap: 14, padding: '4px 12px', borderRadius: 12, textDecoration: 'none',
-        color: '#0F2F33', fontSize: 16, fontWeight: active || bold ? 700 : 500,
-        background: active ? '#fff' : 'transparent',
-        boxShadow: active ? 'inset 4px 0 0 #E2B04A, 0 1px 0 #eadfc4' : 'none',
+        color: 'var(--color-ink)', fontSize: 16, fontWeight: active || bold ? 700 : 500,
+        background: active ? 'var(--color-card)' : 'transparent',
+        boxShadow: active ? 'inset 4px 0 0 #E2B04A, 0 1px 0 var(--color-line)' : 'none',
       }}
     >
-      <span style={{ width: 32, height: 32, borderRadius: '50%', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? '#0F2F33' : '#F3E7C7' }}>
-        <Icon size={18} color={active ? '#FFE9A8' : '#B07A10'} />
+      <span style={{ width: 32, height: 32, borderRadius: '50%', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? 'var(--color-btn)' : 'var(--color-goldDisc)' }}>
+        <Icon size={18} color={active ? 'var(--color-btnText)' : 'var(--color-gold)'} />
       </span>
       {label}
     </a>
