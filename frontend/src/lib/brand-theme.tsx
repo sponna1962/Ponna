@@ -49,6 +49,8 @@ export function ThemeStyles() {
         --color-head2: #1c6b6b;
         --color-btn: #0F2F33;
         --color-btnText: #FFE9A8;
+        --color-okBg: #E4F4E2;
+        --color-badBg: #FCE9E6;
       }
       [data-theme='dark'] {
         --color-paper: #14161F;
@@ -68,6 +70,8 @@ export function ThemeStyles() {
         --color-head2: #14494b;
         --color-btn: #E2B04A;
         --color-btnText: #1b1300;
+        --color-okBg: #143323;
+        --color-badBg: #3a1c1c;
       }
     `}</style>
   );
