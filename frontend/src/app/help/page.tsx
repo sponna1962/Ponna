@@ -62,6 +62,12 @@ const FAQS: Faq[] = [
     answer: 'Tap the language toggle in the top menu anytime.',
   },
   {
+    id: 'lost-number',
+    category: 'account',
+    question: 'What if I lose my registered phone number?',
+    answer: 'Email ponna@arlena.in from your registered email address and briefly describe the issue \u2014 we will help you get back into your account.',
+  },
+  {
     id: 'performance-calc',
     category: 'practice',
     question: 'How is my performance calculated?',
@@ -145,14 +151,15 @@ export default function HelpPage() {
   const mailHref = `mailto:ponna@arlena.in?subject=${encodeURIComponent('PONNA Support')}&body=${mailBody}`;
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: 24 }}>
       <BitterFontLinks />
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-        <StudentMenu />
-        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.menu.help}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: '3px solid #E2B04A' }}>
+        <StudentMenu iconColor="#fff" />
+        <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.menu.help}</h1>
       </div>
+      <div style={{ padding: 16 }}>
 
       <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 800, color: COLORS.ink, margin: '0 0 6px' }}>How can we help?</h2>
       <p style={{ fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.5, margin: '0 0 16px' }}>
@@ -169,9 +176,9 @@ export default function HelpPage() {
           style={{
             width: '100%',
             padding: '14px 14px 14px 40px',
-            borderRadius: 12,
+            borderRadius: 14,
             border: `1.5px solid ${searching ? COLORS.gold : COLORS.line}`,
-            background: COLORS.paperAlt,
+            background: COLORS.field,
             color: COLORS.ink,
             fontSize: 14,
             boxSizing: 'border-box',
@@ -187,7 +194,7 @@ export default function HelpPage() {
             {visibleFaqs.length} result{visibleFaqs.length === 1 ? '' : 's'}
           </p>
           {visibleFaqs.length === 0 ? (
-            <div style={{ padding: 16, borderRadius: 12, background: COLORS.paperAlt, border: `1px solid ${COLORS.line}`, fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.5 }}>
+            <div style={{ padding: 16, borderRadius: 12, background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.5 }}>
               No matching answers yet — try different keywords, or contact support below.
             </div>
           ) : (
@@ -209,8 +216,9 @@ export default function HelpPage() {
                   }}
                   style={{
                     textAlign: 'left',
-                    background: activeCategory === c.id ? COLORS.goldLight : COLORS.paper,
+                    background: activeCategory === c.id ? COLORS.goldLight : COLORS.card,
                     border: `1.5px solid ${activeCategory === c.id ? COLORS.gold : COLORS.line}`,
+                    borderLeft: '4px solid #E2B04A',
                     borderRadius: 14,
                     padding: 14,
                     cursor: 'pointer',
@@ -241,7 +249,7 @@ export default function HelpPage() {
             </div>
 
             {activeCategory === 'technical' || visibleFaqs.length === 0 ? (
-              <div style={{ padding: 16, borderRadius: 12, background: COLORS.paperAlt, border: `1px solid ${COLORS.line}`, fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.5 }}>
+              <div style={{ padding: 16, borderRadius: 12, background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.5 }}>
                 Loading or error issues are usually fixed by refreshing the page or checking your internet connection. Still stuck? Contact support below.
               </div>
             ) : (
@@ -255,10 +263,10 @@ export default function HelpPage() {
             {GUIDES.map((g) => {
               const open = openGuideId === g.id;
               return (
-                <div key={g.id} style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
+                <div key={g.id} style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, marginBottom: 8, overflow: 'hidden' }}>
                   <button
                     onClick={() => setOpenGuideId(open ? null : g.id)}
-                    style={{ width: '100%', textAlign: 'left', background: COLORS.paper, border: 'none', padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
+                    style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, color: COLORS.ink }}
                   >
                     <span>
                       <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 2 }}>{g.title}</span>
@@ -283,7 +291,7 @@ export default function HelpPage() {
                 same modal the FAQ entry above uses. */}
             <button
               onClick={() => setShowAppGuide(true)}
-              style={{ width: '100%', textAlign: 'left', background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
+              style={{ width: '100%', textAlign: 'left', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 14, color: COLORS.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
             >
               <span>
                 <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 2 }}>Use PONNA as an App</span>
@@ -298,7 +306,7 @@ export default function HelpPage() {
       {showAppGuide && <AppGuideModal onClose={() => setShowAppGuide(false)} />}
 
       {/* Contact Support */}
-      <section style={{ background: COLORS.paperAlt, border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: 20, textAlign: 'center' }}>
+      <section style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 20, textAlign: 'center' }}>
         <h3 style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 700, color: COLORS.ink, margin: '0 0 4px' }}>Still need help?</h3>
         <p style={{ fontSize: 13, color: COLORS.inkMuted, margin: '0 0 4px' }}>We&apos;re here to help.</p>
         <p style={{ fontSize: 13, color: COLORS.ink, fontWeight: 600, margin: '0 0 12px' }}>ponna@arlena.in</p>
@@ -309,12 +317,12 @@ export default function HelpPage() {
           href={mailHref}
           style={{
             display: 'block',
-            padding: 13,
-            borderRadius: 10,
-            background: COLORS.ink,
-            color: COLORS.paper,
-            fontWeight: 600,
-            fontSize: 14,
+            padding: 14,
+            borderRadius: 14,
+            background: COLORS.btn,
+            color: COLORS.btnText,
+            fontWeight: 700,
+            fontSize: 15,
             textDecoration: 'none',
             boxSizing: 'border-box',
           }}
@@ -322,6 +330,7 @@ export default function HelpPage() {
           Contact Support →
         </a>
       </section>
+      </div>
     </main>
   );
 }
@@ -332,10 +341,10 @@ function FaqAccordion({ faqs, openId, onToggle }: { faqs: Faq[]; openId: string 
       {faqs.map((f) => {
         const open = openId === f.id;
         return (
-          <div key={f.id} style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
+          <div key={f.id} style={{ background: COLORS.card, border: `1px solid ${open ? COLORS.gold : COLORS.line}`, borderRadius: 14, marginBottom: 8, overflow: 'hidden' }}>
             <button
               onClick={() => onToggle(f.id)}
-              style={{ width: '100%', textAlign: 'left', background: COLORS.paper, border: 'none', padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
+              style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
             >
               <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, lineHeight: 1.4 }}>{f.question}</span>
               <span style={{ fontSize: 15, color: COLORS.gold, flexShrink: 0 }}>{open ? '−' : '+'}</span>
@@ -392,7 +401,7 @@ function AppGuideModal({ onClose }: { onClose: () => void }) {
             </p>
             <button
               onClick={() => setStep('platforms')}
-              style={{ width: '100%', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}
+              style={{ width: '100%', padding: 14, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, border: 'none', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
             >
               Get Started →
             </button>
@@ -440,7 +449,7 @@ function AppGuideModal({ onClose }: { onClose: () => void }) {
 
 function PlatformGuideSection({ title, mockup, steps }: { title: string; mockup: ReactNode; steps: string[] }) {
   return (
-    <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 16, marginBottom: 16 }}>
       <h4 style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: 700, color: COLORS.ink, margin: '0 0 12px' }}>{title}</h4>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>{mockup}</div>
       <ol style={{ margin: 0, padding: '0 0 0 20px', fontSize: 13, color: COLORS.ink, lineHeight: 1.7 }}>
