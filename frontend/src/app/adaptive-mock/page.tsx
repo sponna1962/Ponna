@@ -52,6 +52,14 @@ export default function AdaptiveMockPage() {
 
   useEffect(loadState, []);
 
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const msLeft = state?.access === 'IN_PROGRESS' ? Math.max(0, new Date(state.expiresAt).getTime() - now) : null;
+  const timeLabel = msLeft === null ? '' : `${String(Math.floor(msLeft / 60000)).padStart(2, '0')}:${String(Math.floor((msLeft % 60000) / 1000)).padStart(2, '0')}`;
+
   function loadQuestions(attemptId: string) {
     studentFetch(`/adaptive-mock/attempts/${attemptId}/questions`)
       .then((r) => r.json())
@@ -148,8 +156,9 @@ export default function AdaptiveMockPage() {
 
       {inQuiz && cur && questions && (
         <div>
-          <div style={{ fontSize: 14, color: COLORS.inkMuted, fontWeight: 700, marginBottom: 10 }}>
-            {currentIndex + 1} / {questions.length}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: COLORS.inkMuted, fontWeight: 700, marginBottom: 10 }}>
+            <span>{currentIndex + 1} / {questions.length}</span>
+            <span style={{ color: msLeft !== null && msLeft < 120000 ? COLORS.bad : COLORS.inkMuted }}>⏱ {timeLabel}</span>
           </div>
           <div style={{ height: 8, background: COLORS.line, borderRadius: 4, overflow: 'hidden', marginBottom: 14 }}>
             <div style={{ height: '100%', width: `${((currentIndex + 1) / questions.length) * 100}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)' }} />
