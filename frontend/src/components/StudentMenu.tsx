@@ -66,7 +66,15 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
   const sections: { heading: string; items: NavItem[] }[] = [
     {
       heading: t.menu.sectionPreparation,
-      items: isLoggedIn ? preparationItems : preparationItems.map((i) => ({ ...i, href: '/?startLogin=1', locked: true })),
+      items: isLoggedIn ? preparationItems : preparationItems.map((i) => {
+            // Open to everyone: Study Notes is public; Ask Ponna starts the free 20-question
+            // diagnostic without sign-up; Start Practice opens Login (its 5 free questions
+            // belong to an account) but is not shown as locked.
+            if (i.href === '/study-notes') return i;
+            if (i.href === '/ask-ponna') return { ...i, href: '/ask-ponna?guestDiagnostic=1' };
+            if (i.href === '/quiz') return { ...i, href: '/?startLogin=1' };
+            return { ...i, href: '/?startLogin=1', locked: true };
+          }),
     },
     {
       heading: t.menu.sectionSupport,
