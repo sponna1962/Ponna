@@ -471,8 +471,8 @@ export default function AskPonnaPage() {
               {isLastAssistant && navigateTo && (
                 <div style={{ marginTop: 8, marginLeft: 38 }}>
                   <a
-                    href={getDownloadHref(navigateTo.path)}
-                    download
+                    href={navigateTo.path.startsWith('/') ? navigateTo.path : getDownloadHref(navigateTo.path)}
+                    {...(navigateTo.path.startsWith('/') ? {} : { download: true })}
                     style={{
                       display: 'inline-block',
                       padding: '11px 20px',
