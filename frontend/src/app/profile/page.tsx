@@ -423,124 +423,66 @@ export default function ProfilePage() {
   if (!profile) return <p style={{ padding: 24, color: '#94a3b8' }}>{t.quiz.loading}</p>;
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
-        <StudentMenu />
-        <strong style={{ fontSize: 16 }}>{t.profile.title}</strong>
+    <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 130, background: 'var(--color-paper)', color: 'var(--color-ink)', minHeight: '100dvh' }}>
+      <style>{`.pf-field:focus { outline: none; border-color: var(--color-teal) !important; box-shadow: 0 0 0 3px rgba(28,107,107,0.18); }`}</style>
+      {/* Oct 2026 redesign — teal header, avatar on a gold ring, sectioned cards, sticky Save.
+          All behaviour is unchanged; only presentation. */}
+      <header style={{ background: 'linear-gradient(180deg, var(--color-head1), var(--color-head2))', padding: '14px 16px 64px', color: '#fff', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '3px solid #E2B04A' }}>
+        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <strong style={{ fontSize: 17 }}>{t.profile.title}</strong>
         <div style={{ flex: 1 }} />
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={t.profile.darkMode}
-          title={t.profile.darkMode}
-          style={{ width: 44, height: 28, borderRadius: 14, border: '1px solid #cbd5e1', background: theme === 'dark' ? '#0f172a' : '#e2e8f0', position: 'relative', cursor: 'pointer', padding: 0 }}
-        >
-          <span style={{ position: 'absolute', top: 3, left: theme === 'dark' ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
-        </button>
+        <Switch on={theme === 'dark'} onClick={toggleTheme} label={t.profile.darkMode} onColor="#E2B04A" offColor="rgba(255,255,255,0.25)" />
       </header>
 
-      {/* Sept 2026 — Gamification badges, same data as Dashboard. Tap a
-          badge to share it. Silently absent until the first badge is
-          earned. */}
-      {milestones.length > 0 && (
-        <div style={{ margin: '0 16px 16px', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0' }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', margin: '0 0 10px', letterSpacing: 0.3 }}>{t.dashboard.badgesLabel}</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {milestones.map((m) => (
-              <button
-                key={m.type}
-                onClick={() => shareBadge(m)}
-                style={{ textAlign: 'center', width: 64, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                <p style={{ fontSize: 26, margin: 0 }}>{m.emoji}</p>
-                <p style={{ fontSize: 9, color: '#94a3b8', margin: '2px 0 0', lineHeight: 1.2 }}>{m.label}</p>
-              </button>
-            ))}
-          </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -52 }}>
+        <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto} aria-label="Change photo" style={{ position: 'relative', border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
+          {profile.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.photoUrl} alt="" style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--color-paper)', boxShadow: '0 0 0 3px #E2B04A', opacity: uploadingPhoto ? 0.5 : 1 }} />
+          ) : (
+            <div style={{ width: 96, height: 96, borderRadius: '50%', background: 'var(--color-goldDisc)', border: '4px solid var(--color-paper)', boxShadow: '0 0 0 3px #E2B04A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, fontWeight: 700, color: 'var(--color-gold)', opacity: uploadingPhoto ? 0.5 : 1 }}>
+              {(profile.name || '?').trim().charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span style={{ position: 'absolute', right: -4, bottom: -4, width: 32, height: 32, borderRadius: '50%', background: 'var(--color-btn)', color: 'var(--color-btnText)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: '3px solid var(--color-paper)' }}>
+            {uploadingPhoto ? '…' : '📷'}
+          </span>
+        </button>
+        <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoSelected} style={{ display: 'none' }} />
+        {photoError && <p style={{ fontSize: 12, color: 'var(--color-bad)', marginTop: 8 }}>{photoError}</p>}
+        {profile.name && <p style={{ fontSize: 20, fontWeight: 700, margin: '12px 0 2px' }}>{profile.name}</p>}
+        {profile.phone && <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ok)', margin: 0 }}>✓ {t.profile.phone} — Verified</p>}
+      </div>
+
+      {cameFromGate && !profile.profileComplete && (
+        <div style={{ background: 'var(--color-goldDisc)', border: '1px solid #E2B04A', borderRadius: 14, padding: 14, margin: '16px 16px 0' }}>
+          <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.completeYourProfile}</strong>
+          <span style={{ fontSize: 13, color: 'var(--color-inkMuted)' }}>{t.profile.completeProfileNote}</span>
         </div>
       )}
 
-      {/* Sept 2026 — Push Notifications (Priority 1, Accessibility &
-          Reach). Hidden entirely if VAPID keys aren't configured on the
-          backend yet, rather than offering a toggle that would silently
-          do nothing. Opt-in only, surfaced here (not a popup) — matches
-          the "non-spam" scope agreed for this release. */}
-      {pushStatus?.configured && (
-        <div style={{ margin: '0 16px 16px', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 600, margin: '0 0 2px' }}>🔔 Notifications</p>
-            <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Daily Challenge, streak reminders, exam updates</p>
-          </div>
-          <button
-            type="button"
-            disabled={pushBusy}
-            onClick={() => (pushStatus.subscribed ? disablePushNotifications() : enablePushNotifications())}
-            aria-label="Toggle notifications"
-            style={{
-              width: 44,
-              height: 28,
-              borderRadius: 14,
-              border: '1px solid #cbd5e1',
-              background: pushStatus.subscribed ? '#0f172a' : '#e2e8f0',
-              position: 'relative',
-              cursor: 'pointer',
-              padding: 0,
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ position: 'absolute', top: 3, left: pushStatus.subscribed ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
-          </button>
+      {cameFromGate && (!profile.phone || !profile.email) && (
+        <div style={{ background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 14, padding: 14, margin: '16px 16px 0' }}>
+          <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.freePreviewGateTitle}</strong>
+          <span style={{ fontSize: 13, color: 'var(--color-inkMuted)' }}>
+            {!profile.phone && !profile.email ? t.profile.freePreviewGateBothMissing : !profile.phone ? t.profile.freePreviewGatePhoneMissing : t.profile.freePreviewGateEmailMissing}
+          </span>
         </div>
       )}
 
-      <div style={{ padding: '0 20px' }}>
-        {cameFromGate && !profile.profileComplete && (
-          <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: 14, marginBottom: 20 }}>
-            <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.completeYourProfile}</strong>
-            <span style={{ fontSize: 13, color: '#78350f' }}>{t.profile.completeProfileNote}</span>
-          </div>
-        )}
-
-        {cameFromGate && (!profile.phone || !profile.email) && (
-          <div style={{ background: '#fef3c7', border: '1.5px solid #f59e0b', borderRadius: 10, padding: 14, marginBottom: 20 }}>
-            <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.freePreviewGateTitle}</strong>
-            <span style={{ fontSize: 13, color: '#78350f' }}>
-              {!profile.phone && !profile.email ? t.profile.freePreviewGateBothMissing : !profile.phone ? t.profile.freePreviewGatePhoneMissing : t.profile.freePreviewGateEmailMissing}
-            </span>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
-          <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto} style={{ position: 'relative', border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-            {profile.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.photoUrl} alt="" style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0', opacity: uploadingPhoto ? 0.5 : 1 }} />
-            ) : (
-              <div style={{ width: 88, height: 88, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 700, color: '#64748b', opacity: uploadingPhoto ? 0.5 : 1 }}>
-                {(profile.name || '?').trim().charAt(0).toUpperCase()}
-              </div>
-            )}
-            <span style={{ position: 'absolute', right: -2, bottom: -2, width: 28, height: 28, borderRadius: '50%', background: '#0f172a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, border: '2px solid #fff' }}>
-              {uploadingPhoto ? '…' : '📷'}
-            </span>
-          </button>
-          <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoSelected} style={{ display: 'none' }} />
-          {photoError && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>{photoError}</p>}
-        </div>
-
-        <SectionHeading>{t.profile.personalInfo}</SectionHeading>
+      <Card title={t.profile.personalInfo}>
         <TextField label={t.profile.name} required value={name} onChange={setName} />
         <DateField label={t.profile.dateOfBirth} required value={dateOfBirth} onChange={setDateOfBirth} />
         <TextField label={t.profile.email} required type="email" value={email} onChange={setEmail} />
 
-        <div id="phone-number-field" style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
-            {t.profile.phone} {!profile.phone && <span style={{ color: '#dc2626' }}>*</span>}
+        <div id="phone-number-field" style={{ marginBottom: 14 }}>
+          <label style={LABEL}>
+            {t.profile.phone} {!profile.phone && <span style={{ color: 'var(--color-bad)' }}>*</span>}
           </label>
           {profile.phone ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
-              <span style={{ color: '#334155', fontSize: 14 }}>{profile.phone}</span>
-              <span style={{ color: '#16a34a', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>✓ Verified</span>
+            <div style={{ ...FIELD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <span style={{ fontSize: 16, fontWeight: 500 }}>{profile.phone}</span>
+              <span style={{ color: 'var(--color-ok)', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>✓ Verified</span>
             </div>
           ) : (
             <>
@@ -551,7 +493,7 @@ export default function ProfilePage() {
                 placeholder="9876543210"
                 disabled={phoneLinkStep === 'enterOtp' || verifyingPhone}
                 autoComplete="tel"
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box', background: phoneLinkStep === 'enterOtp' ? '#f8fafc' : '#fff' }}
+                className="pf-field" style={FIELD}
               />
               <div ref={phoneRecaptchaRef} />
               {phoneLinkStep === 'idle' && (
@@ -559,14 +501,14 @@ export default function ProfilePage() {
                   type="button"
                   onClick={sendPhoneVerification}
                   disabled={verifyingPhone || !phoneToVerify.trim()}
-                  style={{ width: '100%', marginTop: 8, padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#111827', fontWeight: 700, cursor: verifyingPhone || !phoneToVerify.trim() ? 'not-allowed' : 'pointer', opacity: verifyingPhone || !phoneToVerify.trim() ? 0.55 : 1 }}
+                  style={{ width: '100%', marginTop: 8, padding: 12, borderRadius: 12, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)', fontWeight: 700, cursor: verifyingPhone || !phoneToVerify.trim() ? 'not-allowed' : 'pointer', opacity: verifyingPhone || !phoneToVerify.trim() ? 0.55 : 1 }}
                 >
                   📱 {verifyingPhone ? 'Sending OTP…' : t.profile.verifyPhone}
                 </button>
               )}
               {phoneLinkStep === 'enterOtp' && (
                 <div style={{ marginTop: 8 }}>
-                  <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>{t.login.otpLabel}</label>
+                  <label style={{ display: 'block', fontSize: 13, color: 'var(--color-inkMuted)', marginBottom: 6 }}>{t.login.otpLabel}</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -574,32 +516,33 @@ export default function ProfilePage() {
                     onChange={(e) => setPhoneOtp(e.target.value)}
                     placeholder={t.login.otpPlaceholder}
                     autoFocus
-                    style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box', marginBottom: 8 }}
+                    className="pf-field" style={{ ...FIELD, marginBottom: 8 }}
                   />
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button type="button" onClick={() => { setPhoneLinkStep('idle'); setPhoneOtp(''); setPhoneLinkMessage(null); }} style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff' }}>
+                    <button type="button" onClick={() => { setPhoneLinkStep('idle'); setPhoneOtp(''); setPhoneLinkMessage(null); }} style={{ flex: 1, padding: 12, borderRadius: 12, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)' }}>
                       {t.login.cancel}
                     </button>
-                    <button type="button" onClick={confirmPhoneVerification} disabled={verifyingPhone || !phoneOtp.trim()} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, opacity: verifyingPhone || !phoneOtp.trim() ? 0.55 : 1 }}>
+                    <button type="button" onClick={confirmPhoneVerification} disabled={verifyingPhone || !phoneOtp.trim()} style={{ flex: 1, padding: 12, borderRadius: 12, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, opacity: verifyingPhone || !phoneOtp.trim() ? 0.55 : 1 }}>
                       {verifyingPhone ? '…' : t.login.verify}
                     </button>
                   </div>
                 </div>
               )}
-              {phoneLinkMessage && <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? '#16a34a' : '#dc2626', margin: '8px 0 0' }}>{phoneLinkMessage.text}</p>}
+              {phoneLinkMessage && <p style={{ fontSize: 13, color: phoneLinkMessage.ok ? 'var(--color-ok)' : 'var(--color-bad)', margin: '8px 0 0' }}>{phoneLinkMessage.text}</p>}
             </>
           )}
         </div>
 
         <TextField label={t.profile.whatsapp} required type="tel" value={whatsapp} onChange={setWhatsapp} />
         <TextField label={t.profile.district} required value={district} onChange={setDistrict} />
-        <TextField label={t.profile.cityTownVillage} required value={city} onChange={setCity} />
+        <TextField label={t.profile.cityTownVillage} required value={city} onChange={setCity} last />
+      </Card>
 
-        <SectionHeading>{t.profile.education}</SectionHeading>
-        <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
-          {t.profile.educationStatus} {!educationStatus && <span style={{ color: '#dc2626' }}>*</span>}
+      <Card title={t.profile.education}>
+        <label style={LABEL}>
+          {t.profile.educationStatus} {!educationStatus && <span style={{ color: 'var(--color-bad)' }}>*</span>}
         </label>
-        <select value={educationStatus} onChange={(e) => setEducationStatus(e.target.value as EducationStatus)} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 12 }}>
+        <select value={educationStatus} onChange={(e) => setEducationStatus(e.target.value as EducationStatus)} className="pf-field" style={{ ...FIELD, marginBottom: 14 }}>
           <option value="">—</option>
           <option value="SCHOOL_STUDENT">{t.profile.educationSchool}</option>
           <option value="COLLEGE_STUDENT">{t.profile.educationCollege}</option>
@@ -614,14 +557,14 @@ export default function ProfilePage() {
           </>
         )}
         {educationStatus === 'COMPLETED_STUDIES' && (
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
-              {t.profile.highestQualification} {!highestQualification && <span style={{ color: '#dc2626' }}>*</span>}
+          <div style={{ marginBottom: 14 }}>
+            <label style={LABEL}>
+              {t.profile.highestQualification} {!highestQualification && <span style={{ color: 'var(--color-bad)' }}>*</span>}
             </label>
             <select
               value={highestQualification}
               onChange={(e) => setHighestQualification(e.target.value)}
-              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+              className="pf-field" style={FIELD}
             >
               <option value="">—</option>
               {QUALIFICATION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -633,15 +576,15 @@ export default function ProfilePage() {
                 value={otherQualificationText}
                 onChange={(e) => setOtherQualificationText(e.target.value)}
                 placeholder="Please specify your qualification"
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box', marginTop: 8 }}
+                className="pf-field" style={{ ...FIELD, marginTop: 8 }}
               />
             )}
           </div>
         )}
 
-        <label style={{ display: 'block', marginBottom: 16 }}>
-          <span style={{ fontSize: 13, color: '#64748b', display: 'block', marginBottom: 6 }}>{t.profile.communityLabel}</span>
-          <select value={community} onChange={(e) => setCommunity(e.target.value)} style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}>
+        <label style={{ display: 'block' }}>
+          <span style={LABEL}>{t.profile.communityLabel}</span>
+          <select value={community} onChange={(e) => setCommunity(e.target.value)} className="pf-field" style={{ ...FIELD, marginBottom: 6 }}>
             <option value="">{t.profile.communitySkip}</option>
             <option value="OC">OC</option>
             <option value="BC">BC</option>
@@ -651,62 +594,122 @@ export default function ProfilePage() {
             <option value="SCA">SC(A)</option>
             <option value="ST">ST</option>
           </select>
-          <span style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginTop: 4 }}>{t.profile.communityNote}</span>
+          <span style={{ fontSize: 11.5, color: 'var(--color-inkMuted)', display: 'block' }}>{t.profile.communityNote}</span>
         </label>
+      </Card>
 
-        <button onClick={save} disabled={saving} style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600, marginTop: 8, marginBottom: 8 }}>
-          {saving ? '…' : t.profile.save}
-        </button>
-        {saved && <p style={{ color: '#16a34a', fontSize: 13, marginBottom: 16 }}>{t.profile.saved}</p>}
-        {saveError && <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 16 }}>{saveError}</p>}
+      {/* Sept 2026 — Gamification badges, same data as Dashboard. Tap a
+          badge to share it. Silently absent until the first badge is earned. */}
+      {milestones.length > 0 && (
+        <Card title={t.dashboard.badgesLabel}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {milestones.map((m) => (
+              <button key={m.type} onClick={() => shareBadge(m)} style={{ textAlign: 'center', width: 64, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }}>
+                <p style={{ fontSize: 28, margin: 0 }}>{m.emoji}</p>
+                <p style={{ fontSize: 10.5, color: 'var(--color-inkMuted)', margin: '2px 0 0', lineHeight: 1.2 }}>{m.label}</p>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
-        <SectionHeading>{t.profile.account}</SectionHeading>
-        <a href="/plans" style={{ display: 'block', textAlign: 'center', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', color: '#0f172a', textDecoration: 'none', fontWeight: 600, marginBottom: 12 }}>
+      {/* Sept 2026 — Push Notifications. Hidden entirely if VAPID keys aren't
+          configured on the backend, rather than offering a dead toggle. */}
+      {pushStatus?.configured && (
+        <Card title="அறிவிப்புகள் / Notifications">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 700, margin: '0 0 2px' }}>🔔 Notifications</p>
+              <p style={{ fontSize: 12, color: 'var(--color-inkMuted)', margin: 0 }}>Daily Challenge, streak reminders, exam updates</p>
+            </div>
+            <Switch on={!!pushStatus.subscribed} disabled={pushBusy} onClick={() => (pushStatus.subscribed ? disablePushNotifications() : enablePushNotifications())} label="Toggle notifications" onColor="var(--color-teal)" offColor="var(--color-line)" />
+          </div>
+        </Card>
+      )}
+
+      <Card title={t.profile.account}>
+        <a href="/plans" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, background: 'var(--color-field)', border: '1.5px solid var(--color-line)', color: 'var(--color-ink)', textDecoration: 'none', fontWeight: 700, marginBottom: 12 }}>
           {t.profile.viewMyPlans}
+          <span style={{ color: 'var(--color-gold)', fontSize: 22, lineHeight: 1 }}>›</span>
         </a>
 
-        <button onClick={connectGoogle} disabled={connectingGoogle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#1f2937', fontWeight: 600, marginBottom: 8 }}>
+        <button onClick={connectGoogle} disabled={connectingGoogle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: 13, borderRadius: 12, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)', fontWeight: 700, fontSize: 15 }}>
           {connectingGoogle ? '…' : `🔵 ${t.profile.connectGoogle}`}
         </button>
-        {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? '#16a34a' : '#dc2626', marginBottom: 16 }}>{googleLinkMessage.text}</p>}
+        {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? 'var(--color-ok)' : 'var(--color-bad)', margin: '10px 0 0' }}>{googleLinkMessage.text}</p>}
+      </Card>
 
-        <ReferralSection />
+      <ReferralSection />
 
-        {profile.isTestAccount && (
-          <div style={{ border: '1px solid #fecaca', borderRadius: 10, padding: 14, marginTop: 20 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', marginBottom: 8 }}>🧪 TEST ACCOUNT</p>
-            <button onClick={resetHistory} disabled={resettingHistory} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #dc2626', color: '#dc2626', background: '#fff', fontSize: 13, fontWeight: 600 }}>
-              {resettingHistory ? '…' : 'Reset My Quiz History & Score'}
-            </button>
-          </div>
-        )}
+      {profile.isTestAccount && (
+        <div style={{ border: '1px solid var(--color-bad)', borderRadius: 14, padding: 14, margin: '16px 16px 0' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-bad)', marginBottom: 8 }}>🧪 TEST ACCOUNT</p>
+          <button onClick={resetHistory} disabled={resettingHistory} style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid var(--color-bad)', color: 'var(--color-bad)', background: 'var(--color-card)', fontSize: 13, fontWeight: 600 }}>
+            {resettingHistory ? '…' : 'Reset My Quiz History & Score'}
+          </button>
+        </div>
+      )}
+
+      {/* Sticky Save — always reachable on this long page. */}
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '14px 16px 16px', background: 'linear-gradient(transparent, var(--color-paper) 40%)', zIndex: 5 }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+          {saved && <p style={{ color: 'var(--color-ok)', fontSize: 13, fontWeight: 700, margin: '0 0 6px', textAlign: 'center' }}>{t.profile.saved}</p>}
+          {saveError && <p style={{ color: 'var(--color-bad)', fontSize: 13, margin: '0 0 6px', textAlign: 'center' }}>{saveError}</p>}
+          <button onClick={save} disabled={saving} style={{ width: '100%', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 17, boxShadow: '0 10px 24px -10px rgba(15,47,51,0.7)' }}>
+            {saving ? '…' : t.profile.save}
+          </button>
+        </div>
       </div>
     </main>
   );
 }
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return <h2 style={{ fontSize: 13, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, margin: '20px 0 10px' }}>{children}</h2>;
+
+const FIELD: React.CSSProperties = {
+  width: '100%', padding: '13px 14px', borderRadius: 12, border: '1.5px solid var(--color-line)',
+  background: 'var(--color-field)', color: 'var(--color-ink)', fontSize: 16, boxSizing: 'border-box', fontFamily: 'inherit',
+};
+const LABEL: React.CSSProperties = { display: 'block', fontSize: 13, color: 'var(--color-inkMuted)', marginBottom: 6, fontWeight: 500 };
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderRadius: 18, padding: 16, margin: '16px 16px 0', boxShadow: '0 8px 24px -18px rgba(15,47,51,0.5)' }}>
+      <h2 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 700, margin: '0 0 14px', color: 'var(--color-ink)' }}>
+        <span style={{ width: 5, height: 18, borderRadius: 3, background: '#E2B04A' }} />
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
 }
 
-function TextField({ label, value, onChange, required, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; required?: boolean; type?: string }) {
+function Switch({ on, onClick, label, onColor, offColor, disabled }: { on: boolean; onClick: () => void; label: string; onColor: string; offColor: string; disabled?: boolean }) {
   return (
-    <div style={{ marginBottom: 12 }}>
-      <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
-        {label} {required && !value && <span style={{ color: '#dc2626' }}>*</span>}
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} role="switch" aria-checked={on}
+      style={{ width: 46, height: 28, borderRadius: 14, border: 'none', background: on ? onColor : offColor, position: 'relative', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+      <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 22, height: 22, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+    </button>
+  );
+}
+
+function TextField({ label, value, onChange, required, type = 'text', last }: { label: string; value: string; onChange: (v: string) => void; required?: boolean; type?: string; last?: boolean }) {
+  return (
+    <div style={{ marginBottom: last ? 0 : 14 }}>
+      <label style={LABEL}>
+        {label} {required && !value && <span style={{ color: 'var(--color-bad)' }}>*</span>}
       </label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="pf-field" style={FIELD} />
     </div>
   );
 }
 
 function DateField({ label, value, onChange, required }: { label: string; value: string; onChange: (v: string) => void; required?: boolean }) {
   return (
-    <div style={{ marginBottom: 12 }}>
-      <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
-        {label} {required && !value && <span style={{ color: '#dc2626' }}>*</span>}
+    <div style={{ marginBottom: 14 }}>
+      <label style={LABEL}>
+        {label} {required && !value && <span style={{ color: 'var(--color-bad)' }}>*</span>}
       </label>
-      <input type="date" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+      <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className="pf-field" style={FIELD} />
     </div>
   );
 }
@@ -732,14 +735,14 @@ function ReferralSection() {
   }
 
   return (
-    <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginTop: 20 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>🎁 Invite &amp; Earn</p>
-      <p style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>Invite a friend — you both get a reward once they get a paid plan.</p>
+    <div style={{ background: 'linear-gradient(135deg, var(--color-goldDisc), var(--color-card))', border: '1px solid var(--color-line)', borderRadius: 18, padding: 16, margin: '16px 16px 0' }}>
+      <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>🎁 Invite &amp; Earn</p>
+      <p style={{ fontSize: 13, color: 'var(--color-inkMuted)', marginBottom: 12 }}>Invite a friend — you both get a reward once they get a paid plan.</p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <input readOnly value={shareLink} style={{ flex: 1, padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, background: '#f8fafc' }} />
-        <button onClick={copyLink} style={{ padding: '8px 14px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', fontSize: 12, fontWeight: 600 }}>{copied ? '✓' : 'Copy'}</button>
+        <input readOnly value={shareLink} style={{ ...FIELD, flex: 1, padding: 10, borderRadius: 10, fontSize: 12, minWidth: 0 }} />
+        <button onClick={copyLink} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontSize: 13, fontWeight: 700 }}>{copied ? '✓' : 'Copy'}</button>
       </div>
-      <p style={{ fontSize: 11, color: '#94a3b8' }}>{info.totalReferred} invited · {info.totalRewarded} rewarded · {info.pending} pending</p>
+      <p style={{ fontSize: 12, color: 'var(--color-inkMuted)' }}>{info.totalReferred} invited · {info.totalRewarded} rewarded · {info.pending} pending</p>
     </div>
   );
 }

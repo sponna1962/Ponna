@@ -38,6 +38,17 @@ export function ThemeStyles() {
         --color-gold: #A8791F;
         --color-goldLight: #EFE0BC;
         --color-line: #E4DFD0;
+        /* Oct 2026 — extra tokens for the redesigned profile page */
+        --color-card: #FFFFFF;
+        --color-field: #FBF8EE;
+        --color-teal: #1c6b6b;
+        --color-ok: #1e8a3b;
+        --color-bad: #c0392b;
+        --color-goldDisc: #F3E7C7;
+        --color-head1: #0c2f3f;
+        --color-head2: #1c6b6b;
+        --color-btn: #0F2F33;
+        --color-btnText: #FFE9A8;
       }
       [data-theme='dark'] {
         --color-paper: #14161F;
@@ -47,6 +58,16 @@ export function ThemeStyles() {
         --color-gold: #D9A94A;
         --color-goldLight: #3A331C;
         --color-line: #2E3145;
+        --color-card: #1D2030;
+        --color-field: #161827;
+        --color-teal: #5cc2b6;
+        --color-ok: #4cc16b;
+        --color-bad: #ff8a7d;
+        --color-goldDisc: #3A331C;
+        --color-head1: #0a1a24;
+        --color-head2: #14494b;
+        --color-btn: #E2B04A;
+        --color-btnText: #1b1300;
       }
     `}</style>
   );
