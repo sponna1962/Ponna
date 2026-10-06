@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
+import { translations } from '../../lib/translations';
 import { studentFetch } from '../../lib/student-fetch';
 
 // Sept 2026 (explicit request) — some official syllabi include a subject
@@ -772,7 +773,10 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 // /subject-preference/* routes as-is, no backend changes needed here.
 type PrefSubject = { id: string; name: string; nameTa?: string | null };
 
-function SubjectPreferenceField({ subCategoryId, t, resetOnFreshVisit, practiceLanguage }: { subCategoryId: string; t: any; resetOnFreshVisit?: boolean; practiceLanguage?: 'TA' | 'EN' | '' }) {
+function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, practiceLanguage }: { subCategoryId: string; t: any; resetOnFreshVisit?: boolean; practiceLanguage?: 'TA' | 'EN' | '' }) {
+  // Oct 2026 — this picker's own wording follows the chosen PRACTICE language
+  // (Tamil practice → Tamil wording), falling back to the app language.
+  const t = practiceLanguage === 'TA' ? translations.ta : practiceLanguage === 'EN' ? translations.en : appT;
   const [subjects, setSubjects] = useState<PrefSubject[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
