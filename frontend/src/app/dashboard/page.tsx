@@ -20,11 +20,6 @@ type DashboardData = {
   rankUnlocked: boolean;
 };
 
-// One shared card system for every section — same border, radius, and a
-// consistent horizontal padding scale — so nothing on the page reads as
-// visually disconnected from anything else.
-const CARD = { border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '16px 16px' };
-
 export default function DashboardPage() {
   const { t } = useLanguage();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -138,305 +133,249 @@ export default function DashboardPage() {
 
   const insight = !hasAnswered ? t.dashboard.insightEmpty : t.dashboard.insightSome(answered, correct);
 
+  const SECTION_H2 = { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: 700, color: COLORS.ink, margin: '22px 0 10px', display: 'flex', alignItems: 'center', gap: 8 } as const;
+  const MARK = <span aria-hidden="true" style={{ width: 5, height: 18, borderRadius: 3, background: '#E2B04A', display: 'inline-block' }} />;
+  const LABEL = { fontSize: 12.5, fontWeight: 700, color: 'var(--color-gold)', margin: '0 0 4px' } as const;
+  const BOX = { background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: '14px 16px' } as const;
+  const PILL_BTN = { display: 'inline-block', padding: '10px 18px', borderRadius: 999, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: 'pointer' } as const;
+
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, paddingBottom: 30, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
 
-      {/* Milestone celebration (finalized requirement) — shown once per
-          newly-achieved badge, dismissible, never re-shown for the same
-          badge on a later visit. */}
-      {newBadge && (
-        <div
-          onClick={() => setNewBadge(null)}
-          style={{ ...CARD, background: COLORS.goldLight, marginBottom: 14, textAlign: 'center', cursor: 'pointer', border: `1px solid ${COLORS.gold}` }}
-        >
-          <p style={{ fontSize: 28, margin: '0 0 4px' }}>{newBadge.emoji}</p>
-          <p style={{ fontSize: 14, fontWeight: 700, color: '#5C4009', margin: 0 }}>{t.dashboard.newBadge(newBadge.label)}</p>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-        <StudentMenu />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 70px', background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
         {photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={photoUrl} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${COLORS.line}` }} />
+          <img src={photoUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E2B04A' }} />
         ) : null}
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.dashboard.title}</h1>
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.dashboard.title}</h1>
         {streak && streak.currentStreak > 0 && (
-          <span
-            style={{
-              marginLeft: 'auto',
-              fontSize: 13,
-              fontWeight: 700,
-              color: '#B4544A',
-              background: COLORS.goldLight,
-              padding: '4px 10px',
-              borderRadius: 20,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 800, color: '#8a3b00', background: 'var(--color-goldDisc)', padding: '5px 12px', borderRadius: 999, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
             🔥 {streak.currentStreak}
           </span>
         )}
       </div>
 
-      {/* Sept 2026 — Exam Countdown (Personalization). Same data/rules
-          as Home. */}
-      {examCountdown && (
-        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 12, marginBottom: 12, background: COLORS.goldLight, textAlign: 'center' }}>
-          <p style={{ fontSize: 12, color: '#7A5A14', margin: '0 0 2px', fontWeight: 600 }}>{examCountdown.subCategoryName}</p>
-          <p style={{ fontSize: 22, fontWeight: 800, color: '#5C4009', margin: 0, fontFamily: FONT_FAMILY }}>
-            இன்னும் {examCountdown.daysRemaining} நாட்கள்
-          </p>
-        </div>
-      )}
-
-      {/* Sept 2026 — "this month" effort summary (world-class-polish
-          quick win). Reuses the same /students/me/monthly-summary as
-          Home — same numbers everywhere, one source of truth. */}
-      {monthlySummary && monthlySummary.questionsAnswered > 0 && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 12, marginBottom: 12, background: COLORS.paperAlt }}>
-          <p style={{ fontSize: 11, color: COLORS.inkMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
-            இந்த மாதம் / This Month
-          </p>
-          <p style={{ fontSize: 14, color: COLORS.ink, fontWeight: 600, margin: 0 }}>
-            {monthlySummary.questionsAnswered} கேள்விகள் · {monthlySummary.timeSpentMinutes} நிமிடங்கள்
-            {monthlySummary.currentStreak > 0 && <> · {monthlySummary.currentStreak} நாள் streak</>}
-          </p>
-        </div>
-      )}
-
-      {/* Sept 2026 — Weak-Area Alert. Same source/rules as Home — see
-          weak-area.service.ts's header comment. */}
-      {weakArea && (
-        <div style={{ border: '1px solid #F3D9A8', borderRadius: 10, padding: 12, marginBottom: 12, background: '#FFF8EC' }}>
-          <p style={{ fontSize: 11, color: '#92400E', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
-            கவனிக்க வேண்டிய பகுதி / Weak Area
-          </p>
-          <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 10px', lineHeight: 1.5 }}>
-            <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
-          </p>
-          <button
-            disabled={settingWeakAreaPractice}
-            onClick={async () => {
-              setSettingWeakAreaPractice(true);
-              await studentFetch(`/subject-preference/${weakArea.subCategoryId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subjectIds: [weakArea.subjectId], topicIds: [] }),
-              });
-              window.location.href = '/quiz';
-            }}
-            style={{ padding: '9px 16px', borderRadius: 8, background: '#92400E', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-          >
-            {settingWeakAreaPractice ? '...' : 'இப்போ Practice பண்ணுங்க'}
-          </button>
-        </div>
-      )}
-
-      {/* Overall Performance — fully vertical, centered composition: label,
-          ring, then one compact stats line. No side-by-side layout, so
-          there's no leftover space on the left/right of a narrow ring. */}
-      <div style={{ ...CARD, marginBottom: 12, textAlign: 'center' }}>
-        <p style={{ fontSize: 11, color: COLORS.inkMuted, fontWeight: 600, letterSpacing: 0.3, margin: '0 0 12px' }}>{t.dashboard.overallTitle}</p>
-        <ProgressRing percent={accuracy} />
-        <p style={{ fontSize: 13, color: COLORS.ink, margin: '14px 0 0' }}>
-          <b style={{ color: COLORS.ink, fontWeight: 700 }}>{answered}</b> {t.dashboard.answered}
-          <span style={{ color: COLORS.line, margin: '0 8px' }}>·</span>
-          <b style={{ color: COLORS.gold, fontWeight: 700 }}>{correct}</b> {t.dashboard.correct}
-          <span style={{ color: COLORS.line, margin: '0 8px' }}>·</span>
-          <b style={{ color: '#B4544A', fontWeight: 700 }}>{incorrect}</b> {t.dashboard.incorrect}
-        </p>
-      </div>
-
-      {/* Performance Insight — same card system as everything else,
-          tinted rather than bordered-plain to read as "a note", not
-          another stat block. */}
-      <div style={{ ...CARD, background: COLORS.paperAlt, marginBottom: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <span style={{ fontSize: 14, lineHeight: 1.4 }}>💡</span>
-        <div>
-          <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 3px', letterSpacing: 0.3 }}>{t.dashboard.insightLabel}</p>
-          <p style={{ fontSize: 13, color: COLORS.ink, lineHeight: 1.55, margin: 0 }}>{insight}</p>
-        </div>
-      </div>
-
-      {/* Ask Ponna proactive nudge (finalized requirement — "world-class"
-          polish, proactive not just reactive). Rule-based, computed
-          server-side, no AI call for this card itself — only shows when
-          something genuinely actionable applies (long inactivity, a real
-          weak area, or a pending-mistakes backlog); silently absent
-          otherwise, never a generic filler message. */}
-      {nudge && (
-        <a
-          href={`/ask-ponna?prefill=${encodeURIComponent(nudge.suggestedMessage)}`}
-          style={{ ...CARD, background: COLORS.goldLight, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'flex-start', textDecoration: 'none' }}
-        >
-          <span style={{ fontSize: 14, lineHeight: 1.4 }}>🎯</span>
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: '#7A5A14', margin: '0 0 3px', letterSpacing: 0.3 }}>Ask Ponna</p>
-            <p style={{ fontSize: 13, color: COLORS.ink, lineHeight: 1.55, margin: 0 }}>{nudge.message}</p>
-          </div>
-        </a>
-      )}
-
-      {/* Parent/Mentor Progress Sharing (finalized requirement) — a
-          student-initiated, revocable, read-only public link. Default
-          private; never PII, only accuracy/streak/subject performance. */}
-      <div style={{ ...CARD, marginBottom: 18 }}>
-        <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 8px', letterSpacing: 0.3 }}>{t.dashboard.shareProgressLabel}</p>
-        {shareToken ? (
-          <>
-            <p style={{ fontSize: 12, color: COLORS.inkMuted, marginBottom: 8, wordBreak: 'break-all' }}>
-              {typeof window !== 'undefined' ? `${window.location.origin}/shared/${shareToken}` : ''}
-            </p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => navigator.clipboard.writeText(`${window.location.origin}/shared/${shareToken}`)}
-                style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${COLORS.line}`, background: COLORS.paper, fontSize: 12, fontWeight: 600 }}
-              >
-                {t.dashboard.copyLink}
-              </button>
-              <button onClick={revokeShareLink} style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', fontSize: 12, fontWeight: 600 }}>
-                {t.dashboard.revokeLink}
-              </button>
-            </div>
-          </>
-        ) : (
-          <button
-            onClick={createShareLink}
-            disabled={sharing}
-            style={{ width: '100%', padding: 10, borderRadius: 8, border: 'none', background: COLORS.ink, color: COLORS.paper, fontSize: 13, fontWeight: 600 }}
-          >
-            {sharing ? '…' : t.dashboard.createShareLink}
-          </button>
-        )}
-      </div>
-
-      {/* Milestone Badges (finalized requirement) — silently absent until
-          the first badge is earned, never an empty-state placeholder.
-          Sept 2026: tap a badge to share it (Web Share API, WhatsApp
-          fallback) — social proof + light viral growth. */}
-      {milestones.length > 0 && (
-        <div style={{ ...CARD, marginBottom: 18 }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 10px', letterSpacing: 0.3 }}>{t.dashboard.badgesLabel}</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {milestones.map((m) => (
-              <button
-                key={m.type}
-                onClick={() => shareBadge(m)}
-                style={{ textAlign: 'center', width: 64, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                <p style={{ fontSize: 26, margin: 0 }}>{m.emoji}</p>
-                <p style={{ fontSize: 9, color: COLORS.inkMuted, margin: '2px 0 0', lineHeight: 1.2 }}>{m.label}</p>
-              </button>
-            ))}
+      {/* Overall performance — the one thing students look at first. */}
+      <div style={{ margin: '-56px 16px 14px', background: 'linear-gradient(160deg,#0c2f3f,#1c6b6b)', borderBottom: '4px solid #E2B04A', borderRadius: 20, padding: '20px 16px', color: '#fff', boxShadow: '0 14px 30px -18px rgba(0,0,0,0.6)' }}>
+        <div style={{ width: 140, height: 140, borderRadius: '50%', margin: '0 auto 6px', background: `conic-gradient(#E2B04A 0 ${accuracy}%, rgba(255,255,255,0.18) 0)`, display: 'grid', placeItems: 'center' }}>
+          <div style={{ width: 112, height: 112, borderRadius: '50%', background: '#0f4a52', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: FONT_FAMILY, fontSize: 34, fontWeight: 800, lineHeight: 1 }}>{accuracy}%</span>
+            <small style={{ fontSize: 12, color: '#FFE9A8', marginTop: 4 }}>{t.dashboard.overallTitle}</small>
           </div>
         </div>
-      )}
-
-      {/* Time-Management Analytics (finalized requirement) — framed as
-          "room to improve" against TNPSC's real exam time pressure, never
-          as a negative judgement. Silently absent until there's at least
-          some timed data. */}
-      {timeAnalytics && (
-        <div style={{ ...CARD, marginBottom: 18 }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 8px', letterSpacing: 0.3 }}>{t.dashboard.timeAnalyticsLabel}</p>
-          <p style={{ fontSize: 13, color: COLORS.ink, marginBottom: 8 }}>{t.dashboard.avgTimeOverall(timeAnalytics.overallAverageSeconds)}</p>
-          {timeAnalytics.byDifficulty.map((d) => (
-            <div key={d.difficulty} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: `1px solid ${COLORS.line}`, fontSize: 12 }}>
-              <span style={{ color: COLORS.inkMuted }}>{t.dashboard.buckets[d.difficulty as 'EASY' | 'MEDIUM' | 'HARD'] ?? d.difficulty}</span>
-              <span style={{ fontWeight: 600 }}>{t.dashboard.secondsPerQuestion(d.averageSeconds)}</span>
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          {[
+            { n: answered, label: t.dashboard.answered, color: '#fff' },
+            { n: correct, label: t.dashboard.correct, color: '#9ff0b5' },
+            { n: incorrect, label: t.dashboard.incorrect, color: '#ffb4a8' },
+          ].map((x) => (
+            <div key={x.label} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: '10px 4px', textAlign: 'center' }}>
+              <b style={{ display: 'block', fontSize: 22, color: x.color }}>{x.n}</b>
+              <small style={{ fontSize: 11.5, color: '#d7ece9', lineHeight: 1.3, display: 'block' }}>{x.label}</small>
             </div>
           ))}
         </div>
-      )}
-
-      {/* Performance by Difficulty — Medium/Hard only, equal-width and
-          equal-height regardless of whether a progress bar renders. */}
-      <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: 700, color: COLORS.ink, margin: '0 0 10px' }}>{t.dashboard.byDifficulty}</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
-        <DifficultyCard label={t.dashboard.buckets.MEDIUM} bucket={data?.buckets.MEDIUM} />
-        <DifficultyCard label={t.dashboard.buckets.HARD} bucket={data?.buckets.HARD} />
       </div>
 
-      {/* Your Rank */}
-      <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: 700, color: COLORS.ink, margin: '0 0 10px' }}>{t.dashboard.rank}</h2>
-      <div style={{ ...CARD, background: data?.rankUnlocked ? COLORS.goldLight : 'transparent', borderColor: data?.rankUnlocked ? COLORS.gold : COLORS.line }}>
-        {data?.rankUnlocked ? (
-          overall?.rank != null ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <p style={{ fontFamily: FONT_FAMILY, fontSize: 32, fontWeight: 800, color: COLORS.ink, margin: 0, lineHeight: 1 }}>{overall.rank}</p>
-              <div>
-                <p style={{ fontSize: 11, color: COLORS.inkMuted, fontWeight: 600, margin: '0 0 3px' }}>{t.dashboard.currentRank}</p>
-                <p style={{ fontSize: 13, color: COLORS.ink, fontWeight: 600, margin: '0 0 2px' }}>
-                  {accuracy}% {t.dashboard.rankAccuracy}
-                </p>
-                <p style={{ fontSize: 11, color: COLORS.inkMuted, margin: 0 }}>{t.dashboard.rankPositionNote}</p>
-              </div>
-            </div>
-          ) : (
-            <p style={{ fontSize: 13, color: COLORS.inkMuted, margin: 0 }}>{t.dashboard.notEligible}</p>
-          )
-        ) : data && !data.planEligible ? (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <span style={{ fontSize: 16, lineHeight: 1.3 }}>🔒</span>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.ink, margin: '0 0 4px' }}>{t.dashboard.rankLockedFree}</p>
-              <p style={{ fontSize: 12, color: COLORS.inkMuted, marginBottom: 10, lineHeight: 1.5 }}>{t.dashboard.rankLockedFreeSub}</p>
-              <a
-                href="/plans"
-                style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 7, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 12 }}
-              >
-                {t.dashboard.upgrade}
-              </a>
+      <div style={{ padding: '0 16px' }}>
+        {/* Milestone celebration (finalized requirement) — shown once per
+            newly-achieved badge, dismissible, never re-shown for the same
+            badge on a later visit. */}
+        {newBadge && (
+          <div onClick={() => setNewBadge(null)} style={{ ...BOX, background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', marginBottom: 12, textAlign: 'center', cursor: 'pointer' }}>
+            <p style={{ fontSize: 28, margin: '0 0 4px' }}>{newBadge.emoji}</p>
+            <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, margin: 0 }}>{t.dashboard.newBadge(newBadge.label)}</p>
+          </div>
+        )}
+
+        {/* Sept 2026 — Exam Countdown (Personalization). Same data/rules as Home. */}
+        {examCountdown && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 16, padding: '12px 16px', marginBottom: 12 }}>
+            <span style={{ fontSize: 26 }}>⏳</span>
+            <div>
+              <b style={{ fontSize: 20, display: 'block', fontFamily: FONT_FAMILY, color: COLORS.ink }}>இன்னும் {examCountdown.daysRemaining} நாட்கள்</b>
+              <small style={{ fontSize: 12.5, color: COLORS.inkMuted }}>{examCountdown.subCategoryName}</small>
             </div>
           </div>
-        ) : data && !data.profileComplete ? (
-          <>
-            <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.ink, margin: '0 0 10px' }}>{t.dashboard.completeProfileForRank}</p>
-            <a
-              href="/profile?complete=1"
-              style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 7, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 12 }}
+        )}
+
+        {/* Sept 2026 — "this month" effort summary. Same /students/me/monthly-summary as Home. */}
+        {monthlySummary && monthlySummary.questionsAnswered > 0 && (
+          <div style={{ ...BOX, marginBottom: 12 }}>
+            <p style={LABEL}>இந்த மாதம் / This Month</p>
+            <p style={{ fontSize: 15, color: COLORS.ink, fontWeight: 600, margin: 0 }}>
+              {monthlySummary.questionsAnswered} கேள்விகள் · {monthlySummary.timeSpentMinutes} நிமிடங்கள்
+              {monthlySummary.currentStreak > 0 && <> · {monthlySummary.currentStreak} நாள் streak</>}
+            </p>
+          </div>
+        )}
+
+        {/* Sept 2026 — Weak-Area Alert. Same source/rules as Home. */}
+        {weakArea && (
+          <div style={{ background: 'var(--color-goldLight)', border: '1px solid #F3D9A8', borderLeft: '5px solid #D99A1E', borderRadius: 16, padding: '14px 16px', marginBottom: 12 }}>
+            <p style={{ ...LABEL, color: 'var(--color-gold)' }}>கவனிக்க வேண்டிய பகுதி / Weak Area</p>
+            <p style={{ fontSize: 14.5, color: COLORS.ink, margin: '0 0 10px', lineHeight: 1.6 }}>
+              <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
+            </p>
+            <button
+              disabled={settingWeakAreaPractice}
+              onClick={async () => {
+                setSettingWeakAreaPractice(true);
+                await studentFetch(`/subject-preference/${weakArea.subCategoryId}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ subjectIds: [weakArea.subjectId], topicIds: [] }),
+                });
+                window.location.href = '/quiz';
+              }}
+              style={{ ...PILL_BTN, background: '#92400E', color: '#fff' }}
             >
-              {t.dashboard.completeProfileForRank}
-            </a>
+              {settingWeakAreaPractice ? '...' : 'இப்போ Practice பண்ணுங்க'}
+            </button>
+          </div>
+        )}
+
+        {/* Performance Insight */}
+        <div style={{ ...BOX, marginBottom: 12, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <span style={{ fontSize: 20 }}>💡</span>
+          <div>
+            <p style={LABEL}>{t.dashboard.insightLabel}</p>
+            <p style={{ fontSize: 14.5, color: COLORS.ink, lineHeight: 1.6, margin: 0 }}>{insight}</p>
+          </div>
+        </div>
+
+        {/* Ask Ponna proactive nudge (finalized requirement). Rule-based,
+            computed server-side; only shows when something genuinely
+            actionable applies, silently absent otherwise. */}
+        {nudge && (
+          <a
+            href={`/ask-ponna?prefill=${encodeURIComponent(nudge.suggestedMessage)}`}
+            style={{ ...BOX, background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', marginBottom: 12, display: 'flex', gap: 12, alignItems: 'flex-start', textDecoration: 'none' }}
+          >
+            <span style={{ fontSize: 20 }}>🎯</span>
+            <div>
+              <p style={LABEL}>Ask Ponna</p>
+              <p style={{ fontSize: 14.5, color: COLORS.ink, lineHeight: 1.6, margin: 0 }}>{nudge.message}</p>
+            </div>
+          </a>
+        )}
+
+        {/* Performance by Difficulty — Medium/Hard only. */}
+        <h2 style={SECTION_H2}>{MARK}{t.dashboard.byDifficulty}</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <DifficultyCard label={t.dashboard.buckets.MEDIUM} bucket={data?.buckets.MEDIUM} />
+          <DifficultyCard label={t.dashboard.buckets.HARD} bucket={data?.buckets.HARD} />
+        </div>
+
+        {/* Your Rank */}
+        <h2 style={SECTION_H2}>{MARK}{t.dashboard.rank}</h2>
+        <div style={{ ...BOX, padding: 16, background: data?.rankUnlocked ? 'var(--color-goldDisc)' : 'var(--color-card)', border: data?.rankUnlocked ? '1.5px solid #E2B04A' : `1px solid ${COLORS.line}` }}>
+          {data?.rankUnlocked ? (
+            overall?.rank != null ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <p style={{ fontFamily: FONT_FAMILY, fontSize: 38, fontWeight: 800, color: COLORS.ink, margin: 0, lineHeight: 1 }}>{overall.rank}</p>
+                <div>
+                  <p style={{ fontSize: 12.5, color: COLORS.inkMuted, fontWeight: 600, margin: '0 0 3px' }}>{t.dashboard.currentRank}</p>
+                  <p style={{ fontSize: 15, color: COLORS.ink, fontWeight: 700, margin: '0 0 2px' }}>
+                    {accuracy}% {t.dashboard.rankAccuracy}
+                  </p>
+                  <p style={{ fontSize: 12.5, color: COLORS.inkMuted, margin: 0 }}>{t.dashboard.rankPositionNote}</p>
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.dashboard.notEligible}</p>
+            )
+          ) : data && !data.planEligible ? (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <span style={{ fontSize: 20, lineHeight: 1.3 }}>🔒</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, margin: '0 0 4px' }}>{t.dashboard.rankLockedFree}</p>
+                <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 12, lineHeight: 1.6 }}>{t.dashboard.rankLockedFreeSub}</p>
+                <a href="/plans" style={PILL_BTN}>{t.dashboard.upgrade}</a>
+              </div>
+            </div>
+          ) : data && !data.profileComplete ? (
+            <>
+              <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, margin: '0 0 10px' }}>{t.dashboard.completeProfileForRank}</p>
+              <a href="/profile?complete=1" style={PILL_BTN}>{t.dashboard.completeProfileForRank}</a>
+            </>
+          ) : null}
+        </div>
+
+        {/* Time-Management Analytics (finalized requirement) — framed as
+            "room to improve", never as a negative judgement. Silently
+            absent until there's at least some timed data. */}
+        {timeAnalytics && (
+          <>
+            <h2 style={SECTION_H2}>{MARK}{t.dashboard.timeAnalyticsLabel}</h2>
+            <div style={BOX}>
+              <p style={{ fontSize: 14.5, color: COLORS.ink, margin: '0 0 6px' }}>{t.dashboard.avgTimeOverall(timeAnalytics.overallAverageSeconds)}</p>
+              {timeAnalytics.byDifficulty.map((d) => (
+                <div key={d.difficulty} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: `1px solid ${COLORS.line}`, fontSize: 14 }}>
+                  <span style={{ color: COLORS.inkMuted }}>{t.dashboard.buckets[d.difficulty as 'EASY' | 'MEDIUM' | 'HARD'] ?? d.difficulty}</span>
+                  <span style={{ fontWeight: 700 }}>{t.dashboard.secondsPerQuestion(d.averageSeconds)}</span>
+                </div>
+              ))}
+            </div>
           </>
-        ) : null}
+        )}
+
+        {/* Milestone Badges — silently absent until the first badge is
+            earned. Tap a badge to share it (Web Share API, WhatsApp fallback). */}
+        {milestones.length > 0 && (
+          <>
+            <h2 style={SECTION_H2}>{MARK}{t.dashboard.badgesLabel}</h2>
+            <div style={{ ...BOX, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              {milestones.map((m) => (
+                <button
+                  key={m.type}
+                  onClick={() => shareBadge(m)}
+                  style={{ textAlign: 'center', width: 74, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: COLORS.inkMuted }}
+                >
+                  <span style={{ display: 'block', fontSize: 30 }}>{m.emoji}</span>
+                  <span style={{ display: 'block', fontSize: 11.5, margin: '2px 0 0', lineHeight: 1.3 }}>{m.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Parent/Mentor Progress Sharing (finalized requirement) — a
+            student-initiated, revocable, read-only public link. Default
+            private; never PII. */}
+        <h2 style={SECTION_H2}>{MARK}{t.dashboard.shareProgressLabel}</h2>
+        <div style={BOX}>
+          {shareToken ? (
+            <>
+              <p style={{ fontSize: 12.5, color: COLORS.inkMuted, marginBottom: 10, wordBreak: 'break-all' }}>
+                {typeof window !== 'undefined' ? `${window.location.origin}/shared/${shareToken}` : ''}
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => navigator.clipboard.writeText(`${window.location.origin}/shared/${shareToken}`)}
+                  style={{ flex: 1, padding: 12, borderRadius: 14, border: `1.5px solid ${COLORS.line}`, background: 'var(--color-field)', color: COLORS.ink, fontSize: 13.5, fontWeight: 700 }}
+                >
+                  {t.dashboard.copyLink}
+                </button>
+                <button onClick={revokeShareLink} style={{ flex: 1, padding: 12, borderRadius: 14, border: '1.5px solid var(--color-bad)', background: 'transparent', color: 'var(--color-bad)', fontSize: 13.5, fontWeight: 700 }}>
+                  {t.dashboard.revokeLink}
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={createShareLink}
+              disabled={sharing}
+              style={{ width: '100%', padding: 13, borderRadius: 14, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontSize: 14.5, fontWeight: 700 }}
+            >
+              {sharing ? '…' : t.dashboard.createShareLink}
+            </button>
+          )}
+        </div>
       </div>
     </main>
-  );
-}
-
-function ProgressRing({ percent }: { percent: number }) {
-  const size = 84;
-  const stroke = 7;
-  const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
-  const offset = circumference * (1 - percent / 100);
-
-  return (
-    <div style={{ position: 'relative', width: size, height: size, margin: '0 auto' }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={COLORS.line} strokeWidth={stroke} />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={COLORS.gold}
-          strokeWidth={stroke}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-        />
-      </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 800, color: COLORS.ink, lineHeight: 1 }}>{percent}%</span>
-      </div>
-    </div>
   );
 }
 
@@ -446,18 +385,16 @@ function DifficultyCard({ label, bucket }: { label: string; bucket?: Bucket }) {
   const percent = hasData ? Math.round(bucket!.averagePercent) : 0;
 
   return (
-    <div style={{ ...CARD, padding: '16px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
-      <p style={{ fontSize: 12, color: COLORS.inkMuted, fontWeight: 600, marginBottom: 10 }}>{label}</p>
-      <p style={{ fontFamily: FONT_FAMILY, fontSize: 23, fontWeight: 800, color: hasData ? COLORS.ink : COLORS.inkMuted, margin: '0 0 10px' }}>
+    <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: '14px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
+      <p style={{ fontSize: 13, color: COLORS.inkMuted, fontWeight: 600, margin: '0 0 6px' }}>{label}</p>
+      <p style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 800, color: hasData ? COLORS.ink : COLORS.inkMuted, margin: '0 0 8px' }}>
         {hasData ? `${percent}%` : '—'}
       </p>
-      {/* Fixed-height slot either way — a real bar when there's data, an
-          equal-height blank spacer when there isn't — so both cards stay
-          the same height instead of the no-data card looking shorter. */}
-      <div style={{ height: 4, borderRadius: 2, overflow: 'hidden', marginBottom: 10, background: hasData ? COLORS.line : 'transparent' }}>
-        {hasData && <div style={{ height: '100%', width: `${percent}%`, background: COLORS.gold }} />}
+      {/* Fixed-height slot either way so both cards stay the same height. */}
+      <div style={{ height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 8, background: hasData ? COLORS.line : 'transparent' }}>
+        {hasData && <div style={{ height: '100%', width: `${percent}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)' }} />}
       </div>
-      <p style={{ fontSize: 11, color: COLORS.inkMuted, lineHeight: 1.4, marginTop: 'auto' }}>
+      <p style={{ fontSize: 12, color: COLORS.inkMuted, lineHeight: 1.4, margin: 'auto 0 0' }}>
         {answered} Questions · {bucket?.correctAnswers ?? 0} Correct
       </p>
     </div>
