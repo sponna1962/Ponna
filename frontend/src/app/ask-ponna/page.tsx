@@ -283,6 +283,61 @@ export default function AskPonnaPage() {
     );
   }
 
+  // Guest diagnostic (first-visit, not logged in): language choice and the
+  // 20 questions are shown as a clean quiz card (same look as the Quiz page),
+  // not as chat bubbles. The completion message falls through to the chat view.
+  if (guestMode && (guestStage === 'language' || guestStage === 'quiz')) {
+    const q = guestStage === 'quiz' ? guestQuestions[guestIndex] : null;
+    const total = guestQuestions.length || 20;
+    return (
+      <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: 32 }}>
+        <BitterFontLinks />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+          <StudentMenu iconColor="#fff" />
+          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: '#E2B04A', color: '#2b1c00', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16, boxShadow: '0 0 0 2px rgba(255,233,168,0.4)' }}>P</span>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
+        </div>
+        <div style={{ padding: 16 }}>
+          {error && <p style={{ color: COLORS.bad, fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+          {guestStage === 'language' && (
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px' }}>உங்கள் பயிற்சிக்கான மொழியைத் தேர்வு செய்யுங்கள்</p>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {['தமிழ்', 'English'].map((label) => (
+                  <button key={label} disabled={sending} onClick={() => sendGuest(label)} style={{ padding: 17, borderRadius: 14, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 17, cursor: 'pointer', opacity: sending ? 0.6 : 1 }}>
+                    {sending ? '…' : label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {q && (
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.inkMuted, marginBottom: 10 }}>
+                {guestLanguage === 'EN' ? `Question ${guestIndex + 1} / ${total}` : `கேள்வி ${guestIndex + 1} / ${total}`}
+              </div>
+              <div style={{ height: 8, background: COLORS.line, borderRadius: 4, overflow: 'hidden', marginBottom: 14 }}>
+                <div style={{ height: '100%', width: `${((guestIndex + 1) / total) * 100}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)' }} />
+              </div>
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 18, fontSize: q.questionText.length > 140 ? 16 : 17.5, fontWeight: 600, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{q.questionText}</div>
+              {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+                const text = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }[letter];
+                return (
+                  <button key={letter} disabled={sending} onClick={() => sendGuest(letter)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${COLORS.line}`, background: COLORS.card, color: COLORS.ink, marginBottom: 10, fontSize: 15, lineHeight: 1.55, cursor: 'pointer', boxSizing: 'border-box', opacity: sending ? 0.6 : 1 }}>
+                    <span style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12.5, background: COLORS.field, border: `1.5px solid ${COLORS.line}`, color: COLORS.inkMuted }}>{letter}</span>
+                    <span style={{ flex: 1 }}>{text}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', display: 'flex', flexDirection: 'column', color: COLORS.ink }}>
       <BitterFontLinks />
