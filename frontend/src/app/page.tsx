@@ -567,8 +567,11 @@ export default function IndexPage() {
       )}
 
       {view === 'chooseMethod' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: '0 0 32px', color: COLORS.ink }}>{t.login.title}</h1>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Oct 2026 — same sunrise banner as the home/welcome screens (entry pages only, by decision). */}
+        <div aria-hidden="true" style={{ position: 'relative', height: 210, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '14px 24px 40px' }}>
+          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: 700, margin: '0 0 24px', color: '#0F2F33' }}>{t.login.title}</h1>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <button
@@ -580,13 +583,14 @@ export default function IndexPage() {
                 justifyContent: 'center',
                 gap: 10,
                 width: '100%',
-                padding: 14,
-                borderRadius: 8,
-                background: COLORS.paper,
-                color: COLORS.ink,
-                border: `1px solid ${COLORS.line}`,
-                fontSize: 15,
-                fontWeight: 600,
+                padding: 16,
+                borderRadius: 14,
+                background: '#fff',
+                color: '#0F2F33',
+                border: '1.5px solid #e2d6b4',
+                boxShadow: '0 6px 16px -12px rgba(15,47,51,.5)',
+                fontSize: 17,
+                fontWeight: 700,
               }}
             >
               <GoogleIcon size={18} />
@@ -604,13 +608,14 @@ export default function IndexPage() {
                 setError(null);
                 setView('phone');
               }}
-              style={{ width: '100%', padding: 14, borderRadius: 8, background: COLORS.ink, color: COLORS.paper, border: 'none', fontSize: 15, fontWeight: 600 }}
+              style={{ width: '100%', padding: 16, borderRadius: 14, background: '#0F2F33', color: '#FFE9A8', border: 'none', fontSize: 17, fontWeight: 700, boxShadow: '0 8px 20px -10px rgba(15,47,51,.6)' }}
             >
               📱 {t.login.continueWithPhone}
             </button>
 
             {error && <p style={{ color: COLORS.inkMuted, marginTop: 4, fontSize: 13, textAlign: 'center' }}>{error}</p>}
           </div>
+        </div>
         </div>
       )}
 
