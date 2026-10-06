@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { apiUrl } from '../../lib/api-config';
+import { studentFetch } from '../../lib/student-fetch';
 import { StudentMenu } from '../../components/StudentMenu';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
@@ -62,6 +63,7 @@ export default function CurrentAffairsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [joinedAt, setJoinedAt] = useState<string | null>(null);
   const [lang, setLang] = useState<'ta' | 'en'>('ta');
   const s = STRINGS[lang];
 
@@ -77,21 +79,31 @@ export default function CurrentAffairsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // News is shown only from the day the student joined (first login)
+  // onward — older news is hidden. Logged-out visitors see everything.
+  useEffect(() => {
+    studentFetch('/students/me/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => { if (p?.createdAt) setJoinedAt(dateKey(p.createdAt)); })
+      .catch(() => {});
+  }, []);
+
   const grouped = useMemo(() => {
     const groups: { date: string; items: Item[] }[] = [];
     for (const item of items) {
+      if (joinedAt && dateKey(item.date) < joinedAt) continue;
       const key = dateKey(item.date);
       const last = groups[groups.length - 1];
       if (!last || last.date !== key) groups.push({ date: key, items: [item] });
       else last.items.push(item);
     }
     return groups;
-  }, [items]);
+  }, [items, joinedAt]);
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
       <BitterFontLinks />
-      <header style={{ background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <StudentMenu iconColor="#fff" />
           <div style={{ flex: 1 }}><div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.2 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: '#FFE9A8' }}>{s.subtitle}</div></div>

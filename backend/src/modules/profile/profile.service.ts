@@ -65,6 +65,7 @@ export class ProfileService {
       community: user.community,
       profileComplete: isProfileComplete(user),
       isTestAccount: user.isTestAccount,
+      createdAt: user.createdAt,
     };
   }
 
