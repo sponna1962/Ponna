@@ -74,6 +74,7 @@ import { adaptiveMockService } from './modules/quiz/adaptive-mock.service';
 import { DiagnosticService } from './modules/quiz/diagnostic.service';
 import { DailyQuizType } from '@prisma/client';
 import { prisma } from './lib/prisma';
+import { adminAlertService } from './modules/payments/admin-alert.service';
 import { isProfileComplete } from './modules/profile/profile.service';
 import { ProfileService } from './modules/profile/profile.service';
 
@@ -3918,13 +3919,33 @@ app.listen(PORT, () => {
   // (Sept 2026) from a separate runtime-routes.ts that scheduled this at
   // module-require time via a monkey-patch — see the route registration
   // above for why that approach was removed.
-  cron.schedule('30 16 * * *', async () => {
+  // Oct 2026 — catch-up: tries at 16:30, 17:00, ... 19:30 IST and stops as
+  // soon as today (IST) already has items, so a failed/restarted 16:30 run
+  // is retried instead of leaving the student feed empty for the day. Alerts
+  // the owner (Telegram/push) if nothing exists after the last slot.
+  let learningRunning = false;
+  cron.schedule('0,30 16-19 * * *', async () => {
+    if (learningRunning) return;
+    const istNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    if (istNow.getHours() === 16 && istNow.getMinutes() < 30) return;
+    learningRunning = true;
     try {
-      const result = await currentAffairsLearningService.generateDaily();
-      console.log('[cron] Current Affairs learning:', result);
-    } catch (err) {
+      const istMidnightUtc = new Date(Date.UTC(istNow.getFullYear(), istNow.getMonth(), istNow.getDate()) - 5.5 * 60 * 60_000);
+      const todayCount = await prisma.currentAffairsItem.count({ where: { createdAt: { gte: istMidnightUtc } } });
+      if (todayCount === 0) {
+        const result = await currentAffairsLearningService.generateDaily();
+        console.log('[cron] Current Affairs learning:', result);
+        const isLast = istNow.getHours() === 19 && istNow.getMinutes() >= 30;
+        if (isLast && result.created === 0) {
+          adminAlertService.notify('⚠️ PONNA: இன்றைய Current Affairs சேரவில்லை', 'போதுமான புதிய செய்திகள் கிடைக்கவில்லை. Admin பக்கத்தில் Generate அழுத்தவும்.', '/admin');
+        }
+      }
+    } catch (err: any) {
       console.error('[cron] Current Affairs learning generation failed', err);
-    }
+      if (istNow.getHours() === 19 && istNow.getMinutes() >= 30) {
+        adminAlertService.notify('⚠️ PONNA: இன்றைய Current Affairs சேரவில்லை', String(err?.message ?? err).slice(0, 200), '/admin');
+      }
+    } finally { learningRunning = false; }
   }, { timezone: 'Asia/Kolkata' });
   // Sept 2026 (real bug found while building Bulk Explanation Generator) —
   // resumeStaleRuns() existed on QuestionAuditService but was never

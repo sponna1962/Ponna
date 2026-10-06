@@ -22,7 +22,7 @@ export default function Page() {
         <li>A technical fault on our side prevented you from using the plan, and we could not fix it.</li>
       </ul>
       <H>How to request a refund</H>
-      <p>Email us at <a href="mailto:ponna@arlena.in">ponna@arlena.in</a> within 7 days of payment with your registered email address and the payment reference. We reply within 2 working days.</p>
+      <p>Email us at <a href="mailto:ponna@arlena.in">ponna@arlena.in</a> within 7 days of payment with your registered email address and the payment reference. We reply within 2 hours.</p>
       <H>Timeline</H>
       <p>Approved refunds are returned to the original payment method within 5–7 working days. Your bank may take additional time to show it.</p>
     </PolicyPage>

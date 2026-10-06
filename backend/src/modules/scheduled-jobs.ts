@@ -10,6 +10,7 @@ import { runWhatsAppReminderSweep } from './notifications/whatsapp-reminder.serv
 import { pushNotificationService } from './notifications/push-notification.service';
 import { questionAuditService } from './audit/question-audit.service';
 import { dailyCurrentAffairsService } from './admin/daily-current-affairs.service';
+import { adminAlertService } from './payments/admin-alert.service';
 import { prisma } from '../lib/prisma';
 
 const sessionService = new SessionService();
@@ -80,19 +81,43 @@ export function startScheduledJobs() {
   // to the normal Question/DRAFT bank.
   // 5 PM IST daily (explicit timezone, independent of server clock); the
   // quiz is published at 6 PM IST and stays live until 6 PM the next day.
-  cron.schedule('0 17 * * *', async () => {
+  //
+  // Oct 2026 — catch-up: runs every 20 minutes from 17:00 to 20:40 IST. The
+  // generators are idempotent (a quiz that already exists for today is
+  // returned untouched), so a transient AI/DB failure or a deploy restart at
+  // 17:00 is simply retried at the next slot. If today's quiz is STILL
+  // missing at the last slot, the owner gets a Telegram/push alert.
+  let dailyContentRunning = false;
+  cron.schedule('*/20 17-20 * * *', async () => {
+    if (dailyContentRunning) return;
+    dailyContentRunning = true;
+    const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const isLastSlot = now.getHours() === 20 && now.getMinutes() >= 40;
+    const failed: string[] = [];
     try {
-      const result = await dailyCurrentAffairsService.generateDailyBatch();
-      if (result.skippedNoResults) {
-        console.log('[cron] Daily Current Affairs: insufficient fresh verified events/questions; nothing created');
-      } else {
-        console.log(`[cron] Daily Current Affairs: created ${result.created} verified Daily Quiz questions`);
+      try {
+        const result = await dailyCurrentAffairsService.generateDailyBatch();
+        if (result.skippedNoResults) {
+          console.log('[cron] Daily Current Affairs: insufficient fresh verified events/questions; nothing created');
+          failed.push('Daily Quiz (போதுமான புதிய செய்திகள் இல்லை)');
+        } else if (result.created > 0) {
+          console.log(`[cron] Daily Current Affairs: created ${result.created} verified Daily Quiz questions`);
+        }
+      } catch (err: any) {
+        console.error('[cron] Daily Current Affairs generation failed:', err);
+        failed.push(`Daily Quiz (${String(err?.message ?? err).slice(0, 120)})`);
       }
-    } catch (err) { console.error('[cron] Daily Current Affairs generation failed:', err); }
-    try {
-      const brain = await dailyCurrentAffairsService.generateBrainChallenge();
-      console.log(`[cron] Brain Challenge: created ${brain.created}${brain.skippedNoResults ? ' (skipped)' : ''}`);
-    } catch (err) { console.error('[cron] Brain Challenge generation failed:', err); }
+      try {
+        const brain = await dailyCurrentAffairsService.generateBrainChallenge();
+        if (brain.created > 0) console.log(`[cron] Brain Challenge: created ${brain.created}`);
+      } catch (err: any) {
+        console.error('[cron] Brain Challenge generation failed:', err);
+        failed.push(`Brain Challenge (${String(err?.message ?? err).slice(0, 120)})`);
+      }
+      if (isLastSlot && failed.length > 0) {
+        adminAlertService.notify('⚠️ PONNA: இன்றைய தினசரி தேர்வு உருவாகவில்லை', `${failed.join('\n')}\nAdmin பக்கத்தில் Generate அழுத்தவும்.`, '/admin');
+      }
+    } finally { dailyContentRunning = false; }
   }, { timezone: 'Asia/Kolkata' });
 
   console.log('Scheduled jobs started: abandonment sweep, rank recomputation, suspicious-usage sweep, Daily Quiz status sweep, WhatsApp reminder sweep, push practice reminder sweep, Live Exam weekend reminder, and 48-hour verified Daily Current Affairs generation');
