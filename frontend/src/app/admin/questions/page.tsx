@@ -262,6 +262,19 @@ function AdminQuestionsPageInner() {
   const [heuristicResult, setHeuristicResult] = useState<{ medium: number; hard: number } | null>(null);
   const [heuristicError, setHeuristicError] = useState<string | null>(null);
 
+  async function hideMalformedOptions() {
+    const pre = await adminFetch('/admin/questions/malformed-options');
+    if (!pre.ok) { alert('Could not check questions'); return; }
+    const { count } = await pre.json();
+    if (!count) { alert('No malformed-option questions found.'); return; }
+    if (!window.confirm(`${count} published questions have placeholder options like "(a)". Hide them from students (set to DISABLED)? You can fix and re-publish them later.`)) return;
+    const res = await adminFetch('/admin/questions/hide-malformed-options', { method: 'POST' });
+    if (!res.ok) { alert('Failed to hide questions'); return; }
+    const body = await res.json();
+    alert(`${body.hidden} questions hidden.`);
+    loadQuestions();
+  }
+
   async function openHeuristicPreview() {
     setHeuristicError(null);
     setHeuristicResult(null);
@@ -645,6 +658,12 @@ function AdminQuestionsPageInner() {
           >
             📊 Question Bank Stats
           </Link>
+          <button
+            onClick={hideMalformedOptions}
+            style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #b45309', background: '#fffbeb', color: '#b45309', fontSize: 14 }}
+          >
+            🙈 Hide broken-option questions
+          </button>
           <button
             onClick={openHeuristicPreview}
             style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', fontSize: 14 }}

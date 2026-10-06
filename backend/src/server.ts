@@ -2193,6 +2193,27 @@ app.get('/admin/questions/ids', requireStaffAuth, async (req, res) => {
 
 // GET /admin/questions/stats — Question Bank Stats dashboard: counts per
 // Authority → Category → Sub-Category, broken down by status.
+// Malformed-options cleanup — some imported questions have placeholder options
+// like "(a)" / "A. (a)" (the real choices are stuck inside the question text), so
+// students cannot tell what to pick. Preview count, then hide (DISABLED, not deleted).
+const MALFORMED_OPTION_A = ['(a)', '(A)', 'A. (a)', 'A. (A)', 'A.(a)', 'a', 'A'];
+const MALFORMED_OPTION_B = ['(b)', '(B)', 'B. (b)', 'B. (B)', 'B.(b)', 'b', 'B'];
+const malformedWhere = {
+  status: 'PUBLISHED' as const,
+  optionA: { in: MALFORMED_OPTION_A },
+  optionB: { in: MALFORMED_OPTION_B },
+};
+
+app.get('/admin/questions/malformed-options', requireStaffAuth, async (_req, res) => {
+  const count = await prisma.question.count({ where: malformedWhere });
+  res.json({ count });
+});
+
+app.post('/admin/questions/hide-malformed-options', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (_req, res) => {
+  const result = await prisma.question.updateMany({ where: malformedWhere, data: { status: 'DISABLED' } });
+  res.json({ hidden: result.count });
+});
+
 // GET /admin/questions/heuristic-classify/preview — dry run of the
 // agreed one-time heuristic Difficulty rule (calculation signal, else
 // length > 120 chars), writes nothing.
