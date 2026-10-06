@@ -95,16 +95,17 @@ export default function MistakesPage() {
     data?.access === 'AVAILABLE' ? data.items ?? data.grouped?.flatMap((g) => g.questions) ?? [] : [];
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
+    <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, paddingBottom: 30, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-        <StudentMenu />
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.mistakes.title}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.mistakes.title}</h1>
       </div>
-      <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 12 }}>{t.mistakes.subtitle}</p>
+      <div style={{ padding: '0 16px' }}>
+      <p style={{ fontSize: 14, color: COLORS.inkMuted, lineHeight: 1.6, margin: '0 0 12px' }}>{t.mistakes.subtitle}</p>
       <a
         href="/ask-ponna?context=mistakes"
-        style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: COLORS.gold, textDecoration: 'underline', marginBottom: 16 }}
+        style={{ display: 'inline-block', fontSize: 13.5, fontWeight: 700, color: COLORS.gold, textDecoration: 'underline', marginBottom: 14, lineHeight: 1.5 }}
       >
         {t.askPonna.analyzeMyMistakes}
       </a>
@@ -115,14 +116,15 @@ export default function MistakesPage() {
       <button
         onClick={generateSmartRevision}
         disabled={generatingRevision}
-        style={{ display: 'block', width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${COLORS.gold}`, background: COLORS.goldLight, color: COLORS.ink, fontWeight: 700, fontSize: 14, cursor: 'pointer', marginBottom: 16 }}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', boxSizing: 'border-box', textAlign: 'left', padding: '14px 16px', borderRadius: 16, border: '1.5px solid #E2B04A', background: 'var(--color-goldDisc)', color: COLORS.ink, fontWeight: 700, fontSize: 14.5, cursor: 'pointer', marginBottom: 16 }}
       >
-        {generatingRevision ? 'உங்க mistakes-ஐ படிச்சு revision notes தயார் பண்றேன்…' : '✨ என் Mistakes-க்கான Smart Revision Notes'}
+        <span style={{ flex: 1 }}>{generatingRevision ? 'உங்க mistakes-ஐ படிச்சு revision notes தயார் பண்றேன்…' : '✨ என் Mistakes-க்கான Smart Revision Notes'}</span>
+        <span aria-hidden="true" style={{ fontSize: 24, color: 'var(--color-gold)', lineHeight: 1 }}>›</span>
       </button>
-      {revisionError && <p style={{ fontSize: 13, color: '#b91c1c', marginBottom: 16 }}>{revisionError}</p>}
+      {revisionError && <p style={{ fontSize: 13, color: 'var(--color-bad)', marginBottom: 16 }}>{revisionError}</p>}
       {revisionSummary && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 14, marginBottom: 16, background: '#fff', whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.6 }}>
-          <p style={{ fontSize: 11, color: COLORS.inkMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+        <div style={{ border: `1px solid ${COLORS.line}`, borderLeft: '5px solid #E2B04A', borderRadius: 16, padding: 16, marginBottom: 16, background: 'var(--color-card)', color: COLORS.ink, whiteSpace: 'pre-wrap', fontSize: 15, lineHeight: 1.7 }}>
+          <p style={{ fontSize: 12.5, color: 'var(--color-gold)', marginBottom: 8, fontWeight: 700 }}>
             உங்க {revisionSummary.questionCount} mistakes-லிருந்து ({revisionSummary.subjectCount} subjects)
           </p>
           {revisionSummary.summary}
@@ -132,10 +134,10 @@ export default function MistakesPage() {
       {!data && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
       {data?.access === 'FREE_LOCKED' && (
-        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 24, background: COLORS.goldLight, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 {t.mistakes.lockedTitle}</p>
-          <p style={{ fontSize: 13, color: '#5C4009', marginBottom: 16 }}>{t.mistakes.lockedBody}</p>
-          <a href="/plans" style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
+        <div style={{ border: '1.5px solid #E2B04A', borderRadius: 16, padding: 22, background: COLORS.goldLight, textAlign: 'center' }}>
+          <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 {t.mistakes.lockedTitle}</p>
+          <p style={{ fontSize: 13.5, color: COLORS.inkMuted, marginBottom: 16 }}>{t.mistakes.lockedBody}</p>
+          <a href="/plans" style={{ display: 'inline-block', padding: '11px 24px', borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 14.5 }}>
             {t.dailyQuiz.viewPlans}
           </a>
         </div>
@@ -143,19 +145,21 @@ export default function MistakesPage() {
 
       {data?.access === 'AVAILABLE' && (
         <>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 6, background: 'var(--color-field)', border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: 4, marginBottom: 16 }}>
             {(['all', 'subject', 'recent'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
                 style={{
-                  padding: '6px 14px',
-                  borderRadius: 20,
-                  border: `1px solid ${filter === f ? COLORS.gold : COLORS.line}`,
-                  background: filter === f ? COLORS.goldLight : COLORS.paper,
-                  color: filter === f ? '#5C4009' : COLORS.inkMuted,
-                  fontSize: 12,
-                  fontWeight: 600,
+                  flex: 1,
+                  padding: '9px 4px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: filter === f ? 'var(--color-btn)' : 'transparent',
+                  color: filter === f ? 'var(--color-btnText)' : COLORS.inkMuted,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
                 }}
               >
                 {t.mistakes.filters[f]}
@@ -164,15 +168,16 @@ export default function MistakesPage() {
           </div>
 
           {allItems.length === 0 && (
-            <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
-              <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.mistakes.empty}</p>
+            <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: '30px 18px', textAlign: 'center' }}>
+              <span style={{ display: 'block', fontSize: 36, marginBottom: 8 }}>🎉</span>
+              <p style={{ fontSize: 15, color: COLORS.inkMuted, margin: 0 }}>{t.mistakes.empty}</p>
             </div>
           )}
 
           {filter === 'subject' && data.grouped
             ? data.grouped.map((group) => (
                 <div key={group.subject} style={{ marginBottom: 16 }}>
-                  <h2 style={{ fontSize: 13, fontWeight: 700, color: COLORS.inkMuted, marginBottom: 8 }}>{group.subject}</h2>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, margin: '0 0 8px' }}>{group.subject}</h2>
                   {group.questions.map((item) => (
                     <MistakeCard
                       key={item.questionId}
@@ -199,6 +204,7 @@ export default function MistakesPage() {
               ))}
         </>
       )}
+      </div>
     </main>
   );
 }
@@ -220,10 +226,10 @@ function MistakeCard({
 }) {
   const { t } = useLanguage();
   return (
-    <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+    <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderLeft: '5px solid #E2B04A', borderRadius: 16, padding: '14px 16px', marginBottom: 12 }}>
       <button onClick={onOpen} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', width: '100%', cursor: 'pointer' }}>
-        {item.subjectName && <span style={{ fontSize: 11, color: COLORS.gold, fontWeight: 700 }}>{item.subjectName}</span>}
-        <p style={{ fontSize: 14, color: COLORS.ink, margin: '4px 0 0', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{item.questionText}</p>
+        {item.subjectName && <span style={{ display: 'inline-block', fontSize: 12, color: 'var(--color-gold)', fontWeight: 700, background: 'var(--color-goldDisc)', padding: '3px 10px', borderRadius: 999 }}>{item.subjectName}</span>}
+        <p style={{ fontSize: 15.5, color: COLORS.ink, margin: '6px 0 0', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{item.questionText}</p>
       </button>
 
       {isOpen && (
@@ -239,29 +245,32 @@ function MistakeCard({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  padding: '10px 12px',
-                  border: `1.5px solid ${isCorrectOption ? '#16a34a' : COLORS.line}`,
-                  borderRadius: 8,
-                  marginBottom: 6,
-                  fontSize: 13,
+                  gap: 12,
+                  padding: '11px 13px',
+                  border: `1.5px solid ${isCorrectOption ? 'var(--color-ok)' : isWrongSelected ? 'var(--color-bad)' : COLORS.line}`,
+                  borderRadius: 14,
+                  marginBottom: 8,
+                  fontSize: 15,
+                  lineHeight: 1.55,
+                  color: COLORS.ink,
                   cursor: result ? 'default' : 'pointer',
-                  background: isCorrectOption ? '#f0fdf4' : COLORS.paper,
+                  background: isCorrectOption ? 'var(--color-okBg)' : isWrongSelected ? 'var(--color-badBg)' : 'var(--color-card)',
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: 12, color: COLORS.inkMuted }}>{letter}.</span>
+                <span style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12.5, background: isCorrectOption ? 'var(--color-ok)' : 'var(--color-field)', border: `1.5px solid ${isCorrectOption ? 'var(--color-ok)' : COLORS.line}`, color: isCorrectOption ? '#fff' : COLORS.inkMuted }}>
+                  {isCorrectOption ? '✓' : letter}
+                </span>
                 <span style={{ flex: 1 }}>{text}</span>
-                {isCorrectOption && <span style={{ color: '#16a34a' }}>✓</span>}
               </div>
             );
           })}
 
           {result && (
-            <p style={{ fontSize: 13, fontWeight: 700, color: result.isCorrect ? '#16a34a' : '#B4544A', marginTop: 8 }}>
+            <p style={{ fontSize: 14.5, fontWeight: 700, color: result.isCorrect ? 'var(--color-ok)' : 'var(--color-bad)', marginTop: 8 }}>
               {result.isCorrect ? t.mistakes.corrected : t.mistakes.stillWrong}
             </p>
           )}
-          {result?.explanation && <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 4 }}>{result.explanation}</p>}
+          {result?.explanation && <p style={{ fontSize: 13.5, color: COLORS.inkMuted, marginTop: 4, lineHeight: 1.7 }}>{result.explanation}</p>}
         </div>
       )}
     </div>
