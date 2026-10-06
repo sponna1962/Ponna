@@ -399,15 +399,19 @@ export default function QuizStartPage() {
    * straight to starting, and the prompt must never appear in that case.
    */
   async function startWithAccessCheck() {
-    // Profile must be complete before practice starts (it is no longer
-    // required before payment, so a paid student may still need it here).
+    // Profile is required only for Pass holders (paid practice). Free-preview
+    // students go straight to their free questions; the profile is asked after.
     try {
-      const pr = await studentFetch('/students/me/profile');
-      if (pr.ok) {
-        const prof = await pr.json();
-        if (prof.profileComplete === false) {
-          setProfileGate(true);
-          return;
+      const subsRes = await studentFetch('/students/me/subscriptions');
+      const subs = subsRes.ok ? await subsRes.json() : [];
+      if (Array.isArray(subs) && subs.length > 0) {
+        const pr = await studentFetch('/students/me/profile');
+        if (pr.ok) {
+          const prof = await pr.json();
+          if (prof.profileComplete === false) {
+            setProfileGate(true);
+            return;
+          }
         }
       }
     } catch {}
