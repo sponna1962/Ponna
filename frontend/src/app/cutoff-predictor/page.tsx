@@ -92,18 +92,25 @@ export default function CutoffPredictorPage() {
       : 'Note: this is only a historical comparison based on Practice Accuracy. It does not determine your actual exam marks, rank or selection.',
   };
 
-  return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
-      <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-        <StudentMenu />
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 700, margin: 0, color: COLORS.ink }}>{t.cutoffPredictor.title}</h1>
-      </div>
-      <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 16, lineHeight: 1.5 }}>{t.cutoffPredictor.note}</p>
+  const gold4 = '#E2B04A';
+  const cardBase: React.CSSProperties = { background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 16 };
+  const topCard: React.CSSProperties = { ...cardBase, borderTop: `4px solid ${gold4}` };
+  const leftCard: React.CSSProperties = { ...cardBase, borderLeft: `4px solid ${gold4}`, borderRadius: 12 };
+  const linkBtn: React.CSSProperties = { display: 'block', padding: 14, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, textDecoration: 'none', fontWeight: 700, fontSize: 15, textAlign: 'center' };
 
-      <section style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 16, marginBottom: 18, background: 'var(--color-card)' }}>
-        <p style={{ fontSize: 14, fontWeight: 700, margin: '0 0 8px' }}>{label.purpose}</p>
-        <p style={{ fontSize: 12.5, lineHeight: 1.55, color: COLORS.inkMuted, margin: '0 0 12px' }}>{label.purposeBody}</p>
+  return (
+    <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: 24 }}>
+      <BitterFontLinks />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: `3px solid ${gold4}` }}>
+        <StudentMenu iconColor="#fff" />
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.cutoffPredictor.title}</h1>
+      </div>
+      <div style={{ padding: 16 }}>
+      <p style={{ fontSize: 13, color: COLORS.inkMuted, margin: '0 0 14px', lineHeight: 1.5 }}>{t.cutoffPredictor.note}</p>
+
+      <section style={{ ...leftCard, padding: '14px 16px', marginBottom: 18 }}>
+        <p style={{ fontSize: 14.5, fontWeight: 700, margin: '0 0 6px' }}>{label.purpose}</p>
+        <p style={{ fontSize: 12.5, lineHeight: 1.6, color: COLORS.inkMuted, margin: '0 0 12px' }}>{label.purposeBody}</p>
         <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 7px' }}>{label.steps}</p>
         <div style={{ display: 'grid', gap: 5, fontSize: 12.5, color: COLORS.inkMuted }}>
           <div>{label.step1}</div>
@@ -123,93 +130,90 @@ export default function CutoffPredictorPage() {
       )}
 
       {loading && selectedExamId && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
+        <div style={{ ...topCard, padding: 24, textAlign: 'center' }}>
           <p style={{ fontSize: 13, color: COLORS.inkMuted, margin: 0 }}>{label.loading}</p>
         </div>
       )}
 
       {loadError && !loading && (
-        <div style={{ border: '1px solid #e5b7b7', borderRadius: 14, padding: 20, background: '#fff7f7', textAlign: 'center' }}>
-          <p style={{ fontSize: 13, color: '#8b1e1e', margin: 0 }}>{loadError}</p>
+        <div style={{ ...cardBase, border: `1px solid ${COLORS.bad}`, background: COLORS.badBg, padding: 20, textAlign: 'center' }}>
+          <p style={{ fontSize: 13, color: COLORS.bad, margin: 0 }}>{loadError}</p>
         </div>
       )}
 
       {prediction?.access === 'FREE_LOCKED' && (
-        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 24, background: COLORS.goldLight, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 {t.cutoffPredictor.lockedTitle}</p>
-          <p style={{ fontSize: 13, color: '#5C4009', marginBottom: 16 }}>{t.cutoffPredictor.lockedBody}</p>
-          <a href="/plans" style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
-            {t.dailyQuiz.viewPlans}
-          </a>
+        <div style={{ ...topCard, padding: 24, textAlign: 'center' }}>
+          <p style={{ fontSize: 16, fontWeight: 700, color: COLORS.ink, margin: '0 0 8px' }}>🔒 {t.cutoffPredictor.lockedTitle}</p>
+          <p style={{ fontSize: 13, color: COLORS.inkMuted, margin: '0 0 16px', lineHeight: 1.6 }}>{t.cutoffPredictor.lockedBody}</p>
+          <a href="/plans" style={linkBtn}>{t.dailyQuiz.viewPlans}</a>
         </div>
       )}
 
       {prediction?.access === 'NEEDS_COMMUNITY' && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: COLORS.ink, marginBottom: 16 }}>{t.cutoffPredictor.needsCommunity}</p>
-          <a href="/profile" style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
-            {t.cutoffPredictor.goToProfile}
-          </a>
+        <div style={{ ...topCard, padding: 24, textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: COLORS.ink, margin: '0 0 16px', lineHeight: 1.6 }}>{t.cutoffPredictor.needsCommunity}</p>
+          <a href="/profile" style={linkBtn}>{t.cutoffPredictor.goToProfile}</a>
         </div>
       )}
 
       {prediction?.access === 'AVAILABLE' && (
         <>
           {prediction.records.length === 0 ? (
-            <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 20, background: COLORS.goldLight }}>
+            <div style={{ ...leftCard, padding: 18 }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, margin: '0 0 8px' }}>{label.noDataTitle}</p>
-              <p style={{ fontSize: 12.5, lineHeight: 1.55, color: '#5C4009', margin: 0 }}>{label.noDataBody}</p>
+              <p style={{ fontSize: 12.5, lineHeight: 1.6, color: COLORS.inkMuted, margin: 0 }}>{label.noDataBody}</p>
             </div>
           ) : (
             <>
               {comparison && (
-                <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 16, marginBottom: 16, background: COLORS.goldLight }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#5C4009', margin: '0 0 12px' }}>{label.latestComparison}</p>
+                <div style={{ ...topCard, padding: 16, marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.gold, margin: '0 0 12px' }}>{label.latestComparison}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
-                      <div style={{ fontSize: 11, color: '#7A5A14' }}>{label.practice}</div>
-                      <div style={{ fontFamily: FONT_FAMILY, fontSize: 23, fontWeight: 800 }}>{comparison.practiceScore} / {comparison.totalMarks}</div>
+                      <div style={{ fontSize: 11.5, color: COLORS.inkMuted }}>{label.practice}</div>
+                      <div style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 800, color: COLORS.ink }}>{comparison.practiceScore} / {comparison.totalMarks}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 11, color: '#7A5A14' }}>{comparison.latest.year} Cut-off</div>
-                      <div style={{ fontFamily: FONT_FAMILY, fontSize: 23, fontWeight: 800 }}>{comparison.latest.cutoffMarks} / {comparison.totalMarks}</div>
+                      <div style={{ fontSize: 11.5, color: COLORS.inkMuted }}>{comparison.latest.year} Cut-off</div>
+                      <div style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 800, color: COLORS.ink }}>{comparison.latest.cutoffMarks} / {comparison.totalMarks}</div>
                     </div>
                   </div>
-                  <p style={{ fontSize: 12, color: '#5C4009', margin: '12px 0 0' }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, margin: '12px 0 0', padding: '9px 12px', borderRadius: 12, background: comparison.difference >= 0 ? COLORS.okBg : COLORS.badBg, color: comparison.difference >= 0 ? COLORS.ok : COLORS.bad }}>
                     {Math.abs(comparison.difference)} {comparison.difference >= 0 ? label.above : label.below} {comparison.latest.year} historical cut-off.
                   </p>
                 </div>
               )}
 
               {!comparison && prediction.studentQuestionsAnswered < 20 && (
-                <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 12, padding: 14, marginBottom: 16, background: COLORS.goldLight }}>
-                  <p style={{ fontSize: 12.5, color: '#5C4009', margin: 0 }}>{label.notEnough}</p>
+                <div style={{ ...leftCard, padding: 14, marginBottom: 16 }}>
+                  <p style={{ fontSize: 12.5, color: COLORS.inkMuted, margin: 0, lineHeight: 1.6 }}>{label.notEnough}</p>
                 </div>
               )}
 
               <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 10px' }}>{label.historical}</p>
               {prediction.records.map((r) => (
-                <div key={r.year} style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.inkMuted, marginBottom: 4 }}>{r.year} · {prediction.community}</p>
+                <div key={r.year} style={{ ...leftCard, padding: '12px 14px', marginBottom: 10 }}>
+                  <p style={{ fontSize: 12.5, fontWeight: 700, color: COLORS.inkMuted, margin: '0 0 2px' }}>{r.year} · {prediction.community}</p>
                   <p style={{ fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: 800, color: COLORS.gold, margin: 0 }}>
                     {r.cutoffMarks}{r.totalMarks ? ` / ${r.totalMarks}` : ''}
                   </p>
-                  <p style={{ fontSize: 11, color: COLORS.inkMuted, marginTop: 6 }}>
+                  <p style={{ fontSize: 11, color: COLORS.inkMuted, margin: '6px 0 0' }}>
                     {label.verified}: {new Date(r.verifiedAt).toLocaleDateString()}
                     {r.sourceUrl && (
                       <>
                         {' · '}
-                        <a href={r.sourceUrl} target="_blank" rel="noreferrer">{label.source}</a>
+                        <a href={r.sourceUrl} target="_blank" rel="noreferrer" style={{ color: COLORS.gold }}>{label.source}</a>
                       </>
                     )}
                   </p>
                 </div>
               ))}
-              <p style={{ fontSize: 11, color: '#7A5A14', marginTop: 10 }}>{label.disclaimer}</p>
+              <p style={{ fontSize: 11, color: COLORS.inkMuted, marginTop: 10, lineHeight: 1.5 }}>{label.disclaimer}</p>
             </>
           )}
         </>
       )}
+      </div>
     </main>
   );
 }
