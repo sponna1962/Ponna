@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
@@ -43,6 +43,30 @@ type SavedPreference = {
   selections: Selections;
 };
 
+/** Oct 2026 — PONNA currently sells and serves only TNPSC Group 4, so the
+ * exam is fixed instead of asking the student to pick it. Found by NAME
+ * in the real taxonomy tree (never a hardcoded id); if it can't be found
+ * (taxonomy renamed/restructured) this returns null and the page falls
+ * back to the full, original picker below — nothing breaks. */
+function findGroup4Selections(tree: Purpose[]): Selections | null {
+  for (const purpose of tree) {
+    for (const authority of purpose.authorities) {
+      if (!/tnpsc/i.test(authority.name)) continue;
+      for (const category of authority.categories) {
+        const sc = category.subCategories.find((x) => /group[\s-]*(iv|4)\b/i.test(x.name));
+        if (sc) {
+          return {
+            purposeId: purpose.id,
+            allAuthorities: false,
+            authorities: [{ authorityId: authority.id, allCategories: false, categories: [{ categoryId: category.id, allSubCategories: false, subCategoryIds: [sc.id] }] }],
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 const emptySelections: Selections = { purposeId: '', allAuthorities: false, authorities: [] };
 
 export default function QuizStartPage() {
@@ -74,6 +98,8 @@ export default function QuizStartPage() {
   // so even if this state is somehow wrong/stale, the backend still rejects
   // any other selection.
   const [restriction, setRestriction] = useState<{ restricted: boolean; allowedSubCategoryIds: string[] } | null>(null);
+  const fixedSel = useMemo(() => findGroup4Selections(tree), [tree]);
+  const fixedSubCategoryId = fixedSel?.authorities[0]?.categories[0]?.subCategoryIds[0] ?? null;
 
   useEffect(() => {
     studentFetch('/students/me/scope-restriction')
@@ -129,12 +155,16 @@ export default function QuizStartPage() {
     ]).then(([treeData, prefData]) => {
       setTree(treeData);
       setSaved(prefData);
-      if (!prefData) {
-        setEditing(true); // first-time student — go straight into setup
-      } else {
+      const g4 = findGroup4Selections(treeData);
+      if (!prefData || g4) {
+        setEditing(true); // first-time student (or fixed Group 4 mode) — go straight into setup
+      }
+      if (prefData) {
         setMode(prefData.mode);
-        setSelections(prefData.selections);
+        setSelections(g4 ?? prefData.selections);
         setLanguage(prefData.language);
+      } else if (g4) {
+        setSelections(g4);
       }
     });
   }, []);
@@ -178,6 +208,14 @@ export default function QuizStartPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [difficultyStepVisible, relevantAuthorities.length]);
+
+  // Fixed Group 4 mode never shows the difficulty chooser — default to Mixed
+  // if the exam enables difficulty and nothing is chosen yet (when it does
+  // not, the effect above already sets HARD, same as before).
+  useEffect(() => {
+    if (fixedSel && difficultyStepVisible && !mode) setMode('MIXED');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixedSel, difficultyStepVisible]);
 
   // Re-check available languages every time the exam selection or difficulty
   // changes — this is what makes Language "determined dynamically", not a
@@ -419,13 +457,13 @@ export default function QuizStartPage() {
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
-        <StudentMenu />
-        <h1 style={{ fontSize: 20, margin: 0 }}>{t.quiz.title}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 18, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <span style={{ display: 'flex', filter: 'invert(1) brightness(2)' }}><StudentMenu /></span>
+        <h1 style={{ fontSize: 19, margin: 0 }}>{t.quiz.title}</h1>
         {/* Sept 2026 — Offline Practice entry point. Deliberately not a
             new sidebar item (nav structure is finalized) — lives here
             instead, right where a student starts practice. */}
-        <a href="/offline-practice" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#A8791F', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+        <a href="/offline-practice" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#FFE9A8', border: '1px solid rgba(255,233,168,0.5)', padding: '5px 10px', borderRadius: 999, textDecoration: 'none', whiteSpace: 'nowrap' }}>
           📥 Offline
         </a>
       </div>
@@ -489,7 +527,16 @@ export default function QuizStartPage() {
 
         {editing && (
           <>
-            {restriction?.restricted ? (
+            {fixedSel ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', borderRadius: 16, padding: '14px 16px', color: '#fff', marginBottom: 22 }}>
+                <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,233,168,0.18)', display: 'grid', placeItems: 'center', fontSize: 20 }}>🎯</span>
+                <div>
+                  <b style={{ fontSize: 17, display: 'block' }}>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</b>
+                  <small style={{ fontSize: 12, color: '#FFE9A8' }}>{lang === 'ta' ? 'போட்டித் தேர்வு' : 'Competitive exam'}</small>
+                </div>
+                <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 700, background: '#E2B04A', color: '#2b1c00', padding: '4px 10px', borderRadius: 999 }}>✓ {lang === 'ta' ? 'தேர்வானது' : 'Selected'}</span>
+              </div>
+            ) : restriction?.restricted ? (
               // Sept 2026 — TNPSC Group IV & VAO Pass (finalized
               // requirement): no picker at all, locked straight to Group
               // IV & VAO. Real enforcement is server-side; this is just
@@ -647,19 +694,24 @@ export default function QuizStartPage() {
               </Section>
             )}
 
+            {fixedSubCategoryId && examSelectionComplete && (
+              <SubjectPreferenceField subCategoryId={fixedSubCategoryId} t={t} resetOnFreshVisit />
+            )}
+
             <button
               onClick={saveAndStart}
               disabled={!canStart || starting}
               style={{
                 width: '100%',
-                padding: 14,
-                borderRadius: 10,
-                background: canStart ? '#0f172a' : '#cbd5e1',
-                color: '#fff',
+                padding: 16,
+                borderRadius: 14,
+                background: canStart ? 'var(--color-btn)' : 'var(--color-line)',
+                color: canStart ? 'var(--color-btnText)' : 'var(--color-inkMuted)',
                 border: 'none',
-                fontSize: 15,
-                fontWeight: 600,
+                fontSize: 17,
+                fontWeight: 700,
                 marginTop: 8,
+                boxShadow: canStart ? '0 10px 24px -10px rgba(15,47,51,0.7)' : 'none',
               }}
             >
               {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.startPractice}
@@ -683,7 +735,7 @@ export default function QuizStartPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <h2 style={{ fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 10 }}>{title}</h2>
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 10 }}>{title}</h2>
       {children}
     </div>
   );
@@ -698,12 +750,13 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
     <button
       onClick={onClick}
       style={{
-        padding: '8px 16px',
-        borderRadius: 20,
-        border: active ? '1.5px solid #0f172a' : '1px solid #cbd5e1',
-        background: active ? '#0f172a' : '#fff',
-        color: active ? '#fff' : '#334155',
-        fontSize: 13,
+        padding: '10px 18px',
+        borderRadius: 999,
+        border: active ? '1.5px solid var(--color-btn)' : '1.5px solid var(--color-line)',
+        background: active ? 'var(--color-btn)' : 'var(--color-card)',
+        color: active ? 'var(--color-btnText)' : 'var(--color-ink)',
+        fontWeight: active ? 700 : 500,
+        fontSize: 14.5,
       }}
     >
       {active ? `${label} ×` : label}
@@ -719,7 +772,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 // /subject-preference/* routes as-is, no backend changes needed here.
 type PrefSubject = { id: string; name: string };
 
-function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t: any }) {
+function SubjectPreferenceField({ subCategoryId, t, resetOnFreshVisit }: { subCategoryId: string; t: any; resetOnFreshVisit?: boolean }) {
   const [subjects, setSubjects] = useState<PrefSubject[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -730,13 +783,33 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
   useEffect(() => {
     setSubjects(null);
     setSelectedIds(new Set());
-    Promise.all([
+    // Oct 2026 — subject choice is for the current practice visit only.
+    // A new login (new token) or a new browser tab starts with none
+    // selected, i.e. the full syllabus; Language is NOT touched here.
+    let token = '';
+    let fresh = false;
+    try {
+      token = localStorage.getItem('ponna_student_token') ?? '';
+      fresh = !!resetOnFreshVisit && sessionStorage.getItem('ponna_subject_visit') !== token;
+    } catch {}
+    const reset: Promise<unknown> = fresh
+      ? studentFetch(`/subject-preference/${subCategoryId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subjectIds: [], topicIds: [] }),
+        })
+          .then(() => {
+            try { sessionStorage.setItem('ponna_subject_visit', token); } catch {}
+          })
+          .catch(() => {})
+      : Promise.resolve();
+    reset.then(() => Promise.all([
       studentFetch(`/subject-preference/${subCategoryId}/syllabus`).then((r) => r.json()),
       studentFetch(`/subject-preference/${subCategoryId}`).then((r) => r.json()),
     ]).then(([syllabus, pref]: [{ id: string; name: string }[], { subjectIds?: string[] }]) => {
       setSubjects(syllabus);
       setSelectedIds(new Set(pref.subjectIds ?? []));
-    });
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subCategoryId]);
 
@@ -769,12 +842,12 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
   if (!subjects || subjects.length === 0) return null; // no syllabus seeded for this exam yet — field doesn't appear at all
 
   return (
-    <div style={{ marginBottom: 20 }}>
+    <div style={{ marginBottom: 24 }}>
       <button
         onClick={openModal}
-        style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#334155', textDecoration: 'underline', cursor: 'pointer' }}
+        style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 14.5, fontWeight: 600, color: 'var(--color-gold)', textDecoration: 'underline', cursor: 'pointer' }}
       >
-        {t.practiceSetup.subjectPreferenceTitle}
+        {t.practiceSetup.subjectPreferenceTitle}{selectedIds.size > 0 ? ` (${selectedIds.size})` : ` (${t.practiceSetup.optionalTag})`}
       </button>
 
       {open && (
@@ -784,13 +857,13 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: 20, width: '100%', maxWidth: 480, margin: '0 auto', maxHeight: '70vh', overflowY: 'auto' }}
+            style={{ background: 'var(--color-card)', color: 'var(--color-ink)', borderRadius: '20px 20px 0 0', padding: 20, width: '100%', maxWidth: 480, margin: '0 auto', maxHeight: '70vh', overflowY: 'auto' }}
           >
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{t.practiceSetup.chooseSubjects}</h3>
-            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{t.practiceSetup.subjectPreferenceNote}</p>
+            <p style={{ fontSize: 12.5, color: 'var(--color-inkMuted)', marginBottom: 16 }}>{t.practiceSetup.subjectPreferenceNote}</p>
 
             {subjects.filter((s) => showDisabilityTrack || !DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)).map((s) => (
-              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
+              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid var(--color-line)' }}>
                 <input type="checkbox" checked={draftIds.has(s.id)} onChange={() => toggleDraft(s.id)} />
                 {s.name}
               </label>
@@ -807,7 +880,7 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
               <button
                 type="button"
                 onClick={() => setShowDisabilityTrack(true)}
-                style={{ background: 'none', border: 'none', padding: '10px 0', fontSize: 12.5, color: '#0f172a', textDecoration: 'underline', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', padding: '10px 0', fontSize: 12.5, color: 'var(--color-gold)', textDecoration: 'underline', cursor: 'pointer' }}
               >
                 {t.practiceSetup.showDisabilityTrack}
               </button>
@@ -816,7 +889,7 @@ function SubjectPreferenceField({ subCategoryId, t }: { subCategoryId: string; t
             <button
               onClick={done}
               disabled={saving}
-              style={{ width: '100%', padding: 12, borderRadius: 10, background: '#0f172a', color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, marginTop: 16 }}
+              style={{ width: '100%', padding: 14, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 15, marginTop: 16 }}
             >
               {saving ? '…' : t.practiceSetup.done}
             </button>
@@ -848,13 +921,13 @@ function PreferenceSummary({
 
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+      <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderLeft: '5px solid #E2B04A', borderRadius: 16, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h3 style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>{t.practiceSetup.yourPreferences}</h3>
-            <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.6, margin: 0 }}>{summary}</p>
+            <h3 style={{ fontSize: 12, color: 'var(--color-gold)', fontWeight: 700, marginBottom: 6 }}>{t.practiceSetup.yourPreferences}</h3>
+            <p style={{ fontSize: 15, color: 'var(--color-ink)', lineHeight: 1.7, margin: 0 }}>{summary}</p>
           </div>
-          <button onClick={onChange} style={{ fontSize: 12, padding: '6px 12px', flexShrink: 0 }}>
+          <button onClick={onChange} style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 14px', flexShrink: 0, borderRadius: 999, border: '1.5px solid var(--color-line)', background: 'var(--color-field)', color: 'var(--color-ink)' }}>
             {t.practiceSetup.changePreferences}
           </button>
         </div>
@@ -863,7 +936,7 @@ function PreferenceSummary({
       <button
         onClick={onStart}
         disabled={starting}
-        style={{ width: '100%', padding: 14, borderRadius: 10, background: '#0f172a', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600 }}
+        style={{ width: '100%', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontSize: 17, fontWeight: 700, boxShadow: '0 10px 24px -10px rgba(15,47,51,0.7)' }}
       >
         {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.startPractice}
       </button>
