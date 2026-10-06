@@ -24,7 +24,7 @@ import {
   StudyNotesIcon,
 } from './icons';
 
-type NavItem = { href: string; label: string; Icon: (p: { size?: number; color?: string }) => React.ReactElement };
+type NavItem = { href: string; label: string; locked?: boolean; Icon: (p: { size?: number; color?: string }) => React.ReactElement };
 
 export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open: boolean) => void; iconColor?: string }) {
   const { t } = useLanguage();
@@ -50,39 +50,32 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
     }
   }
 
-  const sections: { heading: string; items: NavItem[] }[] = isLoggedIn
-    ? [
-        {
-          heading: t.menu.sectionPreparation,
-          items: [
-            { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
-            { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
-            { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
-            { href: '/study-notes', label: t.menu.studyNotes, Icon: StudyNotesIcon },
-            { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
-            { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
-            { href: '/adaptive-mock', label: t.menu.adaptiveMock, Icon: PracticeIcon },
-            { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
-            { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
-          ],
-        },
-        {
-          heading: t.menu.sectionSupport,
-          items: [
-            { href: '/about', label: t.menu.about, Icon: AboutIcon },
-            { href: '/help', label: t.menu.help, Icon: HelpIcon },
-          ],
-        },
-      ]
-    : [
-        {
-          heading: t.menu.sectionSupport,
-          items: [
-            { href: '/about', label: t.menu.about, Icon: AboutIcon },
-            { href: '/help', label: t.menu.help, Icon: HelpIcon },
-          ],
-        },
-      ];
+  const preparationItems: NavItem[] = [
+    { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
+    { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
+    { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
+    { href: '/study-notes', label: t.menu.studyNotes, Icon: StudyNotesIcon },
+    { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
+    { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
+    { href: '/adaptive-mock', label: t.menu.adaptiveMock, Icon: PracticeIcon },
+    { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
+    { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
+  ];
+  // Oct 2026 — logged-out visitors see every feature too (shown with a lock);
+  // tapping one opens the Login / Sign up flow instead of a protected page.
+  const sections: { heading: string; items: NavItem[] }[] = [
+    {
+      heading: t.menu.sectionPreparation,
+      items: isLoggedIn ? preparationItems : preparationItems.map((i) => ({ ...i, href: '/?startLogin=1', locked: true })),
+    },
+    {
+      heading: t.menu.sectionSupport,
+      items: [
+        { href: '/about', label: t.menu.about, Icon: AboutIcon },
+        { href: '/help', label: t.menu.help, Icon: HelpIcon },
+      ],
+    },
+  ];
 
   return (
     <>
@@ -119,7 +112,7 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
                     <span style={{ flex: 1, borderTop: '1.5px solid var(--color-line)' }} />
                   </p>
                   {section.items.map((item) => (
-                    <MenuRow key={item.href} href={item.href} label={item.label} Icon={item.Icon} />
+                    <MenuRow key={item.label} href={item.href} label={item.label} Icon={item.Icon} locked={item.locked} />
                   ))}
                 </div>
               ))}
@@ -132,6 +125,12 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
             </div>
 
             <div style={{ flex: 'none', background: COLORS.paper }}>
+              {!isLoggedIn && (
+                <div style={{ padding: '8px 16px 12px' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: 12.5, color: COLORS.inkMuted, textAlign: 'center' }}>Login செய்தால் எல்லா வசதிகளும் திறக்கும்</p>
+                  <a href="/?startLogin=1" style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 16, textDecoration: 'none' }}>Login / Sign up</a>
+                </div>
+              )}
               {isLoggedIn && hasPass === false && (
                 <a href="/plans" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '6px 14px 10px', padding: '10px 14px', borderRadius: 14, background: 'linear-gradient(135deg,#F3C65A,#D99A1E)', color: '#2b1c00', textDecoration: 'none', boxShadow: '0 8px 18px -10px rgba(176,122,16,0.8)' }}>
                   <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -157,8 +156,8 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
   );
 }
 
-function MenuRow({ href, label, Icon, bold }: { href: string; label: string; Icon: NavItem['Icon']; bold?: boolean }) {
-  const active = typeof window !== 'undefined' && window.location.pathname === href;
+function MenuRow({ href, label, Icon, bold, locked }: { href: string; label: string; Icon: NavItem['Icon']; bold?: boolean; locked?: boolean }) {
+  const active = !locked && typeof window !== 'undefined' && window.location.pathname === href;
   return (
     <a
       href={href}
@@ -173,6 +172,7 @@ function MenuRow({ href, label, Icon, bold }: { href: string; label: string; Ico
         <Icon size={18} color={active ? 'var(--color-btnText)' : 'var(--color-gold)'} />
       </span>
       {label}
+      {locked && <span aria-label="Login required" style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.55 }}>🔒</span>}
     </a>
   );
 }
