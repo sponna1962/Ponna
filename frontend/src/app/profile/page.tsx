@@ -108,6 +108,7 @@ export default function ProfilePage() {
   const [milestones, setMilestones] = useState<{ type: string; label: string; emoji: string; achievedAt: string }[]>([]);
   const [pushStatus, setPushStatus] = useState<{ configured: boolean; subscribed: boolean; vapidPublicKey: string | null } | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
 
   useEffect(() => {
     studentFetch('/students/me/profile')
@@ -159,37 +160,61 @@ export default function ProfilePage() {
     return outputArray;
   }
 
+  // Oct 2026 — every failure path now tells the student what happened (it used
+  // to fail silently, so the toggle just looked "dead").
+  async function waitForServiceWorker(): Promise<ServiceWorkerRegistration> {
+    return Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('SW_TIMEOUT')), 8000)),
+    ]);
+  }
+
   async function enablePushNotifications() {
-    if (!pushStatus?.vapidPublicKey) return;
+    setPushMsg(null);
+    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushMsg('இந்த உலாவியில் அறிவிப்புகள் ஆதரிக்கப்படவில்லை. Chrome-ல் ponna.in-ஐத் திறந்து முயலவும். (Notifications are not supported in this browser — please open ponna.in in Chrome.)');
+      return;
+    }
+    if (!pushStatus?.vapidPublicKey) {
+      setPushMsg('அறிவிப்பு அமைப்பு இன்னும் தயாராகவில்லை. சிறிது நேரம் கழித்து முயலவும். (Notifications are not set up on the server yet.)');
+      return;
+    }
     setPushBusy(true);
     try {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        setPushBusy(false);
+        setPushMsg('அறிவிப்பு அனுமதி வழங்கப்படவில்லை. உலாவியின் முகவரிப் பட்டியில் 🔒 → Permissions → Notifications → Allow செய்து மீண்டும் முயலவும். (Notification permission was not granted.)');
         return;
       }
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await waitForServiceWorker();
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(pushStatus.vapidPublicKey) as BufferSource,
       });
-      await studentFetch('/students/me/push-subscription', {
+      const res = await studentFetch('/students/me/push-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription.toJSON()),
       });
+      if (!res.ok) throw new Error('SAVE_FAILED_' + res.status);
       setPushStatus((cur) => (cur ? { ...cur, subscribed: true } : cur));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Push subscribe failed:', err);
+      if (err?.message === 'SW_TIMEOUT') {
+        setPushMsg('பின்னணிச் சேவை இன்னும் தயாராகவில்லை. பக்கத்தை ஒருமுறை புதுப்பித்து (refresh) மீண்டும் முயலவும். (Service worker is not ready — refresh the page and try again.)');
+      } else {
+        setPushMsg(`அறிவிப்பை இயக்க முடியவில்லை. (Could not enable notifications: ${err?.message ?? 'unknown error'})`);
+      }
     } finally {
       setPushBusy(false);
     }
   }
 
   async function disablePushNotifications() {
+    setPushMsg(null);
     setPushBusy(true);
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await waitForServiceWorker();
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         await studentFetch('/students/me/push-subscription', {
@@ -202,6 +227,7 @@ export default function ProfilePage() {
       setPushStatus((cur) => (cur ? { ...cur, subscribed: false } : cur));
     } catch (err) {
       console.error('Push unsubscribe failed:', err);
+      setPushMsg('அறிவிப்பை நிறுத்த முடியவில்லை. மீண்டும் முயலவும். (Could not turn notifications off — please try again.)');
     } finally {
       setPushBusy(false);
     }
@@ -536,6 +562,14 @@ export default function ProfilePage() {
         <TextField label={t.profile.whatsapp} required type="tel" value={whatsapp} onChange={setWhatsapp} />
         <TextField label={t.profile.district} required value={district} onChange={setDistrict} />
         <TextField label={t.profile.cityTownVillage} required value={city} onChange={setCity} last />
+
+        <div style={{ borderTop: '1px solid var(--color-line)', marginTop: 16, paddingTop: 16 }}>
+          <button onClick={connectGoogle} disabled={connectingGoogle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: 13, borderRadius: 12, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)', fontWeight: 700, fontSize: 15 }}>
+            {connectingGoogle ? '…' : `🔵 ${t.profile.connectGoogle} (விருப்பம்)`}
+          </button>
+          <p style={{ fontSize: 12, color: 'var(--color-inkMuted)', margin: '8px 2px 0', lineHeight: 1.5 }}>எண் மாறினாலும் உங்கள் பாஸ் பாதுகாப்பாக இருக்கும்.</p>
+          {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? 'var(--color-ok)' : 'var(--color-bad)', margin: '10px 0 0' }}>{googleLinkMessage.text}</p>}
+        </div>
       </Card>
 
       <Card title={t.profile.education}>
@@ -624,20 +658,12 @@ export default function ProfilePage() {
             </div>
             <Switch on={!!pushStatus.subscribed} disabled={pushBusy} onClick={() => (pushStatus.subscribed ? disablePushNotifications() : enablePushNotifications())} label="Toggle notifications" onColor="var(--color-teal)" offColor="var(--color-line)" />
           </div>
+          {pushBusy && <p style={{ fontSize: 12.5, color: 'var(--color-inkMuted)', margin: '10px 0 0' }}>…</p>}
+          {pushMsg && <p role="alert" style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--color-bad)', margin: '10px 0 0' }}>{pushMsg}</p>}
         </Card>
       )}
 
-      <Card title={t.profile.account}>
-        <a href="/plans" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, background: 'var(--color-field)', border: '1.5px solid var(--color-line)', color: 'var(--color-ink)', textDecoration: 'none', fontWeight: 700, marginBottom: 12 }}>
-          {t.profile.viewMyPlans}
-          <span style={{ color: 'var(--color-gold)', fontSize: 22, lineHeight: 1 }}>›</span>
-        </a>
-
-        <button onClick={connectGoogle} disabled={connectingGoogle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: 13, borderRadius: 12, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)', fontWeight: 700, fontSize: 15 }}>
-          {connectingGoogle ? '…' : `🔵 ${t.profile.connectGoogle}`}
-        </button>
-        {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? 'var(--color-ok)' : 'var(--color-bad)', margin: '10px 0 0' }}>{googleLinkMessage.text}</p>}
-      </Card>
+      {/* Oct 2026 — the separate "Account" card was removed by request (the plans link duplicated the menu's Pass button); Google linking now lives at the end of Personal info. */}
 
       <ReferralSection />
 
