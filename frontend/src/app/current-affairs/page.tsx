@@ -91,11 +91,11 @@ export default function CurrentAffairsPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
       <BitterFontLinks />
-      <header style={{ background: 'rgba(255,253,247,0.98)', borderBottom: `1px solid ${COLORS.line}` }}>
-        <div style={{ padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <StudentMenu />
-          <div style={{ flex: 1 }}><div style={{ fontSize: 21, fontWeight: 800 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: COLORS.inkMuted }}>{s.subtitle}</div></div>
-          <div style={{ display: 'flex', border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: 2 }}>
+      <header style={{ background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <StudentMenu iconColor="#fff" />
+          <div style={{ flex: 1 }}><div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.2 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: '#FFE9A8' }}>{s.subtitle}</div></div>
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,233,168,0.5)', borderRadius: 999, padding: 3 }}>
             {(['ta', 'en'] as const).map((code) => (
               <button
                 key={code}
@@ -107,8 +107,8 @@ export default function CurrentAffairsPage() {
                   fontSize: 12.5,
                   fontWeight: 700,
                   cursor: 'pointer',
-                  background: lang === code ? COLORS.ink : 'transparent',
-                  color: lang === code ? COLORS.paper : COLORS.inkMuted,
+                  background: lang === code ? '#FFE9A8' : 'transparent',
+                  color: lang === code ? '#2b1c00' : '#e5f1f0',
                 }}
               >
                 {code === 'ta' ? 'தமிழ்' : 'English'}
@@ -119,20 +119,20 @@ export default function CurrentAffairsPage() {
       </header>
 
       <section style={{ padding: '22px 16px 70px' }}>
-        <div style={{ background: '#f6efe1', border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '15px 16px', marginBottom: 22 }}>
-          <strong>{s.bannerTitle}</strong>
+        <div style={{ background: 'var(--color-goldDisc)', border: `1px solid ${COLORS.line}`, borderLeft: '5px solid #E2B04A', borderRadius: 16, padding: '14px 16px', marginBottom: 20 }}>
+          <strong style={{ fontSize: 15 }}>{s.bannerTitle}</strong>
           <div style={{ marginTop: 5, fontSize: 13.5, lineHeight: 1.65, color: COLORS.inkMuted }}>{s.bannerBody}</div>
         </div>
 
         {loading && <p style={{ color: COLORS.inkMuted }}>{s.loading}</p>}
-        {error && <p style={{ color: '#b42318' }}>{error}</p>}
+        {error && <p style={{ color: 'var(--color-bad)' }}>{error}</p>}
         {!loading && !error && grouped.length === 0 && <p style={{ color: COLORS.inkMuted }}>{s.empty}</p>}
 
         {grouped.map((group) => (
           <section key={group.date} style={{ marginBottom: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <div style={{ height: 1, flex: 1, background: COLORS.line }} />
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, whiteSpace: 'nowrap' }}>{formatDate(group.items[0].date, lang)}</h2>
+              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', background: 'var(--color-btn)', color: 'var(--color-btnText)', padding: '6px 16px', borderRadius: 999 }}>{formatDate(group.items[0].date, lang)}</h2>
               <div style={{ height: 1, flex: 1, background: COLORS.line }} />
             </div>
             {group.items.map((item, index) => {
@@ -145,13 +145,13 @@ export default function CurrentAffairsPage() {
               const relevance = relevanceNote?.split('\n').find((line) => line.startsWith(s.relevanceLabel))?.replace(s.relevanceLabel, '').trim();
               const memory = relevanceNote?.split('\n').find((line) => line.startsWith(s.memoryLabel))?.replace(s.memoryLabel, '').trim();
               return (
-                <article key={item.id} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: '17px 17px 15px', marginBottom: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.035)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}><span style={{ fontSize: 11, fontWeight: 800, color: COLORS.gold, background: 'var(--color-goldDisc)', borderRadius: 999, padding: '4px 9px' }}>{category}</span><span style={{ fontSize: 11, color: COLORS.inkMuted }}>#{index + 1}</span></div>
-                  <h3 style={{ margin: '0 0 9px', fontSize: 18, lineHeight: 1.35 }}>{title}</h3>
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.75 }}>{summary}</p>
-                  {relevance && <div style={{ marginTop: 12, padding: '9px 11px', background: 'var(--color-field)', borderRadius: 9, fontSize: 13, lineHeight: 1.55 }}><strong>{s.relevanceLabel}</strong> {relevance}</div>}
-                  {memory && <div style={{ marginTop: 7, fontSize: 12.5, color: COLORS.inkMuted }}><strong>{s.memoryLabel}</strong> {memory}</div>}
-                  {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 10, fontSize: 12, color: COLORS.gold, textDecoration: 'none', fontWeight: 700 }}>{s.source}</a>}
+                <article key={item.id} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}><span style={{ fontSize: 12, fontWeight: 800, color: COLORS.gold, background: 'var(--color-goldDisc)', borderRadius: 999, padding: '4px 11px' }}>{category}</span><span style={{ fontSize: 12, color: COLORS.inkMuted }}>#{index + 1}</span></div>
+                  <h3 style={{ margin: '0 0 8px', fontSize: 18, lineHeight: 1.45 }}>{title}</h3>
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: 1.8 }}>{summary}</p>
+                  {relevance && <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--color-field)', borderLeft: '4px solid #E2B04A', borderRadius: 10, fontSize: 13.5, lineHeight: 1.65 }}><strong>{s.relevanceLabel}</strong> {relevance}</div>}
+                  {memory && <div style={{ marginTop: 8, fontSize: 13, color: COLORS.inkMuted }}><strong>{s.memoryLabel}</strong> {memory}</div>}
+                  {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: COLORS.gold, textDecoration: 'none', fontWeight: 700 }}>{s.source}</a>}
                 </article>
               );
             })}
