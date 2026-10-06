@@ -71,7 +71,7 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
             // diagnostic without sign-up; Start Practice opens Login (its 5 free questions
             // belong to an account) but is not shown as locked.
             if (i.href === '/study-notes') return i;
-            if (i.href === '/ask-ponna') return { ...i, href: '/ask-ponna?guestDiagnostic=1' };
+            if (i.href === '/ask-ponna') return i;
             if (i.href === '/quiz') return { ...i, href: '/?startLogin=1' };
             return { ...i, href: '/?startLogin=1', locked: true };
           }),
