@@ -132,36 +132,11 @@ export default function IndexPage() {
   // attempt always starts FRESH (never resumes from halfway; see
   // guest-diagnostic.service.ts's own startAttempt() comment). Only a
   // COMPLETED attempt stops the redirect for good.
-  useEffect(() => {
-    if (typeof window === 'undefined' || !checkedAuth) return;
-    const token = localStorage.getItem('ponna_student_token');
-    if (token) return; // already logged in — never redirect a real student here
-    // Sept 2026 — never redirect to the Welcome Screen when the visitor
-    // is here specifically to log in and claim a just-completed
-    // diagnostic (see openLogin's own startLogin effect above) -- that
-    // would send them right back to redo the diagnostic instead of
-    // letting them sign in.
-    if (new URLSearchParams(window.location.search).get('startLogin') === '1') return;
-    // Sept 2026 — the Welcome Screen's own "Go to Home" escape link
-    // (explicit fix: a visitor must never feel stuck there with no way
-    // out) skips the redirect for this one page load only -- it does
-    // NOT set anything persistent, so their next fresh visit to "/"
-    // still redirects as normal (the diagnostic is genuinely still
-    // incomplete/unclaimed; skipping once doesn't change that).
-    if (new URLSearchParams(window.location.search).get('skipWelcome') === '1') return;
+  // Oct 2026 — the automatic redirect of new visitors to the Welcome Screen
+  // (/test-your-ability) was removed by explicit request: the first page is now
+  // always the normal home page. The diagnostic is offered inside Ask PONNA
+  // after the student has paid and completed their profile.
 
-    const guestId = localStorage.getItem('ponna_guest_diagnostic_id');
-    if (!guestId) {
-      window.location.href = '/test-your-ability';
-      return;
-    }
-    fetch(apiUrl(`/guest-diagnostic/${guestId}/status`))
-      .then((r) => (r.ok ? r.json() : { completed: false }))
-      .then((data) => {
-        if (!data.completed) window.location.href = '/test-your-ability';
-      })
-      .catch(() => {}); // a status-check failure never blocks the normal Home page from showing
-  }, [checkedAuth]);
 
   useEffect(() => {
     if (!isLoggedIn) return;

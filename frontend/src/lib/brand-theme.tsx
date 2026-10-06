@@ -21,6 +21,19 @@ export const COLORS = {
   gold: 'var(--color-gold)',
   goldLight: 'var(--color-goldLight)',
   line: 'var(--color-line)',
+  // Oct 2026 redesign tokens (defined in ThemeStyles below for both themes).
+  card: 'var(--color-card)',
+  field: 'var(--color-field)',
+  teal: 'var(--color-teal)',
+  ok: 'var(--color-ok)',
+  bad: 'var(--color-bad)',
+  okBg: 'var(--color-okBg)',
+  badBg: 'var(--color-badBg)',
+  goldDisc: 'var(--color-goldDisc)',
+  head1: 'var(--color-head1)',
+  head2: 'var(--color-head2)',
+  btn: 'var(--color-btn)',
+  btnText: 'var(--color-btnText)',
 };
 
 /** The actual variable definitions for both themes — injected once, in
