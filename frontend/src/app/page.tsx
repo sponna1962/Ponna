@@ -535,8 +535,10 @@ export default function IndexPage() {
               Group 4 / TNTET landing pages from the home page. */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
             {/* Oct 2026 — direct link to the Group 4 notification guide. */}
-            <a href="/tnpsc-group-4/notification-2026" style={{ ...PILL_LINK, background: '#fff6d6', borderColor: '#d9a400' }}>🆕 Group 4 அறிவிப்பு 2026</a>
-            <a href="/tnpsc-group-4" style={PILL_LINK}>TNPSC Group 4</a>
+            <a href="/tnpsc-group-4/notification-2026" style={{ ...PILL_LINK, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              Group 4 அறிவிப்பு 2026
+              <span style={{ background: '#d62828', color: '#fff', fontSize: 10.5, fontWeight: 800, letterSpacing: 0.6, padding: '2px 7px', borderRadius: 999 }}>NEW</span>
+            </a>
             {/* Oct 2026 — TNTET link hidden from the home page until TNTET
                 practice questions exist (page itself stays live for SEO). */}
             <a href="/current-affairs" style={PILL_LINK}>Current Affairs</a>
