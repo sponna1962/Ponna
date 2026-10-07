@@ -2212,3 +2212,22 @@ model PlatformSettings {
 
   updatedAt                   DateTime @updatedAt
 }
+
+
+// Oct 2026 — anonymous site-visit counter for the admin "Visitors" page.
+// One row per page view. No name, phone, IP or account id is stored: only a
+// random browser id (visitorId), the page path, where the visitor came from
+// and a coarse device type.
+model SiteVisit {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  visitorId    String
+  path         String
+  source       String   // facebook | instagram | google | whatsapp | direct | internal | other:<host> | utm value
+  device       String   // mobile | tablet | desktop
+  isNewVisitor Boolean  @default(false)
+  isEntry      Boolean  @default(false) // first page view of a browsing session
+
+  @@index([createdAt])
+  @@index([visitorId, createdAt])
+}

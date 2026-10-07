@@ -20,6 +20,7 @@ const navItems = [
   { href: '/admin/daily-quiz', label: 'Daily Quiz' },
   { href: '/admin/current-affairs-learning', label: 'Current Affairs — Learning' },
   { href: '/admin/live-exam', label: 'Live Exam' },
+  { href: '/admin/visitors', label: 'Visitors' },
   { href: '/admin/students', label: 'Students' },
   { href: '/admin/plans', label: 'Plans' },
   { href: '/admin/manual-payments', label: 'UPI Payments' },

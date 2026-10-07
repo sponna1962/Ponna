@@ -74,6 +74,7 @@ import { adaptiveMockService } from './modules/quiz/adaptive-mock.service';
 import { DiagnosticService } from './modules/quiz/diagnostic.service';
 import { DailyQuizType } from '@prisma/client';
 import { prisma } from './lib/prisma';
+import { recordVisit, getVisitSummary } from './modules/analytics/visits.service';
 import { adminAlertService } from './modules/payments/admin-alert.service';
 import { isProfileComplete } from './modules/profile/profile.service';
 import { ProfileService } from './modules/profile/profile.service';
@@ -3917,6 +3918,28 @@ app.patch('/admin/plans/:id/expiry-override', requireStaffAuth, requireRole('SUP
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update expiry override' });
+  }
+});
+
+// ── Anonymous visitor counter (Oct 2026) ──
+// Public, fire-and-forget: always answers 204 so a tracking problem can never
+// affect the student's page.
+app.post('/track/visit', async (req, res) => {
+  res.status(204).end();
+  try {
+    await recordVisit(req.ip ?? '', String(req.headers['user-agent'] ?? ''), req.body ?? {});
+  } catch (err) {
+    console.error('visit tracking failed', err);
+  }
+});
+
+app.get('/admin/visitors/summary', requireStaffAuth, async (req, res) => {
+  try {
+    const r = String(req.query.range ?? '7');
+    res.json(await getVisitSummary(r === 'today' ? 'today' : r === '30' ? '30' : '7'));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load visitor statistics' });
   }
 });
 

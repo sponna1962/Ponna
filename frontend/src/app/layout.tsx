@@ -5,6 +5,7 @@ import { ThemeProvider } from '../lib/theme-context';
 import { ThemeStyles } from '../lib/brand-theme';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { LegalFooter } from '../components/LegalFooter';
+import { VisitTracker } from '../components/VisitTracker';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.ponna.in'),
@@ -116,6 +117,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 buried in Help & Support. See InstallPrompt.tsx for the
                 real-PWA-only / no-nagging / already-installed rules. */}
             <InstallPrompt />
+            <VisitTracker />
           </LanguageProvider>
         </ThemeProvider>
       </body>
