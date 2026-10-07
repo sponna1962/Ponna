@@ -20,10 +20,10 @@ const quick = [
 
 const tools = [
   { icon: PracticeIcon, title: 'Start Practice', body: 'பாடங்களைத் தேர்ந்தெடுத்து கேள்விகளுக்குப் பதில் அளிக்கலாம்.', href: '/quiz', tone: '#F0FAF5', iconColor: '#178D63' },
-  { icon: AskPonnaIcon, title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு எளிய விளக்கம் பெறலாம்.', href: '/ask-ponna', tone: '#F1F8FD', iconColor: '#2085C7' },
+  { icon: AskPonnaIcon, title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', tone: '#F1F8FD', iconColor: '#2085C7' },
   { icon: MistakesIcon, title: 'Review Mistakes', body: 'தவறாகப் பதிலளித்த கேள்விகளை மீண்டும் பார்க்கலாம்.', href: '/quiz', tone: '#FFF2F5', iconColor: '#D84C75' },
   { icon: StudyNotesIcon, title: 'Study Notes', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/current-affairs', tone: '#FFF8E9', iconColor: '#C98A20' },
-  { icon: DailyQuizIcon, title: 'Daily Challenge', body: 'தினமும் புதிய கேள்விகளில் பயிற்சி செய்யலாம்.', href: '/daily-quiz', tone: '#F6F1FC', iconColor: '#7651B8' },
+  { icon: DailyQuizIcon, title: 'Daily Challenge', body: 'Current Affairs மற்றும் Brain Challenge என இரண்டு தினசரி பயிற்சிகளைப் பெறலாம்.', href: '/daily-quiz', tone: '#F6F1FC', iconColor: '#7651B8' },
   { icon: LiveExamIcon, title: 'Live Exam', body: 'தேர்வு போன்ற சூழலில் தேர்வு எழுதலாம்.', href: '/tnpsc-group-4/online-test', tone: '#FFF1F3', iconColor: '#D8455C' },
   { icon: SubjectPreferenceIcon, title: 'Adaptive Mock', body: 'உங்கள் பயிற்சிக்கேற்ப மாதிரித் தேர்வு வழங்கப்படும்.', href: '/quiz', tone: '#F0F8FD', iconColor: '#2387C6' },
   { icon: ProgressIcon, title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்.', href: '/profile', tone: '#EFF8F3', iconColor: '#23956B' },
