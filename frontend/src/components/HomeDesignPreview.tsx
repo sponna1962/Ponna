@@ -12,21 +12,21 @@ import { BitterFontLinks } from '../lib/brand-theme';
 const C = {"navy":"#0B3864","green":"#17835E","yellow":"#FFD22A","red":"#E3313D","ink":"#20384D","muted":"#667786","line":"#DDE5E9","paper":"#FFFFFF"};
 
 const quick = [
-  { icon: PracticeIcon, title: 'பயிற்சிக் கேள்விகள்', sub: 'தமிழில்', href: '/quiz', tone: '#EFF8FC', iconColor: '#1687D4' },
-  { icon: AboutIcon, title: 'மாணவர்கள்', sub: 'நம்பிக்கையுடன்', href: '/about', tone: '#F5F0FC', iconColor: '#7752B9' },
-  { icon: ProgressIcon, title: 'திறன் வளர்ப்பு', sub: 'முன்னேற்றம்', href: '/quiz', tone: '#EEF8F2', iconColor: '#21966A' },
-  { icon: ProgressIcon, title: 'மாணவர் மதிப்பீடு', sub: 'தெளிவான முன்னேற்றம்', href: '/profile', tone: '#FFF1F4', iconColor: '#D94C70' },
+  { icon: PracticeIcon, title: 'Practice', sub: 'தமிழில் பயிற்சி செய்யலாம்', href: '/quiz', tone: '#EFF8FC', iconColor: '#1687D4' },
+  { icon: AboutIcon, title: 'Students', sub: 'நம்பிக்கையுடன் கற்கலாம்', href: '/about', tone: '#F5F0FC', iconColor: '#7752B9' },
+  { icon: ProgressIcon, title: 'Skill Growth', sub: 'முன்னேற்றத்தை வளர்க்கலாம்', href: '/quiz', tone: '#EEF8F2', iconColor: '#21966A' },
+  { icon: ProgressIcon, title: 'Assessment', sub: 'உங்கள் முன்னேற்றத்தைப் பார்க்கலாம்', href: '/profile', tone: '#FFF1F4', iconColor: '#D94C70' },
 ];
 
 const tools = [
-  { icon: PracticeIcon, title: 'பயிற்சிக் கேள்விகள்', body: 'பாடவாரியாக கேள்விகளுக்குப் பதில் அளிக்கலாம்.', href: '/quiz', tone: '#F0FAF5', iconColor: '#178D63' },
-  { icon: AskPonnaIcon, title: 'Ask PONNA', body: 'தேர்வு சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', tone: '#F1F8FD', iconColor: '#2085C7' },
-  { icon: MistakesIcon, title: 'தவறுகள் பயிற்சி', body: 'தவறான பதில்களை மீண்டும் பயிற்சி செய்யலாம்.', href: '/quiz', tone: '#FFF2F5', iconColor: '#D84C75' },
-  { icon: StudyNotesIcon, title: 'படிப்புக் குறிப்புகள்', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/current-affairs', tone: '#FFF8E9', iconColor: '#C98A20' },
-  { icon: DailyQuizIcon, title: 'தினசரி சவால்', body: 'தினமும் புதிய கேள்விகளில் உங்களைச் சோதிக்கலாம்.', href: '/daily-quiz', tone: '#F6F1FC', iconColor: '#7651B8' },
-  { icon: LiveExamIcon, title: 'நேரடித் தேர்வு', body: 'தேர்வு போன்ற சூழலில் மாதிரித் தேர்வு எழுதலாம்.', href: '/tnpsc-group-4/online-test', tone: '#FFF1F3', iconColor: '#D8455C' },
-  { icon: SubjectPreferenceIcon, title: 'தனிப்பயன் மாதிரித் தேர்வு', body: 'உங்கள் தேவைக்கேற்ப மாதிரித் தேர்வு அமைக்கலாம்.', href: '/quiz', tone: '#F0F8FD', iconColor: '#2387C6' },
-  { icon: ProgressIcon, title: 'செயல்திறன்', body: 'உங்கள் முன்னேற்றத்தைத் தெளிவாகப் பார்க்கலாம்.', href: '/profile', tone: '#EFF8F3', iconColor: '#23956B' },
+  { icon: PracticeIcon, title: 'Practice Questions', body: 'பாடவாரியாக கேள்விகளுக்குப் பதில் அளித்து பயிற்சி செய்யலாம்.', href: '/quiz', tone: '#F0FAF5', iconColor: '#178D63' },
+  { icon: AskPonnaIcon, title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு எளிய விளக்கம் பெறலாம்.', href: '/ask-ponna', tone: '#F1F8FD', iconColor: '#2085C7' },
+  { icon: MistakesIcon, title: 'Mistake Practice', body: 'தவறாகப் பதிலளித்த கேள்விகளை மீண்டும் பயிற்சி செய்யலாம்.', href: '/quiz', tone: '#FFF2F5', iconColor: '#D84C75' },
+  { icon: StudyNotesIcon, title: 'Study Notes', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/current-affairs', tone: '#FFF8E9', iconColor: '#C98A20' },
+  { icon: DailyQuizIcon, title: 'Daily Challenge', body: 'தினமும் புதிய கேள்விகளுடன் உங்கள் அறிவைச் சோதிக்கலாம்.', href: '/daily-quiz', tone: '#F6F1FC', iconColor: '#7651B8' },
+  { icon: LiveExamIcon, title: 'Live Test', body: 'தேர்வு போன்ற சூழலில் மாதிரித் தேர்வு எழுதிப் பயிற்சி பெறலாம்.', href: '/tnpsc-group-4/online-test', tone: '#FFF1F3', iconColor: '#D8455C' },
+  { icon: SubjectPreferenceIcon, title: 'Custom Test', body: 'உங்கள் தேவைக்கேற்ப மாதிரித் தேர்வை அமைத்துப் பயிற்சி செய்யலாம்.', href: '/quiz', tone: '#F0F8FD', iconColor: '#2387C6' },
+  { icon: ProgressIcon, title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைத் தெளிவாகப் பார்க்கலாம்.', href: '/profile', tone: '#EFF8F3', iconColor: '#23956B' },
 ];
 
 export default function HomeDesignPreview() {
@@ -102,21 +102,21 @@ export default function HomeDesignPreview() {
 
         <a href="/quiz" className="wide-card cutoff">
           <span className="wide-icon"><CutoffPredictorIcon size={22} color={C.green} /></span>
-          <span><strong>கட்-ஆஃப் கணிப்பான்</strong><small>உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பு.</small></span>
+          <span><strong>Cut-off Predictor</strong><small>உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பைப் பார்க்கலாம்.</small></span>
           <b>›</b>
         </a>
 
         <a href="/current-affairs" className="wide-card current">
           <span className="wide-icon"><StudyNotesIcon size={22} color={C.navy} /></span>
-          <span><strong>நடப்பு நிகழ்வுகள்</strong><small>தேர்வுக்குத் தேவையான நடப்பு நிகழ்வுகளைப் படிக்கலாம்.</small></span>
+          <span><strong>Current Affairs</strong><small>தேர்வுக்குத் தேவையான நடப்பு நிகழ்வுகளைத் தொடர்ந்து படிக்கலாம்.</small></span>
           <mark>புதியது</mark>
         </a>
 
         <section className="tamil-strip">
           <div className="book-stack" aria-hidden="true"><span>தமிழ்</span><span>GENERAL STUDIES</span><span>APTITUDE</span></div>
           <div>
-            <h3>தமிழில், எளிமையாக,<br />தேர்வு நோக்கில்!</h3>
-            <p>பாடங்கள், கேள்விகள், நடப்பு நிகழ்வுகள் — ஒரே இடத்தில்.</p>
+            <h3>Simple. Clear.<br />Exam-focused.</h3>
+            <p>பாடங்கள், கேள்விகள், நடப்பு நிகழ்வுகள் — அனைத்தும் ஒரே இடத்தில்.</p>
             <a href="/quiz">பாடங்களைப் பார்க்க →</a>
           </div>
         </section>
