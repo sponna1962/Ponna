@@ -18,6 +18,7 @@ type Plan = {
   cycleDays: number | null;
   regularPrice: string | null;
   launchPrice: string | null;
+  manualExpiryOverride: string | null;
   active: boolean;
   isFree: boolean;
   purpose: { name: string } | null;
@@ -27,6 +28,8 @@ type Plan = {
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [editingPrice, setEditingPrice] = useState<Record<string, { regular: string; launch: string }>>({});
+  const [expiryInput, setExpiryInput] = useState<Record<string, string>>({});
+  const [expiryMsg, setExpiryMsg] = useState<Record<string, string>>({});
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('ponna_staff_role') === 'SUPER_ADMIN';
 
   async function load() {
@@ -53,6 +56,31 @@ export default function PlansPage() {
   async function toggleActive(planId: string, currentlyActive: boolean) {
     await adminFetch(`/admin/plans/${planId}/${currentlyActive ? 'deactivate' : 'activate'}`, { method: 'POST' });
     load();
+  }
+
+  // Oct 2026 — exam-linked pass expiry. Dates are entered and shown in IST.
+  function toIstInput(iso: string | null): string {
+    if (!iso) return '';
+    return new Date(new Date(iso).getTime() + 5.5 * 3600_000).toISOString().slice(0, 16);
+  }
+  function showIst(iso: string): string {
+    return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST';
+  }
+  async function saveExpiry(p: Plan, clear: boolean) {
+    const value = clear ? '' : (expiryInput[p.id] ?? toIstInput(p.manualExpiryOverride));
+    if (!clear && !value) { setExpiryMsg({ ...expiryMsg, [p.id]: 'Pick a date and time first.' }); return; }
+    const iso = clear ? null : new Date(`${value}:00+05:30`).toISOString();
+    const question = clear
+      ? `Remove the expiry date for "${p.name}"? Subscribers will keep access until their own subscription period ends.`
+      : `All subscribers of "${p.name}" will lose access at ${showIst(iso as string)}. Save this date?`;
+    if (!window.confirm(question)) return;
+    const res = await adminFetch(`/admin/plans/${p.id}/expiry-override`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ manualExpiryOverride: iso }),
+    });
+    setExpiryMsg({ ...expiryMsg, [p.id]: res.ok ? (clear ? 'Expiry date removed.' : 'Saved.') : 'Could not save — try again.' });
+    if (res.ok) { setExpiryInput((m) => { const n = { ...m }; delete n[p.id]; return n; }); load(); }
   }
 
   function scopeLabel(p: Plan): string {
@@ -109,6 +137,36 @@ export default function PlansPage() {
                   </button>
                 </>
               )}
+            </div>
+          )}
+          {!p.isFree && (
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed #e2e8f0' }}>
+              <div style={{ fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                <strong>Access ends on (exam-linked expiry):</strong>{' '}
+                {p.manualExpiryOverride ? showIst(p.manualExpiryOverride) : 'Not set — each subscriber keeps access until their own subscription period ends'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <input
+                  type="datetime-local"
+                  disabled={!isSuperAdmin}
+                  value={expiryInput[p.id] ?? toIstInput(p.manualExpiryOverride)}
+                  onChange={(e) => setExpiryInput({ ...expiryInput, [p.id]: e.target.value })}
+                  style={{ padding: 6, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                />
+                <span style={{ fontSize: 12, color: '#64748b' }}>(IST)</span>
+                {isSuperAdmin && (
+                  <>
+                    <button onClick={() => saveExpiry(p, false)} style={{ padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>Save date</button>
+                    {p.manualExpiryOverride && (
+                      <button onClick={() => saveExpiry(p, true)} style={{ padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>Remove date</button>
+                    )}
+                  </>
+                )}
+              </div>
+              {expiryMsg[p.id] && <p style={{ fontSize: 12.5, color: '#166534', margin: '6px 0 0' }}>{expiryMsg[p.id]}</p>}
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: '6px 0 0' }}>
+                Takes effect for every subscriber at that exact moment. Example for the Group 4 exam (10 Jan 2027): choose 12 Jan 2027, 11:59 PM.
+              </p>
             </div>
           )}
         </div>
