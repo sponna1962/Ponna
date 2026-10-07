@@ -32,13 +32,16 @@ export default function HomeDesignPreview() {
       </header>
 
       <section className="hero">
-        <svg className="sunrise" viewBox="0 0 390 90" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-          <rect width="390" height="90" fill="#EFE6C8" />
-          <circle cx="195" cy="58" r="32" fill="#F3D98B" />
-          <path d="M0 62 Q100 38 195 58 T390 52 V90 H0Z" fill="#5E9A73" />
-          <path d="M0 74 Q120 56 230 72 T390 68 V90 H0Z" fill="#7DB35F" />
-          <path d="M176 90 Q190 76 196 62 Q204 76 224 90Z" fill="#EFE0A6" />
-        </svg>
+        <div className="hero-image-wrap">
+          <Image
+            src="/ponna-hero-woman.jpg"
+            alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி"
+            width={227}
+            height={250}
+            priority
+            className="hero-image"
+          />
+        </div>
         <div className="hero-copy">
           <div className="eyebrow">TNPSC தேர்வுக்கான பயிற்சி</div>
           <h1>Group 4 தேர்வுக்கு <em>திட்டமிட்டுப் பயிற்சி</em> செய்யுங்கள்</h1>
@@ -107,7 +110,8 @@ export default function HomeDesignPreview() {
         .brand { flex: 1; display: flex; align-items: center; }
         .login { background: #0B3864; color: #fff; text-decoration: none; border-radius: 24px; padding: 12px 18px; font-weight: 800; font-size: 16px; white-space: nowrap; min-height: 20px; }
         .hero { position: relative; background: #F1FAF3; border-bottom: 1px solid #DCE9DF; }
-        .sunrise { display: block; width: 100%; height: 90px; }
+        .hero-image-wrap { height: 250px; background: #F1FAF3; overflow: hidden; display: flex; justify-content: flex-end; }
+        .hero-image { width: 100%; height: 250px; object-fit: cover; object-position: center; display: block; }
         .hero-copy { padding: 22px 18px 26px; }
         .eyebrow { color: #17835E; font-weight: 800; font-size: 16px; margin-bottom: 8px; }
         h1 { margin: 0; color: #0B3864; font-size: 31px; line-height: 1.4; }
