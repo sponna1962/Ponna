@@ -19,14 +19,14 @@ const quick = [
 ];
 
 const tools = [
-  { icon: PracticeIcon, title: 'பயிற்சியைத் தொடங்குங்கள்', body: 'பாடங்களையும் கேள்விகளையும் தேர்ந்தெடுத்து பயிற்சி செய்யுங்கள்.', href: '/quiz', tone: '#F0FAF5', iconColor: '#178D63' },
-  { icon: AskPonnaIcon, title: 'Ask PONNA', body: 'தேர்வு தொடர்பான உங்கள் சந்தேகங்களுக்கு எளிய விளக்கங்களைப் பெறுங்கள்.', href: '/ask-ponna', tone: '#F1F8FD', iconColor: '#2085C7' },
-  { icon: MistakesIcon, title: 'தவறுகளை மீண்டும் பயிற்சி செய்யுங்கள்', body: 'தவறாகப் பதிலளித்த கேள்விகளை மீண்டும் செய்து சரிசெய்யுங்கள்.', href: '/quiz', tone: '#FFF2F5', iconColor: '#D84C75' },
-  { icon: StudyNotesIcon, title: 'படிப்புக் குறிப்புகள்', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களை எளிமையாகப் படியுங்கள்.', href: '/current-affairs', tone: '#FFF8E9', iconColor: '#C98A20' },
-  { icon: DailyQuizIcon, title: 'தினசரி சவால்', body: 'தினமும் புதிய கேள்விகளுடன் உங்கள் அறிவையும் வேகத்தையும் சோதியுங்கள்.', href: '/daily-quiz', tone: '#F6F1FC', iconColor: '#7651B8' },
-  { icon: LiveExamIcon, title: 'நேரடித் தேர்வு', body: 'தேர்வு போன்ற சூழலில் முழுமையான மாதிரித் தேர்வை எழுதி பயிற்சி பெறுங்கள்.', href: '/tnpsc-group-4/online-test', tone: '#FFF1F3', iconColor: '#D8455C' },
-  { icon: SubjectPreferenceIcon, title: 'தனிப்பயன் மாதிரித் தேர்வு', body: 'உங்கள் திறனுக்கேற்ப பயிற்சியைத் தேர்ந்தெடுத்து செய்யுங்கள்.', href: '/quiz', tone: '#F0F8FD', iconColor: '#2387C6' },
-  { icon: ProgressIcon, title: 'செயல்திறன்', body: 'உங்கள் முன்னேற்றம் மற்றும் மேம்படுத்த வேண்டிய பகுதிகளைப் பாருங்கள்.', href: '/profile', tone: '#EFF8F3', iconColor: '#23956B' },
+  { icon: PracticeIcon, title: 'பயிற்சிக் கேள்விகள்', body: 'பாடவாரியாக கேள்விகளுக்குப் பதில் அளிக்கலாம்.', href: '/quiz', tone: '#F0FAF5', iconColor: '#178D63' },
+  { icon: AskPonnaIcon, title: 'Ask PONNA', body: 'தேர்வு சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', tone: '#F1F8FD', iconColor: '#2085C7' },
+  { icon: MistakesIcon, title: 'தவறுகள் பயிற்சி', body: 'தவறான பதில்களை மீண்டும் பயிற்சி செய்யலாம்.', href: '/quiz', tone: '#FFF2F5', iconColor: '#D84C75' },
+  { icon: StudyNotesIcon, title: 'படிப்புக் குறிப்புகள்', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/current-affairs', tone: '#FFF8E9', iconColor: '#C98A20' },
+  { icon: DailyQuizIcon, title: 'தினசரி சவால்', body: 'தினமும் புதிய கேள்விகளில் உங்களைச் சோதிக்கலாம்.', href: '/daily-quiz', tone: '#F6F1FC', iconColor: '#7651B8' },
+  { icon: LiveExamIcon, title: 'நேரடித் தேர்வு', body: 'தேர்வு போன்ற சூழலில் மாதிரித் தேர்வு எழுதலாம்.', href: '/tnpsc-group-4/online-test', tone: '#FFF1F3', iconColor: '#D8455C' },
+  { icon: SubjectPreferenceIcon, title: 'தனிப்பயன் மாதிரித் தேர்வு', body: 'உங்கள் தேவைக்கேற்ப மாதிரித் தேர்வு அமைக்கலாம்.', href: '/quiz', tone: '#F0F8FD', iconColor: '#2387C6' },
+  { icon: ProgressIcon, title: 'செயல்திறன்', body: 'உங்கள் முன்னேற்றத்தைத் தெளிவாகப் பார்க்கலாம்.', href: '/profile', tone: '#EFF8F3', iconColor: '#23956B' },
 ];
 
 export default function HomeDesignPreview() {
@@ -42,12 +42,12 @@ export default function HomeDesignPreview() {
 
       <section className="hero">
         <div className="hero-copy">
-          <div className="eyebrow">அரசுப் போட்டித் தேர்வுகளுக்கான பயிற்சித் தளம்</div>
-          <h1>TNPSC Group 4<br />தேர்வுக்கான உங்கள்<br /><em>முழுமையான பயிற்சி</em><br />இங்கே தொடங்குகிறது!</h1>
+          <div className="eyebrow">TNPSC தேர்வுக்கான பயிற்சி</div>
+          <h1>Group 4 தேர்வுக்கு<br /><em>திட்டமிட்டுப் பயிற்சி</em><br />செய்யுங்கள்</h1>
           <ul>
-            <li>புதிய பாடத்திட்டத்துக்கு ஏற்ப பயிற்சி</li>
-            <li>தமிழில் எளிய விளக்கங்களுடன்</li>
-            <li>உங்கள் முன்னேற்றத்தை நீங்களே அறிந்துகொள்ள</li>
+            <li>பாடவாரியாகப் பயிற்சி</li>
+            <li>மாதிரித் தேர்வுகள்</li>
+            <li>முன்னேற்றத்தைப் பார்க்கலாம்</li>
           </ul>
           <a href="/quiz" className="primary-button">இப்போதே பயிற்சியைத் தொடங்குங்கள் <b>→</b></a>
         </div>
@@ -82,7 +82,7 @@ export default function HomeDesignPreview() {
       </a>
 
       <section className="content">
-        <h2>உங்கள் தேர்வுத் தயாரிப்புக்குத் தேவையான அனைத்தும்<br />ஒரே இடத்தில்</h2>
+        <h2>தேர்வுக்குத் தேவையான வசதிகள்<br />ஒரே இடத்தில்</h2>
 
         <div className="tools-grid">
           {tools.map((item) => {
@@ -102,13 +102,13 @@ export default function HomeDesignPreview() {
 
         <a href="/quiz" className="wide-card cutoff">
           <span className="wide-icon"><CutoffPredictorIcon size={22} color={C.green} /></span>
-          <span><strong>கட்-ஆஃப் கணிப்பான்</strong><small>உங்கள் பயிற்சி மற்றும் தேர்வு முடிவுகளை அடிப்படையாகக் கொண்டு கட்-ஆஃப் மதிப்பெண்ணை கணிக்க உதவும்.</small></span>
+          <span><strong>கட்-ஆஃப் கணிப்பான்</strong><small>உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பு.</small></span>
           <b>›</b>
         </a>
 
         <a href="/current-affairs" className="wide-card current">
           <span className="wide-icon"><StudyNotesIcon size={22} color={C.navy} /></span>
-          <span><strong>நடப்பு நிகழ்வுகள்</strong><small>போட்டித் தேர்வுகளுக்குத் தேவையான முக்கியமான நடப்பு நிகழ்வுகளைத் தொடர்ந்து படியுங்கள்.</small></span>
+          <span><strong>நடப்பு நிகழ்வுகள்</strong><small>தேர்வுக்குத் தேவையான நடப்பு நிகழ்வுகளைப் படிக்கலாம்.</small></span>
           <mark>புதியது</mark>
         </a>
 
@@ -116,20 +116,20 @@ export default function HomeDesignPreview() {
           <div className="book-stack" aria-hidden="true"><span>தமிழ்</span><span>GENERAL STUDIES</span><span>APTITUDE</span></div>
           <div>
             <h3>தமிழில், எளிமையாக,<br />தேர்வு நோக்கில்!</h3>
-            <p>அவசியமான பாடங்கள், பயிற்சிக் கேள்விகள், நடப்பு நிகழ்வுகள் — அனைத்தும் ஒரே இடத்தில்.</p>
+            <p>பாடங்கள், கேள்விகள், நடப்பு நிகழ்வுகள் — ஒரே இடத்தில்.</p>
             <a href="/quiz">பாடங்களைப் பார்க்க →</a>
           </div>
         </section>
 
         <section className="trust-strip">
           <div className="trust-quote">“</div>
-          <p><strong>PONNA மாணவரை மதிப்பிடுவதற்காக மட்டும் அல்ல;<br />மாணவர் தனது திறனை அறிந்துகொள்வதற்கும் முன்னேறுவதற்கும் உதவுகிறது.</strong></p>
-          <div className="steps"><span>பயிற்சி</span><i>→</i><span>முயற்சி</span><i>→</i><span>தவறுகளைச் சரிசெய்தல்</span><i>→</i><span>முன்னேற்றம்</span></div>
+          <p><strong>பயிற்சி → தவறுகளைச் சரிசெய்தல் → முன்னேற்றம்</strong></p>
+          <div className="steps"><span>பயிற்சி</span><i>→</i><span>தவறுகள்</span><i>→</i><span>சரிசெய்தல்</span><i>→</i><span>முன்னேற்றம்</span></div>
         </section>
 
         <section className="final-strip">
           <h3>உங்கள் தேர்வுத் தயாரிப்பு<br />இன்று தொடங்கட்டும்!</h3>
-          <p>படிப்போம். பயிற்சி செய்வோம். தவறுகளைச் சரிசெய்வோம். முன்னேறுவோம்.</p>
+          <p>பயிற்சி செய்யுங்கள். உங்கள் முன்னேற்றத்தைப் பாருங்கள்.</p>
           <a href="/quiz">இப்போதே பயிற்சியைத் தொடங்குங்கள் →</a>
         </section>
       </section>
@@ -146,9 +146,9 @@ export default function HomeDesignPreview() {
         .hero { min-height: 280px; display: flex; position: relative; overflow: hidden; background: linear-gradient(90deg,#F1FBF3 0%,#F8FFF9 58%,#E6F6EA 100%); }
         .hero-copy { width: 58%; padding: 22px 0 20px 22px; position: relative; z-index: 2; }
         .eyebrow { color: #17835E; font-weight: 800; font-size: 12px; margin-bottom: 6px; }
-        h1 { margin: 0; color: #0B3864; font-size: 27px; line-height: 1.17; letter-spacing: -.2px; }
+        h1 { margin: 0; color: #0B3864; font-size: 26px; line-height: 1.18; letter-spacing: -.2px; }
         h1 em { color: #E3313D; font-style: normal; }
-        .hero ul { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 5px; font-size: 10.5px; font-weight: 700; line-height: 1.35; }
+        .hero ul { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; font-size: 10px; font-weight: 700; line-height: 1.35; }
         .hero li::before { content: '✓'; color: #17835E; margin-right: 5px; font-weight: 900; }
         .primary-button, .tamil-strip a, .final-strip a { display: inline-block; background: #FFD22A; color: #20384D; text-decoration: none; font-weight: 900; border-radius: 5px; padding: 9px 13px; font-size: 10.5px; margin-top: 12px; }
         .primary-button b { margin-left: 5px; }
@@ -166,15 +166,15 @@ export default function HomeDesignPreview() {
         .notice-banner b { color: #fff; background: #17835E; border-radius: 4px; padding: 5px 8px; font-size: 9px; }
         .notice-arrow { margin-left: auto; color: #0B3864; font-size: 26px; }
         .content { padding: 14px 12px 0; }
-        .content h2 { text-align: center; color: #0B3864; font-size: 19px; line-height: 1.3; margin: 0 0 12px; }
+        .content h2 { text-align: center; color: #0B3864; font-size: 18px; line-height: 1.3; margin: 0 0 12px; }
         .content h2::after { content: ''; display: block; width: 54px; height: 2px; background: #D8E4EA; margin: 8px auto 0; }
         .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-        .tool-card { min-height: 105px; border: 1px solid #DDE5E9; border-radius: 8px; padding: 10px 10px 9px; text-decoration: none; }
+        .tool-card { min-height: 92px; border: 1px solid #DDE5E9; border-radius: 8px; padding: 10px 10px 9px; text-decoration: none; }
         .tool-top { display: flex; align-items: center; gap: 7px; }
         .tool-icon { width: 34px; height: 34px; background: #fff; border-radius: 7px; display: grid; place-items: center; flex: 0 0 34px; }
         .tool-top strong { font-size: 11px; line-height: 1.18; flex: 1; }
         .tool-arrow { color: #667786; font-size: 20px; line-height: 1; }
-        .tool-card p { color: #667786; font-size: 9.2px; line-height: 1.38; margin: 7px 0 0; }
+        .tool-card p { color: #667786; font-size: 8.8px; line-height: 1.38; margin: 7px 0 0; }
         .wide-card { display: flex; align-items: center; gap: 9px; min-height: 67px; padding: 9px 11px; margin-top: 7px; border: 1px solid #DDE5E9; border-radius: 8px; text-decoration: none; }
         .cutoff { background: #FFF7E8; }
         .current { background: #EFF7FC; }
