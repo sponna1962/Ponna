@@ -534,6 +534,26 @@ export default function AskPonnaPage() {
                   {text}
                 </div>
               </div>
+              {navigateTo && (
+                <div style={{ marginTop: 8, marginLeft: 38 }}>
+                  <a
+                    href={isSiteLink(navigateTo.path) ? navigateTo.path : getDownloadHref(navigateTo.path)}
+                    {...(isSiteLink(navigateTo.path) ? {} : { download: true })}
+                    style={{
+                      display: 'inline-block',
+                      padding: '11px 20px',
+                      borderRadius: 999,
+                      background: 'var(--color-btn)',
+                      color: 'var(--color-btnText)',
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {navigateTo.label}
+                  </a>
+                </div>
+              )}
               {m.role === 'ASSISTANT' && !guestMode && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6, marginLeft: 38 }}>
                   {(['up', 'down'] as const).map((r) => (
@@ -586,26 +606,6 @@ export default function AskPonnaPage() {
                       {opt}
                     </button>
                   ))}
-                </div>
-              )}
-              {isLastAssistant && navigateTo && (
-                <div style={{ marginTop: 8, marginLeft: 38 }}>
-                  <a
-                    href={isSiteLink(navigateTo.path) ? navigateTo.path : getDownloadHref(navigateTo.path)}
-                    {...(isSiteLink(navigateTo.path) ? {} : { download: true })}
-                    style={{
-                      display: 'inline-block',
-                      padding: '11px 20px',
-                      borderRadius: 999,
-                      background: 'var(--color-btn)',
-                      color: 'var(--color-btnText)',
-                      fontSize: 13.5,
-                      fontWeight: 700,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    {navigateTo.label}
-                  </a>
                 </div>
               )}
             </div>

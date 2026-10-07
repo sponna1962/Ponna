@@ -48,7 +48,7 @@ Never invent: exam dates, vacancy numbers, eligibility specifics, cutoffs, salar
 THE THREE VERIFICATION TIERS
 ═══════════════════════════════════════════════════════════════
 Tier 1 — Verified PONNA data (get_exam_full_info / get_current_affairs / get_ponna_faq / get_exam_syllabus), where isOfficialConfirmed=true: state as officially confirmed.
-Tier 1 (official notification) — search_group4_notification: for ANY question about the details of the TNPSC Group IV Notification No. 11/2026 (Advertisement No. 747) — vacancies, posts, qualification, age limit/concessions, community, fee/exemption, dates, how to apply, exam scheme, hall ticket/exam day, banned items, OMR, PwBD, sports, ex-servicemen, destitute widow, certificates, penalties, counselling, pay level — you MUST call this tool FIRST, directly, in your very first step (do NOT call find_exam, get_exam_full_info, get_my_profile or get_exam_syllabus beforehand for these questions — they waste tool rounds); a broad request such as "தகுதி, வயது வரம்பு" needs just 1–2 searches (e.g. "educational qualification posts", then "age limit") with focused ENGLISH keywords (e.g. "age limit BC MBC SC", "examination fee exemption"), because the official text is in English. Give the COMPLETE explanation of what was asked — every relevant rule, number, condition, exception and footnote in the passages, as a full step-by-step/point-by-point answer, never a vague summary (a student should not need to open the website just to get the answer). Answer ONLY from the returned passages, in simple Tamil, plain text, with exact numbers, years and post names as given; never fill gaps from memory. Salary/take-home figures are approximate (label "தோராயம்"). After the link, add [[OPTIONS: question 1 | question 2 | question 3]] with 2–3 short, natural follow-up questions a student would ask next about the notification (each answerable from the notification, e.g. "தேர்வுக் கட்டணம் எவ்வளவு?", "எப்படி விண்ணப்பிப்பது?"). STRICT RULE: never answer a Group IV notification question from your own knowledge or by guessing — not even partly. If found is false, or the passages do not contain the exact detail asked, reply plainly in Tamil: "இந்தக் கேள்விக்கான அதிகாரப்பூர்வ பதில் அறிவிப்பில் இல்லை; என்னிடம் இந்தத் தகவல் இல்லை." and then point them to the PONNA guide link (and tnpsc.gov.in for official confirmation) — add nothing else you are not sure of. Never present a partial or related passage as if it answered the question. For the Tamil syllabus or application forms (not in the text), use get_exam_syllabus and the guide link. After the complete answer, ALWAYS close with one line "மேலும் விவரங்களுக்கு நமது PONNA வழிகாட்டிப் பக்கத்தைப் பாருங்கள்:" followed by the link from the best passage using [[NAVIGATE: <that link> | முழு விவரத்துக்கு PONNA வழிகாட்டி]] (never a raw URL).
+Tier 1 (official notification) — search_group4_notification: for ANY question about the details of the TNPSC Group IV Notification No. 11/2026 (Advertisement No. 747) — vacancies, posts, qualification, age limit/concessions, community, fee/exemption, dates, how to apply, exam scheme, hall ticket/exam day, banned items, OMR, PwBD, sports, ex-servicemen, destitute widow, certificates, penalties, counselling, pay level — you MUST call this tool FIRST, directly, in your very first step (do NOT call find_exam, get_exam_full_info, get_my_profile or get_exam_syllabus beforehand for these questions — they waste tool rounds); a broad request such as "தகுதி, வயது வரம்பு" needs just 1–2 searches (e.g. "educational qualification posts", then "age limit") with focused ENGLISH keywords (e.g. "age limit BC MBC SC", "examination fee exemption"), because the official text is in English. Give the COMPLETE explanation of what was asked — every relevant rule, number, condition, exception and footnote in the passages, as a full step-by-step/point-by-point answer, never a vague summary (a student should not need to open the website just to get the answer). Answer ONLY from the returned passages, in simple Tamil, plain text, with exact numbers, years and post names as given; never fill gaps from memory. Salary/take-home figures are approximate (label "தோராயம்"). After the link, add [[OPTIONS: question 1 | question 2 | question 3]] with 2–3 short, natural follow-up questions a student would ask next about the notification (each answerable from the notification, e.g. "தேர்வுக் கட்டணம் எவ்வளவு?", "எப்படி விண்ணப்பிப்பது?"). STRICT RULE: never answer a Group IV notification question from your own knowledge or by guessing — not even partly. If found is false, or the passages do not contain the exact detail asked, reply plainly in Tamil: "இந்தக் கேள்விக்கான அதிகாரப்பூர்வ பதில் அறிவிப்பில் இல்லை; என்னிடம் இந்தத் தகவல் இல்லை." and then point them to the PONNA guide link (and tnpsc.gov.in for official confirmation) — add nothing else you are not sure of. Never present a partial or related passage as if it answered the question. For the Tamil syllabus or application forms (not in the text), use get_exam_syllabus and the guide link. After the complete answer, ALWAYS close with one line "மேலும் விவரங்களுக்கு நமது PONNA வழிகாட்டிப் பக்கத்தைப் பாருங்கள்:" followed by the link from the best passage using [[NAVIGATE: <that link> | 👉 முழு விவரம் — கிளிக் செய்யவும்]] (never a raw URL).
 Tier 2 — PONNA's own tentative/estimate data (isOfficialConfirmed=false facts, or CutoffRecord rows not marked official): always label as tentative/expected or "PONNA-ன் மதிப்பீடு" — never imply it's confirmed.
 Tier 3 — Live search (search_current_info), used ONLY when Tier 1 is missing or flagged stale (isStale=true — this only ever applies to genuinely time-varying facts: dates, vacancy, hall ticket, answer key, result, application window; a syllabus or eligibility rule is never "stale" just because it's old). If the search result's isOfficialSource is true, present it as reasonably current official information (but still note it came from a live check, not PONNA's own database). If isOfficialSource is false, you MUST say "தற்போதைய web தகவல் (அதிகாரப்பூர்வமாக உறுதிப்படுத்தப்படவில்லை)" — never imply official confirmation. If available is false, use the exact fallback sentence above — never guess instead.
 
@@ -152,6 +152,7 @@ export async function runConversationTurn(userId: string, history: ChatMessage[]
   const adapter = await buildAdapter();
   const toolCallsUsed: string[] = [];
   let pendingToolResults: ToolResult[] | undefined = undefined;
+  let g4Link: string | null = null; // best guide link from search_group4_notification, appended deterministically
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await adapter.sendMessage({
@@ -162,7 +163,20 @@ export async function runConversationTurn(userId: string, history: ChatMessage[]
     });
 
     if (response.type === 'text') {
-      return { text: response.text, toolCallsUsed };
+      let text = response.text;
+      // Every answer that came from PONNA content gets a small clickable "full details" button, even if the model forgot the marker.
+      const GUIDE = 'https://www.ponna.in/tnpsc-group-4/notification-2026';
+      if (!g4Link && !/\[\[NAVIGATE:/.test(text)) {
+        if (toolCallsUsed.some((n) => ['get_exam_info', 'get_exam_full_info', 'get_exam_syllabus', 'get_previous_cutoffs', 'get_ponna_faq'].includes(n))) g4Link = GUIDE;
+        else if (toolCallsUsed.includes('get_current_affairs')) g4Link = '/current-affairs';
+        else if (toolCallsUsed.includes('get_my_mistakes')) g4Link = '/mistakes';
+      }
+      if (g4Link && !/\[\[NAVIGATE:/.test(text)) {
+        // The model sometimes writes "see the guide" but forgets the clickable marker — always attach it.
+        text = text.split('\n').filter((l) => !l.includes('மேலும் விவரங்களுக்கு')).join('\n').trim();
+        text += `\n\nமேலும் விவரங்களுக்கு நமது PONNA வழிகாட்டிப் பக்கத்தைப் பாருங்கள்:\n[[NAVIGATE: ${g4Link} | 👉 முழு விவரம் — கிளிக் செய்யவும்]]`;
+      }
+      return { text, toolCallsUsed };
     }
 
     // response.type === 'tool_calls' — execute each via the Tool Layer,
@@ -174,6 +188,10 @@ export async function runConversationTurn(userId: string, history: ChatMessage[]
       try {
         const result = await executeTool(userId, call.name, call.arguments);
         results.push({ toolCallId: call.id, name: call.name, result });
+        if (call.name === 'search_group4_notification') {
+          const r = result as { found?: boolean; results?: { link: string }[]; guidePage?: string };
+          g4Link = (r.found && r.results?.[0]?.link) || 'https://www.ponna.in/tnpsc-group-4/notification-2026';
+        }
       } catch (err: any) {
         results.push({ toolCallId: call.id, name: call.name, result: { error: err.message ?? 'Tool execution failed' } });
       }
