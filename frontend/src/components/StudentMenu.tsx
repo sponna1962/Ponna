@@ -110,6 +110,7 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
               {[
                 { href: '/', label: t.menu.home, Icon: HomeIcon, bold: true },
                 { href: '/current-affairs', label: 'Current Affairs', Icon: StudyNotesIcon, bold: true },
+                { href: '/tnpsc-group-4/notification-2026', label: 'Group 4 அறிவிப்பு 2026', Icon: StudyNotesIcon, bold: true },
               ].map((item) => (
                 <MenuRow key={item.href} href={item.href} label={item.label} Icon={item.Icon} bold={item.bold} />
               ))}

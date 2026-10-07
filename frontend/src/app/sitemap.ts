@@ -21,6 +21,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/test-your-ability`, changeFrequency: 'weekly', priority: 0.8 },
     // TNPSC Group 4 & TNTET SEO landing pages (Sept 2026)
     { url: `${baseUrl}/tnpsc-group-4`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${baseUrl}/tnpsc-group-4/notification-2026`, lastModified: new Date('2026-10-07'), changeFrequency: 'daily', priority: 0.95 },
     { url: `${baseUrl}/tnpsc-group-4/previous-year-questions`, changeFrequency: 'weekly', priority: 0.85 },
     { url: `${baseUrl}/tnpsc-group-4/online-test`, changeFrequency: 'weekly', priority: 0.85 },
     { url: `${baseUrl}/tnpsc-group-4/question-bank`, changeFrequency: 'weekly', priority: 0.85 },

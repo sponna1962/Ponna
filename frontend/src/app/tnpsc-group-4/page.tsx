@@ -107,6 +107,7 @@ export default function TnpscGroup4Page() {
         </p>
         <div style={{ display: 'grid', gap: 10 }}>
           {[
+            ['Group 4 அறிவிப்பு 2026 — முழுமையான வழிகாட்டி', '6,574 காலியிடங்கள், தேதிகள், தகுதி, வயது, விண்ணப்ப முறை — அறிவிப்பு 11/2026-ன் முழு விவரம்.', '/tnpsc-group-4/notification-2026'],
             ['முந்தைய ஆண்டு கேள்விகள்', 'Previous year TNPSC Group 4 question papers, subject-வாரியாக பிரிக்கப்பட்டவை.', '/tnpsc-group-4/previous-year-questions'],
             ['Online Test', 'நேரம் குறித்த, real-exam மாதிரி online mock test.', '/tnpsc-group-4/online-test'],
             ['Question Bank', 'Indian Polity முதல் தமிழ் தகுதி வரை, subject-வாரியான ஆயிரக்கணக்கான கேள்விகள்.', '/tnpsc-group-4/question-bank'],
