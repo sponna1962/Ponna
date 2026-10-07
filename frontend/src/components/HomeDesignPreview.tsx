@@ -36,7 +36,7 @@ export default function HomeDesignPreview() {
 
       <header className="site-header">
         <button className="menu-button" aria-label="மெனு"><span /><span /><span /></button>
-        <a href="/" className="brand"><Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority /></a>
+        <a href="/" className="brand" style={{ flex: 1, display: 'flex', alignItems: 'center' }}><Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority style={{ width: 145, height: 'auto', display: 'block' }} /></a>
         <a href="/" className="login">உள்நுழைவு</a>
       </header>
 
@@ -52,7 +52,7 @@ export default function HomeDesignPreview() {
           <a href="/quiz" className="primary-button">இப்போதே பயிற்சியைத் தொடங்குங்கள் <b>→</b></a>
         </div>
         <div className="hero-photo">
-          <Image src="/ponna-hero-woman.jpg" alt="பயிலும் மாணவி" fill priority sizes="(max-width: 620px) 48vw, 300px" />
+          <Image src="/ponna-hero-woman.jpg" alt="பயிலும் மாணவி" width={227} height={250} priority sizes="(max-width: 620px) 48vw, 300px" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
         </div>
       </section>
 
@@ -142,7 +142,6 @@ export default function HomeDesignPreview() {
         .menu-button { width: 34px; height: 34px; border: 0; background: transparent; display: grid; align-content: center; gap: 5px; padding: 4px; }
         .menu-button span { display: block; height: 2px; width: 28px; background: #0B3864; }
         .brand { flex: 1; display: flex; align-items: center; }
-        .brand img { width: 145px; height: auto; display: block; }
         .login { background: #0B3864; color: white; text-decoration: none; border-radius: 20px; padding: 9px 17px; font-weight: 800; font-size: 13px; white-space: nowrap; }
         .hero { min-height: 280px; display: flex; position: relative; overflow: hidden; background: linear-gradient(90deg,#F1FBF3 0%,#F8FFF9 58%,#E6F6EA 100%); }
         .hero-copy { width: 58%; padding: 22px 0 20px 22px; position: relative; z-index: 2; }
@@ -154,8 +153,7 @@ export default function HomeDesignPreview() {
         .primary-button, .tamil-strip a, .final-strip a { display: inline-block; background: #FFD22A; color: #20384D; text-decoration: none; font-weight: 900; border-radius: 5px; padding: 9px 13px; font-size: 10.5px; margin-top: 12px; }
         .primary-button b { margin-left: 5px; }
         .hero-photo { position: absolute; top: 0; right: 0; bottom: 0; width: 47%; }
-        .hero-photo img { object-fit: cover; object-position: center top; }
-        .quick-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 8px 10px 0; }
+                .quick-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 8px 10px 0; }
         .quick-card { min-height: 74px; padding: 8px 4px; background: #fff; border: 1px solid #DDE5E9; border-radius: 8px; text-decoration: none; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(22,54,75,.04); }
         .quick-icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; margin-bottom: 4px; }
         .quick-card strong { color: #0B3864; font-size: 10.2px; line-height: 1.15; }
