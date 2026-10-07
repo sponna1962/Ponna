@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { BitterFontLinks } from '../lib/brand-theme';
+import { StudyNotesIcon } from '../components/icons';
 
 const tools = [
   { title: 'Start Practice', body: 'கேள்விகளைத் தேர்ந்தெடுத்து பயிற்சி செய்யலாம்.', href: '/quiz', photo: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=240&h=240&fit=crop&q=80' },
