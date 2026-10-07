@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { BitterFontLinks } from '../lib/brand-theme';
-import { StudyNotesIcon } from '../components/icons';
 
 const tools = [
   { title: 'Start Practice', body: 'கேள்விகளைத் தேர்ந்தெடுத்து பயிற்சி செய்யலாம்.', href: '/quiz', photo: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=240&h=240&fit=crop&q=80' },
@@ -14,6 +13,23 @@ const tools = [
   { title: 'Adaptive Mock', body: 'உங்கள் பயிற்சிக்கேற்ப மாற்றித் தேர்வு வழங்கப்படும்.', href: '/adaptive-mock', photo: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=240&h=240&fit=crop&q=80' },
   { title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்.', href: '/dashboard', photo: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=240&h=240&fit=crop&q=80' },
   { title: 'Cut-off Predictor', body: 'உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பைப் பார்க்கலாம்.', href: '/cutoff-predictor', photo: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=240&h=240&fit=crop&q=80' },
+];
+
+const featured = [
+  {
+    title: 'Current Affairs',
+    body: 'தேர்வுக்குத் தேவையான நடப்பு நிகழ்வுகளைத் தொடர்ந்து படிக்கலாம்.',
+    href: '/current-affairs',
+    photo: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=240&h=180&fit=crop&q=80',
+    badge: 'புதியது',
+  },
+  {
+    title: 'TNPSC Group 4 2026 அறிவிப்பு',
+    body: 'காலிப்பணியிடங்கள் மற்றும் முக்கியத் தகவல்களைத் தெரிந்துகொள்ளலாம்.',
+    href: '/tnpsc-group-4/notification-2026',
+    photo: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=240&h=180&fit=crop&q=80',
+    badge: '',
+  },
 ];
 
 export default function HomeDesignPreview() {
@@ -41,50 +57,36 @@ export default function HomeDesignPreview() {
           <a href="/quiz" className="primary-button">இப்போதே பயிற்சியைத் தொடங்குங்கள் <b>→</b></a>
         </div>
         <div className="hero-photo">
-          <Image
-            src="/ponna-hero-woman.jpg"
-            alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி"
-            fill
-            priority
-            sizes="42vw"
-          />
+          <img src="/ponna-hero-woman.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" />
         </div>
       </section>
 
       <section className="content">
-        <a href="/current-affairs" className="wide-card current">
-          <span className="wide-icon"><StudyNotesIcon size={28} color="#2085C7" /></span>
-          <span className="wide-copy">
-            <strong>Current Affairs</strong>
-            <small>தேர்வுக்குத் தேவையான நடப்பு நிகழ்வுகளைத் தொடர்ந்து படிக்கலாம்.</small>
-          </span>
-          <mark>புதியது</mark>
-          <span className="arrow">›</span>
-        </a>
-
-        <a href="/tnpsc-group-4/notification-2026" className="notice-banner">
-          <div className="notice-mark">4</div>
-          <div className="notice-text">
-            <strong>TNPSC Group 4 <span>2026 அறிவிப்பு</span></strong>
-            <p>காலிப்பணியிடங்கள் மற்றும் முக்கியத் தகவல்களைத் தெரிந்துகொள்ளலாம்.</p>
-            <b>முழு விவரங்கள் →</b>
-          </div>
-          <span className="arrow">›</span>
-        </a>
+        <div className="featured-list">
+          {featured.map((item) => (
+            <a key={item.title} href={item.href} className="featured-card">
+              <img className="featured-photo" src={item.photo} alt="" loading="lazy" />
+              <span className="featured-copy">
+                <strong>{item.title}</strong>
+                <small>{item.body}</small>
+              </span>
+              {item.badge && <mark>{item.badge}</mark>}
+              <span className="arrow">›</span>
+            </a>
+          ))}
+        </div>
 
         <div className="tools-grid">
-          {tools.map((item) => {
-            return (
-              <a key={item.title} href={item.href} className="tool-card">
-                <img className="tool-photo" src={item.photo} alt="" loading="lazy" />
-                <span className="tool-copy">
-                  <strong>{item.title}</strong>
-                  <p>{item.body}</p>
-                </span>
-                <span className="tool-arrow">›</span>
-              </a>
-            );
-          })}
+          {tools.map((item) => (
+            <a key={item.title} href={item.href} className="tool-card">
+              <img className="tool-photo" src={item.photo} alt="" loading="lazy" />
+              <span className="tool-copy">
+                <strong>{item.title}</strong>
+                <p>{item.body}</p>
+              </span>
+              <span className="tool-arrow">›</span>
+            </a>
+          ))}
         </div>
 
         <section className="final-strip">
@@ -147,25 +149,25 @@ export default function HomeDesignPreview() {
 
         .hero {
           display: grid;
-          grid-template-columns: 58% 42%;
-          min-height: 310px;
+          grid-template-columns: 56% 44%;
+          min-height: 360px;
           background: #F1FAF3;
           border-bottom: 1px solid #DCE9DF;
           overflow: hidden;
         }
-        .hero-copy { padding: 22px 8px 20px 17px; position: relative; z-index: 2; }
-        .eyebrow { color: #17835E; font-weight: 800; font-size: 18px; line-height: 1.45; margin-bottom: 6px; }
-        h1 { margin: 0; color: #0B3864; font-size: 30px; line-height: 1.3; letter-spacing: -0.2px; }
+        .hero-copy { padding: 22px 7px 20px 17px; position: relative; z-index: 2; }
+        .eyebrow { color: #17835E; font-weight: 800; font-size: 19px; line-height: 1.4; margin-bottom: 5px; }
+        h1 { margin: 0; color: #0B3864; font-size: 32px; line-height: 1.28; letter-spacing: -0.25px; }
         h1 em { color: #E3313D; font-style: normal; }
         .hero ul {
           list-style: none;
           padding: 0;
           margin: 13px 0 0;
           display: grid;
-          gap: 5px;
-          font-size: 17px;
+          gap: 4px;
+          font-size: 18px;
           font-weight: 700;
-          line-height: 1.45;
+          line-height: 1.4;
         }
         .hero li::before { content: '✓'; color: #17835E; margin-right: 6px; font-weight: 900; }
         .primary-button {
@@ -178,42 +180,53 @@ export default function HomeDesignPreview() {
           text-decoration: none;
           font-weight: 900;
           border-radius: 10px;
-          padding: 10px 8px;
-          min-height: 50px;
-          font-size: 16px;
-          line-height: 1.35;
+          padding: 10px 7px;
+          min-height: 56px;
+          font-size: 17px;
+          line-height: 1.3;
           margin-top: 14px;
           text-align: center;
         }
-        .hero-photo { position: relative; min-height: 310px; overflow: hidden; }
-        .hero-photo :global(img) { object-fit: cover; object-position: center; }
+        .hero-photo { position: relative; min-height: 360px; overflow: hidden; background: #EAF3F0; }
+        .hero-photo img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center top; }
 
         .content { padding: 12px 10px 0; }
-        .wide-card {
+        .featured-list { display: grid; gap: 8px; }
+        .featured-card {
           display: flex;
           align-items: center;
           gap: 10px;
-          min-height: 86px;
-          padding: 11px;
-          margin-top: 8px;
+          min-height: 88px;
+          padding: 9px 10px;
           border: 1px solid #DDE5E9;
           border-radius: 10px;
+          background: #F3F8FC;
           text-decoration: none;
         }
-        .current { background: #F3F8FC; }
-        .wide-icon {
-          width: 48px;
-          height: 48px;
-          flex: 0 0 48px;
-          background: #fff;
-          border-radius: 10px;
-          display: grid;
-          place-items: center;
+        .featured-card:nth-child(2) { background: #EFF9F1; }
+        .featured-photo {
+          width: 66px;
+          height: 58px;
+          flex: 0 0 66px;
+          object-fit: cover;
+          border-radius: 7px;
         }
-        .wide-copy { flex: 1; min-width: 0; }
-        .wide-card strong { display: block; color: #0B3864; font-size: 20px; line-height: 1.35; }
-        .wide-card small { display: block; color: #4F6272; font-size: 16px; line-height: 1.5; margin-top: 2px; }
-        .wide-card mark {
+        .featured-copy { flex: 1; min-width: 0; }
+        .featured-card strong {
+          display: block;
+          color: #0B3864;
+          font-size: 22px;
+          line-height: 1.3;
+          font-weight: 900;
+        }
+        .featured-card small {
+          display: block;
+          color: #4F6272;
+          font-size: 17px;
+          line-height: 1.42;
+          margin-top: 2px;
+        }
+        .featured-card mark {
           color: #E3313D;
           background: #fff;
           border-radius: 6px;
@@ -222,68 +235,32 @@ export default function HomeDesignPreview() {
           font-weight: 800;
           white-space: nowrap;
         }
-        .arrow { color: #20384D; font-size: 30px; line-height: 1; flex: 0 0 auto; }
+        .arrow { color: #20384D; font-size: 31px; line-height: 1; flex: 0 0 auto; }
 
-        .notice-banner {
-          margin: 8px 0;
-          border: 1px solid #CFE5D8;
-          border-radius: 10px;
-          background: #EFF9F1;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 11px;
-          text-decoration: none;
-        }
-        .notice-mark {
-          width: 45px;
-          flex: 0 0 45px;
-          align-self: stretch;
-          border-right: 1px solid #BFD7C6;
-          display: grid;
-          place-items: center;
-          color: #0B3864;
-          font-size: 36px;
-          font-weight: 900;
-        }
-        .notice-text { flex: 1; min-width: 0; }
-        .notice-banner strong { color: #0B3864; font-size: 20px; line-height: 1.35; display: block; }
-        .notice-banner strong span { color: #E3313D; }
-        .notice-banner p { color: #4F6272; font-size: 16px; margin: 3px 0 8px; line-height: 1.45; }
-        .notice-banner b {
-          display: inline-block;
-          color: #fff;
-          background: #17835E;
-          border-radius: 7px;
-          padding: 7px 10px;
-          font-size: 15px;
-          line-height: 1.3;
-        }
-
-        .tools-grid { display: grid; grid-template-columns: 1fr; gap: 7px; }
+        .tools-grid { display: grid; grid-template-columns: 1fr; gap: 7px; margin-top: 8px; }
         .tool-card {
-          min-height: 86px;
+          min-height: 82px;
           border: 1px solid #DDE5E9;
           border-radius: 10px;
-          padding: 9px 10px;
+          padding: 8px 10px;
           text-decoration: none;
           background: #fff;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 11px;
         }
         .tool-photo {
-          width: 68px;
-          height: 68px;
+          width: 56px;
+          height: 56px;
           object-fit: cover;
           border-radius: 7px;
-          flex: 0 0 68px;
+          flex: 0 0 56px;
           display: block;
         }
         .tool-copy { flex: 1; min-width: 0; }
-        .tool-copy strong { color: #0B3864; font-size: 19px; line-height: 1.3; display: block; }
-        .tool-copy p { color: #4F6272; font-size: 16px; line-height: 1.45; margin: 2px 0 0; }
-        .tool-arrow { color: #536575; font-size: 29px; line-height: 1; flex: 0 0 auto; }
+        .tool-copy strong { color: #0B3864; font-size: 22px; line-height: 1.28; display: block; font-weight: 900; }
+        .tool-copy p { color: #4F6272; font-size: 17px; line-height: 1.42; margin: 2px 0 0; }
+        .tool-arrow { color: #536575; font-size: 30px; line-height: 1; flex: 0 0 auto; }
 
         .final-strip {
           margin: 12px 0 16px;
@@ -313,14 +290,16 @@ export default function HomeDesignPreview() {
         @media (max-width: 380px) {
           .brand :global(img) { width: 132px !important; }
           .login { font-size: 14px; padding: 10px 12px; }
-          .hero { grid-template-columns: 60% 40%; min-height: 300px; }
+          .hero { grid-template-columns: 57% 43%; min-height: 330px; }
           .hero-copy { padding-left: 13px; }
-          .eyebrow { font-size: 16px; }
-          h1 { font-size: 27px; }
-          .hero ul { font-size: 16px; }
-          .primary-button { font-size: 15px; }
-          .wide-card small, .notice-banner p, .tool-copy p { font-size: 15px; }
-          .tool-photo { width: 60px; height: 60px; flex-basis: 60px; }
+          .eyebrow { font-size: 17px; }
+          h1 { font-size: 29px; }
+          .hero ul { font-size: 17px; }
+          .primary-button { font-size: 16px; }
+          .featured-card small, .tool-copy p { font-size: 16px; }
+          .featured-card strong, .tool-copy strong { font-size: 20px; }
+          .featured-photo { width: 58px; height: 52px; flex-basis: 58px; }
+          .tool-photo { width: 52px; height: 52px; flex-basis: 52px; }
         }
       `}
       </style>
