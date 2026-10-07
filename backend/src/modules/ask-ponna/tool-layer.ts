@@ -14,6 +14,7 @@ import { Prisma } from '@prisma/client';
 import { ToolDefinition } from './provider-adapter';
 import { isFactStale } from './verification-tiers';
 import { searchCurrentInfo } from './live-search-adapter';
+import { searchGroup4Notification } from './g4-search';
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -156,6 +157,16 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         community: { type: 'string', enum: ['OC', 'BC', 'BCM', 'MBC_DNC', 'SC', 'SCA', 'ST'], description: "The student's community, if known" },
       },
       required: ['subCategoryId'],
+    },
+  },
+  {
+    name: 'search_group4_notification',
+    description:
+      "Search the FULL official TNPSC Group IV 2026 notification (Notification No. 11/2026, Advertisement No. 747) — the same content as PONNA's Group 4 guide page — for ANY detail a student asks about: important dates, posts and vacancies per post, pay levels/salary, educational qualification per post, age limit and age concessions (per post code and community), Tamil knowledge, medical standards, PwBD / Ex-Servicemen / Destitute Widow / PSTM / sports / women / transgender rules, scheme and plan of examination, ranking, OTR and online application steps, photo/signature, exam fee and exemption, exam centres, hall ticket and exam-day rules, banned items, OMR instructions, scribe, penalty/debarment, certificates, counselling, annexure forms. ALWAYS call this for any Group 4 notification detail BEFORE answering — never answer such details from memory. Pass `query` as a few focused ENGLISH keywords even if the student wrote in Tamil (the notification is in English), e.g. 'age limit BC Typist 3844', 'exam fee SC', 'VAO educational qualification', 'banned items mobile phone'. You may call it again with different keywords if the first result does not contain the detail. It returns the best-matching passages with a link to the matching part of PONNA's guide page: after answering, ALWAYS end the response with that link using the [[NAVIGATE: <link> | முழு விவரத்துக்கு PONNA வழிகாட்டி]] marker (never as plain text). Everything returned is the official notification's content (Tier 1, officially confirmed) unless a passage itself says otherwise; the salary table in the 'posts' section is the TN Pay Matrix basic pay range and take-home salary is only approximate — say so.",
+    parameters: {
+      type: 'object',
+      properties: { query: { type: 'string', description: 'A few focused English keywords describing the detail needed' } },
+      required: ['query'],
     },
   },
 ];
@@ -476,6 +487,12 @@ export async function executeTool(userId: string, toolName: string, args: Record
         return { hasData: false, message: 'No cut-off data on file for this exam -- do not guess a number.' };
       }
       return { hasData: true, records };
+    }
+
+    case 'search_group4_notification': {
+      const query = ((args.query as string) ?? '').trim();
+      if (!query) throw new ToolLayerError('query is required');
+      return searchGroup4Notification(query);
     }
 
     default:
