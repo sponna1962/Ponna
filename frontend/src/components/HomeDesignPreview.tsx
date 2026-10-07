@@ -1,23 +1,18 @@
 'use client';
 
 import Image from 'next/image';
-import {
-  PracticeIcon, ProgressIcon, AskPonnaIcon, MistakesIcon,
-  StudyNotesIcon, DailyQuizIcon, LiveExamIcon, SubjectPreferenceIcon,
-  CutoffPredictorIcon,
-} from '../components/icons';
 import { BitterFontLinks } from '../lib/brand-theme';
 
 const tools = [
-  { icon: PracticeIcon, title: 'Start Practice', body: 'கேள்விகளைத் தேர்ந்தெடுத்து பயிற்சி செய்யலாம்.', href: '/quiz', iconColor: '#178D63' },
-  { icon: AskPonnaIcon, title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', iconColor: '#2085C7' },
-  { icon: MistakesIcon, title: 'Review Mistakes', body: 'தவறான கேள்விகளை மீண்டும் பார்க்கலாம்.', href: '/mistakes', iconColor: '#D84C75' },
-  { icon: StudyNotesIcon, title: 'Study Notes', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/study-notes', iconColor: '#C98A20' },
-  { icon: DailyQuizIcon, title: 'Daily Challenge', body: 'Current Affairs மற்றும் Brain Challenge என இரண்டு தினசரி பயிற்சிகளைப் பெறலாம்.', href: '/daily-quiz', iconColor: '#7651B8' },
-  { icon: LiveExamIcon, title: 'Live Exam', body: 'தேர்வு போன்ற சூழலில் தேர்வு எழுதலாம்.', href: '/tnpsc-group-4/online-test', iconColor: '#D8455C' },
-  { icon: SubjectPreferenceIcon, title: 'Adaptive Mock', body: 'உங்கள் பயிற்சிக்கேற்ப மாற்றித் தேர்வு வழங்கப்படும்.', href: '/adaptive-mock', iconColor: '#2387C6' },
-  { icon: ProgressIcon, title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்.', href: '/dashboard', iconColor: '#23956B' },
-  { icon: CutoffPredictorIcon, title: 'Cut-off Predictor', body: 'உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பைப் பார்க்கலாம்.', href: '/cutoff-predictor', iconColor: '#C98A20' },
+  { title: 'Start Practice', body: 'கேள்விகளைத் தேர்ந்தெடுத்து பயிற்சி செய்யலாம்.', href: '/quiz', photo: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=240&h=240&fit=crop&q=80' },
+  { title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', photo: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=240&h=240&fit=crop&q=80' },
+  { title: 'Review Mistakes', body: 'தவறான கேள்விகளை மீண்டும் பார்க்கலாம்.', href: '/mistakes', photo: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=240&h=240&fit=crop&q=80' },
+  { title: 'Study Notes', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/study-notes', photo: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=240&h=240&fit=crop&q=80' },
+  { title: 'Daily Challenge', body: 'Current Affairs மற்றும் Brain Challenge என இரண்டு தினசரி பயிற்சிகளைப் பெறலாம்.', href: '/daily-quiz', photo: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=240&h=240&fit=crop&q=80' },
+  { title: 'Live Exam', body: 'தேர்வு போன்ற சூழலில் தேர்வு எழுதலாம்.', href: '/live-exam', photo: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=240&h=240&fit=crop&q=80' },
+  { title: 'Adaptive Mock', body: 'உங்கள் பயிற்சிக்கேற்ப மாற்றித் தேர்வு வழங்கப்படும்.', href: '/adaptive-mock', photo: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=240&h=240&fit=crop&q=80' },
+  { title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்.', href: '/dashboard', photo: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=240&h=240&fit=crop&q=80' },
+  { title: 'Cut-off Predictor', body: 'உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பைப் பார்க்கலாம்.', href: '/cutoff-predictor', photo: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=240&h=240&fit=crop&q=80' },
 ];
 
 export default function HomeDesignPreview() {
@@ -78,10 +73,9 @@ export default function HomeDesignPreview() {
 
         <div className="tools-grid">
           {tools.map((item) => {
-            const Icon = item.icon;
             return (
               <a key={item.title} href={item.href} className="tool-card">
-                <span className="tool-icon"><Icon size={27} color={item.iconColor} /></span>
+                <img className="tool-photo" src={item.photo} alt="" loading="lazy" />
                 <span className="tool-copy">
                   <strong>{item.title}</strong>
                   <p>{item.body}</p>
@@ -267,7 +261,7 @@ export default function HomeDesignPreview() {
 
         .tools-grid { display: grid; grid-template-columns: 1fr; gap: 7px; }
         .tool-card {
-          min-height: 70px;
+          min-height: 86px;
           border: 1px solid #DDE5E9;
           border-radius: 10px;
           padding: 9px 10px;
@@ -277,14 +271,13 @@ export default function HomeDesignPreview() {
           align-items: center;
           gap: 10px;
         }
-        .tool-icon {
-          width: 50px;
-          height: 50px;
-          background: #F4F7F8;
-          border-radius: 10px;
-          display: grid;
-          place-items: center;
-          flex: 0 0 50px;
+        .tool-photo {
+          width: 68px;
+          height: 68px;
+          object-fit: cover;
+          border-radius: 7px;
+          flex: 0 0 68px;
+          display: block;
         }
         .tool-copy { flex: 1; min-width: 0; }
         .tool-copy strong { color: #0B3864; font-size: 19px; line-height: 1.3; display: block; }
@@ -326,6 +319,7 @@ export default function HomeDesignPreview() {
           .hero ul { font-size: 16px; }
           .primary-button { font-size: 15px; }
           .wide-card small, .notice-banner p, .tool-copy p { font-size: 15px; }
+          .tool-photo { width: 60px; height: 60px; flex-basis: 60px; }
         }
       `}
       </style>
