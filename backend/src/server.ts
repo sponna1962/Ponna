@@ -427,6 +427,17 @@ app.post('/ask-ponna/chat', requireStudentAuth, async (req: StudentAuthedRequest
   }
 });
 
+// POST /ask-ponna/feedback  { rating: 'up' | 'down', question?: string, answer?: string }
+// Lightweight: written to the server log (tag ASKPONNA_FEEDBACK) so we can see which
+// answers students found unhelpful, without a new database table. No user id is logged.
+app.post('/ask-ponna/feedback', requireStudentAuth, (req: StudentAuthedRequest, res) => {
+  const rating = req.body?.rating === 'up' ? 'up' : req.body?.rating === 'down' ? 'down' : null;
+  if (!rating) return res.status(400).json({ error: 'rating must be up or down' });
+  const clip = (v: unknown) => String(v ?? '').replace(/\s+/g, ' ').slice(0, 300);
+  console.log(`[ASKPONNA_FEEDBACK] ${rating} | Q: ${clip(req.body?.question)} | A: ${clip(req.body?.answer)}`);
+  res.json({ ok: true });
+});
+
 // ── Student Subject & Topic Preference — Stage 1 (finalized requirement) ──
 // Storage + picker only, not yet connected to question allocation.
 

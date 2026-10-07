@@ -56,6 +56,11 @@ function parseOptions(content: string): { text: string; options: string[]; navig
 
 /** Cloudinary's fl_attachment delivery flag tells the CDN to return the PDF
  * as a download attachment instead of opening it in the browser/PDF viewer. */
+/** PONNA's own pages (relative or https://www.ponna.in/...) open normally; only external files (syllabus PDFs) are downloads. */
+function isSiteLink(path: string): boolean {
+  return path.startsWith('/') || /^https?:\/\/(www\.)?ponna\.in(\/|$)/.test(path);
+}
+
 function getDownloadHref(path: string): string {
   try {
     const url = new URL(path);
@@ -78,6 +83,9 @@ export default function AskPonnaPage() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rated, setRated] = useState<Record<number, 'up' | 'down'>>({});
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [failedQ, setFailedQ] = useState<string | null>(null); // last question that errored -> 'மீண்டும் முயற்சி' button
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Sept 2026 (Item 4 — First-Visit TNPSC Group 4 Diagnostic Flow) —
@@ -239,6 +247,59 @@ export default function AskPonnaPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  function newChat() {
+    if (sending) return;
+    setMessages([]);
+    setConversationId(null);
+    setError(null);
+    setFailedQ(null);
+    setRated({});
+  }
+
+  function questionFor(i: number): string {
+    for (let k = i - 1; k >= 0; k--) if (messages[k].role === 'USER') return messages[k].content;
+    return '';
+  }
+
+  function rate(i: number, rating: 'up' | 'down') {
+    if (rated[i]) return;
+    setRated((p) => ({ ...p, [i]: rating }));
+    const m = messages[i];
+    void studentFetch('/ask-ponna/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating, question: questionFor(i), answer: parseOptions(m.content).text }),
+    }).catch(() => {});
+  }
+
+  function shareText(i: number): string {
+    const { text, navigateTo } = parseOptions(messages[i].content);
+    const link = navigateTo && /^https?:\/\//.test(navigateTo.path) ? navigateTo.path : 'https://www.ponna.in';
+    return `${text}\n\n— PONNA.in (Ask PONNA)\n${link}`;
+  }
+
+  async function copyAnswer(i: number) {
+    try {
+      await navigator.clipboard.writeText(shareText(i));
+      setCopiedIdx(i);
+      setTimeout(() => setCopiedIdx((c) => (c === i ? null : c)), 2000);
+    } catch { /* clipboard unavailable */ }
+  }
+
+  function whatsappAnswer(i: number) {
+    window.open('https://wa.me/?text=' + encodeURIComponent(shareText(i)), '_blank', 'noopener');
+  }
+
+  function retryFailed() {
+    const q = failedQ;
+    if (!q || sending) return;
+    // drop the unanswered copy of the question so it isn't shown twice
+    setMessages((prev) => (prev.length && prev[prev.length - 1].role === 'USER' && prev[prev.length - 1].content === q ? prev.slice(0, -1) : prev));
+    setFailedQ(null);
+    setError(null);
+    void send(q);
+  }
+
   async function send(overrideText?: string) {
     const toSend = overrideText ?? input;
     if (!toSend.trim() || sending) return;
@@ -266,9 +327,11 @@ export default function AskPonnaPage() {
         return;
       }
       setError(body.error ?? t.askPonna.sendError);
+      setFailedQ(userMessage);
       return;
     }
 
+    setFailedQ(null);
     const body = await res.json();
     setConversationId(body.conversationId);
     setMessages((prev) => [...prev, { role: 'ASSISTANT', content: body.reply, toolCallsUsed: body.toolCallsUsed }]);
@@ -355,7 +418,19 @@ export default function AskPonnaPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
         <StudentMenu iconColor="#fff" />
         <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: '#E2B04A', color: '#2b1c00', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16, boxShadow: '0 0 0 2px rgba(255,233,168,0.4)' }}>P</span>
-        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
+        <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff', flex: 1 }}>{t.askPonna.title}</h1>
+        <button
+          type="button"
+          onClick={() => { if (typeof window !== 'undefined' && window.history.length > 1) window.history.back(); else window.location.href = '/'; }}
+          style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', borderRadius: 999, padding: '7px 14px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
+        >
+          ← பின் செல்
+        </button>
+        {messages.length > 0 && !guestMode && (
+          <button type="button" onClick={newChat} disabled={sending} style={{ background: '#E2B04A', border: 'none', color: '#2b1c00', borderRadius: 999, padding: '7px 12px', fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>
+            ＋ புதிய அரட்டை
+          </button>
+        )}
       </div>
 
       {accessState === 'locked' && (
@@ -411,6 +486,16 @@ export default function AskPonnaPage() {
                 </button>
               ))}
             </div>
+            {!loggedOut && (
+              <div style={{ marginTop: 20, textAlign: 'left' }}>
+                <p style={{ fontSize: 13.5, fontWeight: 700, color: COLORS.ink, margin: '0 0 10px' }}>⚡ Group 4 அறிவிப்பு 2026 — விரைவுக் கேள்விகள்</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {['வயது வரம்பு என்ன?', 'தேர்வுக் கட்டணம் எவ்வளவு?', 'கல்வித் தகுதி என்ன?', 'எத்தனை காலிப்பணியிடங்கள்?', 'தேர்வு முறை எப்படி?', 'எப்படி விண்ணப்பிப்பது?', 'முக்கிய தேதிகள் என்ன?', 'தேர்வு அறைக்குள் எதை எடுத்துச் செல்லக்கூடாது?'].map((q) => (
+                    <button key={q} onClick={() => send(q)} disabled={sending} style={{ padding: '9px 14px', borderRadius: 999, border: '1.5px solid #E2B04A', background: 'var(--color-card)', color: COLORS.ink, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>{q}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             {!loggedOut && <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 16 }}>{t.askPonna.orAskDirectly}</p>}
             {loggedOut && <p style={{ fontSize: 12.5, color: COLORS.inkMuted, marginTop: 16, lineHeight: 1.6 }}>🔒 குறியிட்ட வசதிகளுக்கு Pass தேவை. Login செய்து Pass பெறுங்கள்.</p>}
             <p style={{ fontSize: 11.5, color: COLORS.inkMuted, marginTop: 20, lineHeight: 1.6, padding: '0 10px' }}>{t.askPonna.aiDisclaimer}</p>
@@ -449,6 +534,22 @@ export default function AskPonnaPage() {
                   {text}
                 </div>
               </div>
+              {m.role === 'ASSISTANT' && !guestMode && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6, marginLeft: 38 }}>
+                  {(['up', 'down'] as const).map((r) => (
+                    <button key={r} type="button" onClick={() => rate(i, r)} disabled={!!rated[i]} aria-label={r === 'up' ? 'பயனுள்ளது' : 'பயனில்லை'}
+                      style={{ padding: '4px 10px', borderRadius: 999, border: `1px solid ${COLORS.line}`, background: rated[i] === r ? '#E2B04A' : 'transparent', color: COLORS.ink, fontSize: 13, cursor: rated[i] ? 'default' : 'pointer', opacity: rated[i] && rated[i] !== r ? 0.4 : 1 }}>
+                      {r === 'up' ? '👍' : '👎'}
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => copyAnswer(i)} style={{ padding: '4px 10px', borderRadius: 999, border: `1px solid ${COLORS.line}`, background: 'transparent', color: COLORS.ink, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                    {copiedIdx === i ? '✓ நகலெடுக்கப்பட்டது' : '📋 நகலெடு'}
+                  </button>
+                  <button type="button" onClick={() => whatsappAnswer(i)} style={{ padding: '4px 10px', borderRadius: 999, border: `1px solid ${COLORS.line}`, background: 'transparent', color: COLORS.ink, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                    💬 WhatsApp
+                  </button>
+                </div>
+              )}
               {m.role === 'ASSISTANT' &&
                 m.toolCallsUsed?.some((t) =>
                   ['get_exam_info', 'get_exam_syllabus', 'get_exam_full_info', 'get_current_affairs', 'get_previous_cutoffs', 'get_ponna_faq'].includes(t),
@@ -490,8 +591,8 @@ export default function AskPonnaPage() {
               {isLastAssistant && navigateTo && (
                 <div style={{ marginTop: 8, marginLeft: 38 }}>
                   <a
-                    href={navigateTo.path.startsWith('/') ? navigateTo.path : getDownloadHref(navigateTo.path)}
-                    {...(navigateTo.path.startsWith('/') ? {} : { download: true })}
+                    href={isSiteLink(navigateTo.path) ? navigateTo.path : getDownloadHref(navigateTo.path)}
+                    {...(isSiteLink(navigateTo.path) ? {} : { download: true })}
                     style={{
                       display: 'inline-block',
                       padding: '11px 20px',
@@ -512,6 +613,15 @@ export default function AskPonnaPage() {
         })}
         {sending && <p style={{ fontSize: 13.5, color: COLORS.inkMuted, marginLeft: 38 }}>{t.askPonna.thinking}</p>}
         {error && <p style={{ fontSize: 13, color: 'var(--color-bad)' }}>{error}</p>}
+        {error && failedQ && !sending && !guestMode && (
+          <button
+            type="button"
+            onClick={retryFailed}
+            style={{ marginLeft: 38, marginBottom: 8, padding: '9px 16px', borderRadius: 999, border: '1.5px solid #E2B04A', background: 'transparent', color: '#E2B04A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+          >
+            🔄 மீண்டும் முயற்சி செய்
+          </button>
+        )}
         <div ref={bottomRef} />
       </div>
 
