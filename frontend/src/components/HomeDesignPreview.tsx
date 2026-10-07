@@ -148,28 +148,27 @@ export default function HomeDesignPreview() {
         }
 
         .hero {
-          display: grid;
-          grid-template-columns: 56% 44%;
-          min-height: 360px;
+          display: flex;
+          flex-direction: column;
           background: #F1FAF3;
           border-bottom: 1px solid #DCE9DF;
           overflow: hidden;
         }
-        .hero-copy { padding: 22px 7px 20px 17px; position: relative; z-index: 2; }
+        .hero-copy { padding: 22px 18px 18px; }
         .eyebrow { color: #17835E; font-weight: 800; font-size: 19px; line-height: 1.4; margin-bottom: 5px; }
-        h1 { margin: 0; color: #0B3864; font-size: 32px; line-height: 1.28; letter-spacing: -0.25px; }
+        h1 { margin: 0; color: #0B3864; font-size: 34px; line-height: 1.28; letter-spacing: -0.25px; }
         h1 em { color: #E3313D; font-style: normal; }
         .hero ul {
           list-style: none;
           padding: 0;
-          margin: 13px 0 0;
+          margin: 14px 0 0;
           display: grid;
-          gap: 4px;
+          gap: 5px;
           font-size: 18px;
           font-weight: 700;
           line-height: 1.4;
         }
-        .hero li::before { content: '✓'; color: #17835E; margin-right: 6px; font-weight: 900; }
+        .hero li::before { content: '✓'; color: #17835E; margin-right: 7px; font-weight: 900; }
         .primary-button {
           display: flex;
           align-items: center;
@@ -180,15 +179,26 @@ export default function HomeDesignPreview() {
           text-decoration: none;
           font-weight: 900;
           border-radius: 10px;
-          padding: 10px 7px;
+          padding: 11px 10px;
           min-height: 56px;
-          font-size: 17px;
+          font-size: 18px;
           line-height: 1.3;
-          margin-top: 14px;
+          margin-top: 15px;
           text-align: center;
         }
-        .hero-photo { position: relative; min-height: 360px; overflow: hidden; background: #EAF3F0; }
-        .hero-photo img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center top; }
+        .hero-photo {
+          width: 100%;
+          height: 250px;
+          overflow: hidden;
+          background: #EAF3F0;
+        }
+        .hero-photo img {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: cover;
+          object-position: center 42%;
+        }
 
         .content { padding: 12px 10px 0; }
         .featured-list { display: grid; gap: 8px; }
@@ -290,12 +300,12 @@ export default function HomeDesignPreview() {
         @media (max-width: 380px) {
           .brand :global(img) { width: 132px !important; }
           .login { font-size: 14px; padding: 10px 12px; }
-          .hero { grid-template-columns: 57% 43%; min-height: 330px; }
-          .hero-copy { padding-left: 13px; }
+          .hero-copy { padding: 19px 14px 16px; }
           .eyebrow { font-size: 17px; }
-          h1 { font-size: 29px; }
+          h1 { font-size: 30px; }
           .hero ul { font-size: 17px; }
           .primary-button { font-size: 16px; }
+          .hero-photo { height: 225px; }
           .featured-card small, .tool-copy p { font-size: 16px; }
           .featured-card strong, .tool-copy strong { font-size: 20px; }
           .featured-photo { width: 58px; height: 52px; flex-basis: 58px; }
