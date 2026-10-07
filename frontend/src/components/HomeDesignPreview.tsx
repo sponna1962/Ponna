@@ -12,21 +12,21 @@ import { BitterFontLinks } from '../lib/brand-theme';
 const C = {"navy":"#0B3864","green":"#17835E","yellow":"#FFD22A","red":"#E3313D","ink":"#20384D","muted":"#667786","line":"#DDE5E9","paper":"#FFFFFF"};
 
 const quick = [
-  { icon: PracticeIcon, title: 'Practice', sub: 'தமிழில் பயிற்சி செய்யலாம்', href: '/quiz', tone: '#EFF8FC', iconColor: '#1687D4' },
-  { icon: AboutIcon, title: 'Students', sub: 'நம்பிக்கையுடன் கற்கலாம்', href: '/about', tone: '#F5F0FC', iconColor: '#7752B9' },
-  { icon: ProgressIcon, title: 'Skill Growth', sub: 'முன்னேற்றத்தை வளர்க்கலாம்', href: '/quiz', tone: '#EEF8F2', iconColor: '#21966A' },
-  { icon: ProgressIcon, title: 'Assessment', sub: 'உங்கள் முன்னேற்றத்தைப் பார்க்கலாம்', href: '/profile', tone: '#FFF1F4', iconColor: '#D94C70' },
+  { icon: PracticeIcon, title: 'Start Practice', sub: 'கேள்விகளைப் பயிற்சி செய்யலாம்', href: '/quiz', tone: '#EFF8FC', iconColor: '#1687D4' },
+  { icon: AskPonnaIcon, title: 'Ask PONNA', sub: 'சந்தேகங்களுக்கு விளக்கம் பெறலாம்', href: '/about', tone: '#F5F0FC', iconColor: '#7752B9' },
+  { icon: MistakesIcon, title: 'Review Mistakes', sub: 'தவறான கேள்விகளை மீண்டும் பார்க்கலாம்', href: '/quiz', tone: '#EEF8F2', iconColor: '#21966A' },
+  { icon: ProgressIcon, title: 'Performance', sub: 'மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்', href: '/profile', tone: '#FFF1F4', iconColor: '#D94C70' },
 ];
 
 const tools = [
-  { icon: PracticeIcon, title: 'Practice Questions', body: 'பாடவாரியாக கேள்விகளுக்குப் பதில் அளித்து பயிற்சி செய்யலாம்.', href: '/quiz', tone: '#F0FAF5', iconColor: '#178D63' },
+  { icon: PracticeIcon, title: 'Start Practice', body: 'பாடங்களைத் தேர்ந்தெடுத்து கேள்விகளுக்குப் பதில் அளிக்கலாம்.', href: '/quiz', tone: '#F0FAF5', iconColor: '#178D63' },
   { icon: AskPonnaIcon, title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு எளிய விளக்கம் பெறலாம்.', href: '/ask-ponna', tone: '#F1F8FD', iconColor: '#2085C7' },
-  { icon: MistakesIcon, title: 'Mistake Practice', body: 'தவறாகப் பதிலளித்த கேள்விகளை மீண்டும் பயிற்சி செய்யலாம்.', href: '/quiz', tone: '#FFF2F5', iconColor: '#D84C75' },
+  { icon: MistakesIcon, title: 'Review Mistakes', body: 'தவறாகப் பதிலளித்த கேள்விகளை மீண்டும் பார்க்கலாம்.', href: '/quiz', tone: '#FFF2F5', iconColor: '#D84C75' },
   { icon: StudyNotesIcon, title: 'Study Notes', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/current-affairs', tone: '#FFF8E9', iconColor: '#C98A20' },
-  { icon: DailyQuizIcon, title: 'Daily Challenge', body: 'தினமும் புதிய கேள்விகளுடன் உங்கள் அறிவைச் சோதிக்கலாம்.', href: '/daily-quiz', tone: '#F6F1FC', iconColor: '#7651B8' },
-  { icon: LiveExamIcon, title: 'Live Test', body: 'தேர்வு போன்ற சூழலில் மாதிரித் தேர்வு எழுதிப் பயிற்சி பெறலாம்.', href: '/tnpsc-group-4/online-test', tone: '#FFF1F3', iconColor: '#D8455C' },
-  { icon: SubjectPreferenceIcon, title: 'Custom Test', body: 'உங்கள் தேவைக்கேற்ப மாதிரித் தேர்வை அமைத்துப் பயிற்சி செய்யலாம்.', href: '/quiz', tone: '#F0F8FD', iconColor: '#2387C6' },
-  { icon: ProgressIcon, title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைத் தெளிவாகப் பார்க்கலாம்.', href: '/profile', tone: '#EFF8F3', iconColor: '#23956B' },
+  { icon: DailyQuizIcon, title: 'Daily Challenge', body: 'தினமும் புதிய கேள்விகளில் பயிற்சி செய்யலாம்.', href: '/daily-quiz', tone: '#F6F1FC', iconColor: '#7651B8' },
+  { icon: LiveExamIcon, title: 'Live Exam', body: 'தேர்வு போன்ற சூழலில் தேர்வு எழுதலாம்.', href: '/tnpsc-group-4/online-test', tone: '#FFF1F3', iconColor: '#D8455C' },
+  { icon: SubjectPreferenceIcon, title: 'Adaptive Mock', body: 'உங்கள் பயிற்சிக்கேற்ப மாதிரித் தேர்வு வழங்கப்படும்.', href: '/quiz', tone: '#F0F8FD', iconColor: '#2387C6' },
+  { icon: ProgressIcon, title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்.', href: '/profile', tone: '#EFF8F3', iconColor: '#23956B' },
 ];
 
 export default function HomeDesignPreview() {
