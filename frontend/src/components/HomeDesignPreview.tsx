@@ -175,3 +175,6 @@ export default function HomeDesignPreview() {
         footer { padding: 0 15px 20px; text-align: center; color: #667786; font-size: 9px; }
         @media (min-width: 621px) { .home-preview { box-shadow: 0 0 30px rgba(20,50,70,.08); } }
       `}</style>
+    </main>
+  );
+}
