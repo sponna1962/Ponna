@@ -77,7 +77,7 @@ export default function NotificationGuidePage() {
 
       <div className="g4n-hero-wrap">
         <section className="g4n-hero" aria-labelledby="g4n-h1">
-          <div className="g4n-eyebrow">பொன்னா.in வழங்கும் சிறப்பு வழிகாட்டி</div>
+          <div className="g4n-eyebrow">PONNA.in வழங்கும் சிறப்பு வழிகாட்டி</div>
           <h1 id="g4n-h1">TNPSC Group 4 தேர்வு 2026<br />முழுமையான வழிகாட்டி</h1>
           {content.heroParas.map((p, i) => (
             <p key={i} dangerouslySetInnerHTML={{ __html: p }} />
