@@ -9,8 +9,6 @@ import {
 } from '../components/icons';
 import { BitterFontLinks } from '../lib/brand-theme';
 
-const C = {"navy":"#0B3864","green":"#17835E","yellow":"#FFD22A","red":"#E3313D","ink":"#20384D","muted":"#667786","line":"#DDE5E9","paper":"#FFFFFF"};
-
 const quick = [
   { icon: PracticeIcon, title: 'Start Practice', sub: 'கேள்விகளைப் பயிற்சி செய்யலாம்', href: '/quiz', tone: '#EFF8FC', iconColor: '#1687D4' },
   { icon: AskPonnaIcon, title: 'Ask PONNA', sub: 'சந்தேகங்களுக்கு விளக்கம் பெறலாம்', href: '/ask-ponna', tone: '#F5F0FC', iconColor: '#7752B9' },
@@ -122,7 +120,7 @@ export default function HomeDesignPreview() {
       <footer>வடிவமைப்பு முன்னோட்டம் · PONNA.in</footer>
 
       <style jsx>{`
-        .home-preview { width: 100%; max-width: 620px; margin: 0 auto; min-height: 100dvh; background: #fff; color: #20384D; font-family: Arial, sans-serif; }
+        .home-preview { width: 100%; max-width: 620px; margin: 0 auto; min-height: 100dvh; background: #fff; color: #20384D; font-family: 'Noto Sans Tamil', 'Nirmala UI', Latha, Arial, sans-serif; }
         .site-header { height: 62px; background: #fff; border-bottom: 1px solid #DDE5E9; display: flex; align-items: center; padding: 0 14px; gap: 12px; position: sticky; top: 0; z-index: 30; }
         .menu-button { width: 34px; height: 34px; border: 0; background: transparent; display: grid; align-content: center; gap: 5px; padding: 4px; }
         .menu-button span { display: block; height: 2px; width: 27px; background: #0B3864; }
@@ -137,11 +135,11 @@ export default function HomeDesignPreview() {
         .hero li::before { content: '✓'; color: #17835E; margin-right: 5px; font-weight: 900; }
         .primary-button { display: inline-block; background: #FFD22A; color: #20384D; text-decoration: none; font-weight: 900; border-radius: 6px; padding: 9px 12px; font-size: 10.5px; margin-top: 12px; }
         .hero-photo { position: absolute; top: 0; right: 0; bottom: 0; width: 47%; overflow: hidden; }
-        .quick-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 8px 10px 0; }
-        .quick-card { min-height: 72px; padding: 7px 4px; background: #fff; border: 1px solid #DDE5E9; border-radius: 9px; text-decoration: none; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .quick-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding: 10px 12px 0; }
+        .quick-card { min-height: 70px; padding: 9px 8px; background: #fff; border: 1px solid #DDE5E9; border-radius: 9px; text-decoration: none; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .quick-icon { width: 31px; height: 31px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 4px; }
-        .quick-card strong { color: #0B3864; font-size: 9.7px; line-height: 1.15; }
-        .quick-card small { color: #667786; font-size: 8px; margin-top: 2px; line-height: 1.15; }
+        .quick-card strong { color: #0B3864; font-size: 11px; line-height: 1.2; }
+        .quick-card small { color: #667786; font-size: 9.5px; margin-top: 3px; line-height: 1.3; }
         .content { padding: 16px 12px 0; }
         .content h2 { text-align: center; color: #0B3864; font-size: 19px; line-height: 1.25; margin: 0 0 11px; }
         .content h2::after { content: ''; display: block; width: 45px; height: 2px; background: #D7E2E6; margin: 7px auto 0; }
@@ -151,23 +149,23 @@ export default function HomeDesignPreview() {
         .wide-icon { width: 36px; height: 36px; flex: 0 0 36px; background: #fff; border-radius: 8px; display: grid; place-items: center; }
         .wide-card > span:nth-child(2) { flex: 1; }
         .wide-card strong { display: block; color: #0B3864; font-size: 12px; }
-        .wide-card small { display: block; color: #667786; font-size: 8.9px; line-height: 1.35; margin-top: 2px; }
+        .wide-card small { display: block; color: #667786; font-size: 10px; line-height: 1.45; margin-top: 2px; }
         .wide-card > b { color: #667786; font-size: 21px; }
-        .wide-card mark { color: #E3313D; background: #fff; border-radius: 4px; padding: 3px 5px; font-size: 8px; font-weight: 800; }
+        .wide-card mark { color: #E3313D; background: #fff; border-radius: 4px; padding: 3px 5px; font-size: 9px; font-weight: 800; }
         .notice-banner { margin: 7px 0 11px; min-height: 76px; border: 1px solid #CFE5D8; border-radius: 9px; background: #EFF9F1; display: flex; align-items: center; gap: 10px; padding: 9px 11px; text-decoration: none; position: relative; }
         .notice-mark { width: 43px; height: 48px; flex: 0 0 43px; border-right: 1px solid #BFD7C6; display: grid; place-items: center; color: #0B3864; font-size: 31px; font-weight: 900; }
         .notice-banner strong { color: #0B3864; font-size: 17px; }
         .notice-banner strong span { color: #E3313D; }
-        .notice-banner p { color: #667786; font-size: 8.8px; margin: 3px 0 6px; line-height: 1.3; }
-        .notice-banner b { color: #fff; background: #17835E; border-radius: 4px; padding: 5px 8px; font-size: 8.5px; }
+        .notice-banner p { color: #667786; font-size: 10px; margin: 4px 0 7px; line-height: 1.4; }
+        .notice-banner b { color: #fff; background: #17835E; border-radius: 4px; padding: 5px 8px; font-size: 10px; }
         .notice-arrow { margin-left: auto; color: #0B3864; font-size: 25px; }
-        .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-        .tool-card { min-height: 91px; border: 1px solid #DDE5E9; border-left: 3px solid var(--icon); border-radius: 8px; padding: 9px 9px 8px; text-decoration: none; background: #fff; }
+        .tools-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .tool-card { min-height: 68px; border: 1px solid #DDE5E9; border-radius: 8px; padding: 10px 11px; text-decoration: none; background: #fff; }
         .tool-top { display: flex; align-items: center; gap: 7px; }
-        .tool-icon { width: 32px; height: 32px; background: var(--tone); border-radius: 7px; display: grid; place-items: center; flex: 0 0 32px; }
-        .tool-top strong { color: #0B3864; font-size: 10.8px; line-height: 1.18; flex: 1; }
+        .tool-icon { width: 34px; height: 34px; background: #F4F7F8; border-radius: 7px; display: grid; place-items: center; flex: 0 0 34px; }
+        .tool-top strong { color: #0B3864; font-size: 13px; line-height: 1.25; flex: 1; }
         .tool-arrow { color: #667786; font-size: 20px; line-height: 1; }
-        .tool-card p { color: #667786; font-size: 8.7px; line-height: 1.38; margin: 7px 0 0; }
+        .tool-card p { color: #667786; font-size: 10.5px; line-height: 1.45; margin: 5px 0 0 41px; }
         .final-strip { margin: 9px 0 15px; padding: 15px 14px; border-radius: 9px; background: #0B3864; color: #fff; }
         .final-strip h3 { margin: 0; font-size: 19px; line-height: 1.2; }
         .final-strip p { margin: 4px 0 0; font-size: 9px; opacity: .9; }
