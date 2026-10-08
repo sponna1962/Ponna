@@ -97,7 +97,7 @@ export default function MistakesPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, paddingBottom: 30, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.mistakes.title}</h1>
       </div>
@@ -116,14 +116,14 @@ export default function MistakesPage() {
       <button
         onClick={generateSmartRevision}
         disabled={generatingRevision}
-        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', boxSizing: 'border-box', textAlign: 'left', padding: '14px 16px', borderRadius: 16, border: '1.5px solid #E2B04A', background: 'var(--color-goldDisc)', color: COLORS.ink, fontWeight: 700, fontSize: 14.5, cursor: 'pointer', marginBottom: 16 }}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', boxSizing: 'border-box', textAlign: 'left', padding: '14px 16px', borderRadius: 10, border: '1.5px solid #E2B04A', background: 'var(--color-goldDisc)', color: COLORS.ink, fontWeight: 700, fontSize: 14.5, cursor: 'pointer', marginBottom: 16 }}
       >
         <span style={{ flex: 1 }}>{generatingRevision ? 'உங்க mistakes-ஐ படிச்சு revision notes தயார் பண்றேன்…' : '✨ என் Mistakes-க்கான Smart Revision Notes'}</span>
         <span aria-hidden="true" style={{ fontSize: 24, color: 'var(--color-gold)', lineHeight: 1 }}>›</span>
       </button>
       {revisionError && <p style={{ fontSize: 13, color: 'var(--color-bad)', marginBottom: 16 }}>{revisionError}</p>}
       {revisionSummary && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderLeft: '5px solid #E2B04A', borderRadius: 16, padding: 16, marginBottom: 16, background: 'var(--color-card)', color: COLORS.ink, whiteSpace: 'pre-wrap', fontSize: 15, lineHeight: 1.7 }}>
+        <div style={{ border: `1px solid ${COLORS.line}`, borderLeft: '5px solid #E2B04A', borderRadius: 10, padding: 16, marginBottom: 16, background: 'var(--color-card)', color: COLORS.ink, whiteSpace: 'pre-wrap', fontSize: 15, lineHeight: 1.7 }}>
           <p style={{ fontSize: 12.5, color: 'var(--color-gold)', marginBottom: 8, fontWeight: 700 }}>
             உங்க {revisionSummary.questionCount} mistakes-லிருந்து ({revisionSummary.subjectCount} subjects)
           </p>
@@ -134,10 +134,10 @@ export default function MistakesPage() {
       {!data && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
       {data?.access === 'FREE_LOCKED' && (
-        <div style={{ border: '1.5px solid #E2B04A', borderRadius: 16, padding: 22, background: COLORS.goldLight, textAlign: 'center' }}>
+        <div style={{ border: '1.5px solid #E2B04A', borderRadius: 10, padding: 22, background: COLORS.goldLight, textAlign: 'center' }}>
           <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 {t.mistakes.lockedTitle}</p>
           <p style={{ fontSize: 13.5, color: COLORS.inkMuted, marginBottom: 16 }}>{t.mistakes.lockedBody}</p>
-          <a href="/plans" style={{ display: 'inline-block', padding: '11px 24px', borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 14.5 }}>
+          <a href="/plans" style={{ display: 'inline-block', padding: '11px 24px', borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 14.5 }}>
             {t.dailyQuiz.viewPlans}
           </a>
         </div>
@@ -145,7 +145,7 @@ export default function MistakesPage() {
 
       {data?.access === 'AVAILABLE' && (
         <>
-          <div style={{ display: 'flex', gap: 6, background: 'var(--color-field)', border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: 4, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 6, background: 'var(--color-field)', border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: 4, marginBottom: 16 }}>
             {(['all', 'subject', 'recent'] as const).map((f) => (
               <button
                 key={f}
@@ -153,7 +153,7 @@ export default function MistakesPage() {
                 style={{
                   flex: 1,
                   padding: '9px 4px',
-                  borderRadius: 999,
+                  borderRadius: 6,
                   border: 'none',
                   background: filter === f ? 'var(--color-btn)' : 'transparent',
                   color: filter === f ? 'var(--color-btnText)' : COLORS.inkMuted,
@@ -168,7 +168,7 @@ export default function MistakesPage() {
           </div>
 
           {allItems.length === 0 && (
-            <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: '30px 18px', textAlign: 'center' }}>
+            <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: '30px 18px', textAlign: 'center' }}>
               <span style={{ display: 'block', fontSize: 36, marginBottom: 8 }}>🎉</span>
               <p style={{ fontSize: 15, color: COLORS.inkMuted, margin: 0 }}>{t.mistakes.empty}</p>
             </div>
@@ -226,9 +226,9 @@ function MistakeCard({
 }) {
   const { t } = useLanguage();
   return (
-    <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderLeft: '5px solid #E2B04A', borderRadius: 16, padding: '14px 16px', marginBottom: 12 }}>
+    <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderLeft: '5px solid #E2B04A', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
       <button onClick={onOpen} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', width: '100%', cursor: 'pointer' }}>
-        {item.subjectName && <span style={{ display: 'inline-block', fontSize: 12, color: 'var(--color-gold)', fontWeight: 700, background: 'var(--color-goldDisc)', padding: '3px 10px', borderRadius: 999 }}>{item.subjectName}</span>}
+        {item.subjectName && <span style={{ display: 'inline-block', fontSize: 12, color: 'var(--color-gold)', fontWeight: 700, background: 'var(--color-goldDisc)', padding: '3px 10px', borderRadius: 6 }}>{item.subjectName}</span>}
         <p style={{ fontSize: 15.5, color: COLORS.ink, margin: '6px 0 0', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{item.questionText}</p>
       </button>
 
@@ -248,7 +248,7 @@ function MistakeCard({
                   gap: 12,
                   padding: '11px 13px',
                   border: `1.5px solid ${isCorrectOption ? 'var(--color-ok)' : isWrongSelected ? 'var(--color-bad)' : COLORS.line}`,
-                  borderRadius: 14,
+                  borderRadius: 8,
                   marginBottom: 8,
                   fontSize: 15,
                   lineHeight: 1.55,
