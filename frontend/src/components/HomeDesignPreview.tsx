@@ -239,14 +239,14 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           position: relative;
           display: flex;
           flex-direction: column;
-          min-height: 470px;
+          min-height: 400px;
           background: #F1FAF3;
           border-bottom: 1px solid #DCE9DF;
           overflow: hidden;
         }
-        .hero-copy { position: relative; z-index: 2; flex: 1; width: 58%; padding: 20px 0 0 14px; min-width: 0; display: flex; flex-direction: column; }
-        .eyebrow { color: #17835E; font-weight: 800; font-size: 15.5px; line-height: 1.4; margin-bottom: 10px; white-space: nowrap; }
-        h1 { margin: 0 0 auto; color: #0B3864; font-size: 27px; line-height: 1.4; letter-spacing: -0.2px; }
+        .hero-copy { position: relative; z-index: 2; flex: 1; width: 200px; padding: 22px 0 88px 16px; min-width: 0; display: flex; flex-direction: column; }
+        .eyebrow { color: #17835E; font-weight: 800; font-size: 13px; line-height: 1.5; margin-bottom: 6px; white-space: nowrap; }
+        h1 { margin: 0 0 auto; color: #0B3864; font-size: 26px; line-height: 1.35; letter-spacing: -0.2px; }
         h1 em { color: #17835E; font-style: normal; }
         .hero ul {
           list-style: none;
@@ -279,7 +279,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         }
         .hero-photo {
           position: absolute;
-          inset: 0 0 88px 0;
+          inset: 0;
           z-index: 1;
           pointer-events: none;
           overflow: hidden;
@@ -288,21 +288,21 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(180deg, rgba(241,250,243,0) 90%, #F1FAF3 100%), linear-gradient(90deg, rgba(241,250,243,0.95) 0%, rgba(241,250,243,0.9) 38%, rgba(241,250,243,0) 62%);
+          background: linear-gradient(90deg, #F1FAF3 34%, rgba(241,250,243,0) 70%);
         }
         .hero-photo img {
           position: absolute;
-          top: -6%;
+          top: 0;
           right: 0;
-          height: 112%;
-          width: auto;
+          height: 100%;
+          width: 78%;
           max-width: none;
           display: block;
-          -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 34%);
-          mask-image: linear-gradient(90deg, transparent 0%, #000 34%);
+          object-fit: cover;
+          object-position: left top;
         }
-        .hero-actions { position: relative; z-index: 2; padding: 0 14px 18px; }
-        .hero-actions .primary-button { margin-top: 14px; }
+        .hero-actions { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 0 14px 16px; }
+        .hero-actions .primary-button { margin-top: 0; box-shadow: 0 6px 16px rgba(11,56,100,.15); }
 
         .stat-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #0B3864; color: #fff; padding: 14px 4px; }
         .stat-strip div { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; padding: 0 4px; }
@@ -681,7 +681,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           .brand :global(img) { width: 132px !important; }
           .login { font-size: 14px; padding: 10px 12px; }
           .hero-copy { padding: 18px 0 0 12px; }
-          .eyebrow { font-size: 15px; }
+          .eyebrow { font-size: 12px; }
           h1 { font-size: 24px; }
           .hero ul { font-size: 14.5px; }
           .primary-button { font-size: 16px; }
