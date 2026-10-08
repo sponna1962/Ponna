@@ -181,7 +181,6 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         </section>
       </section>
 
-      <footer>வடிவமைப்பு முன்னோட்டம் · PONNA.in</footer>
 
       <style jsx>{`
         .home-preview {
@@ -671,7 +670,6 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           font-size: 17px;
           margin-top: 12px;
         }
-        footer { padding: 0 12px 24px; text-align: center; color: #667786; font-size: 14px; }
 
         @media (max-width: 380px) {
           .brand :global(img) { width: 132px !important; }
