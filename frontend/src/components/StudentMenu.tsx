@@ -103,17 +103,25 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
             }}
           >
             <header style={{
-              flex: '0 0 72px', height: 72, display: 'flex', alignItems: 'center',
+              flex: '0 0 68px', height: 68, display: 'flex', alignItems: 'center',
               justifyContent: 'space-between', padding: '0 16px',
-              borderBottom: '3px solid #E2B04A', background: '#fff', boxSizing: 'border-box',
+              borderBottom: '2px solid #E2B04A', background: '#fff', boxSizing: 'border-box',
             }}>
-              <div style={{ background: '#fff', border: '1px solid #DDE5E9', padding: '4px 10px', borderRadius: 7, display: 'flex' }}>
-                <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} style={{ width: 178, height: 'auto' }} />
-              </div>
+              <a href="/" aria-label="PONNA.in" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', minWidth: 0 }}>
+                <Image
+                  src="/logo-compact.png"
+                  alt="PONNA.in"
+                  width={1968}
+                  height={531}
+                  priority
+                  style={{ width: 190, height: 'auto', display: 'block' }}
+                />
+              </a>
               <button onClick={() => setOpen(false)} aria-label="Close" style={{
-                width: 36, height: 36, border: '1px solid #DDE5E9', borderRadius: '50%',
+                width: 36, height: 36, border: '1px solid #DDE5E9', borderRadius: 8,
                 background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0,
-              }}>
+                flex: '0 0 36px',
+              }>
                 <CloseIcon size={18} color="#20384D" />
               </button>
             </header>
