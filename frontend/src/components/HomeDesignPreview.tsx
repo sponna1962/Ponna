@@ -46,19 +46,19 @@ export default function HomeDesignPreview() {
 
       <section className="hero">
         <div className="hero-copy">
-          <div className="eyebrow">TNPSC தேர்வுக்கான பயிற்சி</div>
-          <h1>Group 4 தேர்வுக்கு<br /><em>திட்டமிட்டுப் பயிற்சி</em><br />செய்யுங்கள்</h1>
+          <div className="eyebrow">போட்டித் தேர்வுக்கான<br />பயிற்சி தளம்</div>
+          <h1>Group 4 வெற்றிக்கான<br /><em>உங்கள் முயற்சி</em><br />இங்கே தொடங்கட்டும்</h1>
           <ul>
-            <li>பாடவாரியாகப் பயிற்சி</li>
-            <li>மாதிரித் தேர்வுகள்</li>
-            <li>முன்னேற்றத்தைப் பார்க்கலாம்</li>
+            <li>60,000+ கேள்விகள்</li>
+            <li>புதிய பாடத்திட்டம்</li>
+            <li>நிபுணர்கள் உருவாக்கியது</li>
           </ul>
         </div>
         <div className="hero-photo">
           <img src="/ponna-hero-woman.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" />
         </div>
         <div className="hero-actions">
-          <a href="/quiz" className="primary-button">இப்போதே பயிற்சியைத் தொடங்குங்கள் <b>→</b></a>
+          <a href="/quiz" className="primary-button">பயிற்சி தொடங்குங்கள் <b>→</b></a>
         </div>
       </section>
 
@@ -190,7 +190,7 @@ export default function HomeDesignPreview() {
           overflow: hidden;
         }
         .hero-copy { position: relative; z-index: 2; flex: 1; width: 55%; padding: 18px 0 10px 14px; min-width: 0; }
-        .eyebrow { color: #17835E; font-weight: 800; font-size: 15px; line-height: 1.4; margin-bottom: 4px; }
+        .eyebrow { color: #17835E; font-weight: 800; font-size: 15px; line-height: 1.4; margin-bottom: 7px; }
         h1 { margin: 0; color: #0B3864; font-size: 25px; line-height: 1.3; letter-spacing: -0.2px; }
         h1 em { color: #E3313D; font-style: normal; }
         .hero ul {
