@@ -564,6 +564,9 @@ function PlansPageInner() {
                     >
                       {loadingPlan === p.id ? '…' : features?.buttonLabel ?? buyButtonLabel(p.name)}
                     </button>
+                    <div style={{ marginTop: 10, fontSize: 12.5, color: COLORS.inkMuted, textAlign: 'center' }}>
+                      {lang === 'ta' ? 'UPI-ல் செலுத்தி, பரிவர்த்தனை எண்ணை அனுப்புங்கள்.' : 'Pay by UPI, then send us the transaction ID.'}
+                    </div>
                   </div>
                 );
               })}
@@ -834,8 +837,8 @@ function UpiPaySheet({
 
         <ol style={{ paddingLeft: 18, margin: '0 0 16px', fontSize: 14, lineHeight: 1.7 }}>
           <li>{ta ? `கீழே உள்ள UPI ID-க்கு ₹${data.amount} செலுத்துங்கள்.` : `Pay ₹${data.amount} to the UPI ID below.`}</li>
-          <li>{ta ? 'உங்கள் UPI செயலியில் காட்டும் 12 இலக்க பரிவர்த்தனை எண்ணை (UTR) கீழே உள்ளிடுங்கள்.' : 'Enter the 12-digit transaction ID (UTR) from your UPI app below.'}</li>
-          <li>{ta ? 'நாங்கள் சரிபார்த்ததும் உங்கள் பாஸ் செயல்படும்.' : 'Your pass activates once we verify the payment.'}</li>
+          <li>{ta ? 'UPI செயலியில் வரும் 12 இலக்க பரிவர்த்தனை எண்ணை கீழே உள்ளிட்டு எங்களுக்கு அனுப்புங்கள்.' : 'Enter the 12-digit transaction ID from your UPI app below and send it to us.'}</li>
+          <li>{ta ? 'நாங்கள் சரிபார்த்து உங்கள் PONNA Pass-ஐ இயக்குவோம்.' : 'We verify it and activate your PONNA Pass.'}</li>
         </ol>
 
         <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 12, marginBottom: 12 }}>
@@ -875,19 +878,13 @@ function UpiPaySheet({
           {ta ? 'UPI செயலியில் செலுத்து' : 'Pay with UPI app'}
         </a>
 
-        <div style={{ background: '#FEF3C7', color: '#92400E', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
-          {ta
-            ? 'ஏற்கெனவே பணம் செலுத்திவிட்டீர்களா, ஆனால் எண்ணை உள்ளிட முடியவில்லையா? மீண்டும் செலுத்த வேண்டாம். இதே திரையை மீண்டும் திறந்து, உங்கள் UPI செயலியின் வரலாற்றில் உள்ள 12 இலக்க பரிவர்த்தனை எண்ணை மட்டும் கீழே உள்ளிடுங்கள்.'
-            : 'Already paid but could not enter the ID? Do not pay again. Reopen this screen and enter only the 12-digit transaction ID from your UPI app history below.'}
-        </div>
-
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
           {ta ? 'UPI பரிவர்த்தனை எண் (12 இலக்கம்)' : 'UPI transaction ID (12 digits)'}
         </label>
         <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: '0 0 6px', lineHeight: 1.5 }}>
           {ta
-            ? 'பணம் செலுத்திய பின் உங்கள் UPI செயலியில் "UPI Ref No / UTR / Transaction ID" என்று காட்டும் 12 இலக்க எண். எழுத்துகள் இல்லாமல் எண்கள் மட்டும் (Google Pay-ல் "UPI transaction ID").'
-            : 'After paying, find the 12-digit number your UPI app shows as "UPI Ref No / UTR / Transaction ID" (in Google Pay: "UPI transaction ID"). Digits only, no letters.'}
+            ? 'Google Pay: "UPI transaction ID" · PhonePe: "UTR" · Paytm: "UPI Ref No". எண்கள் மட்டும், 12 இலக்கம்.'
+            : 'Google Pay: "UPI transaction ID" · PhonePe: "UTR" · Paytm: "UPI Ref No". Digits only, 12 digits.'}
         </p>
         <input
           value={utr}
@@ -896,6 +893,8 @@ function UpiPaySheet({
           placeholder="123456789012"
           style={{ width: '100%', boxSizing: 'border-box', padding: 12, fontSize: 16, borderRadius: 8, border: `1px solid ${COLORS.line}`, background: 'transparent', color: COLORS.ink, marginBottom: 10 }}
         />
+
+
         {err && <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 10px' }}>{err}</p>}
 
         <button
@@ -905,6 +904,12 @@ function UpiPaySheet({
         >
           {busy ? '…' : ta ? 'சமர்ப்பி' : 'Submit'}
         </button>
+        <div style={{ height: 10 }} />
+        <div style={{ background: '#FEF3C7', color: '#92400E', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
+          {ta
+            ? 'ஏற்கெனவே பணம் செலுத்திவிட்டீர்களா, ஆனால் எண்ணை உள்ளிட முடியவில்லையா? மீண்டும் செலுத்த வேண்டாம். இதே திரையை மீண்டும் திறந்து, உங்கள் UPI செயலியின் வரலாற்றில் உள்ள 12 இலக்க பரிவர்த்தனை எண்ணை மட்டும் கீழே உள்ளிடுங்கள்.'
+            : 'Already paid but could not enter the ID? Do not pay again. Reopen this screen and enter only the 12-digit transaction ID from your UPI app history below.'}
+        </div>
         <ProblemReport ta={ta} />
         <button onClick={() => { clearDraft(); onClose(); }} style={{ width: '100%', padding: 12, background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 14, cursor: 'pointer', marginTop: 4 }}>
           {ta ? 'மூடு' : 'Close'}
