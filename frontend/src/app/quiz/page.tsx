@@ -489,9 +489,18 @@ export default function QuizStartPage() {
         <a href="/offline-practice" className="offline-badge">Offline</a>
       </header>
 
-      <div className="practice-page-title">
-        <h1 className="practice-title">{t.quiz.title}</h1>
-      </div>
+      <section className="practice-hero">
+        <div>
+          <p className="practice-kicker">{lang === 'ta' ? 'தினசரி பயிற்சி' : 'DAILY PRACTICE'}</p>
+          <h1 className="practice-title">{lang === 'ta' ? 'பயிற்சியைத் தொடங்குங்கள்' : 'Start Practice'}</h1>
+          <p className="practice-intro">{lang === 'ta' ? 'உங்கள் தேர்வைத் தேர்ந்தெடுத்து, பயிற்சி மொழி மற்றும் கேள்வி நிலையை அமைக்கவும்.' : 'Choose your exam, practice language and question level.'}</p>
+        </div>
+        <div className="practice-steps">
+          <span className="practice-step active">1</span><span className="practice-step-line" />
+          <span className="practice-step active">2</span><span className="practice-step-line" />
+          <span className="practice-step active">3</span>
+        </div>
+      </section>
 
       <div className="practice-content">
         {!editing && saved && (
@@ -561,7 +570,12 @@ export default function QuizStartPage() {
 
         {editing && (
           <>
+            <div className="setup-note">
+              <span className="setup-note-mark" aria-hidden="true">✓</span>
+              <div><strong>{lang === 'ta' ? 'சில படிகள் மட்டுமே' : 'A few simple steps'}</strong><p>{lang === 'ta' ? 'தேர்வைத் தொடங்கும் முன் உங்கள் பயிற்சியை அமைத்துக்கொள்ளுங்கள்.' : 'Set your practice before you begin.'}</p></div>
+            </div>
             {fixedSel ? (
+              <div className="setup-section-label">{lang === 'ta' ? 'தேர்வு' : 'EXAM'}</div>
               <div className="exam-card">
                 <span className="exam-card-mark" aria-hidden="true">4</span>
                 <div>
@@ -763,54 +777,49 @@ export default function QuizStartPage() {
         )}
       </div>
     
-      <style jsx>{`\n.practice-page{color-scheme:light dark;width:100%;max-width:680px;min-height:100dvh;margin:0 auto;padding-bottom:32px;background:var(--color-paper);color:var(--color-ink);font-family:'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif}
-.practice-header{height:68px;min-height:68px;max-height:68px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--color-card);border-bottom:2px solid var(--color-gold);position:sticky;top:0;z-index:30}
-.practice-brand{display:flex;align-items:center;height:42px;min-width:0;margin-right:auto;text-decoration:none;overflow:hidden}
-.practice-brand-crop{display:block;width:154px;height:31px;overflow:hidden;flex:0 0 154px;line-height:0}
+      <style jsx>{`.practice-page{color-scheme:light;width:100%;max-width:760px;min-height:100dvh;margin:0 auto;padding-bottom:40px;background:#FBFAF6;color:#14253D;font-family:'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif}
+.practice-header{height:64px;display:flex;align-items:center;gap:10px;padding:0 16px;background:#fff;border-bottom:1px solid #DDD9CE;position:sticky;top:0;z-index:30;overflow:hidden}
+.practice-brand{display:flex;align-items:center;width:154px;height:34px;margin-right:auto;text-decoration:none;overflow:hidden;flex:0 0 154px}
+.practice-brand-crop{display:block;width:154px;height:32px;overflow:hidden;flex:0 0 154px;line-height:0}
 .practice-brand-crop img{width:154px!important;height:auto!important;max-width:none;display:block}
-.practice-brand img{width:154px;height:auto;display:block}
-.practice-title{margin:0!important;color:var(--color-ink)!important;font-size:23px!important;font-weight:900!important;line-height:1.3;letter-spacing:-.2px}
-.practice-page-title{padding:20px 16px 4px}
-.practice-page-title:after{content:'';display:block;width:42px;height:3px;margin-top:9px;background:var(--color-gold);border-radius:2px}
-.offline-badge{color:var(--color-ok)!important;border:1px solid var(--color-ok)!important;background:var(--color-okBg);padding:7px 9px;border-radius:7px;text-decoration:none;white-space:nowrap;font-size:11px;font-weight:900;line-height:1}
-.practice-content{padding:12px 16px 0!important}
-.exam-card{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding:15px 16px;color:#fff;background:var(--color-head1);border-radius:10px;border-bottom:3px solid #FFD22A;box-shadow:0 6px 18px rgba(11,56,100,.12)}
-.exam-card-mark{width:42px;height:42px;border:1px solid rgba(255,255,255,.42);border-radius:8px;background:rgba(255,255,255,.08);display:grid;place-items:center;color:#fff;font-size:20px;font-weight:900;flex:0 0 42px}
-.exam-card b{font-size:18px!important}.exam-card small{color:#E6EFF6!important;font-size:12px!important}
-.selected-badge{margin-left:auto;color:#14253D;background:#FFD22A;padding:6px 9px;border-radius:6px;font-size:11px;font-weight:900;white-space:nowrap}
-.section-block{margin-bottom:22px!important;padding-bottom:18px;border-bottom:1px solid var(--color-line)}
-.section-title{margin:0 0 11px!important;color:var(--color-ink)!important;font-size:17px!important;letter-spacing:0;line-height:1.45;font-weight:900!important}
-.chip-row{display:flex;flex-wrap:wrap;gap:8px}
-.practice-chip{padding:10px 15px!important;min-height:44px;border-radius:8px!important;border:1px solid var(--color-line)!important;background:var(--color-card)!important;color:var(--color-ink)!important;font-weight:700!important;font-size:14.5px!important;box-shadow:none!important}
-.practice-chip.active{background:var(--color-head1)!important;color:#fff!important;border-color:var(--color-head1)!important}
-.start-button,.summary-start{width:100%!important;min-height:54px;padding:13px 16px!important;margin-top:10px!important;border-radius:9px!important;border:none!important;background:var(--color-btn)!important;color:var(--color-btnText)!important;font-size:17px!important;font-weight:900!important;box-shadow:0 7px 18px rgba(11,56,100,.16)!important}
-.profile-gate{margin-top:14px!important;padding:22px 16px!important;text-align:center;border-radius:10px!important;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-top:3px solid var(--color-gold)!important}
-.profile-gate a{display:block!important;padding:13px!important;border-radius:8px!important;background:var(--color-btn)!important;color:var(--color-btnText)!important}
-.access-prompt{margin-top:14px!important;padding:15px!important;border-radius:9px!important;background:var(--color-goldLight)!important;border:1px solid var(--color-gold)!important}
-.access-prompt>div{gap:8px!important}.access-prompt button,.access-prompt a{border-radius:8px!important}
-.locked-card{padding:13px!important;border-radius:8px!important;background:var(--color-okBg)!important;border:1px solid var(--color-ok)!important;color:var(--color-ok)!important}
-.error-box{margin-top:14px!important;padding:12px;border:1px solid var(--color-bad);border-radius:8px;background:var(--color-badBg)}.error-box p{color:var(--color-bad)!important;margin:0 0 8px!important}
-.error-link{display:inline-block;padding:8px 14px;border-radius:7px;background:var(--color-btn);color:var(--color-btnText);text-decoration:none;font-size:13px}
-.subject-pref{margin-bottom:22px}.subject-pref-button{background:transparent!important;border:none!important;padding:0!important;font-size:14px!important;font-weight:800!important;color:var(--color-teal)!important;text-decoration:underline;cursor:pointer}
-.subject-modal-overlay{position:fixed;inset:0;background:rgba(11,56,100,.52);z-index:100;display:flex;align-items:flex-end}
-.subject-modal{background:var(--color-card);color:var(--color-ink);border-radius:14px 14px 0 0;padding:20px;width:100%;max-width:680px;margin:0 auto;max-height:72vh;overflow-y:auto;box-shadow:0 -8px 28px rgba(11,56,100,.18)}
-.subject-option{display:flex;align-items:center;gap:10px;padding:11px 0;font-size:14px;cursor:pointer;border-bottom:1px solid var(--color-line)}
-.subject-done{width:100%;padding:13px;border-radius:8px;background:var(--color-btn);color:var(--color-btnText);border:none;font-weight:900;font-size:15px;margin-top:16px}
-.preference-summary{margin-bottom:22px}.summary-card{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-left:4px solid var(--color-gold)!important;border-radius:9px!important;padding:15px!important;margin-bottom:12px!important}
-.summary-label{margin:0 0 5px!important;color:var(--color-gold)!important;font-size:12px!important;font-weight:900!important}.summary-text{margin:0!important;color:var(--color-ink)!important;font-size:14.5px!important;line-height:1.6!important}
-.change-button{flex-shrink:0;font-size:12px;font-weight:800;padding:6px 11px;border-radius:7px;border:1px solid var(--color-line);background:var(--color-card);color:var(--color-ink)}
-@media(max-width:480px){.practice-header{padding:0 10px;gap:8px}.practice-brand-crop{width:146px;flex-basis:146px;height:30px}.practice-brand-crop img{width:146px!important}.practice-brand img{width:146px}.practice-page-title{padding:18px 14px 3px}.practice-title{font-size:21px!important}.practice-content{padding:12px 14px 0!important}.exam-card{padding:13px 12px}.exam-card b{font-size:16px!important}.selected-badge{padding:5px 7px;font-size:10px}.practice-chip{font-size:14px!important;padding:9px 12px!important;min-height:44px}}
-@media(max-width:380px){.practice-brand-crop{width:136px;flex-basis:136px;height:29px}.practice-brand-crop img{width:136px!important}.practice-brand img{width:136px}.practice-title{font-size:20px!important}.offline-badge{padding:7px;font-size:10px}.practice-content{padding-left:12px!important;padding-right:12px!important}}\n      `}</style>
+.practice-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:34px 28px 28px;background:#fff;border-bottom:1px solid #DDD9CE}
+.practice-kicker{margin:0 0 8px;color:#17835E;font-size:11px;font-weight:900;letter-spacing:.12em}
+.practice-title{margin:0!important;color:#0B3864!important;font-size:30px!important;font-weight:900!important;line-height:1.25;letter-spacing:-.3px}
+.practice-intro{margin:9px 0 0;color:#596579;font-size:14px;line-height:1.65;max-width:520px}
+.practice-steps{display:flex;align-items:center;flex:0 0 auto;padding-bottom:3px}
+.practice-step{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#0B3864;color:#fff;font-size:11px;font-weight:900}
+.practice-step-line{width:20px;height:1px;background:#C28A16}
+.practice-content{padding:24px 28px 0!important}
+.setup-note{display:flex;align-items:flex-start;gap:12px;margin-bottom:22px;padding:14px 16px;background:#F4F1E8;border:1px solid #DDD9CE;border-left:3px solid #C28A16}
+.setup-note-mark{width:24px;height:24px;flex:0 0 24px;display:grid;place-items:center;border-radius:50%;background:#17835E;color:#fff;font-size:12px;font-weight:900}
+.setup-note strong{display:block;color:#0B3864;font-size:14px}.setup-note p{margin:2px 0 0;color:#596579;font-size:12.5px;line-height:1.5}
+.setup-section-label{margin:0 0 8px;color:#596579;font-size:11px;font-weight:900;letter-spacing:.1em}
+.exam-card{display:flex;align-items:center;gap:14px;margin-bottom:26px;padding:17px 18px;color:#fff;background:#0B3864;border:1px solid #0B3864;border-bottom:3px solid #FFD22A;border-radius:12px;box-shadow:0 8px 20px rgba(11,56,100,.12)}
+.exam-card-mark{width:46px;height:46px;border:1px solid rgba(255,255,255,.45);border-radius:9px;background:rgba(255,255,255,.08);display:grid;place-items:center;color:#fff;font-size:20px;font-weight:900;flex:0 0 46px}
+.exam-card b{font-size:18px!important;line-height:1.3}.exam-card small{color:#EAF1F7!important;font-size:12px!important}
+.selected-badge{margin-left:auto;color:#14253D;background:#FFD22A;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:900;white-space:nowrap}
+.section-block{margin:0 0 22px!important;padding:0 0 22px;border-bottom:1px solid #DDD9CE}.section-title{display:flex;align-items:center;gap:9px;margin:0 0 13px!important;color:#0B3864!important;font-size:17px!important;line-height:1.45;font-weight:900!important}.section-marker{display:block;width:4px;height:21px;flex:0 0 4px;background:#C28A16}
+.chip-row{display:flex;flex-wrap:wrap;gap:9px}.practice-chip{padding:11px 15px!important;min-height:44px;border-radius:8px!important;border:1px solid #DDD9CE!important;background:#fff!important;color:#14253D!important;font-weight:700!important;font-size:14px!important;box-shadow:none!important}.practice-chip.active{background:#0B3864!important;color:#fff!important;border-color:#0B3864!important}
+.start-button,.summary-start{width:100%!important;min-height:56px;padding:14px 18px!important;margin-top:4px!important;border-radius:9px!important;border:none!important;background:#0B3864!important;color:#FFD22A!important;font-size:17px!important;font-weight:900!important;box-shadow:0 8px 20px rgba(11,56,100,.16)!important}
+.profile-gate{margin-top:14px!important;padding:22px 18px!important;text-align:center;border-radius:10px!important;background:#fff!important;border:1px solid #DDD9CE!important;border-top:3px solid #C28A16!important}.profile-gate a{display:block!important;padding:13px!important;border-radius:8px!important;background:#0B3864!important;color:#FFD22A!important}
+.access-prompt{margin-top:14px!important;padding:16px!important;border-radius:9px!important;background:#FFF3C4!important;border:1px solid #C28A16!important}.access-prompt>div{gap:8px!important}.access-prompt button,.access-prompt a{border-radius:8px!important}
+.locked-card{padding:14px!important;border-radius:8px!important;background:#E9F5EF!important;border:1px solid #17835E!important;color:#0B5D43!important}.error-link{display:inline-block;padding:8px 14px;border-radius:7px;background:#0B3864;color:#FFD22A;text-decoration:none;font-size:13px}
+.subject-pref{margin:-7px 0 22px}.subject-pref-button{background:transparent!important;border:none!important;padding:0!important;font-size:13.5px!important;font-weight:800!important;color:#17835E!important;text-decoration:underline;cursor:pointer}
+.subject-modal-overlay{position:fixed;inset:0;background:rgba(11,56,100,.55);z-index:100;display:flex;align-items:flex-end}.subject-modal{background:#fff;color:#14253D;border-radius:16px 16px 0 0;padding:22px;width:100%;max-width:760px;margin:0 auto;max-height:78vh;overflow-y:auto;box-shadow:0 -10px 30px rgba(11,56,100,.2)}
+.subject-option{display:flex;align-items:center;gap:10px;padding:12px 0;font-size:14px;cursor:pointer;border-bottom:1px solid #DDD9CE}.subject-done{width:100%;padding:13px;border-radius:8px;background:#0B3864;color:#FFD22A;border:none;font-weight:900;font-size:15px;margin-top:16px}
+.preference-summary{margin-bottom:22px}.summary-card{background:#fff!important;border:1px solid #DDD9CE!important;border-left:4px solid #C28A16!important;border-radius:10px!important;padding:17px!important;margin-bottom:12px!important}.summary-label{margin:0 0 5px!important;color:#0B3864!important;font-size:12px!important;font-weight:900!important}.summary-text{margin:0!important;color:#14253D!important;font-size:14.5px!important;line-height:1.65!important}.change-button{flex-shrink:0;font-size:12px;font-weight:800;padding:7px 11px;border-radius:7px;border:1px solid #DDD9CE;background:#fff;color:#0B3864}
+@media(max-width:600px){.practice-header{height:62px;padding:0 12px}.practice-brand{width:146px;height:32px;flex-basis:146px}.practice-brand-crop{width:146px;height:30px;flex-basis:146px}.practice-brand-crop img{width:146px!important}.practice-hero{display:block;padding:26px 18px 22px}.practice-kicker{font-size:10px;margin-bottom:7px}.practice-title{font-size:25px!important}.practice-intro{font-size:13px;margin-top:7px}.practice-steps{margin-top:18px}.practice-content{padding:18px 16px 0!important}.setup-note{margin-bottom:18px;padding:13px 14px}.exam-card{padding:15px 13px;margin-bottom:22px}.exam-card-mark{width:42px;height:42px;flex-basis:42px}.exam-card b{font-size:16px!important}.selected-badge{padding:6px 8px;font-size:10px}.section-title{font-size:16px!important}.practice-chip{min-height:44px;padding:10px 13px!important;font-size:14px!important}}
+@media(max-width:380px){.practice-brand{width:136px;flex-basis:136px}.practice-brand-crop{width:136px;flex-basis:136px}.practice-brand-crop img{width:136px!important}.practice-hero{padding-left:14px;padding-right:14px}.practice-title{font-size:23px!important}.practice-content{padding-left:12px!important;padding-right:12px!important}.selected-badge{font-size:9px;padding:5px 6px}}`}</style>
     </main>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 20 }}>
-      <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 10 }}>{title}</h2>
+    <section className="section-block">
+      <h2 className="section-title"><span className="section-marker" aria-hidden="true" />{title}</h2>
       {children}
-    </div>
+    </section>
   );
 }
 
