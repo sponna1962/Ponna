@@ -822,6 +822,82 @@ async function main() {
     data: { practiceWeight: 2 },
   });
 
+  // Oct 2026 — Cut-off Predictor historical/expected benchmark data.
+  // These are deliberately labelled non-official because TNPSC publishes
+  // marks/ranks and selection lists rather than a single universal Group IV
+  // cut-off table for these years. 2024/2025 values are expected ranges;
+  // 2023 values are the published previous-year benchmark. All are out of 300.
+  // Idempotent: update the existing unique (exam, year, community) row.
+  const cutoffBenchmarks = [
+    // 2025 — expected (category-wise, published after the 12.07.2025 exam)
+    { year: 2025, community: 'OC', min: 180, max: 185, mark: 182.5 },
+    { year: 2025, community: 'BC', min: 175, max: 178, mark: 176.5 },
+    { year: 2025, community: 'MBC_DNC', min: 160, max: 165, mark: 162.5 },
+    { year: 2025, community: 'BCM', min: 156, max: 158, mark: 157 },
+    { year: 2025, community: 'SC', min: 165, max: 170, mark: 167.5 },
+    { year: 2025, community: 'SCA', min: 176, max: 177, mark: 176.5 },
+    { year: 2025, community: 'ST', min: 176, max: 179, mark: 177.5 },
+
+    // 2024 — expected; combined male/female span so the predictor does not
+    // pretend to know gender-specific data that this model does not collect.
+    { year: 2024, community: 'OC', min: 146, max: 155, mark: 150.5 },
+    { year: 2024, community: 'BC', min: 143, max: 150, mark: 146.5 },
+    { year: 2024, community: 'BCM', min: 139, max: 146, mark: 142.5 },
+    { year: 2024, community: 'MBC_DNC', min: 143, max: 147, mark: 145 },
+    { year: 2024, community: 'SC', min: 137, max: 142, mark: 139.5 },
+    { year: 2024, community: 'SCA', min: 133, max: 138, mark: 135.5 },
+    { year: 2024, community: 'ST', min: 132, max: 136, mark: 134 },
+
+    // 2023 — previous-year published benchmark, combining male/female
+    // values into one transparent range for the current community-only profile.
+    { year: 2023, community: 'OC', min: 150, max: 153, mark: 151.5 },
+    { year: 2023, community: 'BC', min: 145, max: 148, mark: 146.5 },
+    { year: 2023, community: 'BCM', min: 140, max: 142, mark: 141 },
+    { year: 2023, community: 'MBC_DNC', min: 145, max: 146, mark: 145.5 },
+    { year: 2023, community: 'SC', min: 138, max: 140, mark: 139 },
+    { year: 2023, community: 'SCA', min: 135, max: 137, mark: 136 },
+    { year: 2023, community: 'ST', min: 133, max: 135, mark: 134 },
+  ] as const;
+
+  if (group4Vao) {
+    const cutoffSource2025 = 'https://www.jagranjosh.com/articles/npsc-group-4-cut-off-2025-check-category-wise-qualifying-passing-marks-1800000944-1';
+    const cutoffSource2024 = 'https://www.jagranjosh.com/articles/tnpsc-group-4-expected-cut-off-2024-category-wise-qualifying-marks-1717917392-1';
+    const cutoffSource2023 = 'https://www.jagranjosh.com/exams/tnpsc-group-4/cutoff';
+    const sourceByYear: Record<number, string> = { 2025: cutoffSource2025, 2024: cutoffSource2024, 2023: cutoffSource2023 };
+    for (const row of cutoffBenchmarks) {
+      await prisma.cutoffRecord.upsert({
+        where: {
+          subCategoryId_year_community: {
+            subCategoryId: group4Vao.id,
+            year: row.year,
+            community: row.community,
+          },
+        },
+        create: {
+          subCategoryId: group4Vao.id,
+          year: row.year,
+          community: row.community,
+          cutoffMarks: row.mark,
+          cutoffMin: row.min,
+          cutoffMax: row.max,
+          totalMarks: 300,
+          isOfficialConfirmed: false,
+          sourceUrl: sourceByYear[row.year],
+          verifiedAt: new Date('2026-10-09T00:00:00.000Z'),
+        },
+        update: {
+          cutoffMarks: row.mark,
+          cutoffMin: row.min,
+          cutoffMax: row.max,
+          totalMarks: 300,
+          isOfficialConfirmed: false,
+          sourceUrl: sourceByYear[row.year],
+          verifiedAt: new Date('2026-10-09T00:00:00.000Z'),
+        },
+      });
+    }
+  }
+
   console.log('Seed complete.');
 }
 
