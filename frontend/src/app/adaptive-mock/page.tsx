@@ -106,16 +106,16 @@ export default function AdaptiveMockPage() {
     setResult({ score: body.score, totalMarks: body.totalMarks });
   }
 
-  const card: React.CSSProperties = { background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${COLORS.gold}`, borderRadius: 16, padding: '22px 18px', textAlign: 'center' };
-  const bigBtn: React.CSSProperties = { width: '100%', padding: 15, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, border: 'none', fontWeight: 700, fontSize: 16, textDecoration: 'none', display: 'block', boxSizing: 'border-box', textAlign: 'center' };
-  const chipStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: 999, background: COLORS.field, border: `1px solid ${COLORS.line}`, fontSize: 12.5, fontWeight: 700, color: COLORS.inkMuted };
+  const card: React.CSSProperties = { background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${COLORS.gold}`, borderRadius: 10, padding: '22px 18px', textAlign: 'center' };
+  const bigBtn: React.CSSProperties = { width: '100%', padding: 15, borderRadius: 8, background: COLORS.btn, color: COLORS.btnText, border: 'none', fontWeight: 700, fontSize: 16, textDecoration: 'none', display: 'block', boxSizing: 'border-box', textAlign: 'center' };
+  const chipStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: 6, background: COLORS.field, border: `1px solid ${COLORS.line}`, fontSize: 12.5, fontWeight: 700, color: COLORS.inkMuted };
   const cur = questions && questions[currentIndex];
   const inQuiz = state?.access === 'IN_PROGRESS' && !!cur && !result;
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: inQuiz ? 96 : 24 }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: `3px solid #E2B04A`, color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: `3px solid #E2B04A`, color: '#fff' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Adaptive Mock Test</h1>
       </div>
@@ -161,9 +161,9 @@ export default function AdaptiveMockPage() {
             <span style={{ color: msLeft !== null && msLeft < 120000 ? COLORS.bad : COLORS.inkMuted }}>⏱ {timeLabel}</span>
           </div>
           <div style={{ height: 8, background: COLORS.line, borderRadius: 4, overflow: 'hidden', marginBottom: 14 }}>
-            <div style={{ height: '100%', width: `${((currentIndex + 1) / questions.length) * 100}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)' }} />
+            <div style={{ height: '100%', width: `${((currentIndex + 1) / questions.length) * 100}%`, background: '#FFD22A' }} />
           </div>
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${COLORS.gold}`, borderRadius: 16, padding: 18, fontSize: cur.questionText.length > 140 ? 16.5 : 17.5, fontWeight: 600, color: COLORS.ink, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{cur.questionText}</div>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${COLORS.gold}`, borderRadius: 10, padding: 18, fontSize: cur.questionText.length > 140 ? 16.5 : 17.5, fontWeight: 600, color: COLORS.ink, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{cur.questionText}</div>
 
           {(['A', 'B', 'C', 'D'] as const).map((letter) => {
             const q = cur;
@@ -179,7 +179,7 @@ export default function AdaptiveMockPage() {
                 onClick={() => !q.selectedOption && selectOption(q.questionId, letter)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-                  border: `1.5px solid ${accent}`, borderRadius: 14, marginBottom: 10, fontSize: 15.5,
+                  border: `1.5px solid ${accent}`, borderRadius: 8, marginBottom: 10, fontSize: 15.5,
                   cursor: q.selectedOption ? 'default' : 'pointer',
                   background: good ? COLORS.okBg : badSel ? COLORS.badBg : COLORS.card,
                 }}
@@ -216,19 +216,19 @@ export default function AdaptiveMockPage() {
           <button
             onClick={() => { setLastAnswerCorrect(null); setCurrentIndex(Math.max(0, currentIndex - 1)); }}
             disabled={currentIndex === 0}
-            style={{ flex: 1, padding: 15, borderRadius: 14, border: `1.5px solid ${COLORS.line}`, background: COLORS.card, color: COLORS.ink, fontWeight: 700, fontSize: 15.5, opacity: currentIndex === 0 ? 0.5 : 1 }}
+            style={{ flex: 1, padding: 15, borderRadius: 8, border: `1.5px solid ${COLORS.line}`, background: COLORS.card, color: COLORS.ink, fontWeight: 700, fontSize: 15.5, opacity: currentIndex === 0 ? 0.5 : 1 }}
           >
             Previous
           </button>
           {currentIndex < questions.length - 1 ? (
             <button
               onClick={() => { setLastAnswerCorrect(null); setCurrentIndex(currentIndex + 1); }}
-              style={{ flex: 1, padding: 15, borderRadius: 14, border: 'none', background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, fontSize: 15.5 }}
+              style={{ flex: 1, padding: 15, borderRadius: 8, border: 'none', background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, fontSize: 15.5 }}
             >
               Next
             </button>
           ) : (
-            <button onClick={finishAttempt} style={{ flex: 1, padding: 15, borderRadius: 14, border: 'none', background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, fontSize: 15.5 }}>
+            <button onClick={finishAttempt} style={{ flex: 1, padding: 15, borderRadius: 8, border: 'none', background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, fontSize: 15.5 }}>
               Finish
             </button>
           )}
