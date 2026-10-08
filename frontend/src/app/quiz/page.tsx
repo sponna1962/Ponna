@@ -479,7 +479,9 @@ export default function QuizStartPage() {
       <header className="practice-header">
         <StudentMenu iconColor="#0B3864" />
         <a href="/" className="practice-brand" aria-label="PONNA.in">
-          <Image src="/logo-header.svg" alt="PONNA.in" width={1968} height={450} priority />
+          <span className="practice-brand-crop">
+            <Image src="/logo-compact.png" alt="PONNA.in" width={1968} height={531} priority />
+          </span>
         </a>
         {/* Sept 2026 — Offline Practice entry point. Deliberately not a
             new sidebar item (nav structure is finalized) — lives here
@@ -762,8 +764,10 @@ export default function QuizStartPage() {
       </div>
     
       <style jsx>{`\n.practice-page{color-scheme:light dark;width:100%;max-width:680px;min-height:100dvh;margin:0 auto;padding-bottom:32px;background:var(--color-paper);color:var(--color-ink);font-family:'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif}
-.practice-header{min-height:64px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--color-card);border-bottom:2px solid var(--color-gold);position:sticky;top:0;z-index:30}
-.practice-brand{display:flex;align-items:center;min-width:0;margin-right:auto;text-decoration:none}
+.practice-header{height:68px;min-height:68px;max-height:68px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--color-card);border-bottom:2px solid var(--color-gold);position:sticky;top:0;z-index:30}
+.practice-brand{display:flex;align-items:center;height:42px;min-width:0;margin-right:auto;text-decoration:none;overflow:hidden}
+.practice-brand-crop{display:block;width:154px;height:40px;overflow:hidden;flex:0 0 154px;line-height:0}
+.practice-brand-crop img{width:154px!important;height:auto!important;max-width:none;display:block}
 .practice-brand img{width:154px;height:auto;display:block}
 .practice-title{margin:0!important;color:var(--color-ink)!important;font-size:23px!important;font-weight:900!important;line-height:1.3;letter-spacing:-.2px}
 .practice-page-title{padding:20px 16px 4px}
@@ -795,8 +799,8 @@ export default function QuizStartPage() {
 .preference-summary{margin-bottom:22px}.summary-card{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-left:4px solid var(--color-gold)!important;border-radius:9px!important;padding:15px!important;margin-bottom:12px!important}
 .summary-label{margin:0 0 5px!important;color:var(--color-gold)!important;font-size:12px!important;font-weight:900!important}.summary-text{margin:0!important;color:var(--color-ink)!important;font-size:14.5px!important;line-height:1.6!important}
 .change-button{flex-shrink:0;font-size:12px;font-weight:800;padding:6px 11px;border-radius:7px;border:1px solid var(--color-line);background:var(--color-card);color:var(--color-ink)}
-@media(max-width:480px){.practice-header{padding:0 10px;gap:8px}.practice-brand img{width:146px}.practice-page-title{padding:18px 14px 3px}.practice-title{font-size:21px!important}.practice-content{padding:12px 14px 0!important}.exam-card{padding:13px 12px}.exam-card b{font-size:16px!important}.selected-badge{padding:5px 7px;font-size:10px}.practice-chip{font-size:14px!important;padding:9px 12px!important;min-height:44px}}
-@media(max-width:380px){.practice-brand img{width:136px}.practice-title{font-size:20px!important}.offline-badge{padding:7px;font-size:10px}.practice-content{padding-left:12px!important;padding-right:12px!important}}\n      `}</style>
+@media(max-width:480px){.practice-header{padding:0 10px;gap:8px}.practice-brand-crop{width:146px;flex-basis:146px;height:38px}.practice-brand-crop img{width:146px!important}.practice-brand img{width:146px}.practice-page-title{padding:18px 14px 3px}.practice-title{font-size:21px!important}.practice-content{padding:12px 14px 0!important}.exam-card{padding:13px 12px}.exam-card b{font-size:16px!important}.selected-badge{padding:5px 7px;font-size:10px}.practice-chip{font-size:14px!important;padding:9px 12px!important;min-height:44px}}
+@media(max-width:380px){.practice-brand-crop{width:136px;flex-basis:136px;height:36px}.practice-brand-crop img{width:136px!important}.practice-brand img{width:136px}.practice-title{font-size:20px!important}.offline-badge{padding:7px;font-size:10px}.practice-content{padding-left:12px!important;padding-right:12px!important}}\n      `}</style>
     </main>
   );
 }
