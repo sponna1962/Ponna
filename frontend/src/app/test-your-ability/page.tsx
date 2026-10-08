@@ -61,7 +61,7 @@ export default function TestYourAbilityPage() {
           சரியான விடையைத் தேர்வு செய்யுங்கள்
         </p>
 
-        <div style={{ background: '#fff', borderRadius: 16, padding: '18px 16px 14px', boxShadow: '0 10px 30px -12px rgba(15,47,51,.35)', border: '1px solid #eadfc4' }}>
+        <div style={{ background: '#fff', borderRadius: 10, padding: '18px 16px 14px', boxShadow: '0 10px 30px -12px rgba(15,47,51,.35)', border: '1px solid #eadfc4' }}>
           <div style={{ fontSize: 12.5, color: GOLD, fontWeight: 700, marginBottom: 8 }}>கேள்வி 1 · TNPSC குரூப்-4 · பொது அறிவு</div>
           <p style={{ fontFamily: SERIF, fontWeight: 800, fontSize: 19, lineHeight: 1.65, margin: '0 0 14px' }}>{QUESTION}</p>
 
@@ -79,7 +79,7 @@ export default function TestYourAbilityPage() {
                   display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 50, textAlign: 'left',
                   background: isRight ? '#E4F4E2' : isWrong ? '#FCE9E6' : PAPER,
                   border: `1.5px solid ${isRight ? '#2e8b3d' : isWrong ? '#c0392b' : '#e6dab8'}`,
-                  borderRadius: 12, padding: '12px 14px', marginBottom: 10,
+                  borderRadius: 8, padding: '12px 14px', marginBottom: 10,
                   fontSize: 17, fontWeight: 500, color: INK, cursor: answered ? 'default' : 'pointer', fontFamily: 'inherit',
                 }}
               >
@@ -111,7 +111,7 @@ export default function TestYourAbilityPage() {
           <div style={{ marginTop: 22 }}>
             <a
               href="/ask-ponna?guestDiagnostic=1"
-              style={{ display: 'block', textAlign: 'center', background: INK, color: '#FFE9A8', textDecoration: 'none', fontWeight: 700, fontSize: 17, padding: 16, borderRadius: 14 }}
+              style={{ display: 'block', textAlign: 'center', background: INK, color: '#FFE9A8', textDecoration: 'none', fontWeight: 700, fontSize: 17, padding: 16, borderRadius: 8 }}
             >
               தொடருங்கள் →
             </a>
