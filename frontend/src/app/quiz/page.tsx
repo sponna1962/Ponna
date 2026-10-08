@@ -917,7 +917,9 @@ export default function QuizStartPage() {
           text-decoration: none;
           font-size: 13px;
         }
-        .subject-pref { margin: 0 0 18px; }
+        .subject-pref {
+          margin: 0 0 18px;
+        }
         .subject-pref-button {
           background: transparent !important;
           border: none !important;
@@ -929,45 +931,27 @@ export default function QuizStartPage() {
           text-underline-offset: 3px;
           cursor: pointer;
         }
-        .subject-modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(11,56,100,.42);
-          z-index: 100;
-          display: flex;
-          align-items: flex-end;
-        }
-        .subject-modal {
-          background: #fff;
-          color: #20384D;
-          border-radius: 16px 16px 0 0;
-          padding: 20px;
-          width: 100%;
-          max-width: 620px;
-          margin: 0 auto;
-          max-height: 72vh;
-          overflow-y: auto;
-          box-shadow: 0 -8px 28px rgba(11,56,100,.18);
+        .subject-list {
+          margin-top: 9px;
+          border-top: 1px solid #E6ECEF;
         }
         .subject-option {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 11px 0;
+          min-height: 42px;
+          padding: 7px 0;
+          color: #20384D;
           font-size: 14px;
+          line-height: 1.45;
           cursor: pointer;
           border-bottom: 1px solid #E6ECEF;
         }
-        .subject-done {
-          width: 100%;
-          padding: 13px;
-          border-radius: 9px;
-          background: #0B3864;
-          color: #FFD22A;
-          border: none;
-          font-weight: 900;
-          font-size: 15px;
-          margin-top: 16px;
+        .subject-option input {
+          width: 19px;
+          height: 19px;
+          flex: 0 0 19px;
+          accent-color: #0B3864;
         }
         .preference-summary { margin-bottom: 22px; }
         .summary-card {
@@ -1048,37 +1032,31 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   );
 }
 
-// Subject Preference (finalized requirement — "Exam -> Subject Preference
-// only" phase, no Topic Preference UI). Self-contained: fetches its own
-// Subject list + saved preference for the given exam, manages its own
-// modal, saves immediately on "Done" (topicIds always sent empty — this
-// phase never touches topic-level preference). Reuses Stage 1's existing
-// /subject-preference/* routes as-is, no backend changes needed here.
+// Subject Preference — compact inline picker. The list opens directly
+// below "பாடங்கள்"; there is no modal, explanatory copy, or Done button.
+// Each checkbox saves immediately so the student can select subjects and
+// go straight to Start Practising.
 type PrefSubject = { id: string; name: string; nameTa?: string | null };
 
 function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, practiceLanguage }: { subCategoryId: string; t: any; resetOnFreshVisit?: boolean; practiceLanguage?: 'TA' | 'EN' | '' }) {
-  // Oct 2026 — this picker's own wording follows the chosen PRACTICE language
-  // (Tamil practice → Tamil wording), falling back to the app language.
-  const t = practiceLanguage === 'TA' ? translations.ta : practiceLanguage === 'EN' ? translations.en : appT;
   const [subjects, setSubjects] = useState<PrefSubject[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
-  const [draftIds, setDraftIds] = useState<Set<string>>(new Set());
-  const [showDisabilityTrack, setShowDisabilityTrack] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setSubjects(null);
     setSelectedIds(new Set());
-    // Oct 2026 — subject choice is for the current practice visit only.
-    // A new login (new token) or a new browser tab starts with none
-    // selected, i.e. the full syllabus; Language is NOT touched here.
+
+    // A new login/new browser tab starts with the full syllabus selected
+    // state cleared. Language is never changed here.
     let token = '';
     let fresh = false;
     try {
       token = localStorage.getItem('ponna_student_token') ?? '';
       fresh = !!resetOnFreshVisit && sessionStorage.getItem('ponna_subject_visit') !== token;
     } catch {}
+
     const reset: Promise<unknown> = fresh
       ? studentFetch(`/subject-preference/${subCategoryId}`, {
           method: 'POST',
@@ -1090,6 +1068,7 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
           })
           .catch(() => {})
       : Promise.resolve();
+
     reset.then(() => Promise.all([
       studentFetch(`/subject-preference/${subCategoryId}/syllabus`).then((r) => r.json()),
       studentFetch(`/subject-preference/${subCategoryId}`).then((r) => r.json()),
@@ -1097,80 +1076,58 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
       setSubjects(syllabus);
       setSelectedIds(new Set(pref.subjectIds ?? []));
     }));
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subCategoryId]);
 
-  function openModal() {
-    setDraftIds(new Set(selectedIds));
-    setOpen(true);
-  }
+  async function toggleSubject(id: string) {
+    if (saving) return;
 
-  function toggleDraft(id: string) {
-    setDraftIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
 
-  async function done() {
+    setSelectedIds(next);
     setSaving(true);
-    await studentFetch(`/subject-preference/${subCategoryId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subjectIds: Array.from(draftIds), topicIds: [] }),
-    });
-    setSelectedIds(new Set(draftIds));
-    setSaving(false);
-    setOpen(false);
+    try {
+      await studentFetch(`/subject-preference/${subCategoryId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subjectIds: Array.from(next), topicIds: [] }),
+      });
+    } catch {
+      // Keep the UI usable; the next Start Practising request still uses
+      // the existing server-side preference flow.
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (!subjects || subjects.length === 0) return null; // no syllabus seeded for this exam yet — field doesn't appear at all
+  if (!subjects || subjects.length === 0) return null;
 
   return (
     <div className="subject-pref">
-      <button className="subject-pref-button"
-        onClick={openModal}
-        
+      <button
+        type="button"
+        className="subject-pref-button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
       >
         பாடங்கள்
       </button>
 
       {open && (
-        <div className="subject-modal-overlay" onClick={() => setOpen(false)}>
-          <div className="subject-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{t.practiceSetup.chooseSubjects}</h3>
-            <p style={{ fontSize: 12.5, color: 'var(--color-inkMuted)', marginBottom: 16 }}>{t.practiceSetup.subjectPreferenceNote}</p>
-
-            {subjects.filter((s) => showDisabilityTrack || !DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)).map((s) => (
-              <label key={s.id} className="subject-option">
-                <input type="checkbox" checked={draftIds.has(s.id)} onChange={() => toggleDraft(s.id)} />
-                {practiceLanguage === 'TA' && s.nameTa ? s.nameTa : s.name}
-              </label>
-            ))}
-
-            {/* Sept 2026 (explicit request) — some syllabi include a subject
-                that's only a valid choice for differently-abled candidates
-                (e.g. Group IV's General English track, vs the standard
-                Tamil Eligibility Test everyone else takes). Hidden by
-                default so it doesn't clutter/confuse the list for
-                everyone; a toggle reveals it for the students it applies
-                to. */}
-            {!showDisabilityTrack && subjects.some((s) => DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)) && (
-              <button
-                type="button"
-                onClick={() => setShowDisabilityTrack(true)}
-                style={{ background: 'none', border: 'none', padding: '10px 0', fontSize: 12.5, color: 'var(--color-gold)', textDecoration: 'underline', cursor: 'pointer' }}
-              >
-                {t.practiceSetup.showDisabilityTrack}
-              </button>
-            )}
-
-            <button className="subject-done" onClick={done} disabled={saving}>
-              {saving ? '…' : t.practiceSetup.done}
-            </button>
-          </div>
+        <div className="subject-list">
+          {subjects.filter((s) => !DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)).map((s) => (
+            <label key={s.id} className="subject-option">
+              <input
+                type="checkbox"
+                checked={selectedIds.has(s.id)}
+                onChange={() => toggleSubject(s.id)}
+              />
+              <span>{practiceLanguage === 'TA' && s.nameTa ? s.nameTa : s.name}</span>
+            </label>
+          ))}
         </div>
       )}
     </div>
