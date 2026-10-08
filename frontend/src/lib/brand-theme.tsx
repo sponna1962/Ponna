@@ -44,24 +44,24 @@ export function ThemeStyles() {
   return (
     <style>{`
       :root {
-        --color-paper: #FAFAF7;
-        --color-paperAlt: #F4F0E6;
-        --color-ink: #1A2238;
-        --color-inkMuted: #535A72;
-        --color-gold: #A8791F;
-        --color-goldLight: #EFE0BC;
-        --color-line: #E4DFD0;
+        --color-paper: #FBFAF6;
+        --color-paperAlt: #F4F1E8;
+        --color-ink: #14253D;
+        --color-inkMuted: #596579;
+        --color-gold: #C28A16;
+        --color-goldLight: #FFF3C4;
+        --color-line: #DDD9CE;
         /* Oct 2026 — extra tokens for the redesigned profile page */
         --color-card: #FFFFFF;
         --color-field: #FBF8EE;
-        --color-teal: #1c6b6b;
-        --color-ok: #1e8a3b;
+        --color-teal: #17835E;
+        --color-ok: #17835E;
         --color-bad: #c0392b;
-        --color-goldDisc: #F3E7C7;
-        --color-head1: #0c2f3f;
-        --color-head2: #1c6b6b;
-        --color-btn: #0F2F33;
-        --color-btnText: #FFE9A8;
+        --color-goldDisc: #FFF7D9;
+        --color-head1: #0B3864;
+        --color-head2: #0B3864;
+        --color-btn: #0B3864;
+        --color-btnText: #FFD22A;
         --color-okBg: #E4F4E2;
         --color-badBg: #FCE9E6;
       }
