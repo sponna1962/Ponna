@@ -8,18 +8,18 @@ export default function FreePracticeCompletePage() {
     <main style={{ minHeight: '100dvh', background: COLORS.paper, color: COLORS.ink, paddingBottom: 40 }}>
       <BitterFontLinks />
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: '3px solid #E2B04A' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A' }}>
           <StudentMenu iconColor="#fff" />
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Practice</h1>
         </div>
 
         <div style={{ padding: '28px 16px 0' }}>
-          <section style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 18, padding: '30px 22px 24px', textAlign: 'center' }}>
+          <section style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #FFD22A', borderRadius: 10, padding: '30px 22px 24px', textAlign: 'center' }}>
             <div style={{ width: 64, height: 64, margin: '0 auto 16px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: COLORS.btn, color: COLORS.btnText, fontSize: 32, fontWeight: 700, lineHeight: 1 }}>
               ✓
             </div>
 
-            <div style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 999, background: COLORS.field, border: `1px solid ${COLORS.line}`, color: COLORS.gold, fontSize: 12.5, fontWeight: 700, marginBottom: 14 }}>
+            <div style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 6, background: COLORS.field, border: `1px solid ${COLORS.line}`, color: COLORS.gold, fontSize: 12.5, fontWeight: 700, marginBottom: 14 }}>
               5 / 5 கேள்விகள்
             </div>
 
@@ -41,7 +41,7 @@ export default function FreePracticeCompletePage() {
 
             <a
               href="/plans"
-              style={{ display: 'block', boxSizing: 'border-box', marginTop: 22, padding: 15, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, textDecoration: 'none', fontSize: 16, fontWeight: 800, lineHeight: 1.35, boxShadow: '0 10px 24px -10px rgba(15,47,51,.7)' }}
+              style={{ display: 'block', boxSizing: 'border-box', marginTop: 22, padding: 15, borderRadius: 8, background: COLORS.btn, color: COLORS.btnText, textDecoration: 'none', fontSize: 16, fontWeight: 800, lineHeight: 1.35, boxShadow: '0 10px 24px -10px rgba(15,47,51,.7)' }}
             >
               <span style={{ display: 'block' }}>பொன்னா பாஸ் பெறுங்கள்</span>
               <span style={{ display: 'block', fontSize: 11.5, marginTop: 3, fontWeight: 700, opacity: 0.85 }}>Get Ponna Pass</span>
