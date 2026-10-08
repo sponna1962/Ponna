@@ -1134,7 +1134,7 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
         onClick={openModal}
         
       >
-        பாடங்கள்${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+        பாடங்கள்
       </button>
 
       {open && (
