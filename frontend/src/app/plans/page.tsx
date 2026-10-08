@@ -197,6 +197,30 @@ function PlansPageInner() {
   const [upiSubmissions, setUpiSubmissions] = useState<UpiSubmission[]>([]);
   const [upiLoaded, setUpiLoaded] = useState(false);
   const [profileDone, setProfileDone] = useState(true);
+  // Oct 2026 — PayU gateway (card / UPI / net banking on PayU's hosted page).
+  // When the server has PAYU_KEY/PAYU_SALT set it becomes the main pay button;
+  // the manual UPI+transaction-ID route stays as a small secondary link.
+  const [payuEnabled, setPayuEnabled] = useState(false);
+  const payuReturn = searchParams.get('payu');
+
+  // Meta Pixel Purchase event once per successful PayU return (value from the
+  // newest active pass). Guarded so a page refresh cannot count it twice.
+  useEffect(() => {
+    if (payuReturn !== 'success' || !plansLoaded || activeSubs.length === 0) return;
+    try {
+      if (sessionStorage.getItem('ponna_payu_pixel')) return;
+      sessionStorage.setItem('ponna_payu_pixel', '1');
+    } catch {}
+    const price = Number(activeSubs[0].plan.launchPrice ?? activeSubs[0].plan.regularPrice ?? 0);
+    if (typeof window.fbq === 'function') window.fbq('track', 'Purchase', { value: price, currency: 'INR' });
+  }, [payuReturn, plansLoaded, activeSubs]);
+
+  useEffect(() => {
+    studentFetch('/payments/payu/info')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setPayuEnabled(!!d?.enabled))
+      .catch(() => setPayuEnabled(false));
+  }, []);
 
   useEffect(() => {
     studentFetch('/students/me/profile')
@@ -282,23 +306,54 @@ function PlansPageInner() {
     document.getElementById(`plan-${highlightPlanId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [plansLoaded, highlightPlanId]);
 
+  /** Manual UPI + transaction-ID route (kept as the fallback). */
+  async function openUpi(planId: string): Promise<boolean> {
+    const upiInfo = await studentFetch('/payments/upi-info')
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (!upiInfo?.enabled) return false;
+    // Profile is no longer required before paying — payment comes first.
+    const plan = plans.find((x) => x.id === planId);
+    const amount = Number(plan?.launchPrice ?? plan?.regularPrice ?? 0);
+    setUpiSheet({ planId, planName: displayName(plan?.name ?? ''), amount, upiId: upiInfo.upiId, payeeName: upiInfo.payeeName });
+    return true;
+  }
+
+  /** PayU: ask our server to sign the order, then POST the browser to PayU. */
+  async function payWithPayu(planId: string) {
+    const res = await studentFetch('/payments/payu/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error ?? t.plans.paymentError);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = body.action;
+    for (const [k, v] of Object.entries(body.fields as Record<string, string>)) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = k;
+      input.value = String(v ?? '');
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
+  }
+
   async function buy(planId: string) {
     setError(null);
     setLoadingPlan(planId);
 
     try {
+      if (payuEnabled) {
+        await payWithPayu(planId);
+        return; // the browser is now navigating to PayU
+      }
       // Oct 2026 — when UPI_ID is configured on the server, pay by UPI and
       // submit the transaction ID for approval instead of opening Razorpay.
-      const upiInfo = await studentFetch('/payments/upi-info')
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null);
-      if (upiInfo?.enabled) {
-        // Profile is no longer required before paying — payment comes first.
-        const plan = plans.find((x) => x.id === planId);
-        const amount = Number(plan?.launchPrice ?? plan?.regularPrice ?? 0);
-        setUpiSheet({ planId, planName: displayName(plan?.name ?? ''), amount, upiId: upiInfo.upiId, payeeName: upiInfo.payeeName });
-        return;
-      }
+      if (await openUpi(planId)) return;
 
       const res = await studentFetch('/payments/create-order', {
         method: 'POST',
@@ -398,6 +453,16 @@ function PlansPageInner() {
           {upiSubmissions.find((u) => u.status === 'REJECTED')?.adminNote && (
             <div style={{ marginTop: 6, fontWeight: 600 }}>{upiSubmissions.find((u) => u.status === 'REJECTED')?.adminNote}</div>
           )}
+        </div>
+      )}
+
+      {payuReturn && (
+        <div style={{ margin: '0 0 14px', padding: '12px 14px', borderRadius: 10, fontSize: 13.5, lineHeight: 1.5, fontWeight: 600,
+          background: payuReturn === 'success' ? '#ecfdf5' : '#fef2f2', color: payuReturn === 'success' ? '#065f46' : '#991b1b',
+          border: `1px solid ${payuReturn === 'success' ? '#a7f3d0' : '#fecaca'}` }}>
+          {payuReturn === 'success'
+            ? (lang === 'ta' ? 'பணம் பெறப்பட்டது. உங்கள் பாஸ் செயல்படுகிறது.' : 'Payment received. Your pass is now active.')
+            : (lang === 'ta' ? 'பணம் செலுத்தல் முடியவில்லை. பணம் கழிக்கப்பட்டிருந்தால் ponna@arlena.in-க்கு எழுதவும்.' : 'The payment did not go through. If money was deducted, please email ponna@arlena.in.')}
         </div>
       )}
 
@@ -565,8 +630,18 @@ function PlansPageInner() {
                       {loadingPlan === p.id ? '…' : features?.buttonLabel ?? buyButtonLabel(p.name)}
                     </button>
                     <div style={{ marginTop: 10, fontSize: 12.5, color: COLORS.inkMuted, textAlign: 'center' }}>
-                      {lang === 'ta' ? 'UPI-ல் செலுத்தி, பரிவர்த்தனை எண்ணை அனுப்புங்கள்.' : 'Pay by UPI, then send us the transaction ID.'}
+                      {payuEnabled
+                        ? (lang === 'ta' ? 'UPI, கார்டு, நெட் பேங்கிங் மூலம் பாதுகாப்பாகச் செலுத்தலாம். செலுத்தியதும் பாஸ் தானாகச் செயல்படும்.' : 'Pay securely by UPI, card or net banking. Your pass activates automatically.')
+                        : (lang === 'ta' ? 'UPI-ல் செலுத்தி, பரிவர்த்தனை எண்ணை அனுப்புங்கள்.' : 'Pay by UPI, then send us the transaction ID.')}
                     </div>
+                    {payuEnabled && (
+                      <button
+                        onClick={async () => { setError(null); setLoadingPlan(p.id); try { await openUpi(p.id); } finally { setLoadingPlan(null); } }}
+                        style={{ display: 'block', margin: '8px auto 0', background: 'none', border: 'none', padding: 0, fontSize: 12.5, fontWeight: 600, color: COLORS.inkMuted, textDecoration: 'underline', cursor: 'pointer' }}
+                      >
+                        {lang === 'ta' ? 'நேரடியாக UPI-ல் செலுத்தி, பரிவர்த்தனை எண்ணை அனுப்ப' : 'Pay directly by UPI and send the transaction ID'}
+                      </button>
+                    )}
                   </div>
                 );
               })}
