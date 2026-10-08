@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { BitterFontLinks } from '../lib/brand-theme';
 
 /* Production deployment sync marker */
+/* Production deployment trigger: 2026-10-08 */
 const tools = [
   { title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', photo: '/home/tile-4.jpg' },
   { title: 'Review Mistakes', body: 'தவறான கேள்விகளை மீண்டும் பார்க்கலாம்.', href: '/mistakes', photo: '/home/tile-5.jpg' },
