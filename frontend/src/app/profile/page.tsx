@@ -453,7 +453,7 @@ export default function ProfilePage() {
       <style>{`.pf-field:focus { outline: none; border-color: var(--color-teal) !important; box-shadow: 0 0 0 3px rgba(28,107,107,0.18); }`}</style>
       {/* Oct 2026 redesign — teal header, avatar on a gold ring, sectioned cards, sticky Save.
           All behaviour is unchanged; only presentation. */}
-      <header style={{ background: 'linear-gradient(180deg, var(--color-head1), var(--color-head2))', padding: '14px 16px 64px', color: '#fff', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '3px solid #E2B04A' }}>
+      <header style={{ background: 'var(--color-head1)', padding: '14px 16px 64px', color: '#fff', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '3px solid #E2B04A' }}>
         <StudentMenu iconColor="#fff" />
         <strong style={{ fontSize: 17 }}>{t.profile.title}</strong>
         <div style={{ flex: 1 }} />
@@ -481,14 +481,14 @@ export default function ProfilePage() {
       </div>
 
       {cameFromGate && !profile.profileComplete && (
-        <div style={{ background: 'var(--color-goldDisc)', border: '1px solid #E2B04A', borderRadius: 14, padding: 14, margin: '16px 16px 0' }}>
+        <div style={{ background: 'var(--color-goldDisc)', border: '1px solid #E2B04A', borderRadius: 8, padding: 14, margin: '16px 16px 0' }}>
           <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.completeYourProfile}</strong>
           <span style={{ fontSize: 13, color: 'var(--color-inkMuted)' }}>{t.profile.completeProfileNote}</span>
         </div>
       )}
 
       {cameFromGate && (!profile.phone || !profile.email) && (
-        <div style={{ background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 14, padding: 14, margin: '16px 16px 0' }}>
+        <div style={{ background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 8, padding: 14, margin: '16px 16px 0' }}>
           <strong style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>{t.profile.freePreviewGateTitle}</strong>
           <span style={{ fontSize: 13, color: 'var(--color-inkMuted)' }}>
             {!profile.phone && !profile.email ? t.profile.freePreviewGateBothMissing : !profile.phone ? t.profile.freePreviewGatePhoneMissing : t.profile.freePreviewGateEmailMissing}
@@ -668,7 +668,7 @@ export default function ProfilePage() {
       <ReferralSection />
 
       {profile.isTestAccount && (
-        <div style={{ border: '1px solid var(--color-bad)', borderRadius: 14, padding: 14, margin: '16px 16px 0' }}>
+        <div style={{ border: '1px solid var(--color-bad)', borderRadius: 8, padding: 14, margin: '16px 16px 0' }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-bad)', marginBottom: 8 }}>🧪 TEST ACCOUNT</p>
           <button onClick={resetHistory} disabled={resettingHistory} style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid var(--color-bad)', color: 'var(--color-bad)', background: 'var(--color-card)', fontSize: 13, fontWeight: 600 }}>
             {resettingHistory ? '…' : 'Reset My Quiz History & Score'}
@@ -681,7 +681,7 @@ export default function ProfilePage() {
         <div style={{ maxWidth: 480, margin: '0 auto' }}>
           {saved && <p style={{ color: 'var(--color-ok)', fontSize: 13, fontWeight: 700, margin: '0 0 6px', textAlign: 'center' }}>{t.profile.saved}</p>}
           {saveError && <p style={{ color: 'var(--color-bad)', fontSize: 13, margin: '0 0 6px', textAlign: 'center' }}>{saveError}</p>}
-          <button onClick={save} disabled={saving} style={{ width: '100%', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 17, boxShadow: '0 10px 24px -10px rgba(15,47,51,0.7)' }}>
+          <button onClick={save} disabled={saving} style={{ width: '100%', padding: 16, borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 17, boxShadow: '0 10px 24px -10px rgba(15,47,51,0.7)' }}>
             {saving ? '…' : t.profile.save}
           </button>
         </div>
@@ -712,7 +712,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 function Switch({ on, onClick, label, onColor, offColor, disabled }: { on: boolean; onClick: () => void; label: string; onColor: string; offColor: string; disabled?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} role="switch" aria-checked={on}
-      style={{ width: 46, height: 28, borderRadius: 14, border: 'none', background: on ? onColor : offColor, position: 'relative', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+      style={{ width: 46, height: 28, borderRadius: 8, border: 'none', background: on ? onColor : offColor, position: 'relative', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
       <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 22, height: 22, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
     </button>
   );

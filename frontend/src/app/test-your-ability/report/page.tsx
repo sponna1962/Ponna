@@ -121,7 +121,7 @@ export default function TestYourAbilityReportPage() {
       {report && (
         <>
           {/* A. Overall Performance */}
-          <div style={{ textAlign: 'center', border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, marginBottom: 20 }}>
+          <div style={{ textAlign: 'center', border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: 24, marginBottom: 20 }}>
             <p style={{ fontFamily: FONT_FAMILY, fontSize: 40, fontWeight: 800, color: COLORS.gold, margin: '0 0 4px' }}>
               {report.correctCount} / {report.totalQuestions}
             </p>
@@ -205,7 +205,7 @@ export default function TestYourAbilityReportPage() {
             (() => {
               const q = report.questionReview.find((x) => x.sequenceNumber === expandedQ)!;
               return (
-                <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 20, fontSize: 13, lineHeight: 1.6 }}>
+                <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: 14, marginBottom: 20, fontSize: 13, lineHeight: 1.6 }}>
                   <p style={{ fontWeight: 600, marginBottom: 8, whiteSpace: 'pre-wrap' }}>{q.questionText}</p>
                   <p style={{ marginBottom: 4 }}>
                     {L('yourAnswer')}{' '}
@@ -225,7 +225,7 @@ export default function TestYourAbilityReportPage() {
 
           {/* D. Performance Insight */}
           {(report.didWell.length > 0 || report.needsPractice.length > 0) && (
-            <div style={{ background: COLORS.goldLight, border: `1px solid ${COLORS.gold}`, borderRadius: 12, padding: 14, marginBottom: 16, fontSize: 13.5, lineHeight: 1.6 }}>
+            <div style={{ background: COLORS.goldLight, border: `1px solid ${COLORS.gold}`, borderRadius: 8, padding: 14, marginBottom: 16, fontSize: 13.5, lineHeight: 1.6 }}>
               {report.didWell.length > 0 && (
                 <>
                   {report.didWell.join(', ')}
@@ -254,7 +254,7 @@ export default function TestYourAbilityReportPage() {
 
           <a
             href="/quiz"
-            style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 12, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 700, marginTop: 8 }}
+            style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 8, background: COLORS.ink, color: COLORS.paper, textDecoration: 'none', fontWeight: 700, marginTop: 8 }}
           >
             {L('continueButton')}
           </a>

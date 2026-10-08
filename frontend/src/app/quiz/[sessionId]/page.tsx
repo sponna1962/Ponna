@@ -229,11 +229,11 @@ export default function QuizSessionPage() {
           {t.quiz.questionCounter(currentIndex + 1, session.totalQuestions)}
         </span>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-gold)', background: 'var(--color-goldDisc)', padding: '5px 12px', borderRadius: 999 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-gold)', background: 'var(--color-goldDisc)', padding: '5px 12px', borderRadius: 6 }}>
             {t.quiz.difficultyLabel[q.difficulty]}
           </span>
           {q.category === 'CURRENT_AFFAIRS' && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#92400e', background: '#fef3c7', padding: '5px 12px', borderRadius: 999 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#92400e', background: '#fef3c7', padding: '5px 12px', borderRadius: 6 }}>
               {t.quiz.categoryLabel.CURRENT_AFFAIRS}
             </span>
           )}
@@ -246,7 +246,7 @@ export default function QuizSessionPage() {
         </div>
       </div>
 
-      <div style={{ margin: '18px 16px 0', background: 'var(--color-card)', border: '1px solid var(--color-line)', borderTop: '4px solid #E2B04A', borderRadius: 16, padding: '20px 18px', boxShadow: '0 10px 26px -20px rgba(15,47,51,0.6)' }}>
+      <div style={{ margin: '18px 16px 0', background: 'var(--color-card)', border: '1px solid var(--color-line)', borderTop: '4px solid #FFD22A', borderRadius: 10, padding: '20px 18px', boxShadow: '0 10px 26px -20px rgba(15,47,51,0.6)' }}>
         <p style={{ fontSize: isLongQuestion ? 16.5 : 19, fontWeight: 600, color: 'var(--color-ink)', lineHeight: isLongQuestion ? 1.65 : 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>{display.questionText}</p>
         <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
           <button
@@ -277,7 +277,7 @@ export default function QuizSessionPage() {
                 gap: 14,
                 padding: '14px 16px',
                 border: `1.5px solid ${borderColor}`,
-                borderRadius: 14,
+                borderRadius: 8,
                 marginBottom: 12,
                 fontSize: 16.5,
                 fontWeight: 500,
@@ -321,12 +321,12 @@ export default function QuizSessionPage() {
           {!showExplanation ? (
             <button
               onClick={() => setShowExplanation(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center', background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 14, padding: '13px 16px', color: 'var(--color-ink)', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center', background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 8, padding: '13px 16px', color: 'var(--color-ink)', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
             >
               <span aria-hidden="true">💡</span> ஏன் இது சரி?
             </button>
           ) : (
-            <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderLeft: '4px solid #E2B04A', borderRadius: 12, padding: '12px 14px', fontSize: 14.5, color: 'var(--color-inkMuted)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderLeft: '4px solid #FFD22A', borderRadius: 8, padding: '12px 14px', fontSize: 14.5, color: 'var(--color-inkMuted)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
               {explanation}
             </div>
           )}
@@ -345,7 +345,7 @@ export default function QuizSessionPage() {
               maxWidth: 480,
               margin: '0 auto',
               padding: 16,
-              borderRadius: 14,
+              borderRadius: 8,
               background: isLastQuestion && !isOnline ? '#94a3b8' : 'var(--color-btn)',
               color: isLastQuestion && !isOnline ? '#fff' : 'var(--color-btnText)',
               border: 'none',
@@ -392,13 +392,13 @@ export default function QuizSessionPage() {
                 />
 
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setReportOpen(false)} style={{ flex: 1, padding: 12, borderRadius: 12, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)' }}>
+                  <button onClick={() => setReportOpen(false)} style={{ flex: 1, padding: 12, borderRadius: 8, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)' }}>
                     {t.login.cancel}
                   </button>
                   <button
                     onClick={submitReport}
                     disabled={reportSubmitting}
-                    style={{ flex: 1, padding: 12, borderRadius: 12, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700 }}
+                    style={{ flex: 1, padding: 12, borderRadius: 8, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700 }}
                   >
                     {reportSubmitting ? '…' : t.quiz.reportSubmit}
                   </button>
@@ -407,7 +407,7 @@ export default function QuizSessionPage() {
             ) : (
               <>
                 <p style={{ fontSize: 14, color: 'var(--color-ink)', marginBottom: 16 }}>✅ {t.quiz.reportThanks}</p>
-                <button onClick={() => setReportOpen(false)} style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700 }}>
+                <button onClick={() => setReportOpen(false)} style={{ width: '100%', padding: 12, borderRadius: 8, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700 }}>
                   {t.quiz.reportClose}
                 </button>
               </>
@@ -437,11 +437,11 @@ function ResultsView({ results }: { results: Results }) {
       </div>
 
       <div style={{ display: 'flex', gap: 12, margin: '26px 0' }}>
-        <div style={{ flex: 1, textAlign: 'center', background: 'var(--color-card)', border: '1px solid var(--color-line)', borderRadius: 16, padding: 16 }}>
+        <div style={{ flex: 1, textAlign: 'center', background: 'var(--color-card)', border: '1px solid var(--color-line)', borderRadius: 10, padding: 16 }}>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{results.answeredCount}</div>
           <div style={{ fontSize: 12.5, color: 'var(--color-inkMuted)' }}>{t.quiz.answered}</div>
         </div>
-        <div style={{ flex: 1, textAlign: 'center', background: 'var(--color-card)', border: '1px solid var(--color-line)', borderRadius: 16, padding: 16 }}>
+        <div style={{ flex: 1, textAlign: 'center', background: 'var(--color-card)', border: '1px solid var(--color-line)', borderRadius: 10, padding: 16 }}>
           <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ok)' }}>{results.correctCount}</div>
           <div style={{ fontSize: 12.5, color: 'var(--color-inkMuted)' }}>{t.quiz.correct}</div>
         </div>
@@ -449,13 +449,13 @@ function ResultsView({ results }: { results: Results }) {
 
       <a
         href="/dashboard"
-        style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', marginBottom: 12, fontWeight: 700, fontSize: 16.5, boxShadow: '0 10px 24px -12px rgba(15,47,51,0.7)' }}
+        style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', marginBottom: 12, fontWeight: 700, fontSize: 16.5, boxShadow: '0 10px 24px -12px rgba(15,47,51,0.7)' }}
       >
         {t.quiz.backToDashboard}
       </a>
       <a
         href="/quiz"
-        style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 14, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)', textDecoration: 'none', fontWeight: 700, fontSize: 16.5 }}
+        style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 8, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)', textDecoration: 'none', fontWeight: 700, fontSize: 16.5 }}
       >
         {t.quiz.practiceAgain}
       </a>

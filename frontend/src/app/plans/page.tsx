@@ -371,7 +371,7 @@ function PlansPageInner() {
 
       <div style={{ padding: 16 }}>
       {upiSubmissions.some((u) => u.status === 'PENDING') && (
-        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 18, marginBottom: 14 }}>
+        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #FFD22A', borderRadius: 10, padding: 18, marginBottom: 14 }}>
           <p style={{ fontSize: 17, fontWeight: 700, color: COLORS.ink, margin: '0 0 6px' }}>{lang === 'ta' ? '✓ பணம் பதிவானது' : '✓ Payment recorded'}</p>
           <p style={{ fontSize: 13.5, color: COLORS.inkMuted, lineHeight: 1.65, margin: '0 0 10px' }}>
             {lang === 'ta'
@@ -383,7 +383,7 @@ function PlansPageInner() {
               <p style={{ fontSize: 13.5, color: COLORS.ink, fontWeight: 600, lineHeight: 1.6, margin: '0 0 12px' }}>
                 {lang === 'ta' ? 'அதுவரை உங்கள் Profile-ஐ நிரப்புங்கள் — பயிற்சி தொடங்க அது தேவை.' : 'Meanwhile, please complete your Profile — it is needed to start practice.'}
               </p>
-              <a href="/profile?complete=1" style={{ display: 'block', padding: 15, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, textAlign: 'center', fontWeight: 700, fontSize: 16, textDecoration: 'none' }}>
+              <a href="/profile?complete=1" style={{ display: 'block', padding: 15, borderRadius: 8, background: COLORS.btn, color: COLORS.btnText, textAlign: 'center', fontWeight: 700, fontSize: 16, textDecoration: 'none' }}>
                 {lang === 'ta' ? 'Profile-ஐ நிரப்புங்கள் →' : 'Complete your Profile →'}
               </a>
             </>
@@ -391,7 +391,7 @@ function PlansPageInner() {
         </div>
       )}
       {upiSubmissions.some((u) => u.status === 'REJECTED') && !upiSubmissions.some((u) => u.status === 'PENDING' || u.status === 'APPROVED') && (
-        <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#991B1B', borderRadius: 14, padding: '13px 14px', fontSize: 13.5, marginBottom: 14, lineHeight: 1.6 }}>
+        <div style={{ background: '#FEE2E2', border: '1px solid #EF4444', color: '#991B1B', borderRadius: 8, padding: '13px 14px', fontSize: 13.5, marginBottom: 14, lineHeight: 1.6 }}>
           {lang === 'ta'
             ? 'உங்கள் முந்தைய UPI பதிவை உறுதிப்படுத்த முடியவில்லை. சரியான பரிவர்த்தனை எண்ணுடன் மீண்டும் முயலவும் அல்லது ponna@arlena.in-க்கு எழுதவும்.'
             : 'Your last UPI submission could not be verified. Please try again with the correct transaction ID, or email ponna@arlena.in.'}
@@ -435,7 +435,7 @@ function PlansPageInner() {
                       background: `linear-gradient(135deg, ${COLORS.goldLight}, var(--color-card, ${COLORS.paper}))`,
                       border: `1px solid ${COLORS.gold}`,
                       borderLeft: '6px solid #1e8a3b',
-                      borderRadius: 16,
+                      borderRadius: 10,
                       padding: '15px 16px',
                       marginBottom: 14,
                       cursor: 'pointer',
@@ -520,7 +520,7 @@ function PlansPageInner() {
                       <div style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 14 }}>{features.description}</div>
                     )}
 
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 16, padding: '12px 14px', borderRadius: 14, background: COLORS.goldLight }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 16, padding: '12px 14px', borderRadius: 8, background: COLORS.goldLight }}>
                       {hasLaunch ? (
                         <>
                           <span style={{ fontFamily: FONT_FAMILY, fontSize: 32, fontWeight: 800, color: COLORS.gold }}>₹{p.launchPrice}</span>
@@ -560,7 +560,7 @@ function PlansPageInner() {
                     <button
                       onClick={() => buy(p.id)}
                       disabled={loadingPlan === p.id}
-                      style={{ width: '100%', padding: 16, borderRadius: 14, background: 'var(--color-btn, ' + COLORS.ink + ')', color: 'var(--color-btnText, ' + COLORS.paper + ')', border: 'none', fontWeight: 700, fontSize: 16.5, cursor: 'pointer', boxShadow: '0 10px 22px -12px rgba(15,47,51,0.7)' }}
+                      style={{ width: '100%', padding: 16, borderRadius: 8, background: 'var(--color-btn, ' + COLORS.ink + ')', color: 'var(--color-btnText, ' + COLORS.paper + ')', border: 'none', fontWeight: 700, fontSize: 16.5, cursor: 'pointer', boxShadow: '0 10px 22px -12px rgba(15,47,51,0.7)' }}
                     >
                       {loadingPlan === p.id ? '…' : features?.buttonLabel ?? buyButtonLabel(p.name)}
                     </button>

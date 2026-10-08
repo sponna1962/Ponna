@@ -136,14 +136,14 @@ export default function DashboardPage() {
   const SECTION_H2 = { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: 700, color: COLORS.ink, margin: '22px 0 10px', display: 'flex', alignItems: 'center', gap: 8 } as const;
   const MARK = <span aria-hidden="true" style={{ width: 5, height: 18, borderRadius: 3, background: '#E2B04A', display: 'inline-block' }} />;
   const LABEL = { fontSize: 12.5, fontWeight: 700, color: 'var(--color-gold)', margin: '0 0 4px' } as const;
-  const BOX = { background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: '14px 16px' } as const;
-  const PILL_BTN = { display: 'inline-block', padding: '10px 18px', borderRadius: 999, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: 'pointer' } as const;
+  const BOX = { background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: '14px 16px' } as const;
+  const PILL_BTN = { display: 'inline-block', padding: '10px 18px', borderRadius: 6, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: 'pointer' } as const;
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, paddingBottom: 30, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 70px', background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 70px', background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <StudentMenu iconColor="#fff" />
         {photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -151,14 +151,14 @@ export default function DashboardPage() {
         ) : null}
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.dashboard.title}</h1>
         {streak && streak.currentStreak > 0 && (
-          <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 800, color: '#8a3b00', background: 'var(--color-goldDisc)', padding: '5px 12px', borderRadius: 999, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+          <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 800, color: '#8a3b00', background: 'var(--color-goldDisc)', padding: '5px 12px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
             🔥 {streak.currentStreak}
           </span>
         )}
       </div>
 
       {/* Overall performance — the one thing students look at first. */}
-      <div style={{ margin: '-56px 16px 14px', background: 'linear-gradient(160deg,#0c2f3f,#1c6b6b)', borderBottom: '4px solid #E2B04A', borderRadius: 20, padding: '20px 16px', color: '#fff', boxShadow: '0 14px 30px -18px rgba(0,0,0,0.6)' }}>
+      <div style={{ margin: '-56px 16px 14px', background: COLORS.head1, borderBottom: '4px solid #E2B04A', borderRadius: 20, padding: '20px 16px', color: '#fff', boxShadow: '0 14px 30px -18px rgba(0,0,0,0.6)' }}>
         <div style={{ width: 140, height: 140, borderRadius: '50%', margin: '0 auto 6px', background: `conic-gradient(#E2B04A 0 ${accuracy}%, rgba(255,255,255,0.18) 0)`, display: 'grid', placeItems: 'center' }}>
           <div style={{ width: 112, height: 112, borderRadius: '50%', background: '#0f4a52', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontFamily: FONT_FAMILY, fontSize: 34, fontWeight: 800, lineHeight: 1 }}>{accuracy}%</span>
@@ -192,7 +192,7 @@ export default function DashboardPage() {
 
         {/* Sept 2026 — Exam Countdown (Personalization). Same data/rules as Home. */}
         {examCountdown && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 16, padding: '12px 16px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--color-goldDisc)', border: '1.5px solid #E2B04A', borderRadius: 10, padding: '12px 16px', marginBottom: 12 }}>
             <span style={{ fontSize: 26 }}>⏳</span>
             <div>
               <b style={{ fontSize: 20, display: 'block', fontFamily: FONT_FAMILY, color: COLORS.ink }}>இன்னும் {examCountdown.daysRemaining} நாட்கள்</b>
@@ -214,7 +214,7 @@ export default function DashboardPage() {
 
         {/* Sept 2026 — Weak-Area Alert. Same source/rules as Home. */}
         {weakArea && (
-          <div style={{ background: 'var(--color-goldLight)', border: '1px solid #F3D9A8', borderLeft: '5px solid #D99A1E', borderRadius: 16, padding: '14px 16px', marginBottom: 12 }}>
+          <div style={{ background: 'var(--color-goldLight)', border: '1px solid #F3D9A8', borderLeft: '5px solid #D99A1E', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
             <p style={{ ...LABEL, color: 'var(--color-gold)' }}>கவனிக்க வேண்டிய பகுதி / Weak Area</p>
             <p style={{ fontSize: 14.5, color: COLORS.ink, margin: '0 0 10px', lineHeight: 1.6 }}>
               <strong>{weakArea.subjectName}</strong>-ல் உங்க accuracy {weakArea.accuracy}% (overall {weakArea.overallAccuracy}%).
@@ -355,11 +355,11 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => navigator.clipboard.writeText(`${window.location.origin}/shared/${shareToken}`)}
-                  style={{ flex: 1, padding: 12, borderRadius: 14, border: `1.5px solid ${COLORS.line}`, background: 'var(--color-field)', color: COLORS.ink, fontSize: 13.5, fontWeight: 700 }}
+                  style={{ flex: 1, padding: 12, borderRadius: 8, border: `1.5px solid ${COLORS.line}`, background: 'var(--color-field)', color: COLORS.ink, fontSize: 13.5, fontWeight: 700 }}
                 >
                   {t.dashboard.copyLink}
                 </button>
-                <button onClick={revokeShareLink} style={{ flex: 1, padding: 12, borderRadius: 14, border: '1.5px solid var(--color-bad)', background: 'transparent', color: 'var(--color-bad)', fontSize: 13.5, fontWeight: 700 }}>
+                <button onClick={revokeShareLink} style={{ flex: 1, padding: 12, borderRadius: 8, border: '1.5px solid var(--color-bad)', background: 'transparent', color: 'var(--color-bad)', fontSize: 13.5, fontWeight: 700 }}>
                   {t.dashboard.revokeLink}
                 </button>
               </div>
@@ -368,7 +368,7 @@ export default function DashboardPage() {
             <button
               onClick={createShareLink}
               disabled={sharing}
-              style={{ width: '100%', padding: 13, borderRadius: 14, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontSize: 14.5, fontWeight: 700 }}
+              style={{ width: '100%', padding: 13, borderRadius: 8, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontSize: 14.5, fontWeight: 700 }}
             >
               {sharing ? '…' : t.dashboard.createShareLink}
             </button>
@@ -385,14 +385,14 @@ function DifficultyCard({ label, bucket }: { label: string; bucket?: Bucket }) {
   const percent = hasData ? Math.round(bucket!.averagePercent) : 0;
 
   return (
-    <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: '14px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: '14px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
       <p style={{ fontSize: 13, color: COLORS.inkMuted, fontWeight: 600, margin: '0 0 6px' }}>{label}</p>
       <p style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 800, color: hasData ? COLORS.ink : COLORS.inkMuted, margin: '0 0 8px' }}>
         {hasData ? `${percent}%` : '—'}
       </p>
       {/* Fixed-height slot either way so both cards stay the same height. */}
       <div style={{ height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 8, background: hasData ? COLORS.line : 'transparent' }}>
-        {hasData && <div style={{ height: '100%', width: `${percent}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)' }} />}
+        {hasData && <div style={{ height: '100%', width: `${percent}%`, background: '#FFD22A' }} />}
       </div>
       <p style={{ fontSize: 12, color: COLORS.inkMuted, lineHeight: 1.4, margin: 'auto 0 0' }}>
         {answered} Questions · {bucket?.correctAnswers ?? 0} Correct

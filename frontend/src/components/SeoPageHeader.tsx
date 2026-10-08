@@ -16,7 +16,7 @@ import { StudentMenu } from './StudentMenu';
 export function SeoPageHeader({ title, subtitle }: { title?: string; subtitle?: string } = {}) {
   if (title) {
     return (
-      <div style={{ background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <div style={{ background: 'var(--color-head1)', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <StudentMenu iconColor="#fff" />
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -28,12 +28,12 @@ export function SeoPageHeader({ title, subtitle }: { title?: string; subtitle?: 
     );
   }
   return (
-    <div style={{ background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A' }}>
+    <div style={{ background: 'var(--color-head1)', borderBottom: '3px solid #E2B04A' }}>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', background: '#fefefe', borderRadius: 10, padding: '4px 10px' }}>
           <Image src="/logo-compact.png" alt="PONNA.in" width={140} height={37} style={{ height: 30, width: 'auto' }} />
         </a>
-        <a href="/quiz" style={{ fontSize: 13, fontWeight: 800, color: '#2b1c00', background: '#E2B04A', borderRadius: 999, padding: '8px 16px', textDecoration: 'none' }}>
+        <a href="/quiz" style={{ fontSize: 13, fontWeight: 800, color: '#2b1c00', background: '#E2B04A', borderRadius: 7, padding: '8px 16px', textDecoration: 'none' }}>
           Start Practising
         </a>
       </div>

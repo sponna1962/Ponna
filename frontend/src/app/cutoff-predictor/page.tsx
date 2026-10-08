@@ -93,15 +93,15 @@ export default function CutoffPredictorPage() {
   };
 
   const gold4 = '#E2B04A';
-  const cardBase: React.CSSProperties = { background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 16 };
+  const cardBase: React.CSSProperties = { background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 10 };
   const topCard: React.CSSProperties = { ...cardBase, borderTop: `4px solid ${gold4}` };
   const leftCard: React.CSSProperties = { ...cardBase, borderLeft: `4px solid ${gold4}`, borderRadius: 12 };
-  const linkBtn: React.CSSProperties = { display: 'block', padding: 14, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, textDecoration: 'none', fontWeight: 700, fontSize: 15, textAlign: 'center' };
+  const linkBtn: React.CSSProperties = { display: 'block', padding: 14, borderRadius: 8, background: COLORS.btn, color: COLORS.btnText, textDecoration: 'none', fontWeight: 700, fontSize: 15, textAlign: 'center' };
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: 24 }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: `3px solid ${gold4}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: `3px solid ${gold4}` }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.cutoffPredictor.title}</h1>
       </div>

@@ -155,7 +155,7 @@ export default function HelpPage() {
       <BitterFontLinks />
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: '3px solid #E2B04A' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.menu.help}</h1>
       </div>
@@ -176,7 +176,7 @@ export default function HelpPage() {
           style={{
             width: '100%',
             padding: '14px 14px 14px 40px',
-            borderRadius: 14,
+            borderRadius: 8,
             border: `1.5px solid ${searching ? COLORS.gold : COLORS.line}`,
             background: COLORS.field,
             color: COLORS.ink,
@@ -219,7 +219,7 @@ export default function HelpPage() {
                     background: activeCategory === c.id ? COLORS.goldLight : COLORS.card,
                     border: `1.5px solid ${activeCategory === c.id ? COLORS.gold : COLORS.line}`,
                     borderLeft: '4px solid #E2B04A',
-                    borderRadius: 14,
+                    borderRadius: 8,
                     padding: 14,
                     cursor: 'pointer',
                   }}
@@ -263,7 +263,7 @@ export default function HelpPage() {
             {GUIDES.map((g) => {
               const open = openGuideId === g.id;
               return (
-                <div key={g.id} style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, marginBottom: 8, overflow: 'hidden' }}>
+                <div key={g.id} style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
                   <button
                     onClick={() => setOpenGuideId(open ? null : g.id)}
                     style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, color: COLORS.ink }}
@@ -291,7 +291,7 @@ export default function HelpPage() {
                 same modal the FAQ entry above uses. */}
             <button
               onClick={() => setShowAppGuide(true)}
-              style={{ width: '100%', textAlign: 'left', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 14, color: COLORS.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
+              style={{ width: '100%', textAlign: 'left', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 8, padding: 14, color: COLORS.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
             >
               <span>
                 <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 2 }}>Use PONNA as an App</span>
@@ -306,7 +306,7 @@ export default function HelpPage() {
       {showAppGuide && <AppGuideModal onClose={() => setShowAppGuide(false)} />}
 
       {/* Contact Support */}
-      <section style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 20, textAlign: 'center' }}>
+      <section style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #FFD22A', borderRadius: 10, padding: 20, textAlign: 'center' }}>
         <h3 style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 700, color: COLORS.ink, margin: '0 0 4px' }}>Still need help?</h3>
         <p style={{ fontSize: 13, color: COLORS.inkMuted, margin: '0 0 4px' }}>We&apos;re here to help.</p>
         <p style={{ fontSize: 13, color: COLORS.ink, fontWeight: 600, margin: '0 0 12px' }}>ponna@arlena.in</p>
@@ -318,7 +318,7 @@ export default function HelpPage() {
           style={{
             display: 'block',
             padding: 14,
-            borderRadius: 14,
+            borderRadius: 8,
             background: COLORS.btn,
             color: COLORS.btnText,
             fontWeight: 700,
@@ -341,7 +341,7 @@ function FaqAccordion({ faqs, openId, onToggle }: { faqs: Faq[]; openId: string 
       {faqs.map((f) => {
         const open = openId === f.id;
         return (
-          <div key={f.id} style={{ background: COLORS.card, border: `1px solid ${open ? COLORS.gold : COLORS.line}`, borderRadius: 14, marginBottom: 8, overflow: 'hidden' }}>
+          <div key={f.id} style={{ background: COLORS.card, border: `1px solid ${open ? COLORS.gold : COLORS.line}`, borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
             <button
               onClick={() => onToggle(f.id)}
               style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
@@ -401,7 +401,7 @@ function AppGuideModal({ onClose }: { onClose: () => void }) {
             </p>
             <button
               onClick={() => setStep('platforms')}
-              style={{ width: '100%', padding: 14, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, border: 'none', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+              style={{ width: '100%', padding: 14, borderRadius: 8, background: COLORS.btn, color: COLORS.btnText, border: 'none', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
             >
               Get Started →
             </button>
@@ -449,7 +449,7 @@ function AppGuideModal({ onClose }: { onClose: () => void }) {
 
 function PlatformGuideSection({ title, mockup, steps }: { title: string; mockup: ReactNode; steps: string[] }) {
   return (
-    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 8, padding: 16, marginBottom: 16 }}>
       <h4 style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: 700, color: COLORS.ink, margin: '0 0 12px' }}>{title}</h4>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>{mockup}</div>
       <ol style={{ margin: 0, padding: '0 0 0 20px', fontSize: 13, color: COLORS.ink, lineHeight: 1.7 }}>

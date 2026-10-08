@@ -49,7 +49,7 @@ export default function TnpscGroup4Page() {
         <p style={{ fontSize: 15, lineHeight: 1.75, color: COLORS.inkMuted, marginBottom: 16 }}>
           SSLC தரத்தில், ஒரே Objective-type paper — மொத்தம் <strong>200 கேள்விகள்</strong>. Negative marking கிடையாது.
         </p>
-        <div style={{ overflowX: 'auto', background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: '6px 14px 10px' }}>
+        <div style={{ overflowX: 'auto', background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #FFD22A', borderRadius: 10, padding: '6px 14px 10px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: `2px solid ${COLORS.line}` }}>
@@ -80,7 +80,7 @@ export default function TnpscGroup4Page() {
 
       <Section>
         <H2>General Studies — Unit-வாரியான Marks</H2>
-        <div style={{ overflowX: 'auto', background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: '6px 14px 10px' }}>
+        <div style={{ overflowX: 'auto', background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #FFD22A', borderRadius: 10, padding: '6px 14px 10px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: `2px solid ${COLORS.line}` }}>
@@ -115,7 +115,7 @@ export default function TnpscGroup4Page() {
             <a
               key={href}
               href={href}
-              style={{ display: 'block', padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', background: 'var(--color-card)', borderRadius: 14, textDecoration: 'none', color: COLORS.ink }}
+              style={{ display: 'block', padding: '16px 18px', border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #FFD22A', background: 'var(--color-card)', borderRadius: 8, textDecoration: 'none', color: COLORS.ink }}
             >
               <strong style={{ fontSize: 15 }}>{title} →</strong>
               <p style={{ fontSize: 13.5, color: COLORS.inkMuted, margin: '4px 0 0' }}>{desc}</p>
@@ -127,7 +127,7 @@ export default function TnpscGroup4Page() {
       <Section>
         <a
           href="/quiz"
-          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, textDecoration: 'none', fontSize: 15 }}
+          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 8, background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, textDecoration: 'none', fontSize: 15 }}
         >
           இலவசமாக Practice தொடங்குங்கள் / Start Practising Free
         </a>

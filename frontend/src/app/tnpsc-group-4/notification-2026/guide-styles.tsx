@@ -8,7 +8,7 @@ const CSS = `
 .g4n *{box-sizing:border-box}
 
 /* top bar */
-.g4n-top{position:sticky;top:0;z-index:60;background:linear-gradient(180deg,var(--color-head1),var(--color-head2));border-bottom:3px solid #E2B04A}
+.g4n-top{position:sticky;top:0;z-index:60;background:var(--color-head1);border-bottom:3px solid #E2B04A}
 .g4n-top-in{max-width:1240px;margin:0 auto;padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .g4n-logo{display:flex;background:#fefefe;border-radius:10px;padding:4px 10px}
 .g4n-logo img{height:30px;width:auto}
@@ -17,8 +17,8 @@ const CSS = `
 .g4n-top-title{color:#fff;min-width:0}
 .g4n-top-title div{font-size:17px;font-weight:800;line-height:1.2}
 .g4n-top-title small{display:block;font-size:12px;color:#FFE9A8}
-.g4n-btn-gold{background:#E2B04A;color:#2b1c00;border:0;border-radius:999px;padding:9px 18px;font:800 14px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-block}
-.g4n-btn-ghost{color:#fff;border:1.5px solid rgba(255,255,255,.55);border-radius:999px;padding:8px 14px;font:700 13px/1 inherit;font-family:inherit;text-decoration:none}
+.g4n-btn-gold{background:#E2B04A;color:#2b1c00;border:0;border-radius:7px;padding:9px 18px;font:800 14px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-block}
+.g4n-btn-ghost{color:#fff;border:1.5px solid rgba(255,255,255,.55);border-radius:7px;padding:8px 14px;font:700 13px/1 inherit;font-family:inherit;text-decoration:none}
 .g4n-progress{position:absolute;left:0;right:0;bottom:-3px;height:3px;background:transparent}
 .g4n-progress-bar{height:3px;width:0;background:#fff;transition:width .08s linear}
 .g4n-share{position:relative}
@@ -32,18 +32,18 @@ const CSS = `
 
 /* hero */
 .g4n-hero-wrap{max-width:1240px;margin:0 auto;padding:12px 16px 0}
-.g4n-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--color-head1) 0%,#124a55 55%,var(--color-head2) 100%);color:#fff;border-radius:22px;padding:44px 38px 34px;box-shadow:0 14px 40px rgba(12,47,63,.25)}
-.g4n-hero:after{content:'';position:absolute;right:-90px;top:-90px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(226,176,74,.28),transparent 68%)}
+.g4n-hero{position:relative;overflow:hidden;background:var(--color-head1);color:#fff;border-radius:10px;padding:44px 38px 34px;border-bottom:5px solid #FFD22A}
+.g4n-hero:after{content:'';position:absolute;right:0;top:0;width:6px;height:100%;background:#FFD22A}
 .g4n-eyebrow{font-weight:800;letter-spacing:.4px;color:#F3D488;font-size:15px}
 .g4n-hero h1{font-family:'Bitter','Noto Sans Tamil',serif;font-size:42px;line-height:1.22;margin:8px 0 14px;font-weight:800}
 .g4n-hero p{font-size:17.5px;max-width:880px;margin:8px 0;color:#eaf3f4;position:relative;z-index:1}
 .g4n-tags{margin-top:12px;position:relative;z-index:1}
-.g4n-tag{display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:5px 13px;margin:5px 6px 0 0;font-size:13.5px}
-.g4n-count{display:inline-block;margin-top:16px;background:#E2B04A;color:#2b1c00;font-weight:800;border-radius:999px;padding:9px 18px;font-size:15px;position:relative;z-index:1}
+.g4n-tag{display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:5px;padding:5px 11px;margin:5px 6px 0 0;font-size:13.5px}
+.g4n-count{display:inline-block;margin-top:16px;background:#FFD22A;color:#10233A;font-weight:800;border-radius:7px;padding:9px 18px;font-size:15px;position:relative;z-index:1}
 
 /* stat cards */
 .g4n-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;max-width:1240px;margin:16px auto 0;padding:0 16px}
-.g4n-stat{background:var(--color-card);border:1px solid var(--color-line);border-top:4px solid #E2B04A;border-radius:14px;padding:14px 12px;text-align:center;text-decoration:none;color:inherit;display:block;transition:transform .15s,box-shadow .15s}
+.g4n-stat{background:var(--color-card);border:1px solid var(--color-line);border-top:4px solid #E2B04A;border-radius:9px;padding:14px 12px;text-align:center;text-decoration:none;color:inherit;display:block;transition:transform .15s,box-shadow .15s}
 .g4n-stat:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(26,34,56,.1)}
 .g4n-stat b{display:block;font-family:'Bitter','Noto Sans',serif;font-size:24px;line-height:1.2;color:var(--color-head1)}
 .g4n-stat span{display:block;font-size:12.5px;color:var(--color-inkMuted);line-height:1.45;margin-top:3px}
@@ -65,7 +65,7 @@ const CSS = `
 
 /* quick answers */
 .g4n-main{min-width:0}
-.g4n-faq{background:var(--color-card);border:1px solid var(--color-line);border-radius:18px;padding:24px 26px;margin-bottom:22px}
+.g4n-faq{background:var(--color-card);border:1px solid var(--color-line);border-radius:10px;padding:24px 26px;margin-bottom:22px}
 .g4n-faq h2,.g4n-sec h2{font-family:'Bitter','Noto Sans Tamil',serif;color:var(--color-head1);margin:0 0 14px;font-size:26px;line-height:1.35;padding:2px 0 10px 14px;border-left:5px solid #E2B04A;border-bottom:1px solid var(--color-line)}
 .g4n-faq details{border-top:1px solid var(--color-line);padding:2px 0}
 .g4n-faq summary{cursor:pointer;font-weight:700;padding:11px 0;list-style:none;display:flex;justify-content:space-between;gap:12px;font-size:16px}
@@ -75,7 +75,7 @@ const CSS = `
 .g4n-faq details p{margin:0 0 12px;color:var(--color-inkMuted);font-size:15.5px}
 
 /* sections */
-.g4n-sec{background:var(--color-card);border:1px solid var(--color-line);border-radius:18px;padding:26px;margin-bottom:20px;scroll-margin-top:76px;box-shadow:0 4px 18px rgba(26,34,56,.04)}
+.g4n-sec{background:var(--color-card);border:1px solid var(--color-line);border-radius:10px;padding:26px;margin-bottom:20px;scroll-margin-top:76px;box-shadow:0 4px 18px rgba(26,34,56,.04)}
 .g4n-sec h3{color:var(--color-teal);margin:22px 0 8px;font-size:19px}
 .g4n-sec h4{margin:16px 0 6px}
 .g4n-sec p,.g4n-sec li{font-size:16px}
@@ -103,7 +103,7 @@ const CSS = `
 .g4n-sec a{color:var(--color-gold);text-decoration:underline}
 
 /* cta + footer */
-.g4n-cta{background:linear-gradient(135deg,var(--color-head1),var(--color-head2));color:#fff;border-radius:20px;padding:30px;margin:6px 0 22px;text-align:center;border:2px solid #E2B04A}
+.g4n-cta{background:var(--color-head1);color:#fff;border-radius:10px;border-top:4px solid #FFD22A;padding:30px;margin:6px 0 22px;text-align:center;border:1px solid #FFD22A}
 .g4n-cta h2{font-family:'Bitter','Noto Sans Tamil',serif;margin:0 0 8px;font-size:25px;color:#fff;border:0;padding:0}
 .g4n-cta p{margin:0 auto 16px;max-width:620px;color:#e6f1f2;font-size:16px}
 .g4n-cta-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
@@ -115,14 +115,14 @@ const CSS = `
 
 /* mobile sheet */
 .g4n-sheet-bg{position:fixed;inset:0;background:rgba(15,47,51,.55);z-index:90;display:flex;align-items:flex-end}
-.g4n-sheet{background:var(--color-paper);width:100%;max-height:78vh;overflow:auto;border-radius:20px 20px 0 0;padding:6px 10px 24px}
+.g4n-sheet{background:var(--color-paper);width:100%;max-height:78vh;overflow:auto;border-radius:10px 10px 0 0;padding:6px 10px 24px}
 .g4n-sheet-top{position:sticky;top:0;background:var(--color-paper);display:flex;justify-content:space-between;align-items:center;padding:12px 8px;font-size:17px;border-bottom:1px solid var(--color-line)}
 .g4n-sheet-top button{background:var(--color-paperAlt);border:0;border-radius:50%;width:34px;height:34px;font-size:15px;cursor:pointer}
 
 @media(max-width:1020px){
   .g4n-layout{grid-template-columns:minmax(0,1fr)}
   .g4n-aside{display:none}
-  .g4n-fab{display:inline-flex;position:fixed;right:14px;bottom:18px;z-index:80;background:var(--color-head1);color:#fff;border:2px solid #E2B04A;border-radius:999px;padding:12px 18px;font:800 14.5px/1 inherit;font-family:inherit;box-shadow:0 8px 22px rgba(0,0,0,.3);cursor:pointer}
+  .g4n-fab{display:inline-flex;position:fixed;right:14px;bottom:18px;z-index:80;background:var(--color-head1);color:#fff;border:2px solid #E2B04A;border-radius:7px;padding:12px 18px;font:800 14.5px/1 inherit;font-family:inherit;box-shadow:0 8px 22px rgba(0,0,0,.3);cursor:pointer}
   .g4n-stats{grid-template-columns:repeat(3,1fr)}
 }
 @media(max-width:640px){

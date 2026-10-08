@@ -212,7 +212,7 @@ export default function DailyQuizPage() {
   if (!checkedEnabled) return null;
 
   const tabs = (
-    <div style={{ display: 'flex', gap: 6, background: 'var(--color-field)', border: '1px solid var(--color-line)', borderRadius: 999, padding: 4, marginBottom: 18 }}>
+    <div style={{ display: 'flex', gap: 6, background: 'var(--color-field)', border: '1px solid var(--color-line)', borderRadius: 6, padding: 4, marginBottom: 18 }}>
       {(['DAILY_QUIZ', 'BRAIN_CHALLENGE'] as const).map((qt) => (
         <button
           key={qt}
@@ -220,7 +220,7 @@ export default function DailyQuizPage() {
           style={{
             flex: 1,
             padding: '9px 6px',
-            borderRadius: 999,
+            borderRadius: 6,
             border: 'none',
             background: quizType === qt ? 'var(--color-btn)' : 'transparent',
             color: quizType === qt ? 'var(--color-btnText)' : COLORS.inkMuted,
@@ -239,7 +239,7 @@ export default function DailyQuizPage() {
     return (
       <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
         <BitterFontLinks />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
           <StudentMenu iconColor="#fff" />
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>
             {t.menu.dailyQuiz}
@@ -247,7 +247,7 @@ export default function DailyQuizPage() {
         </div>
         <div style={{ padding: 16 }}>
         {tabs}
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: 28, textAlign: 'center', background: 'var(--color-card)' }}>
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 28, textAlign: 'center', background: 'var(--color-card)' }}>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.comingSoon}</p>
         </div>
         </div>
@@ -258,7 +258,7 @@ export default function DailyQuizPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
           <StudentMenu iconColor="#fff" />
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>
             {t.menu.dailyQuiz}
@@ -270,39 +270,39 @@ export default function DailyQuizPage() {
       {!state && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
       {state?.access === 'FREE_LOCKED' && (
-        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 16, padding: 22, background: COLORS.goldLight, textAlign: 'center' }}>
+        <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 10, padding: 22, background: COLORS.goldLight, textAlign: 'center' }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>
             🔒 {quizType === 'DAILY_QUIZ' ? t.dailyQuiz.currentAffairs : t.dailyQuiz.brainChallenge} — {t.dailyQuiz.lockedSuffix}
           </p>
           <p style={{ fontSize: 13.5, color: COLORS.inkMuted, marginBottom: 16 }}>{t.dailyQuiz.lockedBody}</p>
-          <a href="/plans" style={{ display: 'inline-block', padding: '11px 24px', borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 14.5 }}>
+          <a href="/plans" style={{ display: 'inline-block', padding: '11px 24px', borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 14.5 }}>
             {t.dailyQuiz.viewPlans}
           </a>
         </div>
       )}
 
       {state?.access === 'NOT_AVAILABLE' && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: 28, textAlign: 'center', background: 'var(--color-card)' }}>
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 28, textAlign: 'center', background: 'var(--color-card)' }}>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.notAvailable(quizType === 'DAILY_QUIZ' ? t.dailyQuiz.currentAffairs : t.dailyQuiz.brainChallenge)}</p>
         </div>
       )}
 
       {state?.access === 'AVAILABLE' && !state.attempt && !attemptData && (
-        <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: '24px 18px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 10, padding: '24px 18px', textAlign: 'center' }}>
           <p style={{ fontSize: 18, fontWeight: 700, color: COLORS.ink, marginBottom: 6 }}>{t.dailyQuiz.readyTitle(quizType === 'DAILY_QUIZ' ? t.dailyQuiz.currentAffairs : t.dailyQuiz.brainChallenge)}</p>
           <p style={{ fontSize: 13.5, color: COLORS.inkMuted, marginBottom: 18, lineHeight: 1.6 }}>{t.dailyQuiz.chooseLanguage}</p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
             <button
               onClick={() => startWithLanguage('TA')}
               disabled={starting}
-              style={{ flex: 1, padding: 15, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 16.5 }}
+              style={{ flex: 1, padding: 15, borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 16.5 }}
             >
               தமிழ்
             </button>
             <button
               onClick={() => startWithLanguage('EN')}
               disabled={starting}
-              style={{ flex: 1, padding: 15, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 16.5 }}
+              style={{ flex: 1, padding: 15, borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 16.5 }}
             >
               English
             </button>
@@ -359,9 +359,9 @@ function QuestionView({
         {index + 1} / {total}
       </p>
       <div style={{ height: 8, background: 'var(--color-line)', borderRadius: 4, overflow: 'hidden', marginBottom: 14 }}>
-        <div style={{ height: '100%', width: `${((index + 1) / total) * 100}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)', borderRadius: 4 }} />
+        <div style={{ height: '100%', width: `${((index + 1) / total) * 100}%`, background: '#FFD22A', borderRadius: 4 }} />
       </div>
-      <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 18, marginBottom: 14 }}>
+      <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 10, padding: 18, marginBottom: 14 }}>
         <p style={{ fontSize: isLong ? 16.5 : 18, fontWeight: 600, color: COLORS.ink, lineHeight: isLong ? 1.65 : 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>{question.questionText}</p>
       </div>
 
@@ -380,7 +380,7 @@ function QuestionView({
               gap: 12,
               padding: '12px 14px',
               border: `1.5px solid ${borderColor}`,
-              borderRadius: 14,
+              borderRadius: 8,
               marginBottom: 10,
               fontSize: 15.5,
               lineHeight: 1.55,
@@ -404,7 +404,7 @@ function QuestionView({
 
       {question.answered && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '14px 16px 16px', background: 'linear-gradient(transparent, var(--color-paper) 40%)', zIndex: 5 }}>
-          <button onClick={onNext} disabled={submitting} style={{ display: 'block', width: '100%', maxWidth: 448, margin: '0 auto', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 17, boxShadow: '0 10px 24px -10px rgba(15,47,51,0.7)' }}>
+          <button onClick={onNext} disabled={submitting} style={{ display: 'block', width: '100%', maxWidth: 448, margin: '0 auto', padding: 16, borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 17, boxShadow: '0 10px 24px -10px rgba(15,47,51,0.7)' }}>
             {index === total - 1 ? t.quiz.finish : t.quiz.next}
           </button>
         </div>
@@ -427,25 +427,25 @@ function CompletedSummary({
   const { t } = useLanguage();
   const pct = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
   return (
-    <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: '22px 18px', textAlign: 'center' }}>
-      <span style={{ display: 'inline-block', background: 'var(--color-okBg)', color: 'var(--color-ok)', fontWeight: 700, fontSize: 13, padding: '5px 14px', borderRadius: 999 }}>{t.dailyQuiz.completedBadge}</span>
+    <div style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 10, padding: '22px 18px', textAlign: 'center' }}>
+      <span style={{ display: 'inline-block', background: 'var(--color-okBg)', color: 'var(--color-ok)', fontWeight: 700, fontSize: 13, padding: '5px 14px', borderRadius: 6 }}>{t.dailyQuiz.completedBadge}</span>
       <div style={{ width: 150, height: 150, borderRadius: '50%', margin: '14px auto 18px', background: `conic-gradient(#E2B04A 0 ${pct}%, var(--color-line) 0)`, display: 'grid', placeItems: 'center' }}>
         <div style={{ width: 120, height: 120, borderRadius: '50%', background: 'var(--color-card)', display: 'grid', placeItems: 'center', fontFamily: FONT_FAMILY, fontSize: 32, fontWeight: 800, color: COLORS.ink }}>
           {correctCount}/{totalQuestions}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
-        <div style={{ flex: 1, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 12, background: 'var(--color-field)' }}>
+        <div style={{ flex: 1, border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: 12, background: 'var(--color-field)' }}>
           <p style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-ok)', margin: 0 }}>{correctCount}</p>
           <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.quiz.correct}</p>
         </div>
-        <div style={{ flex: 1, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 12, background: 'var(--color-field)' }}>
+        <div style={{ flex: 1, border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: 12, background: 'var(--color-field)' }}>
           <p style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-bad)', margin: 0 }}>{incorrectCount}</p>
           <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.incorrect}</p>
         </div>
       </div>
       {/* No retake — a Daily Quiz attempt is one-time (finalized requirement) */}
-      <button onClick={onReview} style={{ width: '100%', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 16.5 }}>
+      <button onClick={onReview} style={{ width: '100%', padding: 16, borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 16.5 }}>
         {t.dailyQuiz.viewReview}
       </button>
     </div>
@@ -457,7 +457,7 @@ function ReviewAnswers({ data }: { data: AttemptQuestions }) {
   return (
     <div>
       {data.questions.map((q, i) => (
-        <div key={q.id} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '3px solid #E2B04A', borderRadius: 14, padding: 16, marginBottom: 12 }}>
+        <div key={q.id} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderTop: '3px solid #E2B04A', borderRadius: 8, padding: 16, marginBottom: 12 }}>
           <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.ink, lineHeight: 1.5, marginBottom: 10 }}>
             {i + 1}. {q.questionText}
           </p>
@@ -485,7 +485,7 @@ function ReviewAnswers({ data }: { data: AttemptQuestions }) {
           {q.explanation && <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 8, lineHeight: 1.5 }}>{q.explanation}</p>}
         </div>
       ))}
-      <a href="/" style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 16.5 }}>
+      <a href="/" style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 16.5 }}>
         {t.dailyQuiz.backHome}
       </a>
     </div>

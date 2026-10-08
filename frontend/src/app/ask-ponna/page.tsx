@@ -343,13 +343,13 @@ export default function AskPonnaPage() {
     return (
       <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
         <BitterFontLinks />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
           <StudentMenu iconColor="#fff" />
-          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: '#E2B04A', color: '#2b1c00', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16, boxShadow: '0 0 0 2px rgba(255,233,168,0.4)' }}>P</span>
+          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 6, background: '#FFD22A', color: '#10233A', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16 }}>P</span>
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
       </div>
         <div style={{ padding: 16 }}>
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: 28, textAlign: 'center', background: 'var(--color-card)' }}>
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 28, textAlign: 'center', background: 'var(--color-card)' }}>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.comingSoon}</p>
         </div>
         </div>
@@ -366,9 +366,9 @@ export default function AskPonnaPage() {
     return (
       <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: 32 }}>
         <BitterFontLinks />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
           <StudentMenu iconColor="#fff" />
-          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: '#E2B04A', color: '#2b1c00', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16, boxShadow: '0 0 0 2px rgba(255,233,168,0.4)' }}>P</span>
+          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 6, background: '#FFD22A', color: '#10233A', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16 }}>P</span>
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
         </div>
         <div style={{ padding: 16 }}>
@@ -379,7 +379,7 @@ export default function AskPonnaPage() {
               <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px' }}>உங்கள் பயிற்சிக்கான மொழியைத் தேர்வு செய்யுங்கள்</p>
               <div style={{ display: 'grid', gap: 12 }}>
                 {['தமிழ்', 'English'].map((label) => (
-                  <button key={label} disabled={sending} onClick={() => sendGuest(label)} style={{ padding: 17, borderRadius: 14, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 17, cursor: 'pointer', opacity: sending ? 0.6 : 1 }}>
+                  <button key={label} disabled={sending} onClick={() => sendGuest(label)} style={{ padding: 17, borderRadius: 8, border: 'none', background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 17, cursor: 'pointer', opacity: sending ? 0.6 : 1 }}>
                     {sending ? '…' : label}
                   </button>
                 ))}
@@ -393,13 +393,13 @@ export default function AskPonnaPage() {
                 {guestLanguage === 'EN' ? `Question ${guestIndex + 1} / ${total}` : `கேள்வி ${guestIndex + 1} / ${total}`}
               </div>
               <div style={{ height: 8, background: COLORS.line, borderRadius: 4, overflow: 'hidden', marginBottom: 14 }}>
-                <div style={{ height: '100%', width: `${((guestIndex + 1) / total) * 100}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)' }} />
+                <div style={{ height: '100%', width: `${((guestIndex + 1) / total) * 100}%`, background: '#FFD22A' }} />
               </div>
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 18, fontSize: q.questionText.length > 140 ? 16 : 17.5, fontWeight: 600, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{q.questionText}</div>
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 10, padding: 18, fontSize: q.questionText.length > 140 ? 16 : 17.5, fontWeight: 600, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{q.questionText}</div>
               {(['A', 'B', 'C', 'D'] as const).map((letter) => {
                 const text = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }[letter];
                 return (
-                  <button key={letter} disabled={sending} onClick={() => sendGuest(letter)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${COLORS.line}`, background: COLORS.card, color: COLORS.ink, marginBottom: 10, fontSize: 15, lineHeight: 1.55, cursor: 'pointer', boxSizing: 'border-box', opacity: sending ? 0.6 : 1 }}>
+                  <button key={letter} disabled={sending} onClick={() => sendGuest(letter)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 8, border: `1.5px solid ${COLORS.line}`, background: COLORS.card, color: COLORS.ink, marginBottom: 10, fontSize: 15, lineHeight: 1.55, cursor: 'pointer', boxSizing: 'border-box', opacity: sending ? 0.6 : 1 }}>
                     <span style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12.5, background: COLORS.field, border: `1.5px solid ${COLORS.line}`, color: COLORS.inkMuted }}>{letter}</span>
                     <span style={{ flex: 1 }}>{text}</span>
                   </button>
@@ -415,9 +415,9 @@ export default function AskPonnaPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', display: 'flex', flexDirection: 'column', color: COLORS.ink }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
         <StudentMenu iconColor="#fff" />
-        <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: '#E2B04A', color: '#2b1c00', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16, boxShadow: '0 0 0 2px rgba(255,233,168,0.4)' }}>P</span>
+        <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 6, background: '#FFD22A', color: '#10233A', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16 }}>P</span>
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff', flex: 1 }}>{t.askPonna.title}</h1>
         <button
           type="button"
@@ -434,10 +434,10 @@ export default function AskPonnaPage() {
       </div>
 
       {accessState === 'locked' && (
-        <div style={{ border: `1px solid #E2B04A`, borderRadius: 16, padding: 24, background: COLORS.goldLight, textAlign: 'center', margin: 16 }}>
+        <div style={{ border: `1px solid #E2B04A`, borderRadius: 10, padding: 24, background: COLORS.goldLight, textAlign: 'center', margin: 16 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>🔒 {t.askPonna.lockedTitle}</p>
           <p style={{ fontSize: 13.5, color: COLORS.inkMuted, marginBottom: 16 }}>{t.askPonna.lockedBody}</p>
-          <a href="/plans" style={{ display: 'inline-block', padding: '11px 24px', borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 14.5 }}>
+          <a href="/plans" style={{ display: 'inline-block', padding: '11px 24px', borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', textDecoration: 'none', fontWeight: 700, fontSize: 14.5 }}>
             {t.dailyQuiz.viewPlans}
           </a>
         </div>
@@ -467,7 +467,7 @@ export default function AskPonnaPage() {
                     alignItems: 'center',
                     gap: 14,
                     padding: '15px 16px',
-                    borderRadius: 16,
+                    borderRadius: 10,
                     border: `1px solid ${COLORS.line}`,
                     borderLeft: '5px solid #E2B04A',
                     background: 'var(--color-card)',

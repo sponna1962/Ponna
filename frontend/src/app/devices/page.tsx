@@ -37,13 +37,13 @@ export default function DevicesPage() {
     <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: '3px solid #E2B04A' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.devices.title}</h1>
       </div>
 
       <div style={{ padding: 16 }}>
-      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 12, padding: '12px 14px', fontSize: 13, color: COLORS.inkMuted, lineHeight: 1.65, marginBottom: 16 }}>{t.devices.note}</div>
+      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #FFD22A', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: COLORS.inkMuted, lineHeight: 1.65, marginBottom: 16 }}>{t.devices.note}</div>
 
       {devices === null && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
@@ -57,8 +57,8 @@ export default function DevicesPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               border: `1px solid ${isThisDevice ? COLORS.gold : COLORS.line}`,
-              borderLeft: '4px solid #E2B04A',
-              borderRadius: 14,
+              borderLeft: '4px solid #FFD22A',
+              borderRadius: 8,
               padding: 14,
               marginBottom: 10,
               background: isThisDevice ? COLORS.field : COLORS.card,
@@ -75,7 +75,7 @@ export default function DevicesPage() {
             <button
               onClick={() => removeDevice(d.deviceId)}
               disabled={removingId === d.deviceId}
-              style={{ padding: '8px 16px', borderRadius: 12, border: `1.5px solid ${COLORS.bad}`, color: COLORS.bad, background: 'transparent', fontSize: 13, fontWeight: 700 }}
+              style={{ padding: '8px 16px', borderRadius: 8, border: `1.5px solid ${COLORS.bad}`, color: COLORS.bad, background: 'transparent', fontSize: 13, fontWeight: 700 }}
             >
               {removingId === d.deviceId ? '…' : t.devices.remove}
             </button>
