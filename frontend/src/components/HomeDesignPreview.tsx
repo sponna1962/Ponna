@@ -146,7 +146,6 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         </section>
       </section>
 
-      <footer>வடிவமைப்பு முன்னோட்டம் · PONNA.in</footer>
 
       <style jsx>{`
         .home-preview {
