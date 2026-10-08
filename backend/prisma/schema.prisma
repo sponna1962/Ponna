@@ -504,6 +504,7 @@ model SubjectClassificationResult {
 
 enum ExplanationRunStatus {
   RUNNING
+  PAUSED // admin paused (e.g. budget); progress kept, can be resumed
   COMPLETED
   FAILED
 }

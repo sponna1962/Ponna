@@ -920,6 +920,26 @@ app.post('/admin/bulk-explanation/runs/:id/cancel', requireStaffAuth, requireRol
   }
 });
 
+app.post('/admin/bulk-explanation/runs/:id/pause', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await bulkExplanationService.pauseRun(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to pause run' });
+  }
+});
+
+app.post('/admin/bulk-explanation/runs/:id/resume', requireStaffAuth, requireRole('SUPER_ADMIN', 'CONTENT_ADMIN'), async (req, res) => {
+  try {
+    await bulkExplanationService.resumeRun(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to resume run' });
+  }
+});
+
 // ── Subject Classification (Sept 2026, Group IV first) ─────────────────
 // See schema.prisma's own header comment on SubjectClassificationRun.
 

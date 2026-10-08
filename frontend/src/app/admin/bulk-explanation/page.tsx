@@ -12,7 +12,7 @@ import { adminFetch } from '../../../lib/admin-fetch';
 type Run = {
   id: string;
   label: string;
-  status: 'RUNNING' | 'COMPLETED' | 'FAILED';
+  status: 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
   totalQuestions: number;
   processedQuestions: number;
   model: string | null;
@@ -121,6 +121,16 @@ export default function BulkExplanationPage() {
     }
   }
 
+  async function pauseOrResume(runId: string, action: 'pause' | 'resume') {
+    setCancellingRunId(runId);
+    try {
+      await adminFetch(`/admin/bulk-explanation/runs/${runId}/${action}`, { method: 'POST' });
+      load();
+    } finally {
+      setCancellingRunId(null);
+    }
+  }
+
   async function cancelRun(runId: string) {
     if (!confirm('Stop this run? Questions already processed keep their generated explanations.')) return;
     setCancellingRunId(runId);
@@ -193,7 +203,7 @@ export default function BulkExplanationPage() {
 
       <h2 style={{ fontSize: 16, marginBottom: 12 }}>Runs</h2>
       {runs.map((r) => (
-        <div key={r.id} style={{ border: r.status === 'RUNNING' ? '2px solid #0f172a' : '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginBottom: 10 }}>
+        <div key={r.id} style={{ border: r.status === 'RUNNING' || r.status === 'PAUSED' ? '2px solid #0f172a' : '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <p style={{ fontWeight: 700, fontSize: 14, margin: '0 0 4px' }}>{r.label}</p>
@@ -216,18 +226,27 @@ export default function BulkExplanationPage() {
                 padding: '2px 10px',
                 borderRadius: 10,
                 fontWeight: 700,
-                background: r.status === 'RUNNING' ? '#fef3c7' : r.status === 'COMPLETED' ? '#dcfce7' : '#fee2e2',
-                color: r.status === 'RUNNING' ? '#92400e' : r.status === 'COMPLETED' ? '#166534' : '#991b1b',
+                background: r.status === 'RUNNING' ? '#fef3c7' : r.status === 'PAUSED' ? '#e0f2fe' : r.status === 'COMPLETED' ? '#dcfce7' : '#fee2e2',
+                color: r.status === 'RUNNING' ? '#92400e' : r.status === 'PAUSED' ? '#075985' : r.status === 'COMPLETED' ? '#166534' : '#991b1b',
               }}
             >
               {r.status}
             </span>
           </div>
-          {r.status === 'RUNNING' && (
+          {(r.status === 'RUNNING' || r.status === 'PAUSED') && (
+            <button
+              onClick={() => pauseOrResume(r.id, r.status === 'RUNNING' ? 'pause' : 'resume')}
+              disabled={cancellingRunId === r.id}
+              style={{ marginTop: 8, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #0f172a', color: '#fff', background: '#0f172a', cursor: 'pointer' }}
+            >
+              {r.status === 'RUNNING' ? 'Pause' : 'Resume'}
+            </button>
+          )}
+          {(r.status === 'RUNNING' || r.status === 'PAUSED') && (
             <button
               onClick={() => cancelRun(r.id)}
               disabled={cancellingRunId === r.id}
-              style={{ marginTop: 8, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #b91c1c', color: '#b91c1c', background: '#fff', cursor: 'pointer' }}
+              style={{ marginTop: 8, marginLeft: 8, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #b91c1c', color: '#b91c1c', background: '#fff', cursor: 'pointer' }}
             >
               {cancellingRunId === r.id ? 'Cancelling…' : 'Cancel Run'}
             </button>

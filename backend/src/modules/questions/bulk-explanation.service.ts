@@ -35,6 +35,10 @@ interface BatchExplanation {
   explanationEn: string;
 }
 
+// Run ids whose loop is alive in THIS process, so a quick pause->resume can
+// never start a second loop for the same run (double spend).
+const activeRuns = new Set<string>();
+
 export class BulkExplanationService {
   private async fetchWithRetry(url: string, init: RequestInit, maxAttempts = 3, delayMs = 2000): Promise<Response> {
     let lastResponse: Response | undefined;
@@ -121,7 +125,17 @@ Respond with ONLY a JSON array, one object per question in the same order, each 
   async processRun(runId: string): Promise<void> {
     const run = await prisma.explanationGenerationRun.findUniqueOrThrow({ where: { id: runId } });
     if (run.status !== 'RUNNING') return;
+    if (activeRuns.has(runId)) return;
+    activeRuns.add(runId);
+    try {
+      await this.runLoop(runId);
+    } finally {
+      activeRuns.delete(runId);
+    }
+  }
 
+  private async runLoop(runId: string): Promise<void> {
+    const run = await prisma.explanationGenerationRun.findUniqueOrThrow({ where: { id: runId } });
     const alreadyDone = run.processedQuestions;
     const remainingIds = run.questionIds.slice(alreadyDone);
 
@@ -202,8 +216,25 @@ Respond with ONLY a JSON array, one object per question in the same order, each 
     });
   }
 
+  /** Pause keeps all progress; nothing is lost and resume continues from the
+   * next unprocessed question. The loop notices at its next batch boundary. */
+  async pauseRun(runId: string): Promise<void> {
+    await prisma.explanationGenerationRun.updateMany({ where: { id: runId, status: 'RUNNING' }, data: { status: 'PAUSED' as ExplanationRunStatus } });
+  }
+
+  async resumeRun(runId: string): Promise<void> {
+    const r = await prisma.explanationGenerationRun.updateMany({ where: { id: runId, status: 'PAUSED' }, data: { status: 'RUNNING' as ExplanationRunStatus } });
+    if (r.count > 0) this.processRun(runId).catch((err) => console.error(`Failed to resume explanation run ${runId}:`, err));
+  }
+
   async listRuns() {
-    return prisma.explanationGenerationRun.findMany({ orderBy: { startedAt: 'desc' } });
+    const runs = await prisma.explanationGenerationRun.findMany({ orderBy: { startedAt: 'desc' } });
+    // Live running-cost estimate (the stored one is only written on completion).
+    return runs.map((r) => ({
+      ...r,
+      estimatedCostUsd:
+        r.estimatedCostUsd ?? (r.inputTokens / 1_000_000) * EST_INPUT_COST_PER_1M + (r.outputTokens / 1_000_000) * EST_OUTPUT_COST_PER_1M,
+    }));
   }
 
   /** Sept 2026 — admin requested: a real quality-check view of what a
