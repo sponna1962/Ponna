@@ -567,55 +567,217 @@ export default function IndexPage() {
       )}
 
       {view === 'chooseMethod' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Oct 2026 — same sunrise banner as the home/welcome screens (entry pages only, by decision). */}
-        <div aria-hidden="true" style={{ position: 'relative', height: 210, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }} />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '14px 24px 40px' }}>
-          <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 30, fontWeight: 700, margin: '0 0 24px', color: COLORS.ink }}>{t.login.title}</h1>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <button
-              onClick={signInWithGoogle}
-              disabled={loading}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            background: '#FBF9F3',
+            minHeight: 'calc(100dvh - 58px)',
+          }}
+        >
+          {/* Login entry — a calm, premium continuation of the PONNA brand.
+              Existing Firebase/Google/Phone flow is unchanged; this is visual only. */}
+          <section
+            style={{
+              position: 'relative',
+              height: 285,
+              overflow: 'hidden',
+              background: '#0B3864',
+            }}
+            aria-label="வெற்றியின் முதல் படி"
+          >
+            <div
+              aria-hidden="true"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                width: '100%',
-                padding: 16,
-                borderRadius: 14,
-                background: '#fff',
-                color: '#0F2F33',
-                border: '1.5px solid #e2d6b4',
-                boxShadow: '0 6px 16px -12px rgba(15,47,51,.5)',
-                fontSize: 17,
-                fontWeight: 700,
+                position: 'absolute',
+                inset: 0,
+                overflow: 'hidden',
+              }}
+              dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background:
+                  'linear-gradient(180deg, rgba(7,31,48,.08) 0%, rgba(7,31,48,0) 45%, rgba(251,249,243,.12) 100%)',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: 24,
+                right: 24,
+                top: 24,
+                textAlign: 'left',
+                color: '#fff',
+                textShadow: '0 2px 10px rgba(7,31,48,.28)',
               }}
             >
-              <GoogleIcon size={18} />
-              {t.login.continueWithGoogle}
-            </button>
+              <div
+                style={{
+                  display: 'inline-block',
+                  paddingBottom: 7,
+                  borderBottom: '3px solid #FFD22A',
+                  fontFamily: FONT_FAMILY,
+                  fontSize: 27,
+                  lineHeight: 1.25,
+                  fontWeight: 800,
+                }}
+              >
+                வெற்றியின் முதல் படி
+              </div>
+              <p
+                style={{
+                  margin: '10px 0 0',
+                  fontFamily: FONT_FAMILY,
+                  fontSize: 15,
+                  lineHeight: 1.6,
+                  fontWeight: 600,
+                  color: '#FFF8DE',
+                }}
+              >
+                உங்கள் முயற்சி இங்கே தொடங்குகிறது.
+              </p>
+            </div>
+          </section>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: COLORS.inkMuted, fontSize: 13 }}>
-              <div style={{ flex: 1, height: 1, background: COLORS.line }} />
-              {t.login.or}
-              <div style={{ flex: 1, height: 1, background: COLORS.line }} />
+          <section
+            style={{
+              width: 'calc(100% - 32px)',
+              maxWidth: 430,
+              margin: '-20px auto 0',
+              position: 'relative',
+              zIndex: 2,
+              background: '#fff',
+              border: '1px solid #E6E1D3',
+              borderRadius: 20,
+              boxShadow: '0 12px 32px rgba(20,45,70,.10)',
+              padding: '24px 18px 20px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <h1
+                style={{
+                  fontFamily: FONT_FAMILY,
+                  fontSize: 27,
+                  lineHeight: 1.35,
+                  fontWeight: 800,
+                  color: '#0B3864',
+                  margin: 0,
+                }}
+              >
+                உள் நுழைக
+              </h1>
+              <p
+                style={{
+                  fontFamily: FONT_FAMILY,
+                  fontSize: 14,
+                  lineHeight: 1.55,
+                  color: '#52677A',
+                  margin: '5px 0 0',
+                }}
+              >
+                உங்கள் பயிற்சியைத் தொடருங்கள்
+              </p>
             </div>
 
-            <button
-              onClick={() => {
-                setError(null);
-                setView('phone');
-              }}
-              style={{ width: '100%', padding: 16, borderRadius: 14, background: '#0F2F33', color: '#FFE9A8', border: 'none', fontSize: 17, fontWeight: 700, boxShadow: '0 8px 20px -10px rgba(15,47,51,.6)' }}
-            >
-              📱 {t.login.continueWithPhone}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button
+                onClick={signInWithGoogle}
+                disabled={loading}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 11,
+                  width: '100%',
+                  minHeight: 56,
+                  padding: '13px 16px',
+                  borderRadius: 12,
+                  background: '#fff',
+                  color: '#173247',
+                  border: '1px solid #D9D5C9',
+                  boxShadow: '0 3px 10px rgba(20,45,70,.06)',
+                  fontSize: 16,
+                  fontWeight: 700,
+                  cursor: loading ? 'default' : 'pointer',
+                }}
+              >
+                <GoogleIcon size={19} />
+                Continue with Google
+              </button>
 
-            {error && <p style={{ color: COLORS.inkMuted, marginTop: 4, fontSize: 13, textAlign: 'center' }}>{error}</p>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#71808C', fontSize: 13 }}>
+                <div style={{ flex: 1, height: 1, background: '#E1E4E5' }} />
+                <span>அல்லது</span>
+                <div style={{ flex: 1, height: 1, background: '#E1E4E5' }} />
+              </div>
+
+              <button
+                onClick={() => {
+                  setError(null);
+                  setView('phone');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  width: '100%',
+                  minHeight: 56,
+                  padding: '13px 16px',
+                  borderRadius: 12,
+                  background: '#0B3864',
+                  color: '#FFD22A',
+                  border: '1px solid #0B3864',
+                  fontSize: 16,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 16px rgba(11,56,100,.18)',
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: 17 }}>📱</span>
+                Continue with Phone
+              </button>
+
+              {error && (
+                <p
+                  style={{
+                    color: '#A33D35',
+                    margin: '2px 0 0',
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    textAlign: 'center',
+                  }}
+                >
+                  {error}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <div
+            style={{
+              flex: 1,
+              minHeight: 28,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              padding: '18px 16px 16px',
+              color: '#657785',
+              fontSize: 12,
+            }}
+          >
+            <span>விதிகள்</span>
+            <span style={{ margin: '0 9px', color: '#B6BEC4' }}>•</span>
+            <span>தனியுரிமை</span>
+            <span style={{ margin: '0 9px', color: '#B6BEC4' }}>•</span>
+            <span>தொடர்பு</span>
           </div>
-        </div>
         </div>
       )}
 
