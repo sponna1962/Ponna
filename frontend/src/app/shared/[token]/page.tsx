@@ -39,7 +39,7 @@ export default function SharedProgressPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: 24 }}>
       <BitterFontLinks />
-      <div style={{ background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', padding: '18px 16px', textAlign: 'center' }}>
+      <div style={{ background: 'var(--color-head1)', borderBottom: '3px solid #E2B04A', padding: '18px 16px', textAlign: 'center' }}>
         <span style={{ display: 'inline-block', background: '#fefefe', borderRadius: 10, padding: '5px 12px' }}>
           <Image src="/logo-compact.png" alt="PONNA.in" width={170} height={45} style={{ height: 32, width: 'auto', display: 'block' }} />
         </span>
@@ -50,14 +50,14 @@ export default function SharedProgressPage() {
       {summary === null && <p style={{ color: COLORS.inkMuted, fontSize: 13, textAlign: 'center' }}>…</p>}
 
       {summary === 'invalid' && (
-        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 28, textAlign: 'center' }}>
+        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #FFD22A', borderRadius: 10, padding: 28, textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.sharedProgress.invalid}</p>
         </div>
       )}
 
       {summary && summary !== 'invalid' && (
         <>
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 22, textAlign: 'center', marginBottom: 14 }}>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #FFD22A', borderRadius: 10, padding: 22, textAlign: 'center', marginBottom: 14 }}>
             <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 12 }}>{summary.name}</p>
             {summary.overallAccuracy !== null ? (
               <>
@@ -72,7 +72,7 @@ export default function SharedProgressPage() {
           </div>
 
           {summary.currentStreak > 0 && (
-            <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 14, padding: 13, marginBottom: 14, background: COLORS.field, textAlign: 'center' }}>
+            <div style={{ border: `1px solid ${COLORS.gold}`, borderRadius: 8, padding: 13, marginBottom: 14, background: COLORS.field, textAlign: 'center' }}>
               <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, margin: 0 }}>
                 🔥 {summary.currentStreak} {t.sharedProgress.dayStreak}
               </p>
@@ -80,7 +80,7 @@ export default function SharedProgressPage() {
           )}
 
           {summary.byDifficulty.length > 0 && (
-            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 14 }}>
+            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #FFD22A', borderRadius: 8, padding: 14 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: COLORS.inkMuted, marginBottom: 10 }}>{t.sharedProgress.byDifficulty}</p>
               {summary.byDifficulty.map((d) => (
                 <div key={d.bucket} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${COLORS.line}`, fontSize: 13 }}>
