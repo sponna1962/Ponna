@@ -129,6 +129,7 @@ export class SubjectPreferenceService {
       session.practiceLanguage,
       taxonomyFilter,
       { subjectIds, topicIds },
+      subCategoryId,
     );
 
     const targetTotal = answeredCount + questionIds.length;

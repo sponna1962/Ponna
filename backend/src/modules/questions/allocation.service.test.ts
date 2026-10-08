@@ -1,28 +1,8 @@
 // Unit tests for AllocationService.buildSessionQuestionIds (Question
-// Allocation Engine). Mocked Prisma client — no real database. Each
-// test wires prisma.question.findMany with sequential
-// mockResolvedValueOnce calls matching the EXACT call order the
-// implementation makes (Current Affairs -> [Unseen | Preferred ->
-// General] -> broadened-Difficulty fallback) — verified against the
-// real allocation.service.ts source, not assumed. These tests verify
-// the CURRENT business rules as implemented; they do not introduce new
-// behaviour.
-//
-// Sept 2026 (Source-Priority, explicit request) — every non-CA step now
-// internally does an ORIGINAL-sourceType-first call, then a backfill
-// call from other sources ONLY if the original call came up short of
-// that step's own `take`. Most tests below sidestep this by mocking the
-// "original" call to return exactly `take` rows, which the
-// implementation's own `stillNeeded <= 0` check uses to skip the
-// backfill call entirely -- this keeps most tests' call counts/indices
-// identical to before. A few tests (marked below) specifically exercise
-// the backfill path and have an extra mocked call + adjusted indices.
-//
-// NOTE on "Free/Paid access separation": this file does NOT itself
-// enforce quota/paid-vs-free access — that is entirely
-// quota.service.ts's responsibility (already covered in the previous
-// test phase, quota.service.test.ts). Documented here rather than
-// force-testing behaviour that doesn't exist in this file.
+// Allocation Engine, balanced/random version — Oct 2026). Prisma is mocked
+// with a tiny in-memory question bank and a matcher that understands just the
+// where-clauses the engine builds (AND/OR, subjectId in, difficulty in,
+// id notIn). No real database.
 
 import { mockReset, DeepMockProxy } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
@@ -37,373 +17,194 @@ import { AllocationService } from './allocation.service';
 
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>;
 
-const USER_ID = 'user-1';
-const TAXONOMY_FILTER = { authorityId: 'tnpsc' }; // stand-in for a real Prisma.QuestionWhereInput fragment
+const USER = 'user-1';
+const TAXONOMY = { authorityId: 'tnpsc' };
 
-const DEFAULT_SETTINGS = {
-  caRecencyWindowDays: 90,
-  caMaxFor5Q: 1,
-  caMaxFor20Q: 3,
-  caMaxFor50Q: 5,
-  subjectTopicPreferenceWeightPercent: 75,
+type Q = { id: string; subjectId: string; sourceType: string; difficulty: string };
+let bank: Q[] = [];
+
+function matches(where: any, q: Q): boolean {
+  if (!where || typeof where !== 'object') return true;
+  if (Array.isArray(where)) return where.every((w) => matches(w, q));
+  for (const [key, val] of Object.entries<any>(where)) {
+    if (key === 'AND') { if (!val.every((w: any) => matches(w, q))) return false; continue; }
+    if (key === 'OR') { if (!val.some((w: any) => matches(w, q))) return false; continue; }
+    if (key === 'subjectId') { if (val?.in && !val.in.includes(q.subjectId)) return false; continue; }
+    if (key === 'difficulty') { if (val?.in && !val.in.includes(q.difficulty)) return false; continue; }
+    if (key === 'id') { if (val?.notIn && val.notIn.includes(q.id)) return false; continue; }
+    if (key === 'syllabusTopic') return false; // nothing in the bank is topic-tagged
+    // status / language / history / auditFlags / authorityId: always satisfied here
+  }
+  return true;
+}
+
+function fill(prefix: string, subjectId: string, n: number, sourceType = 'BOOK', difficulty = 'MEDIUM'): Q[] {
+  return Array.from({ length: n }, (_, i) => ({ id: `${prefix}${i}`, subjectId, sourceType, difficulty }));
+}
+
+// Group IV-like syllabus: Tamil 8, Aptitude 2 (two flat subjects), six GS x1.
+const SYLLABUS = [
+  { id: 'syl-tamil', name: 'Tamil', linkedSubjectIds: ['f-tamil'], practiceWeight: 8 },
+  { id: 'syl-apt', name: 'Aptitude', linkedSubjectIds: ['f-apt', 'f-reason'], practiceWeight: 2 },
+  { id: 'syl-sci', name: 'Science', linkedSubjectIds: ['f-sci'], practiceWeight: null },
+  { id: 'syl-geo', name: 'Geography', linkedSubjectIds: ['f-geo'], practiceWeight: null },
+  { id: 'syl-pol', name: 'Polity', linkedSubjectIds: ['f-pol'], practiceWeight: null },
+  { id: 'syl-eco', name: 'Economy', linkedSubjectIds: ['f-eco'], practiceWeight: null },
+  { id: 'syl-his', name: 'History India', linkedSubjectIds: ['f-his'], practiceWeight: null },
+  { id: 'syl-tn', name: 'History TN', linkedSubjectIds: ['f-tn'], practiceWeight: null },
+];
+const FLAT_TO_BUCKET: Record<string, string> = {
+  'f-tamil': 'Tamil', 'f-apt': 'Aptitude', 'f-reason': 'Aptitude', 'f-sci': 'GS', 'f-geo': 'GS', 'f-pol': 'GS',
+  'f-eco': 'GS', 'f-his': 'GS', 'f-tn': 'GS',
 };
 
-function questionRow(id: string) {
-  return { id };
+function fullBank(): Q[] {
+  return [
+    ...fill('tamil-', 'f-tamil', 2600),
+    ...fill('apt-', 'f-apt', 900), ...fill('rea-', 'f-reason', 50),
+    ...fill('sci-', 'f-sci', 3900), ...fill('geo-', 'f-geo', 2400), ...fill('pol-', 'f-pol', 1500),
+    ...fill('eco-', 'f-eco', 900), ...fill('his-', 'f-his', 450), ...fill('tn-', 'f-tn', 640),
+  ];
 }
 
-function rows(n: number, prefix = 'q') {
-  return Array.from({ length: n }, (_, i) => questionRow(`${prefix}${i}`));
+function countBySubject(ids: string[]) {
+  const bySubject: Record<string, number> = {};
+  const byId = new Map(bank.map((q) => [q.id, q]));
+  for (const id of ids) {
+    const s = byId.get(id)!.subjectId;
+    bySubject[s] = (bySubject[s] ?? 0) + 1;
+  }
+  return bySubject;
 }
 
-describe('AllocationService.buildSessionQuestionIds', () => {
+describe('AllocationService.buildSessionQuestionIds (balanced engine)', () => {
   let service: AllocationService;
+  let lastWheres: any[];
 
   beforeEach(() => {
     mockReset(prismaMock);
     service = new AllocationService();
-    prismaMock.platformSettings.findUniqueOrThrow.mockResolvedValue(DEFAULT_SETTINGS as any);
+    lastWheres = [];
+    prismaMock.platformSettings.findUniqueOrThrow.mockResolvedValue({
+      caRecencyWindowDays: 90, caMaxFor5Q: 0, caMaxFor20Q: 0, caMaxFor50Q: 0,
+    } as any);
+    (prismaMock.syllabusSubject.findMany as jest.Mock).mockImplementation(async (args: any) => {
+      const ids = args?.where?.id?.in;
+      return ids ? SYLLABUS.filter((s) => ids.includes(s.id)) : SYLLABUS;
+    });
+    (prismaMock.question.findMany as jest.Mock).mockImplementation(async (args: any) => {
+      lastWheres.push(args.where);
+      return bank.filter((q) => matches(args.where, q)).map((q) => ({ id: q.id, sourceType: q.sourceType }));
+    });
+    bank = fullBank();
   });
 
-  describe('No-repeat question selection', () => {
-    it('every question query includes history: { none: { userId } } — never re-serves an answered question', async () => {
-      // Source-Priority backfill path exercised on purpose here, to prove
-      // the history filter survives into BOTH the original and backfill
-      // calls of every step: CA[] -> unseen-original[q1,q2] (short of the
-      // step's take=5) -> unseen-backfill[] -> step3-original[] ->
-      // step3-backfill[].
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA step: none available
-        .mockResolvedValueOnce([questionRow('q1'), questionRow('q2')]) // unseen: original (sourceType ORIGINAL)
-        .mockResolvedValueOnce([]) // unseen: backfill (short of take=5)
-        .mockResolvedValueOnce([]) // Step 3: original
-        .mockResolvedValueOnce([]); // Step 3: backfill (still short)
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-
-      for (const call of prismaMock.question.findMany.mock.calls) {
-        const where = call[0]?.where as any;
-        expect(where.history).toEqual({ none: { userId: USER_ID } });
-      }
-    });
-
-    it('returns fewer than sessionSize (never repeats) when the unseen pool is exhausted, even after the broadened-Difficulty fallback', async () => {
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce([questionRow('q1')]) // unseen: original — only 1 found
-        .mockResolvedValueOnce([]) // unseen: backfill — nothing either
-        .mockResolvedValueOnce([]) // Step 3: original — nothing
-        .mockResolvedValueOnce([]); // Step 3: backfill — nothing left either
-
-      const ids = await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-      expect(ids).toEqual(['q1']); // 1, not padded to 5, and never a repeat
-    });
+  it('no preference: a 75-question session follows the Group IV paper (Tamil half, Aptitude an eighth, rest GS)', async () => {
+    const ids = await service.buildSessionQuestionIds(USER, 'MIXED' as any, 75, 'TA' as any, TAXONOMY, null, 'sub-g4');
+    expect(ids).toHaveLength(75);
+    expect(new Set(ids).size).toBe(75);
+    const bySubject = countBySubject(ids);
+    expect(bySubject['f-tamil']).toBeGreaterThanOrEqual(37);
+    expect(bySubject['f-tamil']).toBeLessThanOrEqual(38);
+    const apt = (bySubject['f-apt'] ?? 0) + (bySubject['f-reason'] ?? 0);
+    expect(apt).toBeGreaterThanOrEqual(9);
+    expect(apt).toBeLessThanOrEqual(10);
+    for (const s of ['f-sci', 'f-geo', 'f-pol', 'f-eco', 'f-his', 'f-tn']) {
+      expect(bySubject[s]).toBeGreaterThanOrEqual(4);
+      expect(bySubject[s]).toBeLessThanOrEqual(5);
+    }
   });
 
-  describe('Exam/authority/category/sub-category filtering', () => {
-    it('spreads the caller-supplied taxonomyFilter into every query untouched', async () => {
-      // Mock the "unseen" step's original call to fully satisfy its take
-      // (5) so no backfill/Step-3 calls happen -- keeps this test's call
-      // index (1) for the unseen step identical to before.
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-
-      const unseenCallWhere = prismaMock.question.findMany.mock.calls[1][0]?.where as any;
-      expect(unseenCallWhere.authorityId).toBe('tnpsc');
-    });
+  it('is not oldest-first: repeated sessions differ and are not the first uploaded questions', async () => {
+    const a = await service.buildSessionQuestionIds(USER, 'MIXED' as any, 75, 'TA' as any, TAXONOMY, null, 'sub-g4');
+    const b = await service.buildSessionQuestionIds(USER, 'MIXED' as any, 75, 'TA' as any, TAXONOMY, null, 'sub-g4');
+    expect(a.join()).not.toBe(b.join());
+    const firstUploaded = new Set(bank.slice(0, 75).map((q) => q.id));
+    expect(a.filter((id) => firstUploaded.has(id)).length).toBeLessThan(75);
   });
 
-  describe('Language strictness', () => {
-    it('applies the requested language on every query, independent of taxonomyFilter', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'TA', TAXONOMY_FILTER, null);
-
-      for (const call of prismaMock.question.findMany.mock.calls) {
-        const where = call[0]?.where as any;
-        expect(where.language).toBe('TA');
-      }
-    });
-
-    it('language is NEVER broadened, even at Step 3s difficulty-broadening fallback', async () => {
-      // unseen step comes up completely empty (both original and
-      // backfill) -> Step 3 runs; its own original call also empty, its
-      // backfill call is what actually returns q1. Step 3's calls are now
-      // at indices 3 (original) and 4 (backfill), not 2.
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce([]) // unseen: original — nothing at matched difficulty
-        .mockResolvedValueOnce([]) // unseen: backfill — nothing either
-        .mockResolvedValueOnce([]) // Step 3: original — nothing
-        .mockResolvedValueOnce([questionRow('q1')]); // Step 3: backfill
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'TA', TAXONOMY_FILTER, null);
-
-      const step3Where = prismaMock.question.findMany.mock.calls[3][0]?.where as any;
-      expect(step3Where.language).toBe('TA');
-    });
+  it('a short subject never makes the session short — the others cover it', async () => {
+    bank = [...fill('tamil-', 'f-tamil', 2600), ...fill('his-', 'f-his', 2), ...fill('sci-', 'f-sci', 500), ...fill('geo-', 'f-geo', 500)];
+    const ids = await service.buildSessionQuestionIds(USER, 'MIXED' as any, 75, 'TA' as any, TAXONOMY, null, 'sub-g4');
+    expect(ids).toHaveLength(75);
+    expect(countBySubject(ids)['f-his']).toBe(2);
   });
 
-  describe('Difficulty rules and fallback', () => {
-    it('MEDIUM mode requests only MEDIUM difficulty', async () => {
-      // "original" call mocked to fully satisfy take=5 -> no backfill call.
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-      await service.buildSessionQuestionIds(USER_ID, 'MEDIUM', 5, 'EN', TAXONOMY_FILTER, null);
-      const where = prismaMock.question.findMany.mock.calls[1][0]?.where as any;
-      expect(where.difficulty).toEqual({ in: ['MEDIUM'] });
-    });
-
-    it('HARD mode requests only HARD difficulty', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-      await service.buildSessionQuestionIds(USER_ID, 'HARD', 5, 'EN', TAXONOMY_FILTER, null);
-      const where = prismaMock.question.findMany.mock.calls[1][0]?.where as any;
-      expect(where.difficulty).toEqual({ in: ['HARD'] });
-    });
-
-    it('MIXED mode requests both MEDIUM and HARD', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-      const where = prismaMock.question.findMany.mock.calls[1][0]?.where as any;
-      expect(where.difficulty).toEqual({ in: ['MEDIUM', 'HARD'] });
-    });
-
-    it('Step 3 fallback broadens to ALL difficulties (no difficulty filter at all) only when the matched-difficulty pool falls short', async () => {
-      // unseen: original returns q1 (short of take=5) -> backfill returns
-      // nothing more. Step 3 (ALL difficulty): original returns q2,
-      // backfill returns q3.
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce([questionRow('q1')]) // unseen: original
-        .mockResolvedValueOnce([]) // unseen: backfill
-        .mockResolvedValueOnce([questionRow('q2')]) // Step 3: original
-        .mockResolvedValueOnce([questionRow('q3')]); // Step 3: backfill
-
-      const ids = await service.buildSessionQuestionIds(USER_ID, 'HARD', 5, 'EN', TAXONOMY_FILTER, null);
-
-      const step3Where = prismaMock.question.findMany.mock.calls[3][0]?.where as any;
-      expect(step3Where.difficulty).toBeUndefined(); // no difficulty key at all -> ANY difficulty
-      expect(ids).toEqual(['q1', 'q2', 'q3']);
-    });
-
-    it('Step 3 is skipped entirely when Step 2 already fills the full session', async () => {
-      // "original" call mocked to fully satisfy take=5 -> no backfill, no Step 3.
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-
-      expect(prismaMock.question.findMany).toHaveBeenCalledTimes(2); // CA + unseen-original only
-    });
+  it('returns only what exists when the whole pool is smaller than the session', async () => {
+    bank = fill('only-', 'f-sci', 10);
+    const ids = await service.buildSessionQuestionIds(USER, 'MIXED' as any, 75, 'TA' as any, TAXONOMY, null, 'sub-g4');
+    expect(ids).toHaveLength(10);
   });
 
-  describe('Subject Preference 75/25 allocation', () => {
-    it('splits the non-CA budget 75/25 (Preferred/General) per the default platform setting', async () => {
-      // sessionSize 20 with a preference: CA cap (caMaxFor20Q=3) but CA
-      // returns 0 found -> remaining stays 20. Preferred target =
-      // round(20*75/100) = 15. Both "original" calls mocked to fully
-      // satisfy their own take, so no backfill calls happen.
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce(rows(15, 'p')) // Preferred: original, fills its full target
-        .mockResolvedValueOnce(rows(5, 'g')); // General: original, fills the remaining 5
-
-      const preference = { subjectIds: ['subject-1'], topicIds: [] };
-      const ids = await service.buildSessionQuestionIds(USER_ID, 'MIXED', 20, 'EN', TAXONOMY_FILTER, preference);
-
-      const preferredCallTake = (prismaMock.question.findMany.mock.calls[1][0] as any).take;
-      const generalCallTake = (prismaMock.question.findMany.mock.calls[2][0] as any).take;
-      // Both are the ORIGINAL sub-call's own 70% target (round(x*0.7)),
-      // not the step's full target -- confirms Preferred's overall
-      // target was 15 (round(15*0.7)=11) and General's was 5
-      // (round(5*0.7)=4), i.e. the 75/25 split itself is correct.
-      expect(preferredCallTake).toBe(11); // round(15 * 0.7)
-      expect(generalCallTake).toBe(4); // round(5 * 0.7)
-      expect(ids).toHaveLength(20);
-    });
-
-    it('Preferred pool filters by subjectIds/topicIds; General pool does NOT apply that filter at all', async () => {
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce(rows(15, 'p')) // Preferred: original, fills its target
-        .mockResolvedValueOnce(rows(5, 'g')); // General: original, fills the rest
-
-      const preference = { subjectIds: ['subject-1'], topicIds: ['topic-1'] };
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 20, 'EN', TAXONOMY_FILTER, preference);
-
-      const preferredWhere = prismaMock.question.findMany.mock.calls[1][0]?.where as any;
-      const generalWhere = prismaMock.question.findMany.mock.calls[2][0]?.where as any;
-      expect(preferredWhere.OR).toEqual([
-        { syllabusTopicId: { in: ['topic-1'] } },
-        { syllabusTopic: { subjectId: { in: ['subject-1'] } } },
-      ]);
-      expect(generalWhere.OR).toBeUndefined();
-    });
-
-    it('an empty preference ({ subjectIds: [], topicIds: [] }) is treated identically to no preference at all (byte-identical query)', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, { subjectIds: [], topicIds: [] });
-
-      // Only 2 calls (CA + plain unseen-original, which fully satisfies
-      // take=5 so no backfill) -- NOT the 3-call Preferred/General path.
-      expect(prismaMock.question.findMany).toHaveBeenCalledTimes(2);
-    });
+  it('subject preference is a hard boundary and chosen subjects share equally', async () => {
+    const ids = await service.buildSessionQuestionIds(
+      USER, 'MIXED' as any, 40, 'TA' as any, TAXONOMY, { subjectIds: ['syl-pol', 'syl-eco'], topicIds: [] }, 'sub-g4',
+    );
+    expect(ids).toHaveLength(40);
+    const bySubject = countBySubject(ids);
+    expect(Object.keys(bySubject).sort()).toEqual(['f-eco', 'f-pol']);
+    expect(bySubject['f-pol']).toBe(20);
+    expect(bySubject['f-eco']).toBe(20);
   });
 
-  describe('Insufficient preferred-question handling', () => {
-    it('when the Preferred pool comes up short of its 75% target, the General pools share grows to absorb the shortfall (session still completes at this Difficulty tier)', async () => {
-      // Preferred target = 15 (75% of 20). Preferred pool genuinely only
-      // has 4 questions total -- original call returns 2, its own
-      // backfill call returns the other 2, still only 4 total (short of
-      // 15). General then absorbs the full remaining 16, mocked to fully
-      // satisfy its own take so no further backfill/Step-3 calls happen.
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce(rows(2, 'p')) // Preferred: original — short
-        .mockResolvedValueOnce(rows(2, 'p2')) // Preferred: backfill — still short (4 total)
-        .mockResolvedValueOnce(rows(16, 'g')); // General: original, fills the full 16
-
-      const preference = { subjectIds: ['subject-1'], topicIds: [] };
-      const ids = await service.buildSessionQuestionIds(USER_ID, 'MIXED', 20, 'EN', TAXONOMY_FILTER, preference);
-
-      const generalCallTake = (prismaMock.question.findMany.mock.calls[3][0] as any).take;
-      // The general step's OWN "original" sub-call requests
-      // round(16 * 0.7) = 11 (its 70% target), not the full 16 -- this
-      // confirms the general step's overall target was correctly
-      // absorbed to 16 (20 - 4), since round(16*0.7)=11 while
-      // round(5*0.7)=4 (the original, un-absorbed 25% target) would not.
-      expect(generalCallTake).toBe(11);
-      expect(ids).toHaveLength(20);
-    });
-
-    it('General pool is skipped entirely (no 3rd/4th DB call) when Preferred alone already fills the full remaining budget', async () => {
-      // Preferred's OWN original call returns more than its own take
-      // (15) — simulating the pool having plenty available — so
-      // stillNeeded <= 0 and no Preferred-backfill call happens either.
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce(rows(20, 'p')); // Preferred: original, fills the entire remaining budget
-
-      const preference = { subjectIds: ['subject-1'], topicIds: [] };
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 20, 'EN', TAXONOMY_FILTER, preference);
-
-      expect(prismaMock.question.findMany).toHaveBeenCalledTimes(2); // CA + Preferred-original only
-    });
+  it('a single chosen subject stays inside that subject even when it is smaller than the session', async () => {
+    const ids = await service.buildSessionQuestionIds(
+      USER, 'MIXED' as any, 600, 'TA' as any, TAXONOMY, { subjectIds: ['syl-his'], topicIds: [] }, 'sub-g4',
+    );
+    expect(ids).toHaveLength(450); // all there is — never topped up from another subject
+    expect(Object.keys(countBySubject(ids))).toEqual(['f-his']);
   });
 
-  describe('Current Affairs handling', () => {
-    it('uses caMaxFor5Q for sessionSize <= 5', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-      const caCallTake = (prismaMock.question.findMany.mock.calls[0][0] as any).take;
-      expect(caCallTake).toBe(DEFAULT_SETTINGS.caMaxFor5Q);
-    });
-
-    it('uses caMaxFor20Q for 5 < sessionSize <= 20', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(20));
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 20, 'EN', TAXONOMY_FILTER, null);
-      const caCallTake = (prismaMock.question.findMany.mock.calls[0][0] as any).take;
-      expect(caCallTake).toBe(DEFAULT_SETTINGS.caMaxFor20Q);
-    });
-
-    it('Current Affairs questions are selected by category=CURRENT_AFFAIRS and a recency window, unseen-first', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([questionRow('ca1')]).mockResolvedValueOnce(rows(4));
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-
-      const caCall = prismaMock.question.findMany.mock.calls[0][0] as any;
-      expect(caCall.where.category).toBe('CURRENT_AFFAIRS');
-      expect(caCall.where.relevanceDate).toHaveProperty('gte');
-      expect(caCall.where.history).toEqual({ none: { userId: USER_ID } });
-    });
-
-    it('Current Affairs is completely independent of Subject/Topic Preference — never filtered by it, even when a preference is saved', async () => {
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([questionRow('ca1')]) // CA
-        .mockResolvedValueOnce(rows(14, 'p')) // Preferred: original, fills its target (round(19*0.75)=14)
-        .mockResolvedValueOnce(rows(5, 'g')); // General: original, fills the rest
-
-      const preference = { subjectIds: ['subject-1'], topicIds: [] };
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 20, 'EN', TAXONOMY_FILTER, preference);
-
-      const caWhere = prismaMock.question.findMany.mock.calls[0][0]?.where as any;
-      expect(caWhere.OR).toBeUndefined(); // no preferredFilter applied to the CA step
-    });
-
-    it('caCap of 0 skips the Current Affairs query entirely', async () => {
-      prismaMock.platformSettings.findUniqueOrThrow.mockResolvedValue({ ...DEFAULT_SETTINGS, caMaxFor5Q: 0 } as any);
-      prismaMock.question.findMany.mockResolvedValueOnce(rows(5));
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-
-      expect(prismaMock.question.findMany).toHaveBeenCalledTimes(1); // unseen-original only, no CA call at all
-    });
+  it('keeps the exam taxonomy filter alongside the subject preference (it used to be overwritten)', async () => {
+    await service.buildSessionQuestionIds(
+      USER, 'MIXED' as any, 10, 'TA' as any, TAXONOMY, { subjectIds: ['syl-pol'], topicIds: [] }, 'sub-g4',
+    );
+    expect(lastWheres.length).toBeGreaterThan(0);
+    for (const w of lastWheres) expect(JSON.stringify(w)).toContain('"authorityId":"tnpsc"');
   });
 
-  describe('Pending AI Question Audit review — data-quality safety (Sept 2026, BINDING)', () => {
-    it('every query excludes questions with an unreviewed (OPEN) audit flag, at every tier including the broadened Step 3', async () => {
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce([questionRow('q1')]) // unseen: original — short of take=5
-        .mockResolvedValueOnce([]) // unseen: backfill
-        .mockResolvedValueOnce([]) // Step 3: original
-        .mockResolvedValueOnce([questionRow('q2')]); // Step 3: backfill
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-
-      for (const call of prismaMock.question.findMany.mock.calls) {
-        const where = call[0]?.where as any;
-        expect(where.auditFlags).toEqual({ none: { status: { not: 'DISMISSED' } } });
-      }
-    });
-
-    it('applies the same exclusion in the Preferred and General pools too (Subject Preference path)', async () => {
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce(rows(15, 'p')) // Preferred: original, fills its target
-        .mockResolvedValueOnce(rows(5, 'g')); // General: original, fills the rest
-
-      const preference = { subjectIds: ['subject-1'], topicIds: [] };
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 20, 'EN', TAXONOMY_FILTER, preference);
-
-      const preferredWhere = prismaMock.question.findMany.mock.calls[1][0]?.where as any;
-      const generalWhere = prismaMock.question.findMany.mock.calls[2][0]?.where as any;
-      expect(preferredWhere.auditFlags).toEqual({ none: { status: { not: 'DISMISSED' } } });
-      expect(generalWhere.auditFlags).toEqual({ none: { status: { not: 'DISMISSED' } } });
-    });
+  it('excludes questions the student already answered (history filter on every query)', async () => {
+    await service.buildSessionQuestionIds(USER, 'MIXED' as any, 10, 'TA' as any, TAXONOMY, null, 'sub-g4');
+    for (const w of lastWheres) expect(JSON.stringify(w)).toContain(`"history":{"none":{"userId":"${USER}"}}`);
   });
 
-  describe('Source-Priority (Sept 2026, explicit request — PONNA-authored questions first)', () => {
-    it('the original call for a step requests 70% of that steps take, with sourceType ORIGINAL', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5));
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
+  it('mixes real previous-exam questions (30%) with book questions inside a subject', async () => {
+    bank = [...fill('p-', 'f-sci', 300, 'PREVIOUS_EXAM'), ...fill('b-', 'f-sci', 300, 'BOOK')];
+    prismaMock.syllabusSubject.findMany.mockResolvedValue([SYLLABUS[2]] as any);
+    const ids = await service.buildSessionQuestionIds(USER, 'MIXED' as any, 50, 'TA' as any, TAXONOMY, null, 'sub-g4');
+    const prev = ids.filter((id) => id.startsWith('p-')).length;
+    expect(ids).toHaveLength(50);
+    expect(prev).toBe(15);
+  });
 
-      const unseenOriginalCall = prismaMock.question.findMany.mock.calls[1][0] as any;
-      expect(unseenOriginalCall.take).toBe(4); // round(5 * 0.7) = 4 (rounds up from 3.5)
-      expect(unseenOriginalCall.where.sourceType).toBe('ORIGINAL');
+  it('only the broadened-difficulty pass can reach other difficulties, and only inside the subject', async () => {
+    bank = [...fill('m-', 'f-pol', 5, 'BOOK', 'MEDIUM'), ...fill('h-', 'f-pol', 20, 'BOOK', 'HARD'), ...fill('x-', 'f-eco', 50)];
+    const ids = await service.buildSessionQuestionIds(
+      USER, 'MEDIUM' as any, 15, 'TA' as any, TAXONOMY, { subjectIds: ['syl-pol'], topicIds: [] }, 'sub-g4',
+    );
+    expect(ids).toHaveLength(15);
+    expect(ids.filter((id) => id.startsWith('m-'))).toHaveLength(5);
+    expect(ids.filter((id) => id.startsWith('x-'))).toHaveLength(0);
+  });
+
+  it('no sub-category known: one open random draw from the whole eligible pool', async () => {
+    const ids = await service.buildSessionQuestionIds(USER, 'MIXED' as any, 30, 'TA' as any, TAXONOMY, null, null);
+    expect(ids).toHaveLength(30);
+    expect(prismaMock.syllabusSubject.findMany).not.toHaveBeenCalled();
+  });
+
+  it('Current Affairs stays capped and is included', async () => {
+    prismaMock.platformSettings.findUniqueOrThrow.mockResolvedValue({
+      caRecencyWindowDays: 90, caMaxFor5Q: 1, caMaxFor20Q: 3, caMaxFor50Q: 5,
+    } as any);
+    const ca = [{ id: 'ca-1' }, { id: 'ca-2' }, { id: 'ca-3' }];
+    (prismaMock.question.findMany as jest.Mock).mockImplementation(async (args: any) => {
+      const text = JSON.stringify(args.where);
+      if (text.includes('CURRENT_AFFAIRS')) return ca;
+      return bank.filter((q) => matches(args.where, q)).map((q) => ({ id: q.id, sourceType: q.sourceType }));
     });
-
-    it('backfills from non-ORIGINAL sources ONLY when the original call comes up short, within the SAME exam scope (taxonomyFilter untouched)', async () => {
-      // sessionSize 3 so unseen-original(2) + unseen-backfill(1) = 3
-      // exactly fills the session, keeping this test focused on just the
-      // backfill call's own shape without needing to also mock Step 3.
-      prismaMock.question.findMany
-        .mockResolvedValueOnce([]) // CA
-        .mockResolvedValueOnce([questionRow('q1'), questionRow('q2')]) // unseen: original — 2 of the requested round(3*0.7)=2
-        .mockResolvedValueOnce([questionRow('q3')]); // unseen: backfill — fills the last 1
-
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 3, 'EN', TAXONOMY_FILTER, null);
-
-      const backfillCall = prismaMock.question.findMany.mock.calls[2][0] as any;
-      expect(backfillCall.take).toBe(1); // 3 - 2 already found
-      expect(backfillCall.where.sourceType).toEqual({ not: 'ORIGINAL' });
-      expect(backfillCall.where.authorityId).toBe('tnpsc'); // taxonomyFilter still applied — never cross-exam
-      expect(backfillCall.where.id.notIn).toEqual(expect.arrayContaining(['q1', 'q2'])); // never re-picks the original questions
-    });
-
-    it('skips the backfill call entirely when the original call alone already satisfies the steps take', async () => {
-      prismaMock.question.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(rows(5)); // original call returns all 5 needed
-      await service.buildSessionQuestionIds(USER_ID, 'MIXED', 5, 'EN', TAXONOMY_FILTER, null);
-      expect(prismaMock.question.findMany).toHaveBeenCalledTimes(2); // CA + original only, no backfill call
-    });
+    const ids = await service.buildSessionQuestionIds(USER, 'MIXED' as any, 20, 'TA' as any, TAXONOMY, null, 'sub-g4');
+    expect(ids).toHaveLength(20);
+    expect(ids.filter((id) => id.startsWith('ca-'))).toHaveLength(3);
   });
 });

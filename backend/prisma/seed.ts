@@ -808,6 +808,20 @@ async function main() {
     data: { isTestAccount: true },
   });
 
+  // Oct 2026 — Group IV automatic practice mix mirrors the real paper:
+  // 100 Tamil eligibility + 75 General Studies + 25 Aptitude = 200
+  // questions, i.e. Tamil 50% / Aptitude 12.5% / each of the six General
+  // Studies subjects 6.25%. Weights are relative (8 : 2 : 1 x6). Only
+  // fills a weight that is still empty, so a later manual change sticks.
+  await prisma.syllabusSubject.updateMany({
+    where: { practiceWeight: null, subCategory: { name: 'Group - IV' }, name: 'தமிழ் தகுதி மற்றும் மதிப்பீட்டுத் தேர்வு' },
+    data: { practiceWeight: 8 },
+  });
+  await prisma.syllabusSubject.updateMany({
+    where: { practiceWeight: null, subCategory: { name: 'Group - IV' }, name: 'Aptitude & Mental Ability' },
+    data: { practiceWeight: 2 },
+  });
+
   console.log('Seed complete.');
 }
 

@@ -1231,6 +1231,14 @@ model SyllabusSubject {
   // See allocation.service.ts.
   linkedSubjectIds String[] @default([])
 
+  // Oct 2026 — relative share of an automatic (no Subject Preference)
+  // practice session this subject should receive. Null = 1. Matches the
+  // real exam pattern where applicable (Group IV: Tamil eligibility part is
+  // half of the paper). Only read by allocation.service.ts; has no effect
+  // when the student picks specific subjects (those are always spread
+  // evenly across the chosen subjects).
+  practiceWeight Float?
+
   @@unique([subCategoryId, name])
 }
 

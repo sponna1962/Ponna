@@ -148,6 +148,7 @@ export class SessionService {
       preference.language,
       taxonomyFilter,
       subjectTopicPreference,
+      singleSubCategoryId,
     );
     const actualSize = questionIds.length;
 

@@ -75,6 +75,7 @@ export class OfflinePracticeService {
       preference.language,
       taxonomyFilter,
       subjectTopicPreference,
+      singleSubCategoryId,
     );
     if (questionIds.length === 0) {
       throw new Error('No eligible questions match your Practice Preferences right now. Try widening your selections in Change Preferences.');
