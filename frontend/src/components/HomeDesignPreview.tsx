@@ -94,8 +94,8 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           ))}
         </div>
 
-        <section className="usp-section" aria-label="PONNA-வின் சிறப்பம்சங்கள்">
-          <h2>PONNA-வின் சிறப்பம்சங்கள்</h2>
+        <section className="usp-section" aria-label="PONNA ஏன்?">
+          <h2>PONNA ஏன்?</h2>
           <div className="usp-list">
             <article className="usp-item">
               <strong>60,000+</strong>
@@ -133,10 +133,10 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           ))}
         </div>
 
-        <section className="refund-box" aria-label="தேர்ச்சி பெற்றால் பணம் வாபஸ்">
-          <h3>தேர்ச்சி பெற்றால் பணம் வாபஸ்!</h3>
-          <p>PONNA-வில் பயிற்சி பெற்று தேர்ச்சி பெறுங்கள்.<br />தேர்ச்சி பெற்றால் பயிற்சிக் கட்டணம் திரும்ப வழங்கப்படும்.</p>
-          <small>விதிமுறைகள் பொருந்தும்</small>
+        <section className="refund-box" aria-label="பணம் வாபஸ் பெறலாம்">
+          <h3>பணம் வாபஸ் பெறலாம்!</h3>
+          <p>PONNA-வில் பயிற்சி பெற்று அரசு பணியில் சேர்ந்துவிட்டால்,<br />பயிற்சிக் கட்டணம் முழுவதும் திரும்ப கிடைத்துவிடும்.</p>
+          <small><b>* நிபந்தனை:</b> உங்கள் ஹால் டிக்கெட் எண்ணை PONNA-வில் உள்ள சுயவிவரத்தில் பதிவு செய்து, அதை அங்கீகரிக்க வேண்டும்.</small>
         </section>
 
         <section className="final-strip">
@@ -374,13 +374,14 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         .refund-box {
           margin: 22px 0 12px;
           padding: 20px 16px;
-          border: 2px solid #E3313D;
-          background: #FFF9F9;
+          border: 2px solid #17835E;
+          background: #F3FBF6;
           text-align: center;
+          box-shadow: 0 4px 14px rgba(23,131,94,.08);
         }
         .refund-box h3 {
           margin: 0;
-          color: #E3313D;
+          color: #17835E;
           font-size: 24px;
           line-height: 1.35;
           font-weight: 900;
@@ -393,10 +394,14 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         }
         .refund-box small {
           display: block;
-          margin-top: 9px;
-          color: #667786;
+          margin-top: 10px;
+          padding-top: 9px;
+          border-top: 1px solid #CFE4D6;
+          color: #526A5B;
           font-size: 13px;
+          line-height: 1.55;
         }
+        .refund-box small b { color: #0B3864; }
 
         .final-strip {
           margin: 12px 0 16px;
