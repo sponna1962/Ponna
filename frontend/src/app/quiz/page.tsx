@@ -482,8 +482,6 @@ export default function QuizStartPage() {
             new sidebar item (nav structure is finalized) — lives here
             instead, right where a student starts practice. */}
         <a href="/offline-practice" className="offline-badge">📥 Offline</a>
-          📥 Offline
-        </a>
       </div>
 
       <div className="practice-content">
