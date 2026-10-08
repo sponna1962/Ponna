@@ -188,6 +188,7 @@ model User {
 
   @@index([phone])
   @@index([email])
+  payuPayments PayuPayment[]
 }
 
 // One row per device a student has logged in from — enforces the 2-device
@@ -887,6 +888,7 @@ model Plan {
 
   subscriptions   Subscription[]
   manualPayments  ManualPayment[]
+  payuPayments PayuPayment[]
 }
 
 // Join table: which specific Sub-Category(ies) an exclusive/restricted Plan
@@ -1014,6 +1016,36 @@ enum ManualPaymentStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// Oct 2026 — PayU gateway payments. One row per checkout attempt (txnid is
+// what PayU echoes back). The Subscription is created only after the PayU
+// response hash is verified server-side, in the same transaction that flips
+// INITIATED -> SUCCESS, so a replayed/duplicated callback can never activate a
+// plan twice and a spoofed browser redirect can never activate one at all.
+model PayuPayment {
+  id             String            @id @default(uuid())
+  txnid          String            @unique
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  planId         String
+  plan           Plan              @relation(fields: [planId], references: [id])
+  amount         Decimal           @db.Decimal(10, 2)
+  status         PayuPaymentStatus @default(INITIATED)
+  mihpayid       String?           @unique // PayU's own payment id, set on success
+  subscriptionId String?
+  failureReason  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([status, createdAt])
+}
+
+enum PayuPaymentStatus {
+  INITIATED
+  SUCCESS
+  FAILED
 }
 
 // ─────────────────────────────────────────────────────────

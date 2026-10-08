@@ -35,6 +35,7 @@ import { PlansService } from './modules/admin/plans.service';
 import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
 import { ManualPaymentService, ManualPaymentError } from './modules/payments/manual-payment.service';
+import { payuService, PayuError } from './modules/payments/payu.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
@@ -1917,6 +1918,37 @@ app.post('/payments/create-order', requireStudentAuth, async (req: StudentAuthed
       return res.status(400).json({ error: err.message, code: 'PROFILE_INCOMPLETE' });
     }
     res.status(400).json({ error: err.message ?? 'Failed to create payment order' });
+  }
+});
+
+// ── PayU gateway (Oct 2026) ──────────────────────────────────────────
+// GET  /payments/payu/info      — is online payment switched on
+// POST /payments/payu/checkout  {planId} — fields the browser posts to PayU
+// POST /payments/payu/callback  — called by PayU (browser redirect); verified
+//                                 by response hash, then the user is sent back
+app.get('/payments/payu/info', requireStudentAuth, async (_req, res) => {
+  res.json({ enabled: payuService.isEnabled() });
+});
+
+app.post('/payments/payu/checkout', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const { planId } = req.body;
+    const callbackUrl = `${req.protocol}://${req.get('host')}/payments/payu/callback`;
+    res.json(await payuService.createCheckout(req.studentUserId!, planId, callbackUrl));
+  } catch (err: any) {
+    console.error('PayU checkout failed:', err);
+    res.status(400).json({ error: err instanceof PayuError ? err.message : 'Could not start payment' });
+  }
+});
+
+app.post('/payments/payu/callback', express.urlencoded({ extended: false }), async (req, res) => {
+  const front = (process.env.FRONTEND_URL?.trim() || 'https://www.ponna.in').replace(/\/$/, '');
+  try {
+    const result = await payuService.handleCallback(req.body ?? {});
+    res.redirect(303, `${front}/plans?payu=${result.outcome}`);
+  } catch (err) {
+    console.error('PayU callback failed:', err);
+    res.redirect(303, `${front}/plans?payu=error`);
   }
 });
 
