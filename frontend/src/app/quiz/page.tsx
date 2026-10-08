@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
 import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { translations } from '../../lib/translations';
@@ -471,156 +470,565 @@ export default function QuizStartPage() {
   }
 
   if (saved === 'loading') {
-    return <main style={{ minHeight: '100dvh', padding: 24, textAlign: 'center', color: 'var(--color-inkMuted)', background: 'var(--color-paper)' }}>{t.quiz.loading}</main>;
+    return <main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>{t.quiz.loading}</main>;
   }
 
   return (
     <main className="practice-page">
-      <header className="practice-header">
+      <div className="practice-header">
         <StudentMenu iconColor="#0B3864" />
-        <a href="/" className="practice-brand" aria-label="PONNA.in">
-          <span className="practice-brand-crop">
-            <Image src="/logo-compact.png" alt="PONNA.in" width={1968} height={531} priority />
-          </span>
-        </a>
-        <a href="/offline-practice" className="offline-badge">Offline</a>
-      </header>
+        <h1 className="practice-title">{t.quiz.title}</h1>
+        {/* Sept 2026 — Offline Practice entry point. Deliberately not a
+            new sidebar item (nav structure is finalized) — lives here
+            instead, right where a student starts practice. */}
+        <a href="/offline-practice" className="offline-badge">📥 Offline</a>
+      </div>
 
       <div className="practice-content">
-        <div className="setup-intro">
-          <p className="eyebrow">PONNA · PRACTICE</p>
-          <h1 className="practice-title">{t.quiz.title}</h1>
-          <p className="setup-lead">
-            {lang === 'ta' ? 'உங்கள் தேர்வைத் தேர்ந்தெடுத்து, பயிற்சியைத் தொடங்குங்கள்.' : 'Choose your exam preferences and begin practising.'}
-          </p>
-        </div>
-
-        <div className="setup-progress" aria-label="Practice setup">
-          <span className="progress-dot active">1</span><span className="progress-line" />
-          <span className="progress-dot">2</span><span className="progress-line" />
-          <span className="progress-dot">3</span>
-          <span className="progress-label">{lang === 'ta' ? 'தேர்வு · மொழி · தொடக்கம்' : 'Exam · Language · Start'}</span>
-        </div>
-
         {!editing && saved && (
-          <PreferenceSummary saved={saved} tree={tree} t={t} lang={lang} onChange={() => setEditing(true)} onStart={startWithAccessCheck} starting={starting} />
+          <PreferenceSummary
+            saved={saved}
+            tree={tree}
+            t={t}
+            lang={lang}
+            onChange={() => setEditing(true)}
+            onStart={startWithAccessCheck}
+            starting={starting}
+          />
         )}
 
+        {/* Free-fallback upgrade prompt (finalized requirement) — shown for
+            EITHER "Start Practising" entry point above, never for both/none
+            inconsistently, since it's driven by one shared piece of state. */}
         {profileGate && (
           <div className="profile-gate">
-            <div className="notice-mark">!</div>
-            <p className="notice-title">பயிற்சியைத் தொடங்கும் முன்</p>
-            <p className="notice-copy">உங்கள் Profile-ஐ நிரப்புங்கள். Profile முடிந்ததும் உடனே பயிற்சியைத் தொடங்கலாம்.</p>
-            <a href="/profile?complete=1">Profile-ஐ நிரப்புங்கள் →</a>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>📝</div>
+            <p style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px', color: 'var(--color-ink)' }}>பயிற்சியைத் தொடங்கும் முன்</p>
+            <p style={{ fontSize: 14, lineHeight: 1.65, margin: '0 0 18px', color: 'var(--color-inkMuted)' }}>உங்கள் Profile-ஐ நிரப்புங்கள். உங்கள் Pass பாதுகாப்பாக உள்ளது — Profile முடிந்ததும் உடனே பயிற்சியைத் தொடங்கலாம்.</p>
+            <a href="/profile?complete=1" style={{ display: 'block', padding: 15, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 16, textDecoration: 'none' }}>Profile-ஐ நிரப்புங்கள் →</a>
           </div>
         )}
 
         {accessPrompt && (
           <div className="access-prompt">
-            <p className="prompt-kicker">{t.practiceSetup.noActivePlan}</p>
-            <p className="prompt-copy">{t.practiceSetup.freeFallbackDesc}</p>
-            <div className="prompt-actions">
-              <button onClick={async () => { setStarting(true); try { await startSession(); } finally { setStarting(false); setAccessPrompt(null); } }} disabled={starting}>
+            <p style={{ fontSize: 14, color: '#92400e', marginBottom: 4, fontWeight: 600 }}>{t.practiceSetup.noActivePlan}</p>
+            <p style={{ fontSize: 13, color: '#92400e', marginBottom: 12 }}>{t.practiceSetup.freeFallbackDesc}</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  setStarting(true);
+                  try {
+                    await startSession();
+                  } finally {
+                    setStarting(false);
+                    setAccessPrompt(null);
+                  }
+                }}
+                disabled={starting}
+                style={{ flex: 1, padding: 12, borderRadius: 8, background: '#fff', color: '#92400e', border: '1px solid #92400e', fontWeight: 600 }}
+              >
                 {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.practiceFree}
               </button>
-              <a href={accessPrompt.applicablePlanId ? `/plans?highlight=${accessPrompt.applicablePlanId}` : '/plans'}>{t.practiceSetup.getAnnualPlan}</a>
+              <a
+                href={accessPrompt.applicablePlanId ? `/plans?highlight=${accessPrompt.applicablePlanId}` : '/plans'}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: '#92400e',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {t.practiceSetup.getAnnualPlan}
+              </a>
             </div>
           </div>
         )}
 
         {editing && (
-          <div className="setup-stack">
-            <section className="setup-card exam-section">
-              <div className="step-heading"><span className="step-number">01</span><div><p className="step-kicker">{lang === 'ta' ? 'தேர்வு' : 'EXAM'}</p><h2>{lang === 'ta' ? 'உங்கள் தேர்வு' : 'Your exam'}</h2></div></div>
-              {fixedSel ? (
-                <div className="exam-choice">
-                  <div className="exam-symbol">4</div>
-                  <div className="exam-copy"><strong>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</strong><span>{lang === 'ta' ? 'தமிழ்நாடு அரசு போட்டித் தேர்வு' : 'Tamil Nadu government competitive exam'}</span></div>
-                  <span className="selected-badge">✓ {lang === 'ta' ? 'தேர்வு' : 'Selected'}</span>
+          <>
+            {fixedSel ? (
+              <div className="exam-card">
+                <span className="exam-card-icon">🎯</span>
+                <div>
+                  <b style={{ fontSize: 17, display: 'block' }}>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</b>
+                  <small style={{ fontSize: 12, color: '#FFE9A8' }}>{lang === 'ta' ? 'போட்டித் தேர்வு' : 'Competitive exam'}</small>
                 </div>
-              ) : restriction?.restricted ? (
-                <div className="locked-card">{lang === 'ta' ? 'உங்கள் பாஸ்: TNPSC குரூப்-4' : 'Your Pass: TNPSC Group - IV'}</div>
-              ) : (
-                <>
-                  <Section title={t.practiceSetup.selectPurpose}><ChipRow>{tree.map((p) => <Chip key={p.id} label={lang === 'ta' ? (p.nameTa || p.name) : p.name} active={selections.purposeId === p.id} onClick={() => selectPurpose(p.id)} />)}</ChipRow></Section>
-                  {selectedPurpose && (
-                    <>
-                      <Section title={t.practiceSetup.selectAuthority}><ChipRow>{selectedPurpose.allowMultipleAuthorities && <Chip label={t.practiceSetup.all} active={selections.allAuthorities} onClick={toggleAllAuthorities} />}{selectedPurpose.authorities.map((a) => <Chip key={a.id} label={a.name} active={selections.authorities.some((s) => s.authorityId === a.id)} onClick={() => toggleAuthority(a)} />)}</ChipRow></Section>
-                      {!selections.allAuthorities && selections.authorities.map((authSel) => {
-                        const authority=selectedPurpose.authorities.find((a)=>a.id===authSel.authorityId); if(!authority)return null;
-                        return <div key={authority.id}>
-                          <Section title={t.practiceSetup.selectCategoryFor(authority.name)}><ChipRow>{authority.allowAllCategories && <Chip label={t.practiceSetup.all} active={authSel.allCategories} onClick={()=>toggleAllCategories(authority.id)} />}{authority.categories.map((cat)=><Chip key={cat.id} label={cat.name} active={authSel.categories.some((s)=>s.categoryId===cat.id)} onClick={()=>toggleCategory(authority.id,cat.id)} />)}</ChipRow></Section>
-                          {!authSel.allCategories && authSel.categories.map((catSel)=>{
-                            const category=authority.categories.find((cat)=>cat.id===catSel.categoryId); if(!category||category.subCategories.length===0)return null;
-                            return <Section key={category.id} title={t.practiceSetup.selectSubCategoryFor(category.name)}><ChipRow><Chip label={t.practiceSetup.all} active={catSel.allSubCategories} onClick={()=>toggleAllSubCategories(authority.id,category.id)} />{category.subCategories.map((sc)=><Chip key={sc.id} label={sc.name} active={catSel.subCategoryIds.includes(sc.id)} onClick={()=>toggleSubCategory(authority.id,category.id,sc.id)} />)}</ChipRow></Section>;
-                          })}
-                        </div>;
+                <span className="selected-badge">✓ {lang === 'ta' ? 'தேர்வானது' : 'Selected'}</span>
+              </div>
+            ) : restriction?.restricted ? (
+              // Sept 2026 — TNPSC Group IV & VAO Pass (finalized
+              // requirement): no picker at all, locked straight to Group
+              // IV & VAO. Real enforcement is server-side; this is just
+              // the matching UI state.
+              <Section title={t.practiceSetup.selectPurpose}>
+                <div className="locked-card">
+                  {lang === 'ta' ? 'உங்கள் பாஸ்: TNPSC குரூப்-4' : 'Your Pass: TNPSC Group - IV'}
+                </div>
+              </Section>
+            ) : (
+              <>
+                <Section title={t.practiceSetup.selectPurpose}>
+                  <ChipRow>
+                    {tree.map((p) => (
+                      <Chip
+                        key={p.id}
+                        label={lang === 'ta' ? (p.nameTa || p.name) : p.name}
+                        active={selections.purposeId === p.id}
+                        onClick={() => selectPurpose(p.id)}
+                      />
+                    ))}
+                  </ChipRow>
+                </Section>
+
+                {selectedPurpose && (
+                  <>
+                    <Section title={t.practiceSetup.selectAuthority}>
+                      <ChipRow>
+                        {selectedPurpose.allowMultipleAuthorities && (
+                          <Chip label={t.practiceSetup.all} active={selections.allAuthorities} onClick={toggleAllAuthorities} />
+                        )}
+                        {selectedPurpose.authorities.map((a) => (
+                          <Chip
+                            key={a.id}
+                            label={a.name}
+                            active={selections.authorities.some((sel) => sel.authorityId === a.id)}
+                            onClick={() => toggleAuthority(a)}
+                          />
+                        ))}
+                      </ChipRow>
+                    </Section>
+
+                    {!selections.allAuthorities &&
+                      selections.authorities.map((authSel) => {
+                        const authority = selectedPurpose.authorities.find((a) => a.id === authSel.authorityId);
+                        if (!authority) return null;
+                        return (
+                          <div key={authority.id}>
+                            <Section title={t.practiceSetup.selectCategoryFor(authority.name)}>
+                              <ChipRow>
+                                {authority.allowAllCategories && (
+                                  <Chip
+                                    label={t.practiceSetup.all}
+                                    active={authSel.allCategories}
+                                    onClick={() => toggleAllCategories(authority.id)}
+                                  />
+                                )}
+                                {authority.categories.map((c) => (
+                                  <Chip
+                                    key={c.id}
+                                    label={c.name}
+                                    active={authSel.categories.some((cs) => cs.categoryId === c.id)}
+                                    onClick={() => toggleCategory(authority.id, c.id)}
+                                  />
+                                ))}
+                              </ChipRow>
+                            </Section>
+
+                            {!authSel.allCategories &&
+                              authSel.categories.map((catSel) => {
+                                const category = authority.categories.find((c) => c.id === catSel.categoryId);
+                                if (!category || category.subCategories.length === 0) return null;
+                                return (
+                                  <Section key={category.id} title={t.practiceSetup.selectSubCategoryFor(category.name)}>
+                                    <ChipRow>
+                                      <Chip
+                                        label={t.practiceSetup.all}
+                                        active={catSel.allSubCategories}
+                                        onClick={() => toggleAllSubCategories(authority.id, category.id)}
+                                      />
+                                      {category.subCategories.map((sc) => (
+                                        <Chip
+                                          key={sc.id}
+                                          label={sc.name}
+                                          active={catSel.subCategoryIds.includes(sc.id)}
+                                          onClick={() => toggleSubCategory(authority.id, category.id, sc.id)}
+                                        />
+                                      ))}
+                                    </ChipRow>
+                                  </Section>
+                                );
+                              })}
+
+                            {/* Subject Preference (finalized requirement) — only
+                                shown once the selection resolves to exactly ONE
+                                specific exam (Sub-Category), matching Stage 2's
+                                own eligibility rule for when a preference lookup
+                                makes sense at all. Optional, underlined, no
+                                permanent screen real estate — the picker only
+                                appears in the modal on tap. Never shown at all
+                                for a restricted-only student (Sept 2026 — see
+                                the `restriction?.restricted` branch above; this
+                                nested branch is dead code for such a student
+                                anyway since they never reach this UI, but the
+                                explicit guard documents the rule here too). */}
+                            {!restriction?.restricted &&
+                              !authSel.allCategories &&
+                              authSel.categories.map((catSel) => {
+                                const category = authority.categories.find((c) => c.id === catSel.categoryId);
+                                if (!category || category.subCategories.length === 0) return null;
+                                if (catSel.allSubCategories || catSel.subCategoryIds.length !== 1) return null;
+                                return <SubjectPreferenceField key={catSel.categoryId} subCategoryId={catSel.subCategoryIds[0]} t={t} />;
+                              })}
+                          </div>
+                        );
                       })}
-                      {(selections.allAuthorities || selections.authorities.length > 0) && <Section title={t.practiceSetup.difficultyQuestion}>{difficultyStepVisible ? <ChipRow><Chip label={t.quiz.modes.MIXED} active={mode==='MIXED'} onClick={()=>setMode('MIXED')} /><Chip label={t.quiz.modes.MEDIUM} active={mode==='MEDIUM'} onClick={()=>setMode('MEDIUM')} /><Chip label={t.quiz.modes.HARD} active={mode==='HARD'} onClick={()=>setMode('HARD')} /></ChipRow> : <p className="muted-note">{t.practiceSetup.difficultyNotApplicable}</p>}</Section>}
-                    </>
-                  )}
-                </>
-              )}
-            </section>
+
+                    {/* Difficulty only ever shows once at least one Authority has
+                        been selected (finalized requirement) — never immediately
+                        after picking the Purpose. */}
+                    {(selections.allAuthorities || selections.authorities.length > 0) && (
+                      <Section title={t.practiceSetup.difficultyQuestion}>
+                        {difficultyStepVisible ? (
+                          <ChipRow>
+                            <Chip label={t.quiz.modes.MIXED} active={mode === 'MIXED'} onClick={() => setMode('MIXED')} />
+                            <Chip label={t.quiz.modes.MEDIUM} active={mode === 'MEDIUM'} onClick={() => setMode('MEDIUM')} />
+                            <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
+                          </ChipRow>
+                        ) : (
+                          <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.practiceSetup.difficultyNotApplicable}</p>
+                        )}
+                      </Section>
+                    )}
+                  </>
+                )}
+              </>
+            )}
 
             {examSelectionComplete && (
-              <section className="setup-card">
-                <div className="step-heading"><span className="step-number">02</span><div><p className="step-kicker">{lang === 'ta' ? 'மொழி' : 'LANGUAGE'}</p><h2>{lang === 'ta' ? 'பயிற்சி மொழி' : 'Practice language'}</h2></div></div>
-                {checkingLanguages ? <div className="loading-row">{t.quiz.loading}</div> : availableLanguages && availableLanguages.length > 0 ? <div className="language-options">{availableLanguages.includes('TA') && <Chip label="தமிழ்" active={language==='TA'} onClick={()=>setLanguage('TA')} />}{availableLanguages.includes('EN') && <Chip label="English" active={language==='EN'} onClick={()=>setLanguage('EN')} />}</div> : <p className="availability-note">{t.practiceSetup.noQuestionsForSelection}</p>}
-              </section>
+              <Section title={t.practiceSetup.languageQuestion}>
+                {checkingLanguages ? (
+                  <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.quiz.loading}</p>
+                ) : availableLanguages && availableLanguages.length > 0 ? (
+                  <ChipRow>
+                    {availableLanguages.includes('TA') && (
+                      <Chip label="தமிழ்" active={language === 'TA'} onClick={() => setLanguage('TA')} />
+                    )}
+                    {availableLanguages.includes('EN') && (
+                      <Chip label="English" active={language === 'EN'} onClick={() => setLanguage('EN')} />
+                    )}
+                  </ChipRow>
+                ) : (
+                  <p style={{ fontSize: 13, color: '#d97706' }}>{t.practiceSetup.noQuestionsForSelection}</p>
+                )}
+              </Section>
             )}
 
             {fixedSubCategoryId && examSelectionComplete && (
-              <section className="setup-card optional-section">
-                <div className="step-heading"><span className="step-number">03</span><div><p className="step-kicker">{lang === 'ta' ? 'விருப்பம்' : 'OPTIONAL'}</p><h2>{lang === 'ta' ? 'பாடங்களைத் தேர்ந்தெடுக்கவும்' : 'Choose subjects'}</h2></div></div>
-                <p className="section-description">{lang === 'ta' ? 'முழுப் பாடத்திட்டத்திலும் பயிற்சி செய்யலாம். விருப்பமிருந்தால் குறிப்பிட்ட பாடங்களை மட்டும் தேர்வு செய்யலாம்.' : 'Practise the full syllabus, or optionally focus on selected subjects.'}</p>
-                <SubjectPreferenceField subCategoryId={fixedSubCategoryId} t={t} resetOnFreshVisit practiceLanguage={language} />
-              </section>
+              <SubjectPreferenceField subCategoryId={fixedSubCategoryId} t={t} resetOnFreshVisit practiceLanguage={language} />
             )}
 
-            <section className="start-panel">
-              <div><p className="start-kicker">{lang === 'ta' ? 'தயாரா?' : 'READY TO PRACTISE?'}</p><h2>{lang === 'ta' ? 'உங்கள் பயிற்சி தயார்.' : 'Your practice is ready.'}</h2><p>{language === 'TA' ? 'தமிழ் · TNPSC Group 4' : language === 'EN' ? 'English · TNPSC Group 4' : (lang === 'ta' ? 'மொழியைத் தேர்ந்தெடுக்கவும்' : 'Select a language to continue')}</p></div>
-              <button className="start-button" onClick={saveAndStart} disabled={!canStart || starting}>{starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.startPractice}{!starting && <span aria-hidden="true"> →</span>}</button>
-            </section>
-          </div>
+            <button
+              onClick={saveAndStart}
+              disabled={!canStart || starting}
+              style={{
+                width: '100%',
+                padding: 16,
+                borderRadius: 14,
+                background: canStart ? 'var(--color-btn)' : 'var(--color-line)',
+                color: canStart ? 'var(--color-btnText)' : 'var(--color-inkMuted)',
+                border: 'none',
+                fontSize: 17,
+                fontWeight: 700,
+                marginTop: 8,
+                boxShadow: canStart ? '0 10px 24px -10px rgba(15,47,51,0.7)' : 'none',
+              }}
+            >
+              {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.startPractice}
+            </button>
+          </>
         )}
 
-        {error && <div className="error-box"><p>{error}</p><a href="/plans" className="error-link">{t.dashboard.upgrade}</a></div>}
+        {error && (
+          <div style={{ marginTop: 16 }}>
+            <p style={{ color: '#dc2626', marginBottom: 8 }}>{error}</p>
+            <a href="/plans" className="error-link">
+              {t.dashboard.upgrade}
+            </a>
+          </div>
+        )}
       </div>
-
+    
       <style jsx>{`
-.practice-page{color-scheme:light dark;width:100%;max-width:760px;min-height:100dvh;margin:0 auto;padding-bottom:40px;background:var(--color-paper);color:var(--color-ink);font-family:'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif}
-.practice-header{height:68px;min-height:68px;max-height:68px;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--color-card);border-bottom:2px solid var(--color-gold);position:sticky;top:0;z-index:30}
-.practice-brand{display:flex;align-items:center;height:38px;min-width:0;margin-right:auto;text-decoration:none;overflow:hidden}
-.practice-brand-crop{display:block;width:154px;height:31px;overflow:hidden;flex:0 0 154px;line-height:0}.practice-brand-crop img{width:154px!important;height:auto!important;max-width:none;display:block}
-.practice-title{margin:0!important;color:var(--color-ink)!important;font-size:28px!important;font-weight:900!important;line-height:1.2;letter-spacing:-.3px}
-.practice-content{padding:0 22px}.setup-intro{padding:34px 0 20px;border-bottom:1px solid var(--color-line)}.eyebrow,.step-kicker,.start-kicker{margin:0 0 5px;color:var(--color-gold);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.setup-lead{margin:8px 0 0;color:var(--color-inkMuted);font-size:15px;line-height:1.7}
-.setup-progress{display:flex;align-items:center;gap:8px;padding:16px 0 4px;color:var(--color-inkMuted)}.progress-dot{width:26px;height:26px;border:1px solid var(--color-line);border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:900;background:var(--color-card);color:var(--color-inkMuted);flex:0 0 26px}.progress-dot.active{background:var(--color-head1);border-color:var(--color-head1);color:#fff}.progress-line{height:1px;width:30px;background:var(--color-line)}.progress-label{margin-left:4px;font-size:11px;font-weight:700}
-.setup-stack{display:grid;gap:14px;padding-top:18px}.setup-card{background:var(--color-card);border:1px solid var(--color-line);border-radius:12px;padding:20px;box-shadow:0 5px 16px rgba(11,56,100,.05)}.exam-section{border-top:3px solid var(--color-head1)}
-.step-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:17px}.step-number{font-size:12px;font-weight:900;color:var(--color-head1);background:var(--color-goldLight);border:1px solid var(--color-gold);min-width:34px;height:34px;border-radius:7px;display:grid;place-items:center}.step-heading h2{margin:0;color:var(--color-ink);font-size:18px;line-height:1.4;font-weight:900}
-.exam-choice{display:flex;align-items:center;gap:13px;padding:15px;background:var(--color-head1);border-radius:10px;color:#fff;border-left:4px solid var(--color-gold)}.exam-symbol{width:44px;height:44px;border:1px solid rgba(255,255,255,.35);border-radius:8px;display:grid;place-items:center;font-size:21px;font-weight:900;background:rgba(255,255,255,.08);flex:0 0 44px}.exam-copy{min-width:0;display:flex;flex-direction:column;gap:3px}.exam-copy strong{font-size:17px;line-height:1.35}.exam-copy span{font-size:12.5px;color:#E7EEF5;line-height:1.45}.selected-badge{margin-left:auto;color:#14253D;background:#FFD22A;padding:7px 9px;border-radius:6px;font-size:11px;font-weight:900;white-space:nowrap}
-.section-block{margin-bottom:20px!important;padding-bottom:17px;border-bottom:1px solid var(--color-line)}.section-block:last-child{border-bottom:0;padding-bottom:0;margin-bottom:0!important}.section-title{margin:0 0 10px!important;color:var(--color-ink)!important;font-size:15px!important;line-height:1.5;font-weight:900!important}.chip-row,.language-options{display:flex;flex-wrap:wrap;gap:9px}.practice-chip{padding:10px 15px!important;min-height:44px;border-radius:8px!important;border:1px solid var(--color-line)!important;background:var(--color-card)!important;color:var(--color-ink)!important;font-weight:700!important;font-size:14.5px!important;box-shadow:none!important}.practice-chip.active{background:var(--color-head1)!important;color:#fff!important;border-color:var(--color-head1)!important}
-.optional-section{padding-bottom:18px}.section-description{margin:-6px 0 15px;color:var(--color-inkMuted);font-size:13.5px;line-height:1.7}.subject-pref{margin:0}.subject-pref-button{display:flex!important;align-items:center;justify-content:space-between;width:100%;background:var(--color-paper)!important;border:1px solid var(--color-line)!important;padding:12px 13px!important;border-radius:8px!important;font-size:13.5px!important;font-weight:800!important;color:var(--color-ink)!important;text-decoration:none!important;cursor:pointer}.subject-pref-button:after{content:'→';color:var(--color-gold);font-size:18px}
-.start-panel{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px;background:var(--color-head1);border-radius:12px;border-bottom:3px solid var(--color-gold);margin-top:2px;color:#fff}.start-panel h2{margin:0 0 4px;color:#fff;font-size:19px;font-weight:900;line-height:1.35}.start-panel p:last-child{margin:0;color:#E7EEF5;font-size:13px;line-height:1.5}.start-button{min-width:210px;min-height:52px;padding:13px 17px!important;border-radius:8px!important;border:0!important;background:#FFD22A!important;color:#14253D!important;font-size:16px!important;font-weight:900!important;box-shadow:none!important;cursor:pointer}.start-button:disabled{background:#6B7A88!important;color:#D9E0E6!important;cursor:not-allowed}
-.profile-gate{margin-top:14px!important;padding:22px 18px!important;border-radius:10px!important;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-top:3px solid var(--color-gold)!important;text-align:left}.notice-mark{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--color-goldLight);color:var(--color-head1);font-weight:900;margin-bottom:10px}.notice-title{font-size:17px;font-weight:900;margin:0 0 6px;color:var(--color-ink)}.notice-copy{font-size:14px;line-height:1.7;margin:0 0 16px;color:var(--color-inkMuted)}.profile-gate a{display:inline-block;padding:12px 15px;border-radius:8px;background:var(--color-btn);color:var(--color-btnText);font-weight:900;text-decoration:none}
-.access-prompt{margin-top:14px!important;padding:17px!important;border-radius:10px!important;background:var(--color-goldLight)!important;border:1px solid var(--color-gold)!important;color:var(--color-ink)}.prompt-kicker{font-size:14px;font-weight:900;margin:0 0 5px;color:var(--color-ink)}.prompt-copy{font-size:13px;line-height:1.65;margin:0 0 13px;color:var(--color-ink)}.prompt-actions{display:flex;gap:9px}.prompt-actions button,.prompt-actions a{flex:1;min-height:44px;padding:10px;border-radius:8px;border:1px solid var(--color-ink);background:var(--color-card);color:var(--color-ink);font-weight:800;text-align:center;text-decoration:none}.prompt-actions a{background:var(--color-ink);color:#fff}
-.locked-card{padding:13px!important;border-radius:8px!important;background:var(--color-okBg)!important;border:1px solid var(--color-ok)!important;color:var(--color-ok)!important}.muted-note,.loading-row,.availability-note{font-size:13px;color:var(--color-inkMuted);line-height:1.6}.availability-note{padding:12px;background:var(--color-goldLight);border-left:3px solid var(--color-gold);color:var(--color-ink)}
-.error-box{margin-top:14px!important;padding:13px 14px;border:1px solid var(--color-bad);border-radius:9px;background:var(--color-badBg)}.error-box p{color:var(--color-bad)!important;margin:0 0 8px!important}.error-link{display:inline-block;padding:8px 14px;border-radius:7px;background:var(--color-btn);color:var(--color-btnText);text-decoration:none;font-size:13px}
-.subject-modal-overlay{position:fixed;inset:0;background:rgba(11,56,100,.56);z-index:100;display:flex;align-items:flex-end}.subject-modal{background:var(--color-card);color:var(--color-ink);border-radius:14px 14px 0 0;padding:20px;width:100%;max-width:760px;margin:0 auto;max-height:76vh;overflow-y:auto;box-shadow:0 -8px 28px rgba(11,56,100,.2)}.subject-option{display:flex;align-items:center;gap:10px;padding:11px 0;font-size:14px;cursor:pointer;border-bottom:1px solid var(--color-line)}.subject-done{width:100%;min-height:46px;padding:12px;border-radius:8px;background:var(--color-btn);color:var(--color-btnText);border:none;font-weight:900;font-size:15px;margin-top:16px}
-.preference-summary{margin-bottom:18px}.summary-card{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-left:4px solid var(--color-gold)!important;border-radius:9px!important;padding:15px!important;margin-bottom:12px!important}.summary-label{margin:0 0 5px!important;color:var(--color-gold)!important;font-size:12px!important;font-weight:900!important}.summary-text{margin:0!important;color:var(--color-ink)!important;font-size:14.5px!important;line-height:1.6!important}.change-button{flex-shrink:0;font-size:12px;font-weight:800;padding:6px 11px;border-radius:7px;border:1px solid var(--color-line);background:var(--color-card);color:var(--color-ink)}.summary-start{width:100%;min-height:52px;border:0;border-radius:8px;background:var(--color-btn);color:var(--color-btnText);font-weight:900;font-size:16px}
-@media(max-width:620px){.practice-content{padding:0 14px}.setup-intro{padding:26px 0 17px}.practice-title{font-size:24px!important}.setup-progress{overflow:hidden}.progress-label{font-size:10px;white-space:nowrap}.setup-stack{gap:11px}.setup-card{padding:16px;border-radius:10px}.step-heading{margin-bottom:14px}.step-heading h2{font-size:17px}.exam-choice{padding:13px 12px}.exam-copy strong{font-size:16px}.selected-badge{font-size:10px;padding:6px 7px}.start-panel{display:block;padding:18px}.start-button{width:100%;margin-top:15px}.setup-lead{font-size:14px}}
-@media(max-width:390px){.practice-header{padding:0 10px}.practice-brand-crop{width:136px;flex-basis:136px;height:29px}.practice-brand-crop img{width:136px!important}.practice-title{font-size:22px!important}.progress-label{display:none}.setup-progress{justify-content:flex-start}.setup-card{padding:14px}.exam-symbol{width:40px;height:40px;flex-basis:40px}.exam-copy span{font-size:11.5px}.selected-badge{margin-left:5px}.practice-chip{min-height:44px;font-size:14px!important;padding:9px 12px!important}.start-panel h2{font-size:18px}}
-`}</style>
+        .practice-page {
+          width: 100%;
+          max-width: 620px;
+          min-height: 100dvh;
+          margin: 0 auto;
+          padding-bottom: 28px;
+          background: #fff;
+          color: #20384D;
+          font-family: 'Noto Sans Tamil', 'Nirmala UI', Latha, Arial, sans-serif;
+        }
+        .practice-header {
+          min-height: 68px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 0 14px;
+          background: #fff;
+          border-bottom: 3px solid #FFD22A;
+          position: sticky;
+          top: 0;
+          z-index: 30;
+        }
+        .practice-title {
+          margin: 0 !important;
+          color: #0B3864 !important;
+          font-size: 21px !important;
+          font-weight: 900 !important;
+          line-height: 1.25;
+        }
+        .offline-badge {
+          margin-left: auto;
+          color: #17835E !important;
+          border: 1px solid #B9DEC7 !important;
+          background: #F1FAF3;
+          padding: 7px 11px;
+          border-radius: 999px;
+          text-decoration: none;
+          white-space: nowrap;
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .practice-content { padding: 18px 14px 0 !important; }
+        .exam-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 22px;
+          padding: 14px 15px;
+          color: #fff;
+          background: #0B3864;
+          border-radius: 12px;
+          border-bottom: 4px solid #FFD22A;
+          box-shadow: 0 6px 16px rgba(11,56,100,.10);
+        }
+        .exam-card-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: rgba(255,255,255,.12);
+          display: grid;
+          place-items: center;
+          font-size: 22px;
+          flex: 0 0 44px;
+        }
+        .exam-card b { font-size: 18px !important; }
+        .exam-card small { color: #DDE9F2 !important; font-size: 12px !important; }
+        .selected-badge {
+          margin-left: auto;
+          color: #20384D;
+          background: #FFD22A;
+          padding: 6px 10px;
+          border-radius: 8px;
+          font-size: 11.5px;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+        .section-block {
+          margin-bottom: 22px !important;
+          padding-bottom: 17px;
+          border-bottom: 1px solid #E6ECEF;
+        }
+        .section-title {
+          margin: 0 0 11px !important;
+          color: #0B3864 !important;
+          font-size: 17px !important;
+          line-height: 1.4;
+          font-weight: 900 !important;
+        }
+        .chip-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .practice-chip {
+          padding: 10px 15px !important;
+          border-radius: 9px !important;
+          border: 1px solid #D7E0E5 !important;
+          background: #fff !important;
+          color: #20384D !important;
+          font-weight: 700 !important;
+          font-size: 14.5px !important;
+          box-shadow: none !important;
+        }
+        .practice-chip.active {
+          background: #0B3864 !important;
+          color: #fff !important;
+          border-color: #0B3864 !important;
+        }
+        .start-button, .summary-start {
+          width: 100% !important;
+          min-height: 54px;
+          padding: 13px 16px !important;
+          margin-top: 10px !important;
+          border-radius: 10px !important;
+          border: none !important;
+          background: #0B3864 !important;
+          color: #FFD22A !important;
+          font-size: 17px !important;
+          font-weight: 900 !important;
+          box-shadow: 0 7px 18px rgba(11,56,100,.16) !important;
+        }
+        .profile-gate {
+          margin-top: 14px !important;
+          padding: 22px 16px !important;
+          text-align: center;
+          border-radius: 12px !important;
+          background: #F8FBFC !important;
+          border: 1px solid #DDE5E9 !important;
+          border-top: 4px solid #FFD22A !important;
+        }
+        .profile-gate a {
+          display: block !important;
+          padding: 13px !important;
+          border-radius: 9px !important;
+          background: #0B3864 !important;
+          color: #FFD22A !important;
+        }
+        .access-prompt {
+          margin-top: 14px !important;
+          padding: 15px !important;
+          border-radius: 10px !important;
+          background: #FFF9E8 !important;
+          border: 1px solid #EBD58C !important;
+        }
+        .access-prompt > div { gap: 8px !important; }
+        .access-prompt button, .access-prompt a { border-radius: 9px !important; }
+        .locked-card {
+          padding: 13px !important;
+          border-radius: 9px !important;
+          background: #F1FAF3 !important;
+          border: 1px solid #B9DEC7 !important;
+          color: #176B4E !important;
+        }
+        .error-box {
+          margin-top: 14px !important;
+          padding: 12px;
+          border: 1px solid #F0C2C6;
+          border-radius: 9px;
+          background: #FFF5F5;
+        }
+        .error-box p { color: #B4232F !important; margin: 0 0 8px !important; }
+        .error-link {
+          display: inline-block;
+          padding: 8px 14px;
+          border-radius: 7px;
+          background: #0B3864;
+          color: #fff;
+          text-decoration: none;
+          font-size: 13px;
+        }
+        .subject-pref { margin-bottom: 22px; }
+        .subject-pref-button {
+          background: #fff !important;
+          border: none !important;
+          padding: 0 !important;
+          font-size: 14px !important;
+          font-weight: 800 !important;
+          color: #17835E !important;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+        .subject-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(11,56,100,.42);
+          z-index: 100;
+          display: flex;
+          align-items: flex-end;
+        }
+        .subject-modal {
+          background: #fff;
+          color: #20384D;
+          border-radius: 16px 16px 0 0;
+          padding: 20px;
+          width: 100%;
+          max-width: 620px;
+          margin: 0 auto;
+          max-height: 72vh;
+          overflow-y: auto;
+          box-shadow: 0 -8px 28px rgba(11,56,100,.18);
+        }
+        .subject-option {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 11px 0;
+          font-size: 14px;
+          cursor: pointer;
+          border-bottom: 1px solid #E6ECEF;
+        }
+        .subject-done {
+          width: 100%;
+          padding: 13px;
+          border-radius: 9px;
+          background: #0B3864;
+          color: #FFD22A;
+          border: none;
+          font-weight: 900;
+          font-size: 15px;
+          margin-top: 16px;
+        }
+        .preference-summary { margin-bottom: 22px; }
+        .summary-card {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+          background: #F8FBFC !important;
+          border: 1px solid #DDE5E9 !important;
+          border-left: 4px solid #FFD22A !important;
+          border-radius: 11px !important;
+          padding: 15px !important;
+          margin-bottom: 12px !important;
+        }
+        .summary-label {
+          margin: 0 0 5px !important;
+          color: #B07A16 !important;
+          font-size: 12px !important;
+          font-weight: 900 !important;
+        }
+        .summary-text {
+          margin: 0 !important;
+          color: #20384D !important;
+          font-size: 14.5px !important;
+          line-height: 1.6 !important;
+        }
+        .change-button {
+          flex-shrink: 0;
+          font-size: 12px;
+          font-weight: 800;
+          padding: 6px 11px;
+          border-radius: 7px;
+          border: 1px solid #D7E0E5;
+          background: #fff;
+          color: #0B3864;
+        }
+        @media (max-width: 380px) {
+          .practice-content { padding: 15px 12px 0 !important; }
+          .practice-title { font-size: 19px !important; }
+          .exam-card { padding: 13px 12px; }
+          .exam-card b { font-size: 16px !important; }
+          .practice-chip { font-size: 14px !important; padding: 9px 12px !important; }
+        }
+      `}</style>
     </main>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="section-block">
-      <h2 className="section-title"><span className="section-marker" aria-hidden="true" />{title}</h2>
+    <div style={{ marginBottom: 20 }}>
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 10 }}>{title}</h2>
       {children}
-    </section>
+    </div>
   );
 }
 
