@@ -888,6 +888,9 @@ export default function IndexPage() {
             onClick={() => {
               setView('main');
               setPendingFirebaseToken(null);
+              if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('startLogin') === '1') {
+                window.history.replaceState({}, '', '/');
+              }
             }}
             style={{ background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 13, marginTop: 12, cursor: 'pointer' }}
           >
