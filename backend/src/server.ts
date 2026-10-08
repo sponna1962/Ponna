@@ -97,7 +97,7 @@ const allowedOrigins = new Set([
 ]);
 const configuredFrontendUrl = process.env.FRONTEND_URL?.trim();
 if (configuredFrontendUrl) allowedOrigins.add(configuredFrontendUrl.replace(/\/$/, ''));
-app.use(cors({
+const corsMiddleware = cors({
   origin: (origin, callback) => {
     // Non-browser tools and same-origin requests do not send Origin.
     if (!origin || allowedOrigins.has(origin)) {
@@ -114,7 +114,17 @@ app.use(cors({
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 204,
-}));
+});
+// PayU sends the customer's browser back with a cross-site form POST, so the
+// request carries `Origin: https://secure.payu.in`. That is not a CORS request
+// from our frontend and must never be blocked — the response-hash check is its
+// authentication. Without this exemption the student saw a raw JSON error page
+// after paying. The webhook is server-to-server (no Origin) but is exempted too.
+const PAYU_PUBLIC_PATHS = new Set(['/payments/payu/callback', '/webhooks/payu']);
+app.use((req, res, next) => {
+  if (req.method === 'POST' && PAYU_PUBLIC_PATHS.has(req.path)) return next();
+  return corsMiddleware(req, res, next);
+});
 // Captures the raw request body alongside the parsed JSON — needed for
 // verifying the Razorpay webhook signature, which is computed over the raw
 // bytes, not the re-serialized JSON (those can differ in whitespace/key order).
