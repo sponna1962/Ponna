@@ -30,7 +30,13 @@ type Exam = { id: string; name: string };
  *  - everything else                 -> normal paragraph
  * Leading spaces/tabs from pasted text are ignored so alignment is uniform. */
 function NoteBody({ content }: { content: string }) {
-  const lines = content.replace(/\r/g, '').split('\n').map((l) => l.replace(/^[\s\u00a0\u3000]+|[\s\u00a0\u3000]+$/g, ''));
+  // Pasted-from-Word lists carry an invisible private-use bullet (U+F0B7 etc.)
+  // and zero-width marks at the start of lines; they show up as a blank gap.
+  const lines = content
+    .replace(/\r/g, '')
+    .replace(/[\uE000-\uF8FF\u200B-\u200F\u202A-\u202E\uFEFF]/g, '')
+    .split('\n')
+    .map((l) => l.replace(/^[\s\u00a0\u3000•·▪●○◦]+|[\s\u00a0\u3000]+$/g, ''));
   const blocks: JSX.Element[] = [];
   let bullets: string[] = [];
   const flush = (key: string) => {
