@@ -16,7 +16,7 @@ export default function Page() {
       <p>You can stop using PONNA.in at any time. Plans do not auto-renew, so there is nothing to cancel and no further charge after your plan ends.</p>
       <H>Refund after you join a government job</H>
       <p>If you prepare with PONNA.in and join a government post, the full fee you paid for your PONNA.in plan(s) will be refunded to you.</p>
-      <p>Condition: you must register your hall ticket number in your PONNA.in profile and have it verified by PONNA.in.</p>
+      <p>Conditions: register your hall ticket number in your PONNA.in profile, and after you join your post, submit your job identity card to PONNA.in. We verify it against your registered hall ticket.</p>
       <H>Other refunds</H>
       <p>Because access is delivered instantly, payments for activated plans are otherwise generally non-refundable. We will also refund you in these cases:</p>
       <ul>
