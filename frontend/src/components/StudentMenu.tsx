@@ -108,13 +108,9 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
               borderBottom: '2px solid #E2B04A', background: '#fff', boxSizing: 'border-box',
             }}>
               <a href="/" aria-label="PONNA.in" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', minWidth: 0 }}>
-                {/* The compact logo with its tagline strip cropped off (an SVG wrapper
-                    can't load the PNG when used as an <img>, so crop with CSS instead). */}
-                <span style={{ display: 'block', position: 'relative', width: 180, aspectRatio: '1968 / 450', overflow: 'hidden' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo-compact.png" alt="PONNA.in" style={{ display: 'block', width: '100%', height: 'auto' }} />
-                  <span aria-hidden="true" style={{ position: 'absolute', left: '21.8%', right: 0, top: '78.8%', bottom: 0, background: '#fff' }} />
-                </span>
+                {/* Same clean wordmark (no tagline strip) as the home page header. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-wordmark.png" alt="PONNA.in" style={{ display: 'block', width: 168, height: 'auto' }} />
               </a>
               <button onClick={() => setOpen(false)} aria-label="Close" style={{
                 width: 36, height: 36, border: '1px solid #DDE5E9', borderRadius: 8,
