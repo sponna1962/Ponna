@@ -575,15 +575,17 @@ export default function QuizStartPage() {
               <div><strong>{lang === 'ta' ? 'சில படிகள் மட்டுமே' : 'A few simple steps'}</strong><p>{lang === 'ta' ? 'தேர்வைத் தொடங்கும் முன் உங்கள் பயிற்சியை அமைத்துக்கொள்ளுங்கள்.' : 'Set your practice before you begin.'}</p></div>
             </div>
             {fixedSel ? (
-              <div className="setup-section-label">{lang === 'ta' ? 'தேர்வு' : 'EXAM'}</div>
-              <div className="exam-card">
+              <>
+                <div className="setup-section-label">{lang === 'ta' ? 'தேர்வு' : 'EXAM'}</div>
+                <div className="exam-card">
                 <span className="exam-card-mark" aria-hidden="true">4</span>
                 <div>
                   <b style={{ fontSize: 17, display: 'block' }}>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</b>
                   <small style={{ fontSize: 12, color: '#FFE9A8' }}>{lang === 'ta' ? 'போட்டித் தேர்வு' : 'Competitive exam'}</small>
                 </div>
-                <span className="selected-badge">✓ {lang === 'ta' ? 'தேர்வானது' : 'Selected'}</span>
-              </div>
+                  <span className="selected-badge">✓ {lang === 'ta' ? 'தேர்வானது' : 'Selected'}</span>
+                </div>
+              </>
             ) : restriction?.restricted ? (
               // Sept 2026 — TNPSC Group IV & VAO Pass (finalized
               // requirement): no picker at all, locked straight to Group
