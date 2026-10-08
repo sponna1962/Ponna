@@ -114,7 +114,7 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
                   width={1968}
                   height={450}
                   priority
-                  style={{ width: 190, height: 'auto', display: 'block' }}
+                  style={{ width: 180, height: 'auto', display: 'block' }}
                 />
               </a>
               <button onClick={() => setOpen(false)} aria-label="Close" style={{
