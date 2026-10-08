@@ -51,7 +51,7 @@ export default function StudyNotesPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40, background: COLORS.paper, color: COLORS.ink, minHeight: '100dvh' }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Study Notes</h1>
       </div>
@@ -71,7 +71,7 @@ export default function StudyNotesPage() {
                 width: '100%',
                 textAlign: 'left',
                 padding: 16,
-                borderRadius: 16,
+                borderRadius: 10,
                 border: `1px solid ${COLORS.line}`,
                 borderLeft: '5px solid #E2B04A',
                 background: 'var(--color-card)',
@@ -101,7 +101,7 @@ export default function StudyNotesPage() {
             ← வேறு தேர்வு / Change exam
           </button>
 
-          <div style={{ display: 'flex', gap: 6, background: 'var(--color-field)', border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: 4, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 6, background: 'var(--color-field)', border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: 4, marginBottom: 16 }}>
             {(['TA', 'EN'] as const).map((l) => (
               <button
                 key={l}
@@ -109,7 +109,7 @@ export default function StudyNotesPage() {
                 style={{
                   flex: 1,
                   padding: 9,
-                  borderRadius: 999,
+                  borderRadius: 6,
                   border: 'none',
                   background: language === l ? 'var(--color-btn)' : 'transparent',
                   color: language === l ? 'var(--color-btnText)' : COLORS.inkMuted,
@@ -127,7 +127,7 @@ export default function StudyNotesPage() {
           {!notesLoading && notes.length === 0 && <p style={{ fontSize: 13, color: COLORS.inkMuted }}>Study notes coming soon.</p>}
 
           {notes.map((note) => (
-            <div key={note.subjectId} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderLeft: openId === note.subjectId ? '5px solid #E2B04A' : `1px solid ${COLORS.line}`, borderRadius: 16, marginBottom: 10, overflow: 'hidden' }}>
+            <div key={note.subjectId} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderLeft: openId === note.subjectId ? '5px solid #E2B04A' : `1px solid ${COLORS.line}`, borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
               <button
                 onClick={() => setOpenId(openId === note.subjectId ? null : note.subjectId)}
                 style={{
