@@ -4,15 +4,15 @@ import Image from 'next/image';
 import { BitterFontLinks } from '../lib/brand-theme';
 
 const tools = [
-  { title: 'Start Practice', body: 'கேள்விகளைத் தேர்ந்தெடுத்து பயிற்சி செய்யலாம்.', href: '/quiz', photo: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=240&h=240&fit=crop&q=80' },
-  { title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', photo: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=240&h=240&fit=crop&q=80' },
-  { title: 'Review Mistakes', body: 'தவறான கேள்விகளை மீண்டும் பார்க்கலாம்.', href: '/mistakes', photo: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=240&h=240&fit=crop&q=80' },
-  { title: 'Study Notes', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/study-notes', photo: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=240&h=240&fit=crop&q=80' },
-  { title: 'Daily Challenge', body: 'Current Affairs மற்றும் Brain Challenge என இரண்டு தினசரி பயிற்சிகளைப் பெறலாம்.', href: '/daily-quiz', photo: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=240&h=240&fit=crop&q=80' },
-  { title: 'Live Exam', body: 'தேர்வு போன்ற சூழலில் தேர்வு எழுதலாம்.', href: '/live-exam', photo: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=240&h=240&fit=crop&q=80' },
-  { title: 'Adaptive Mock', body: 'உங்கள் பயிற்சிக்கேற்ப மாற்றித் தேர்வு வழங்கப்படும்.', href: '/adaptive-mock', photo: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=240&h=240&fit=crop&q=80' },
-  { title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்.', href: '/dashboard', photo: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=240&h=240&fit=crop&q=80' },
-  { title: 'Cut-off Predictor', body: 'உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பைப் பார்க்கலாம்.', href: '/cutoff-predictor', photo: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=240&h=240&fit=crop&q=80' },
+  { title: 'Start Practice', body: 'கேள்விகளைத் தேர்ந்தெடுத்து பயிற்சி செய்யலாம்.', href: '/quiz', photo: '/home/tile-3.jpg' },
+  { title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', photo: '/home/tile-4.jpg' },
+  { title: 'Review Mistakes', body: 'தவறான கேள்விகளை மீண்டும் பார்க்கலாம்.', href: '/mistakes', photo: '/home/tile-5.jpg' },
+  { title: 'Study Notes', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/study-notes', photo: '/home/tile-6.jpg' },
+  { title: 'Daily Challenge', body: 'Current Affairs மற்றும் Brain Challenge என இரண்டு தினசரி பயிற்சிகளைப் பெறலாம்.', href: '/daily-quiz', photo: '/home/tile-1.jpg' },
+  { title: 'Live Exam', body: 'தேர்வு போன்ற சூழலில் தேர்வு எழுதலாம்.', href: '/live-exam', photo: '/home/tile-7.jpg' },
+  { title: 'Adaptive Mock', body: 'உங்கள் பயிற்சிக்கேற்ப மாற்றித் தேர்வு வழங்கப்படும்.', href: '/adaptive-mock', photo: '/home/tile-8.jpg' },
+  { title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்.', href: '/dashboard', photo: '/home/tile-9.jpg' },
+  { title: 'Cut-off Predictor', body: 'உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பைப் பார்க்கலாம்.', href: '/cutoff-predictor', photo: '/home/tile-2.jpg' },
 ];
 
 const featured = [
@@ -20,14 +20,14 @@ const featured = [
     title: 'Current Affairs',
     body: 'தேர்வுக்குத் தேவையான நடப்பு நிகழ்வுகளைத் தொடர்ந்து படிக்கலாம்.',
     href: '/current-affairs',
-    photo: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=240&h=180&fit=crop&q=80',
+    photo: '/home/tile-1.jpg',
     badge: 'புதியது',
   },
   {
     title: 'TNPSC Group 4 2026 அறிவிப்பு',
     body: 'காலிப்பணியிடங்கள் மற்றும் முக்கியத் தகவல்களைத் தெரிந்துகொள்ளலாம்.',
     href: '/tnpsc-group-4/notification-2026',
-    photo: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=240&h=180&fit=crop&q=80',
+    photo: '/home/tile-2.jpg',
     badge: '',
   },
 ];
@@ -197,7 +197,7 @@ export default function HomeDesignPreview() {
           height: 100%;
           display: block;
           object-fit: cover;
-          object-position: center 42%;
+          object-position: center 12%;
         }
 
         .content { padding: 12px 10px 0; }
