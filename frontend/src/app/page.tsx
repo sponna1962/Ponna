@@ -182,6 +182,9 @@ export default function IndexPage() {
     localStorage.setItem('ponna_student_token', token);
     setIsLoggedIn(true);
     setView('main');
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('startLogin') === '1') {
+      window.history.replaceState({}, '', '/');
+    }
   }
 
   /** Shared by both Google and Phone sign-in — sends the persisted device
@@ -275,6 +278,12 @@ export default function IndexPage() {
 
   function openLogin() {
     setError(null);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('startLogin') !== '1') {
+        window.history.pushState({ ponnaLogin: true }, '', '/?startLogin=1');
+      }
+    }
     setView('chooseMethod');
   }
 
@@ -294,10 +303,22 @@ export default function IndexPage() {
   // from any other entry point into login.
   useEffect(() => {
     if (typeof window === 'undefined' || !checkedAuth) return;
-    if (new URLSearchParams(window.location.search).get('startLogin') === '1') {
-      openLogin();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    const syncLoginViewToUrl = () => {
+      const isLoginUrl = new URLSearchParams(window.location.search).get('startLogin') === '1';
+      setView(isLoginUrl ? 'chooseMethod' : 'main');
+      if (!isLoginUrl) {
+        setError(null);
+        setOtpSent(false);
+        setOtp('');
+      }
+    };
+
+    syncLoginViewToUrl();
+    window.addEventListener('popstate', syncLoginViewToUrl);
+    return () => window.removeEventListener('popstate', syncLoginViewToUrl);
+    // URL is the source of truth for the login entry screen so refresh/back
+    // never silently returns a student to the home screen.
   }, [checkedAuth]);
 
   function handleStartPractising() {
@@ -789,6 +810,9 @@ export default function IndexPage() {
               setError(null);
               setOtpSent(false);
               setOtp('');
+              if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('startLogin') !== '1') {
+                window.history.replaceState({ ponnaLogin: true }, '', '/?startLogin=1');
+              }
             }}
             style={{ background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 13, padding: 0, marginBottom: 16, cursor: 'pointer', textAlign: 'left' }}
           >
