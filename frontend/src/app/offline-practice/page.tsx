@@ -105,26 +105,26 @@ export default function OfflinePracticePage() {
   }
 
   const gold4 = '#E2B04A';
-  const btn: React.CSSProperties = { width: '100%', padding: 15, borderRadius: 14, background: COLORS.btn, color: COLORS.btnText, border: 'none', fontWeight: 700, fontSize: 16, cursor: 'pointer', boxSizing: 'border-box' };
+  const btn: React.CSSProperties = { width: '100%', padding: 15, borderRadius: 8, background: COLORS.btn, color: COLORS.btnText, border: 'none', fontWeight: 700, fontSize: 16, cursor: 'pointer', boxSizing: 'border-box' };
   const cur = pack && pack !== 'loading' ? pack.questions[currentIndex] : null;
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', background: COLORS.paper, color: COLORS.ink, paddingBottom: pack && pack !== 'loading' ? 96 : 24 }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: `3px solid ${gold4}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: `3px solid ${gold4}` }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Offline Practice</h1>
       </div>
 
       <div style={{ padding: 16 }}>
-      <span style={{ display: 'inline-block', padding: '7px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, marginBottom: 14, lineHeight: 1.5, background: isOnline ? COLORS.okBg : COLORS.badBg, color: isOnline ? COLORS.ok : COLORS.bad, border: `1px solid ${isOnline ? COLORS.ok : COLORS.bad}` }}>
+      <span style={{ display: 'inline-block', padding: '7px 14px', borderRadius: 6, fontSize: 12.5, fontWeight: 700, marginBottom: 14, lineHeight: 1.5, background: isOnline ? COLORS.okBg : COLORS.badBg, color: isOnline ? COLORS.ok : COLORS.bad, border: `1px solid ${isOnline ? COLORS.ok : COLORS.bad}` }}>
         {isOnline ? '🟢 Online' : '🔴 Offline — practice still works, answers will sync automatically once you reconnect'}
       </span>
 
       {error && <p style={{ color: COLORS.bad, fontSize: 13, marginBottom: 12 }}>{error}</p>}
 
       {justSynced && (
-        <div style={{ padding: 16, borderRadius: 14, background: COLORS.okBg, border: `1px solid ${COLORS.ok}`, marginBottom: 16, fontSize: 14, color: COLORS.ok, fontWeight: 600, lineHeight: 1.6 }}>
+        <div style={{ padding: 16, borderRadius: 8, background: COLORS.okBg, border: `1px solid ${COLORS.ok}`, marginBottom: 16, fontSize: 14, color: COLORS.ok, fontWeight: 600, lineHeight: 1.6 }}>
           ✅ உங்க offline answers sync ஆகிடுச்சு! Streak மற்றும் Performance update ஆகியிருக்கும்.
         </div>
       )}
@@ -132,7 +132,7 @@ export default function OfflinePracticePage() {
       {pack === 'loading' && <p style={{ color: COLORS.inkMuted }}>Loading…</p>}
 
       {pack === null && (
-        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${gold4}`, borderRadius: 16, padding: '30px 18px', textAlign: 'center' }}>
+        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${gold4}`, borderRadius: 10, padding: '30px 18px', textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>📥</div>
           <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: '0 0 20px', lineHeight: 1.65 }}>
             Network இல்லாத நேரத்திலும் practice பண்ண, 75 கேள்விகள் இப்போ download பண்ணுங்க. Answers நீங்க திரும்ப online ஆனதும் தானாகவே sync ஆகும்.
@@ -152,7 +152,7 @@ export default function OfflinePracticePage() {
           <div style={{ height: 8, background: COLORS.line, borderRadius: 4, overflow: 'hidden', marginBottom: 14 }}>
             <div style={{ height: '100%', width: `${(Object.keys(revealed).length / pack.questions.length) * 100}%`, background: 'linear-gradient(90deg,#E2B04A,#D99A1E)' }} />
           </div>
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${gold4}`, borderRadius: 16, padding: 18, fontSize: cur.questionText.length > 140 ? 16.5 : 17.5, fontWeight: 600, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{cur.questionText}</div>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: `4px solid ${gold4}`, borderRadius: 10, padding: 18, fontSize: cur.questionText.length > 140 ? 16.5 : 17.5, fontWeight: 600, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{cur.questionText}</div>
 
           {(['A', 'B', 'C', 'D'] as const).map((letter) => {
             const q = cur;
@@ -166,7 +166,7 @@ export default function OfflinePracticePage() {
                 key={letter}
                 onClick={() => answer(q.id, letter)}
                 disabled={!!chosen}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${accent}`, background: good ? COLORS.okBg : bad ? COLORS.badBg : COLORS.card, color: COLORS.ink, marginBottom: 10, fontSize: 15.5, cursor: chosen ? 'default' : 'pointer', boxSizing: 'border-box' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 8, border: `1.5px solid ${accent}`, background: good ? COLORS.okBg : bad ? COLORS.badBg : COLORS.card, color: COLORS.ink, marginBottom: 10, fontSize: 15.5, cursor: chosen ? 'default' : 'pointer', boxSizing: 'border-box' }}
               >
                 <span style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12.5, background: good ? COLORS.ok : bad ? COLORS.bad : COLORS.field, border: `1.5px solid ${accent}`, color: good || bad ? '#fff' : COLORS.inkMuted }}>
                   {good ? '✓' : bad ? '✕' : letter}
@@ -185,7 +185,7 @@ export default function OfflinePracticePage() {
             <button
               onClick={syncNow}
               disabled={syncing}
-              style={{ width: '100%', padding: 14, borderRadius: 14, border: `1.5px solid ${COLORS.gold}`, background: COLORS.field, color: COLORS.gold, fontWeight: 700, fontSize: 14.5, cursor: 'pointer', marginTop: 14 }}
+              style={{ width: '100%', padding: 14, borderRadius: 8, border: `1.5px solid ${COLORS.gold}`, background: COLORS.field, color: COLORS.gold, fontWeight: 700, fontSize: 14.5, cursor: 'pointer', marginTop: 14 }}
             >
               {syncing ? 'Syncing…' : `Sync ${pack.answers.length} answer(s) now`}
             </button>
@@ -199,14 +199,14 @@ export default function OfflinePracticePage() {
           <button
             disabled={currentIndex === 0}
             onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-            style={{ flex: 1, padding: 15, borderRadius: 14, border: `1.5px solid ${COLORS.line}`, background: COLORS.card, color: COLORS.ink, fontWeight: 700, fontSize: 15.5, cursor: 'pointer', opacity: currentIndex === 0 ? 0.5 : 1 }}
+            style={{ flex: 1, padding: 15, borderRadius: 8, border: `1.5px solid ${COLORS.line}`, background: COLORS.card, color: COLORS.ink, fontWeight: 700, fontSize: 15.5, cursor: 'pointer', opacity: currentIndex === 0 ? 0.5 : 1 }}
           >
             ← முந்தையது
           </button>
           <button
             disabled={currentIndex >= pack.questions.length - 1}
             onClick={() => setCurrentIndex((i) => Math.min(pack.questions.length - 1, i + 1))}
-            style={{ flex: 1, padding: 15, borderRadius: 14, border: 'none', background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, fontSize: 15.5, cursor: 'pointer', opacity: currentIndex >= pack.questions.length - 1 ? 0.5 : 1 }}
+            style={{ flex: 1, padding: 15, borderRadius: 8, border: 'none', background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, fontSize: 15.5, cursor: 'pointer', opacity: currentIndex >= pack.questions.length - 1 ? 0.5 : 1 }}
           >
             அடுத்தது →
           </button>
