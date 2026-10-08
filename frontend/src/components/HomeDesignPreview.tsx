@@ -60,11 +60,6 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         <div className="hero-copy">
           <div className="eyebrow">போட்டித் தேர்வுக்கான<br />பயிற்சி தளம்</div>
           <h1>Group 4 வெற்றிக்கான<br /><em>உங்கள் முயற்சி</em><br />இங்கே தொடங்கட்டும்</h1>
-          <ul>
-            <li>60,000+ கேள்விகள்</li>
-            <li>புதிய பாடத்திட்டம்</li>
-            <li>நிபுணர்கள் உருவாக்கியது</li>
-          </ul>
         </div>
         <div className="hero-photo">
           <img src="/ponna-hero-woman.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" />
@@ -244,7 +239,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           position: relative;
           display: flex;
           flex-direction: column;
-          min-height: 470px;
+          min-height: 400px;
           background: #F1FAF3;
           border-bottom: 1px solid #DCE9DF;
           overflow: hidden;
