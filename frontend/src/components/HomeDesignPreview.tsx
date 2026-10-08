@@ -184,19 +184,20 @@ export default function HomeDesignPreview() {
           position: relative;
           display: flex;
           flex-direction: column;
-          min-height: 500px;
+          min-height: 470px;
           background: #F1FAF3;
           border-bottom: 1px solid #DCE9DF;
           overflow: hidden;
         }
-        .hero-copy { position: relative; z-index: 2; flex: 1; width: 55%; padding: 18px 0 10px 14px; min-width: 0; }
+        .hero-copy { position: relative; z-index: 2; flex: 1; width: 55%; padding: 20px 0 0 14px; min-width: 0; display: flex; flex-direction: column; }
         .eyebrow { color: #17835E; font-weight: 800; font-size: 15px; line-height: 1.4; margin-bottom: 7px; }
-        h1 { margin: 0; color: #0B3864; font-size: 25px; line-height: 1.3; letter-spacing: -0.2px; }
+        h1 { margin: 0 0 auto; color: #0B3864; font-size: 26px; line-height: 1.3; letter-spacing: -0.2px; }
         h1 em { color: #E3313D; font-style: normal; }
         .hero ul {
           list-style: none;
           padding: 0;
           margin: 14px 0 0;
+          padding-bottom: 6px;
           display: grid;
           gap: 5px;
           font-size: 15px;
@@ -223,21 +224,22 @@ export default function HomeDesignPreview() {
         }
         .hero-photo {
           position: absolute;
-          inset: 0;
+          inset: 0 0 88px 0;
           z-index: 1;
           pointer-events: none;
+          overflow: hidden;
         }
         .hero-photo::after {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(90deg, rgba(241,250,243,0.95) 0%, rgba(241,250,243,0.9) 38%, rgba(241,250,243,0) 62%);
+          background: linear-gradient(180deg, rgba(241,250,243,0) 90%, #F1FAF3 100%), linear-gradient(90deg, rgba(241,250,243,0.95) 0%, rgba(241,250,243,0.9) 38%, rgba(241,250,243,0) 62%);
         }
         .hero-photo img {
           position: absolute;
-          top: 0;
+          top: -6%;
           right: 0;
-          height: 100%;
+          height: 112%;
           width: auto;
           max-width: none;
           display: block;
@@ -405,7 +407,7 @@ export default function HomeDesignPreview() {
         @media (max-width: 380px) {
           .brand :global(img) { width: 132px !important; }
           .login { font-size: 14px; padding: 10px 12px; }
-          .hero-copy { padding: 16px 0 8px 12px; }
+          .hero-copy { padding: 18px 0 0 12px; }
           .eyebrow { font-size: 14px; }
           h1 { font-size: 23px; }
           .hero ul { font-size: 14.5px; }
