@@ -139,7 +139,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         <section className="tools-section" aria-label="PONNA-வில் உள்ள வசதிகள்">
           <div className="tools-heading">
             <h2>PONNA-வில் உள்ள வசதிகள்</h2>
-            <p>உங்கள் தேர்வுத் தயாரிப்புக்கு உதவும் பயனுள்ள வசதிகள்</p>
+            <p>உங்கள் தேர்வுத் தயாரிப்பை எளிதாக்கும் உதவிகள்</p>
           </div>
           <div className="tools-grid">
           {tools.map((item) => (
