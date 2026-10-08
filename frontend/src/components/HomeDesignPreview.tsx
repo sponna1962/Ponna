@@ -54,10 +54,12 @@ export default function HomeDesignPreview() {
             <li>மாதிரித் தேர்வுகள்</li>
             <li>முன்னேற்றத்தைப் பார்க்கலாம்</li>
           </ul>
-          <a href="/quiz" className="primary-button">இப்போதே பயிற்சியைத் தொடங்குங்கள் <b>→</b></a>
         </div>
         <div className="hero-photo">
           <img src="/ponna-hero-woman.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" />
+        </div>
+        <div className="hero-actions">
+          <a href="/quiz" className="primary-button">இப்போதே பயிற்சியைத் தொடங்குங்கள் <b>→</b></a>
         </div>
       </section>
 
@@ -148,15 +150,15 @@ export default function HomeDesignPreview() {
         }
 
         .hero {
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-columns: 57% 43%;
           background: #F1FAF3;
           border-bottom: 1px solid #DCE9DF;
           overflow: hidden;
         }
-        .hero-copy { padding: 22px 18px 18px; }
-        .eyebrow { color: #17835E; font-weight: 800; font-size: 19px; line-height: 1.4; margin-bottom: 5px; }
-        h1 { margin: 0; color: #0B3864; font-size: 34px; line-height: 1.28; letter-spacing: -0.25px; }
+        .hero-copy { padding: 18px 4px 10px 14px; min-width: 0; }
+        .eyebrow { color: #17835E; font-weight: 800; font-size: 15px; line-height: 1.4; margin-bottom: 4px; }
+        h1 { margin: 0; color: #0B3864; font-size: 25px; line-height: 1.3; letter-spacing: -0.2px; }
         h1 em { color: #E3313D; font-style: normal; }
         .hero ul {
           list-style: none;
@@ -164,7 +166,7 @@ export default function HomeDesignPreview() {
           margin: 14px 0 0;
           display: grid;
           gap: 5px;
-          font-size: 18px;
+          font-size: 15px;
           font-weight: 700;
           line-height: 1.4;
         }
@@ -187,18 +189,22 @@ export default function HomeDesignPreview() {
           text-align: center;
         }
         .hero-photo {
-          width: 100%;
-          height: 250px;
+          position: relative;
+          min-height: 300px;
           overflow: hidden;
           background: #EAF3F0;
         }
         .hero-photo img {
+          position: absolute;
+          inset: 0;
           width: 100%;
           height: 100%;
           display: block;
           object-fit: cover;
-          object-position: center 12%;
+          object-position: 58% 8%;
         }
+        .hero-actions { grid-column: 1 / -1; padding: 0 14px 18px; }
+        .hero-actions .primary-button { margin-top: 14px; }
 
         .content { padding: 12px 10px 0; }
         .featured-list { display: grid; gap: 8px; }
@@ -300,12 +306,12 @@ export default function HomeDesignPreview() {
         @media (max-width: 380px) {
           .brand :global(img) { width: 132px !important; }
           .login { font-size: 14px; padding: 10px 12px; }
-          .hero-copy { padding: 19px 14px 16px; }
-          .eyebrow { font-size: 17px; }
-          h1 { font-size: 30px; }
-          .hero ul { font-size: 17px; }
+          .hero-copy { padding: 16px 2px 8px 12px; }
+          .eyebrow { font-size: 14px; }
+          h1 { font-size: 23px; }
+          .hero ul { font-size: 14.5px; }
           .primary-button { font-size: 16px; }
-          .hero-photo { height: 225px; }
+          .hero-photo { min-height: 290px; }
           .featured-card small, .tool-copy p { font-size: 16px; }
           .featured-card strong, .tool-copy strong { font-size: 20px; }
           .featured-photo { width: 58px; height: 52px; flex-basis: 58px; }
