@@ -523,7 +523,7 @@ export default function QuizStartPage() {
               <button onClick={async () => { setStarting(true); try { await startSession(); } finally { setStarting(false); setAccessPrompt(null); } }} disabled={starting}>
                 {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.practiceFree}
               </button>
-              <a href={accessPrompt.applicablePlanId ? \`/plans?highlight=\${accessPrompt.applicablePlanId}\` : '/plans'}>{t.practiceSetup.getAnnualPlan}</a>
+              <a href={accessPrompt.applicablePlanId ? `/plans?highlight=${accessPrompt.applicablePlanId}` : '/plans'}>{t.practiceSetup.getAnnualPlan}</a>
             </div>
           </div>
         )}
@@ -588,7 +588,7 @@ export default function QuizStartPage() {
         {error && <div className="error-box"><p>{error}</p><a href="/plans" className="error-link">{t.dashboard.upgrade}</a></div>}
       </div>
 
-      <style jsx>{\`
+      <style jsx>{`
 .practice-page{color-scheme:light dark;width:100%;max-width:760px;min-height:100dvh;margin:0 auto;padding-bottom:40px;background:var(--color-paper);color:var(--color-ink);font-family:'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif}
 .practice-header{height:68px;min-height:68px;max-height:68px;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--color-card);border-bottom:2px solid var(--color-gold);position:sticky;top:0;z-index:30}
 .practice-brand{display:flex;align-items:center;height:38px;min-width:0;margin-right:auto;text-decoration:none;overflow:hidden}
@@ -610,7 +610,7 @@ export default function QuizStartPage() {
 .preference-summary{margin-bottom:18px}.summary-card{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-left:4px solid var(--color-gold)!important;border-radius:9px!important;padding:15px!important;margin-bottom:12px!important}.summary-label{margin:0 0 5px!important;color:var(--color-gold)!important;font-size:12px!important;font-weight:900!important}.summary-text{margin:0!important;color:var(--color-ink)!important;font-size:14.5px!important;line-height:1.6!important}.change-button{flex-shrink:0;font-size:12px;font-weight:800;padding:6px 11px;border-radius:7px;border:1px solid var(--color-line);background:var(--color-card);color:var(--color-ink)}.summary-start{width:100%;min-height:52px;border:0;border-radius:8px;background:var(--color-btn);color:var(--color-btnText);font-weight:900;font-size:16px}
 @media(max-width:620px){.practice-content{padding:0 14px}.setup-intro{padding:26px 0 17px}.practice-title{font-size:24px!important}.setup-progress{overflow:hidden}.progress-label{font-size:10px;white-space:nowrap}.setup-stack{gap:11px}.setup-card{padding:16px;border-radius:10px}.step-heading{margin-bottom:14px}.step-heading h2{font-size:17px}.exam-choice{padding:13px 12px}.exam-copy strong{font-size:16px}.selected-badge{font-size:10px;padding:6px 7px}.start-panel{display:block;padding:18px}.start-button{width:100%;margin-top:15px}.setup-lead{font-size:14px}}
 @media(max-width:390px){.practice-header{padding:0 10px}.practice-brand-crop{width:136px;flex-basis:136px;height:29px}.practice-brand-crop img{width:136px!important}.practice-title{font-size:22px!important}.progress-label{display:none}.setup-progress{justify-content:flex-start}.setup-card{padding:14px}.exam-symbol{width:40px;height:40px;flex-basis:40px}.exam-copy span{font-size:11.5px}.selected-badge{margin-left:5px}.practice-chip{min-height:44px;font-size:14px!important;padding:9px 12px!important}.start-panel h2{font-size:18px}}
-\`}</style>>
+`}</style>
     </main>
   );
 }

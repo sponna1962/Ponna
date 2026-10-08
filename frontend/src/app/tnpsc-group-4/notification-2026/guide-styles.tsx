@@ -13,9 +13,9 @@ const CSS = `
 .g4n-logo{display:flex;background:#fefefe;border-radius:10px;padding:4px 10px}
 .g4n-logo img{height:30px;width:auto}
 .g4n-top-r{display:flex;align-items:center;gap:8px}
-.g4n-top-l{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.g4n-top-l{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
 .g4n-top-title{color:#fff;min-width:0}
-.g4n-top-title div{font-size:17px;font-weight:800;line-height:1.2}
+.g4n-top-title div{font-size:16px;font-weight:800;line-height:1.2}
 .g4n-top-title small{display:block;font-size:12px;color:#FFE9A8}
 .g4n-btn-gold{background:#E2B04A;color:#2b1c00;border:0;border-radius:7px;padding:9px 18px;font:800 14px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-block}
 .g4n-btn-ghost{color:#fff;border:1.5px solid rgba(255,255,255,.55);border-radius:7px;padding:8px 14px;font:700 13px/1 inherit;font-family:inherit;text-decoration:none}

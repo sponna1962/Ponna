@@ -86,6 +86,15 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
       <button onClick={openMenu} aria-label="Menu" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, margin: '-4px 0', lineHeight: 1, display: 'flex' }}>
         <MenuIcon size={30} color={iconColor ?? COLORS.ink} />
       </button>
+      {/* Oct 2026 — brand mark beside the menu button on every navy page header
+          (pages that pass a white menu icon); the home page and the Start Practice
+          page carry their own full logo. */}
+      {iconColor === '#fff' && (
+        <a href="/" aria-label="PONNA.in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flex: '0 0 36px', marginLeft: -8, background: '#fff', borderRadius: 9 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand-mark.png" alt="PONNA.in" width={28} height={28} style={{ width: 28, height: 28, objectFit: 'contain', display: 'block' }} />
+        </a>
+      )}
 
       {open && typeof document !== 'undefined' && createPortal(
         <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(32,56,77,0.34)', zIndex: 999 }}>

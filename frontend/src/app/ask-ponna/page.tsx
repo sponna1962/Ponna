@@ -345,7 +345,6 @@ export default function AskPonnaPage() {
         <BitterFontLinks />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
           <StudentMenu iconColor="#fff" />
-          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 6, background: '#FFD22A', color: '#10233A', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16 }}>P</span>
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
       </div>
         <div style={{ padding: 16 }}>
@@ -368,7 +367,6 @@ export default function AskPonnaPage() {
         <BitterFontLinks />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
           <StudentMenu iconColor="#fff" />
-          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 6, background: '#FFD22A', color: '#10233A', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16 }}>P</span>
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
         </div>
         <div style={{ padding: 16 }}>
@@ -417,7 +415,6 @@ export default function AskPonnaPage() {
       <BitterFontLinks />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
         <StudentMenu iconColor="#fff" />
-        <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 6, background: '#FFD22A', color: '#10233A', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16 }}>P</span>
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff', flex: 1 }}>{t.askPonna.title}</h1>
         <button
           type="button"
