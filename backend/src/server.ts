@@ -1941,6 +1941,21 @@ app.post('/payments/payu/checkout', requireStudentAuth, async (req: StudentAuthe
   }
 });
 
+// POST /webhooks/payu — server-to-server copy of the payment result, so a
+// student who pays and then closes the browser still gets their Pass. Same
+// response-hash verification and the same idempotent fulfilment as the
+// browser callback; accepts form or JSON bodies. Always answers 200 so PayU
+// does not retry-storm on a payload we deliberately ignore.
+app.post('/webhooks/payu', express.urlencoded({ extended: false }), async (req, res) => {
+  try {
+    const result = await payuService.handleCallback(req.body ?? {});
+    res.status(200).json({ ok: result.outcome !== 'invalid', outcome: result.outcome });
+  } catch (err) {
+    console.error('PayU webhook failed:', err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 app.post('/payments/payu/callback', express.urlencoded({ extended: false }), async (req, res) => {
   const front = (process.env.FRONTEND_URL?.trim() || 'https://www.ponna.in').replace(/\/$/, '');
   try {
