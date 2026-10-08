@@ -109,10 +109,10 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
             }}>
               <a href="/" aria-label="PONNA.in" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', minWidth: 0 }}>
                 <Image
-                  src="/logo-compact.png"
+                  src="/logo-header.svg"
                   alt="PONNA.in"
                   width={1968}
-                  height={531}
+                  height={450}
                   priority
                   style={{ width: 190, height: 'auto', display: 'block' }}
                 />
