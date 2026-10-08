@@ -150,7 +150,8 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
               <span className="tool-arrow">›</span>
             </a>
           ))}
-        </div>
+          </div>
+        </section>
 
         <section className="purpose-section" aria-label="PONNA-வின் நோக்கம்">
           <div className="purpose-top">
