@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { BitterFontLinks } from '../lib/brand-theme';
 
 const tools = [
-  { title: 'Start Practice', body: 'கேள்விகளைத் தேர்ந்தெடுத்து பயிற்சி செய்யலாம்.', href: '/quiz', photo: '/home/tile-3.jpg' },
   { title: 'Ask PONNA', body: 'தேர்வு தொடர்பான சந்தேகங்களுக்கு விளக்கம் பெறலாம்.', href: '/ask-ponna', photo: '/home/tile-4.jpg' },
   { title: 'Review Mistakes', body: 'தவறான கேள்விகளை மீண்டும் பார்க்கலாம்.', href: '/mistakes', photo: '/home/tile-5.jpg' },
   { title: 'Study Notes', body: 'தேர்வுக்குத் தேவையான முக்கியப் பாடங்களைப் படிக்கலாம்.', href: '/study-notes', photo: '/home/tile-6.jpg' },
@@ -17,18 +16,18 @@ const tools = [
 
 const featured = [
   {
-    title: 'Current Affairs',
-    body: 'தேர்வுக்குத் தேவையான நடப்பு நிகழ்வுகளைத் தொடர்ந்து படிக்கலாம்.',
-    href: '/current-affairs',
-    photo: '/home/tile-1.jpg',
-    badge: 'புதியது',
-  },
-  {
     title: 'TNPSC Group 4 2026 அறிவிப்பு',
     body: 'காலிப்பணியிடங்கள் மற்றும் முக்கியத் தகவல்களைத் தெரிந்துகொள்ளலாம்.',
     href: '/tnpsc-group-4/notification-2026',
     photo: '/home/tile-2.jpg',
     badge: '',
+  },
+  {
+    title: 'Current Affairs',
+    body: 'தேர்வுக்குத் தேவையான நடப்பு நிகழ்வுகளைத் தொடர்ந்து படிக்கலாம்.',
+    href: '/current-affairs',
+    photo: '/home/tile-1.jpg',
+    badge: 'புதியது',
   },
 ];
 
@@ -78,6 +77,32 @@ export default function HomeDesignPreview() {
           ))}
         </div>
 
+        <section className="usp-section" aria-label="PONNA-வின் சிறப்பம்சங்கள்">
+          <h2>PONNA-வின் சிறப்பம்சங்கள்</h2>
+          <div className="usp-list">
+            <article className="usp-item">
+              <strong>60,000+ கேள்விகள்</strong>
+              <p>புதிய பாடத்திட்டத்தின் கீழ் நிபுணர்கள் தயாரித்தது<br />பழைய டிஎன்பிசி கேள்வித்தாள்கள்</p>
+            </article>
+            <article className="usp-item">
+              <strong>இணையம் இல்லாமலும் பயிற்சி</strong>
+              <p>இணைய இணைப்பு இல்லாத நேரத்திலும் கேள்விகளைப் பயிற்சி செய்யலாம்</p>
+            </article>
+            <article className="usp-item">
+              <strong>மாதத்திற்கு 3,250+ கேள்விகள்</strong>
+              <p>தினசரி பயிற்சி மற்றும் வாராந்திர நேரடித் தேர்வுகள் மூலம்</p>
+            </article>
+            <article className="usp-item">
+              <strong>4,000+ பயிற்சி முயற்சிகள்</strong>
+              <p>நேற்று PONNA-வில்</p>
+            </article>
+            <article className="usp-item">
+              <strong>குறைந்த கட்டணம்</strong>
+              <p>அதிக செலவின்றி, தரமான முழுமையான பயிற்சியை PONNA-வில் பெறலாம்</p>
+            </article>
+          </div>
+        </section>
+
         <div className="tools-grid">
           {tools.map((item) => (
             <a key={item.title} href={item.href} className="tool-card">
@@ -90,6 +115,12 @@ export default function HomeDesignPreview() {
             </a>
           ))}
         </div>
+
+        <section className="refund-box" aria-label="தேர்ச்சி பெற்றால் பணம் வாபஸ்">
+          <h3>தேர்ச்சி பெற்றால் பணம் வாபஸ்!</h3>
+          <p>PONNA-வில் பயிற்சி பெற்று தேர்ச்சி பெறுங்கள்.<br />தேர்ச்சி பெற்றால் பயிற்சிக் கட்டணம் திரும்ப வழங்கப்படும்.</p>
+          <small>விதிமுறைகள் பொருந்தும்</small>
+        </section>
 
         <section className="final-strip">
           <h3>தேர்வுப் பயிற்சியைத் தொடங்குங்கள்</h3>
@@ -263,6 +294,37 @@ export default function HomeDesignPreview() {
         }
         .arrow { color: #20384D; font-size: 31px; line-height: 1; flex: 0 0 auto; }
 
+        .usp-section {
+          margin: 12px 0 0;
+          padding: 18px 12px 4px;
+          border-top: 2px solid #0B3864;
+        }
+        .usp-section h2 {
+          margin: 0 0 8px;
+          color: #0B3864;
+          font-size: 23px;
+          line-height: 1.35;
+          font-weight: 900;
+        }
+        .usp-list { display: grid; gap: 0; }
+        .usp-item {
+          padding: 14px 4px;
+          border-bottom: 1px solid #DDE5E9;
+        }
+        .usp-item strong {
+          display: block;
+          color: #0B3864;
+          font-size: 21px;
+          line-height: 1.35;
+          font-weight: 900;
+        }
+        .usp-item p {
+          margin: 3px 0 0;
+          color: #4F6272;
+          font-size: 16px;
+          line-height: 1.5;
+        }
+
         .tools-grid { display: grid; grid-template-columns: 1fr; gap: 7px; margin-top: 8px; }
         .tool-card {
           min-height: 82px;
@@ -287,6 +349,33 @@ export default function HomeDesignPreview() {
         .tool-copy strong { color: #0B3864; font-size: 22px; line-height: 1.28; display: block; font-weight: 900; }
         .tool-copy p { color: #4F6272; font-size: 17px; line-height: 1.42; margin: 2px 0 0; }
         .tool-arrow { color: #536575; font-size: 30px; line-height: 1; flex: 0 0 auto; }
+
+        .refund-box {
+          margin: 22px 0 12px;
+          padding: 20px 16px;
+          border: 2px solid #E3313D;
+          background: #FFF9F9;
+          text-align: center;
+        }
+        .refund-box h3 {
+          margin: 0;
+          color: #E3313D;
+          font-size: 24px;
+          line-height: 1.35;
+          font-weight: 900;
+        }
+        .refund-box p {
+          margin: 7px 0 0;
+          color: #20384D;
+          font-size: 16px;
+          line-height: 1.55;
+        }
+        .refund-box small {
+          display: block;
+          margin-top: 9px;
+          color: #667786;
+          font-size: 13px;
+        }
 
         .final-strip {
           margin: 12px 0 16px;
