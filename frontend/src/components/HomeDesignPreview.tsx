@@ -91,31 +91,55 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         </div>
 
         <section className="usp-section" aria-label="PONNA-வின் சிறப்பம்சங்கள்">
-          <h2>PONNA ஏன்?</h2>
+          <div className="usp-heading">
+            <h2>PONNA ஏன்?</h2>
+            <span>எளிமையான பயிற்சி. தெளிவான முன்னேற்றம்.</span>
+          </div>
           <div className="usp-list">
             <article className="usp-item">
-              <strong>60,000+</strong>
-              <p>புதிய பாடத்திட்டத்தின் கீழ் நிபுணர்கள் தயாரித்த<br />பயிற்சிக் கேள்விகள் மற்றும் பழைய டிஎன்பிசி கேள்வித்தாள்கள்</p>
+              <div className="usp-number">01</div>
+              <div className="usp-copy">
+                <strong>60,000+</strong>
+                <p>புதிய பாடத்திட்டத்தின் கீழ் நிபுணர்கள் தயாரித்த<br />பயிற்சிக் கேள்விகள் மற்றும் பழைய டிஎன்பிசி கேள்வித்தாள்கள்</p>
+              </div>
             </article>
             <article className="usp-item">
-              <strong>இணையமின்றி</strong>
-              <p>இணைய இணைப்பு இல்லாவிட்டாலும்,<br />ஆஃப்லைன் முறையில் தொடர்ந்து பயிற்சி செய்யலாம்.</p>
+              <div className="usp-number">02</div>
+              <div className="usp-copy">
+                <strong>இணையமின்றி</strong>
+                <p>இணைய இணைப்பு இல்லாவிட்டாலும்,<br />ஆஃப்லைன் முறையில் தொடர்ந்து பயிற்சி செய்யலாம்.</p>
+              </div>
             </article>
             <article className="usp-item">
-              <strong>இரு மொழிகளில்</strong>
-              <p>டிஎன்பிசி தேர்வுக்குத் தேவையான<br />தமிழ் மற்றும் ஆங்கிலத்தில் பயிற்சி செய்யலாம்.</p>
+              <div className="usp-number">03</div>
+              <div className="usp-copy">
+                <strong>இரு மொழிகளில்</strong>
+                <p>டிஎன்பிசி தேர்வுக்குத் தேவையான<br />தமிழ் மற்றும் ஆங்கிலத்தில் பயிற்சி செய்யலாம்.</p>
+              </div>
             </article>
             <article className="usp-item">
-              <strong>உங்கள் நேரத்தில்</strong>
-              <p>நேரம் கிடைக்கும் போதெல்லாம்,<br />எப்போது வேண்டுமானாலும் பயிற்சி செய்யலாம்.</p>
+              <div className="usp-number">04</div>
+              <div className="usp-copy">
+                <strong>உங்கள் நேரத்தில்</strong>
+                <p>நேரம் கிடைக்கும் போதெல்லாம்,<br />எப்போது வேண்டுமானாலும் பயிற்சி செய்யலாம்.</p>
+              </div>
             </article>
             <article className="usp-item">
-              <strong>அனைவருக்கும்</strong>
-              <p>மாணவ–மாணவிகள், வேலைக்குச் செல்பவர்கள்,<br />வீட்டில் இருக்கும் பெண்கள் என அனைவரும் எளிதாகப் பயிற்சி செய்யலாம்.</p>
+              <div className="usp-number">05</div>
+              <div className="usp-copy">
+                <strong>அனைவருக்கும்</strong>
+                <p>மாணவ–மாணவிகள், வேலைக்குச் செல்பவர்கள்,<br />வீட்டில் இருக்கும் பெண்கள் என அனைவரும் எளிதாகப் பயிற்சி செய்யலாம்.</p>
+              </div>
             </article>
-          </div>       </section>
+          </div>
+        </section>
 
-        <div className="tools-grid">
+        <section className="tools-section" aria-label="உங்கள் பயிற்சிக்கான கருவிகள்">
+          <div className="tools-heading">
+            <h2>உங்கள் பயிற்சிக்கான கருவிகள்</h2>
+            <p>தேர்வுத் தயார்பை மேலும் எளிதாக்கும் வசதிகள்</p>
+          </div>
+          <div className="tools-grid">
           {tools.map((item) => (
             <a key={item.title} href={item.href} className="tool-card">
               <img className="tool-photo" src={item.photo} alt="" loading="lazy" />
@@ -357,33 +381,102 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
 
         .usp-section {
           margin: 12px 0 0;
-          padding: 18px 12px 4px;
-          border-top: 2px solid #0B3864;
+          border-top: 1px solid #E4E8EA;
+          border-bottom: 1px solid #E4E8EA;
+          background: #fff;
         }
-        .usp-section h2 {
-          margin: 0 0 8px;
+        .usp-heading {
+          padding: 17px 14px 15px;
+          background: #FFF9EA;
+          border-bottom: 1px solid #E8E0C8;
+        }
+        .usp-heading h2 {
+          margin: 0;
+          color: #0B3864;
+          font-size: 25px;
+          line-height: 1.3;
+          font-weight: 900;
+        }
+        .usp-heading h2::after {
+          content: '';
+          display: block;
+          width: 42px;
+          height: 3px;
+          margin-top: 8px;
+          background: #FFD22A;
+        }
+        .usp-heading span {
+          display: block;
+          margin-top: 7px;
+          color: #667786;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+        .usp-list { display: grid; }
+        .usp-item {
+          display: grid;
+          grid-template-columns: 52px minmax(0, 1fr);
+          gap: 12px;
+          padding: 16px 12px;
+          border-bottom: 1px solid #E2E7EA;
+        }
+        .usp-item:last-child { border-bottom: 0; }
+        .usp-number {
+          color: #A8BBD0;
+          font-family: Georgia, 'Times New Roman', serif;
+          font-size: 29px;
+          line-height: 1;
+          font-weight: 700;
+          padding-top: 2px;
+          border-right: 1px solid #DCE3E8;
+        }
+        .usp-copy { min-width: 0; }
+        .usp-copy strong {
+          display: block;
+          color: #0B3864;
+          font-size: 23px;
+          line-height: 1.3;
+          font-weight: 900;
+        }
+        .usp-copy p {
+          margin: 3px 0 0;
+          color: #536575;
+          font-size: 15.5px;
+          line-height: 1.52;
+        }
+
+        .tools-section {
+          margin-top: 12px;
+          background: #F4F9FC;
+          border-top: 1px solid #DDE8EF;
+          border-bottom: 1px solid #DDE8EF;
+          padding: 17px 10px 12px;
+        }
+        .tools-heading {
+          padding: 0 4px 10px;
+        }
+        .tools-heading h2 {
+          margin: 0;
           color: #0B3864;
           font-size: 23px;
           line-height: 1.35;
           font-weight: 900;
         }
-        .usp-list { display: grid; gap: 0; }
-        .usp-item {
-          padding: 14px 4px;
-          border-bottom: 1px solid #DDE5E9;
+        .tools-heading h2::before {
+          content: '';
+          display: inline-block;
+          width: 4px;
+          height: 25px;
+          margin-right: 9px;
+          vertical-align: -3px;
+          background: #FFD22A;
+          border-radius: 2px;
         }
-        .usp-item strong {
-          display: block;
-          color: #0B3864;
-          font-size: 24px;
-          line-height: 1.25;
-          font-weight: 900;
-        }
-        .usp-item p {
-          margin: 3px 0 0;
-          color: #4F6272;
-          font-size: 16px;
-          line-height: 1.5;
+        .tools-heading p {
+          margin: 4px 0 0 13px;
+          color: #667786;
+          font-size: 13px;
+          line-height: 1.45;
         }
 
         .purpose-section {
