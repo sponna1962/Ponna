@@ -9,7 +9,7 @@ import { COLORS, DISPLAY_FONT } from '../lib/brand-theme';
 export function PolicyPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (
     <main style={{ background: COLORS.paper, color: COLORS.ink, minHeight: '100vh', paddingBottom: 48 }}>
-      <header style={{ background: 'linear-gradient(180deg, var(--color-head1), var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff', padding: '16px 16px 18px' }}>
+      <header style={{ background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff', padding: '16px 16px 18px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <a href="/" style={{ display: 'block', fontSize: 13, color: '#FFE9A8', textDecoration: 'none', marginBottom: 6 }}>← PONNA.in</a>
           <h1 style={{ fontFamily: DISPLAY_FONT, fontSize: 26, margin: 0, color: '#fff' }}>{title}</h1>
@@ -18,7 +18,7 @@ export function PolicyPage({ title, updated, children }: { title: string; update
       </header>
       <article style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 0', lineHeight: 1.7, fontSize: 15 }}>
         <style>{`.policy-body a{color:var(--color-gold);font-weight:600}`}</style>
-        <div className="policy-body" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #E2B04A', borderRadius: 16, padding: 18 }}>
+        <div className="policy-body" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderTop: '4px solid #FFD22A', borderRadius: 10, padding: 18 }}>
           {children}
         </div>
         <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: '18px 4px 0', lineHeight: 1.6 }}>
