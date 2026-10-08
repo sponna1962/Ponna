@@ -44,7 +44,7 @@ export default function Page() {
         </div>
         <a
           href="/quiz"
-          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 12, background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, textDecoration: 'none', fontSize: 15, marginBottom: 20 }}
+          style={{ display: 'block', textAlign: 'center', padding: 16, borderRadius: 8, background: COLORS.btn, color: COLORS.btnText, fontWeight: 700, textDecoration: 'none', fontSize: 15, marginBottom: 20 }}
         >
           TNTET Paper 2 Practice தொடங்குங்கள்
         </a>
