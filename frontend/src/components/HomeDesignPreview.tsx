@@ -15,6 +15,14 @@ const tools = [
   { title: 'Cut-off Predictor', body: 'உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பைப் பார்க்கலாம்.', href: '/cutoff-predictor', photo: '/home/tile-2.jpg' },
 ];
 
+type HomeDesignProps = {
+  menu?: ReactNode;
+  onLogin?: () => void;
+  onStart?: () => void;
+  notice?: string;
+  account?: ReactNode;
+};
+
 const featured = [
   {
     title: 'TNPSC Group 4 2026 அறிவிப்பு',
@@ -31,19 +39,6 @@ const featured = [
     badge: 'புதியது',
   },
 ];
-
-type HomeDesignProps = {
-  /** Real ☰ menu (the preview route shows a static icon). */
-  menu?: ReactNode;
-  /** Opens the login flow instead of navigating (live home page). */
-  onLogin?: () => void;
-  /** Start-practice handler instead of a plain link (live home page). */
-  onStart?: () => void;
-  /** Optional notice shown above the hero (e.g. logged out on another device). */
-  notice?: string;
-  /** Logged-in account button/menu shown instead of the login button. */
-  account?: ReactNode;
-};
 
 export default function HomeDesignPreview({ menu, onLogin, onStart, notice, account }: HomeDesignProps = {}) {
   const startClick = onStart ? (e: MouseEvent) => { e.preventDefault(); onStart(); } : undefined;
@@ -94,7 +89,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           ))}
         </div>
 
-        <section className="usp-section" aria-label="PONNA ஏன்?">
+        <section className="usp-section" aria-label="PONNA-வின் சிறப்பம்சங்கள்">
           <h2>PONNA ஏன்?</h2>
           <div className="usp-list">
             <article className="usp-item">
@@ -133,33 +128,50 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           ))}
         </div>
 
-        <section className="purpose-section" aria-label="PONNA.in நோக்கம்">
-          <div className="editorial-label">PONNA.in நோக்கம்</div>
-          <h2>அரசுப் போட்டித் தேர்வுகளுக்கான தரமான பயிற்சி அனைவருக்கும் கிடைக்க வேண்டும் என்பதே PONNA-வின் நோக்கம்.</h2>
-          <p>அரசுப் போட்டித் தேர்வுகளுக்குத் தயாராகும் மாணவர்கள் பலர், தனியார் பயிற்சி நிறுவனங்களில் அதிக கட்டணம் செலுத்தி பயிற்சி பெற வேண்டிய நிலை உள்ளது. அந்தக் கட்டணம் அனைவராலும் செலுத்தக்கூடியதாக இருப்பதில்லை.</p>
-          <p>PONNA, குறைந்த கட்டணத்தில் தரமான பயிற்சியை வழங்க வேண்டும் என்ற நோக்கத்தில் உருவாக்கப்பட்டது. பொருளாதார சூழ்நிலை எதுவாக இருந்தாலும், மாணவர்கள் தங்கள் திறனை வளர்த்துக்கொண்டு அரசு வேலைக்கான கனவை நனவாக்குவதற்கு PONNA உதவ வேண்டும் என்பதே இதன் நோக்கம்.</p>
-          <p className="purpose-closing"><strong>தரமான பயிற்சி... குறைந்த கட்டணம்... அரசு வேலைக்கான உங்கள் கனவை நனவாக்க PONNA உங்களுடன்.</strong></p>
+        <section className="purpose-section" aria-label="PONNA-வின் நோக்கம்">
+          <div className="purpose-top">
+            <div className="purpose-label">PONNA-வின் நோக்கம்</div>
+            <span className="purpose-mark">நோக்கம்</span>
+          </div>
+          <h2>தரமான போட்டித் தேர்வுப் பயிற்சி<br /><span>அனைவருக்கும் கிடைக்க வேண்டும்.</span></h2>
+          <div className="purpose-rule" />
+          <p className="purpose-lead">அரசு வேலைக்குத் தயாராகும் ஒரு மாணவரின் பொருளாதார நிலை, அவரது கனவுக்குத் தடையாக இருக்கக் கூடாது.</p>
+          <p>தனியார் பயிற்சி மையங்களில் அதிக கட்டணம் செலுத்த முடியாத மாணவர்களுக்கும், குறைந்த கட்டணத்தில் தரமான பயிற்சி கிடைக்க வேண்டும் என்பதற்காக PONNA உருவாக்கப்பட்டுள்ளது.</p>
+          <div className="purpose-pillars">
+            <div><strong>தரமான பயிற்சி</strong><span>நிபுணர்கள் உருவாக்கிய பயிற்சி</span></div>
+            <div><strong>குறைந்த கட்டணம்</strong><span>அனைவருக்கும் எளிதில் கிடைக்க</span></div>
+            <div><strong>அரசு வேலை</strong><span>உங்கள் கனவை நனவாக்க</span></div>
+          </div>
+          <p className="purpose-closing"><strong>இதுவே PONNA-வின் நோக்கம்.</strong></p>
         </section>
 
-        <section className="pass-section" aria-label="PONNA Pass">
-          <div className="editorial-label">உங்கள் PONNA Pass பெறுங்கள்</div>
-          <h2>அரசுப் போட்டித் தேர்வுக்கான உங்கள் தயாரிப்பை முழுமையாக மேற்கொள்ள PONNA Pass-ஐப் பெற்றுக்கொள்ளுங்கள்.</h2>
-          <ul>
-            <li>60,000-க்கும் மேற்பட்ட கேள்விகளில் பயிற்சி பெறலாம்.</li>
-            <li>தினசரி Current Affairs மற்றும் Brain Challenge-ல் பங்கேற்கலாம்.</li>
-            <li>நேரடித் தேர்வுகளில் பங்கேற்கலாம்.</li>
-            <li>Adaptive Mock மூலம் உங்கள் தயாரிப்பு நிலைக்கு ஏற்ப பயிற்சி பெறலாம்.</li>
-            <li>உங்கள் செயல்திறனை அறிந்து, தொடர்ந்து முன்னேற்றத்தை கண்காணிக்கலாம்.</li>
-            <li>Ask PONNA வசதியைப் பயன்படுத்தி உங்கள் தேர்வு தொடர்பான சந்தேகங்களுக்கு வழிகாட்டுதலைப் பெறலாம்.</li>
-          </ul>
-          <p className="pass-cta-copy">உங்கள் பயிற்சியை இன்றே தொடங்குங்கள்</p>
-          <a href="/plans" className="pass-button">PONNA Pass பெறுங்கள் →</a>
+        <section className="pass-section" aria-label="உங்கள் PONNA Pass பெறுங்கள்">
+          <div className="pass-head">
+            <div>
+              <div className="pass-label">உங்கள் PONNA Pass பெறுங்கள்</div>
+              <h2>TNPSC Group 4 தேர்வுக்கான<br /><span>முழுமையான பயிற்சி.</span></h2>
+            </div>
+            <div className="pass-badge">GROUP 4</div>
+          </div>
+          <div className="pass-list">
+            <div><b>60,000+</b><span>கேள்விகளில் பயிற்சி</span></div>
+            <div><b>தினசரி</b><span>Current Affairs &amp; Brain Challenge</span></div>
+            <div><b>நேரடி</b><span>தேர்வுகளில் பங்கேற்பு</span></div>
+          </div>
+          <div className="ask-feature">
+            <strong>Ask PONNA</strong>
+            <span>தேர்வு தொடர்பான உங்கள் சந்தேகங்களுக்கு உடனடி வழிகாட்டுதல்</span>
+          </div>
+          <div className="pass-bottom">
+            <p>உங்கள் Group 4 பயிற்சியை இன்றே தொடங்குங்கள்.</p>
+            <a href="/plans" className="pass-button">PONNA Pass பெறுங்கள் <b>→</b></a>
+          </div>
         </section>
 
-        <section className="refund-box" aria-label="பணம் வாபஸ் பெறலாம்">
+        <section className="refund-box" aria-label="தேர்ச்சி பெற்றால் பணம் வாபஸ்">
           <h3>பணம் வாபஸ் பெறலாம்!</h3>
-          <p>PONNA-வில் பயிற்சி பெற்று அரசு பணியில் சேர்ந்துவிட்டால்,<br />பயிற்சிக் கட்டணம் முழுவதும் திரும்ப கிடைத்துவிடும்.</p>
-          <small><b>* நிபந்தனை:</b> உங்கள் ஹால் டிக்கெட் எண்ணை PONNA-வில் உள்ள சுயவிவரத்தில் பதிவு செய்து, அதை அங்கீகரிக்க வேண்டும்.</small>
+          <p>PONNA-வில் பயிற்சி பெற்று அரசு பணியில் சேர்ந்துவிட்டால், பயிற்சிக் கட்டணம் முழுவதும் திரும்ப கிடைத்துவிடும்.</p>
+          <small>* நிபந்தனை: உங்கள் ஹால் டிக்கெட் எண்ணை PONNA-வில் உள்ள சுயவிவரத்தில் பதிவு செய்து, அதை அங்கீகரிக்க வேண்டும்.</small>
         </section>
 
         <section className="final-strip">
@@ -169,6 +181,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         </section>
       </section>
 
+      <footer>வடிவமைப்பு முன்னோட்டம் · PONNA.in</footer>
 
       <style jsx>{`
         .home-preview {
@@ -194,6 +207,9 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           top: 0;
           z-index: 30;
         }
+        .menu-slot { flex: 0 0 42px; display: flex; align-items: center; }
+        .account-slot { flex: 0 0 auto; display: flex; align-items: center; }
+        .notice { background: #FFF3CD; color: #5C4009; border-bottom: 1px solid #E8D28A; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
         .menu-button {
           width: 42px;
           height: 42px;
@@ -206,9 +222,6 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           flex: 0 0 42px;
         }
         .menu-button span { display: block; height: 3px; width: 27px; background: #0B3864; border-radius: 2px; }
-        .account-slot { flex: 0 0 auto; display: flex; align-items: center; }
-        .menu-slot { flex: 0 0 42px; display: flex; align-items: center; }
-        .notice { background: #FFF3CD; color: #5C4009; border-bottom: 1px solid #E8D28A; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
         .brand { flex: 1; display: flex; align-items: center; min-width: 0; }
         .brand :global(img) { width: 150px !important; height: auto !important; max-width: 100%; }
         .login {
@@ -234,7 +247,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         .hero-copy { position: relative; z-index: 2; flex: 1; width: 55%; padding: 20px 0 0 14px; min-width: 0; display: flex; flex-direction: column; }
         .eyebrow { color: #17835E; font-weight: 800; font-size: 15px; line-height: 1.4; margin-bottom: 7px; }
         h1 { margin: 0 0 auto; color: #0B3864; font-size: 26px; line-height: 1.3; letter-spacing: -0.2px; }
-        h1 em { color: #E3313D; font-style: normal; }
+        h1 em { color: #17835E; font-style: normal; }
         .hero ul {
           list-style: none;
           padding: 0;
@@ -369,6 +382,220 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           line-height: 1.5;
         }
 
+        .purpose-section {
+          margin: 20px 0 10px;
+          padding: 23px 17px 20px;
+          background: #0B3864;
+          color: #fff;
+          border-radius: 12px;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 7px 18px rgba(11,56,100,.10);
+        }
+        .purpose-section::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 68px;
+          height: 4px;
+          background: #FFD22A;
+        }
+        .purpose-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 9px;
+        }
+        .purpose-label {
+          color: #FFD22A;
+          font-size: 13px;
+          font-weight: 900;
+          letter-spacing: .8px;
+        }
+        .purpose-mark {
+          color: #D9E6EE;
+          border: 1px solid rgba(255,255,255,.25);
+          border-radius: 999px;
+          padding: 3px 8px;
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: 1px;
+        }
+        .purpose-section h2 {
+          margin: 0;
+          color: #fff;
+          font-size: 24px;
+          line-height: 1.42;
+          font-weight: 900;
+        }
+        .purpose-section h2 span { color: #FFD22A; }
+        .purpose-rule {
+          width: 44px;
+          height: 3px;
+          background: #FFD22A;
+          margin: 14px 0 12px;
+        }
+        .purpose-section p {
+          margin: 0 0 9px;
+          color: #E8EFF4;
+          font-size: 15.5px;
+          line-height: 1.62;
+        }
+        .purpose-section .purpose-lead {
+          color: #fff;
+          font-size: 16.5px;
+          font-weight: 700;
+        }
+        .purpose-pillars {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          margin: 14px 0 2px;
+          border-top: 1px solid rgba(255,255,255,.22);
+          border-bottom: 1px solid rgba(255,255,255,.18);
+        }
+        .purpose-pillars div {
+          padding: 11px 7px 10px;
+          border-right: 1px solid rgba(255,255,255,.18);
+        }
+        .purpose-pillars div:last-child { border-right: 0; }
+        .purpose-pillars strong {
+          display: block;
+          color: #fff;
+          font-size: 14px;
+          line-height: 1.35;
+        }
+        .purpose-pillars span {
+          display: block;
+          margin-top: 3px;
+          color: #C9D7E0;
+          font-size: 11px;
+          line-height: 1.4;
+        }
+        .purpose-section .purpose-closing {
+          margin: 13px 0 0;
+          color: #FFD22A;
+          font-size: 15px;
+          line-height: 1.45;
+        }
+
+        .pass-section {
+          margin: 12px 0 10px;
+          padding: 18px 15px 15px;
+          border: 1px solid #E2D5AA;
+          border-radius: 12px;
+          background: #FFFDF5;
+        }
+        .pass-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #E9DFC3;
+        }
+        .pass-label {
+          color: #B07A16;
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: .7px;
+          margin-bottom: 4px;
+        }
+        .pass-section h2 {
+          margin: 0;
+          color: #0B3864;
+          font-size: 20px;
+          line-height: 1.4;
+          font-weight: 900;
+        }
+        .pass-section h2 span { color: #B07A16; }
+        .pass-badge {
+          flex: 0 0 auto;
+          color: #0B3864;
+          background: #FFE9A8;
+          border: 1px solid #E2B04A;
+          border-radius: 7px;
+          padding: 5px 7px;
+          font-size: 9px;
+          font-weight: 900;
+          letter-spacing: .8px;
+        }
+        .pass-list {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          margin-top: 11px;
+          border-bottom: 1px solid #E9DFC3;
+        }
+        .pass-list div {
+          padding: 4px 7px 11px;
+          border-right: 1px solid #E9DFC3;
+        }
+        .pass-list div:last-child { border-right: 0; }
+        .pass-list b {
+          display: block;
+          color: #0B3864;
+          font-size: 14px;
+          line-height: 1.3;
+        }
+        .pass-list span {
+          display: block;
+          margin-top: 3px;
+          color: #667786;
+          font-size: 11px;
+          line-height: 1.4;
+        }
+        .ask-feature {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          margin-top: 11px;
+          padding: 9px 10px;
+          background: #fff;
+          border-left: 4px solid #17835E;
+          border-radius: 6px;
+        }
+        .ask-feature strong {
+          flex: 0 0 auto;
+          color: #17835E;
+          font-size: 15px;
+        }
+        .ask-feature span {
+          color: #4F6272;
+          font-size: 12.5px;
+          line-height: 1.45;
+        }
+        .pass-bottom {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 12px;
+        }
+        .pass-bottom p {
+          flex: 1;
+          margin: 0;
+          color: #20384D;
+          font-size: 13px;
+          line-height: 1.4;
+          font-weight: 700;
+        }
+        .pass-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          flex: 0 0 auto;
+          min-height: 43px;
+          padding: 9px 12px;
+          border-radius: 8px;
+          background: #FFD22A;
+          color: #20384D;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+
         .tools-grid { display: grid; grid-template-columns: 1fr; gap: 7px; margin-top: 8px; }
         .tool-card {
           min-height: 82px;
@@ -394,83 +621,16 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         .tool-copy p { color: #4F6272; font-size: 17px; line-height: 1.42; margin: 2px 0 0; }
         .tool-arrow { color: #536575; font-size: 30px; line-height: 1; flex: 0 0 auto; }
 
-        .purpose-section {
-          margin: 22px 0 0;
-          padding: 20px 14px 18px;
-          border-top: 2px solid #0B3864;
-          border-bottom: 1px solid #DDE5E9;
-          background: #fff;
-        }
-        .editorial-label {
-          color: #17835E;
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 1.2px;
-          margin-bottom: 7px;
-        }
-        .purpose-section h2, .pass-section h2 {
-          margin: 0;
-          color: #0B3864;
-          font-size: 21px;
-          line-height: 1.45;
-          font-weight: 900;
-        }
-        .purpose-section p {
-          margin: 10px 0 0;
-          color: #4F6272;
-          font-size: 15.5px;
-          line-height: 1.65;
-        }
-        .purpose-section .purpose-closing {
-          color: #20384D;
-          margin-top: 13px;
-        }
-        .pass-section {
-          margin: 12px 0 0;
-          padding: 20px 14px 18px;
-          border-top: 1px solid #DDE5E9;
-          border-bottom: 1px solid #DDE5E9;
-          background: #F8FBFC;
-        }
-        .pass-section ul {
-          margin: 12px 0 0;
-          padding-left: 22px;
-          color: #4F6272;
-          font-size: 15.5px;
-          line-height: 1.65;
-        }
-        .pass-section li { margin: 4px 0; }
-        .pass-cta-copy {
-          margin: 15px 0 8px;
-          color: #20384D;
-          font-size: 15px;
-          font-weight: 700;
-        }
-        .pass-button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 50px;
-          padding: 11px 14px;
-          border-radius: 9px;
-          background: #0B3864;
-          color: #fff;
-          text-decoration: none;
-          font-size: 16px;
-          font-weight: 900;
-        }
-
         .refund-box {
           margin: 22px 0 12px;
           padding: 20px 16px;
-          border: 2px solid #17835E;
-          background: #F3FBF6;
+          border: 1px solid #B9DEC7;
+          background: #F1FAF3;
           text-align: center;
-          box-shadow: 0 4px 14px rgba(23,131,94,.08);
         }
         .refund-box h3 {
           margin: 0;
-          color: #17835E;
+          color: #E3313D;
           font-size: 24px;
           line-height: 1.35;
           font-weight: 900;
@@ -483,14 +643,10 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         }
         .refund-box small {
           display: block;
-          margin-top: 10px;
-          padding-top: 9px;
-          border-top: 1px solid #CFE4D6;
-          color: #526A5B;
+          margin-top: 9px;
+          color: #667786;
           font-size: 13px;
-          line-height: 1.55;
         }
-        .refund-box small b { color: #0B3864; }
 
         .final-strip {
           margin: 12px 0 16px;
