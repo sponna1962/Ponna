@@ -474,19 +474,19 @@ export default function QuizStartPage() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 18, background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
-        <StudentMenu iconColor="#fff" />
-        <h1 style={{ fontSize: 19, margin: 0 }}>{t.quiz.title}</h1>
+    <main className="practice-page">
+      <div className="practice-header">
+        <StudentMenu iconColor="#0B3864" />
+        <h1 className="practice-title">{t.quiz.title}</h1>
         {/* Sept 2026 — Offline Practice entry point. Deliberately not a
             new sidebar item (nav structure is finalized) — lives here
             instead, right where a student starts practice. */}
-        <a href="/offline-practice" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#FFE9A8', border: '1px solid rgba(255,233,168,0.5)', padding: '5px 10px', borderRadius: 999, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+        <a href="/offline-practice" className="offline-badge">📥 Offline</a>
           📥 Offline
         </a>
       </div>
 
-      <div style={{ padding: '0 20px' }}>
+      <div className="practice-content">
         {!editing && saved && (
           <PreferenceSummary
             saved={saved}
@@ -503,7 +503,7 @@ export default function QuizStartPage() {
             EITHER "Start Practising" entry point above, never for both/none
             inconsistently, since it's driven by one shared piece of state. */}
         {profileGate && (
-          <div style={{ marginTop: 16, padding: '26px 18px', textAlign: 'center', borderRadius: 16, background: 'var(--color-card)', border: '1px solid var(--color-line)', borderTop: '4px solid #E2B04A' }}>
+          <div className="profile-gate">
             <div style={{ fontSize: 36, marginBottom: 8 }}>📝</div>
             <p style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px', color: 'var(--color-ink)' }}>பயிற்சியைத் தொடங்கும் முன்</p>
             <p style={{ fontSize: 14, lineHeight: 1.65, margin: '0 0 18px', color: 'var(--color-inkMuted)' }}>உங்கள் Profile-ஐ நிரப்புங்கள். உங்கள் Pass பாதுகாப்பாக உள்ளது — Profile முடிந்ததும் உடனே பயிற்சியைத் தொடங்கலாம்.</p>
@@ -512,7 +512,7 @@ export default function QuizStartPage() {
         )}
 
         {accessPrompt && (
-          <div style={{ marginTop: 16, padding: 16, borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a' }}>
+          <div className="access-prompt">
             <p style={{ fontSize: 14, color: '#92400e', marginBottom: 4, fontWeight: 600 }}>{t.practiceSetup.noActivePlan}</p>
             <p style={{ fontSize: 13, color: '#92400e', marginBottom: 12 }}>{t.practiceSetup.freeFallbackDesc}</p>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -555,13 +555,13 @@ export default function QuizStartPage() {
         {editing && (
           <>
             {fixedSel ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', borderRadius: 16, padding: '14px 16px', color: '#fff', marginBottom: 22 }}>
-                <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,233,168,0.18)', display: 'grid', placeItems: 'center', fontSize: 20 }}>🎯</span>
+              <div className="exam-card">
+                <span className="exam-card-icon">🎯</span>
                 <div>
                   <b style={{ fontSize: 17, display: 'block' }}>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</b>
                   <small style={{ fontSize: 12, color: '#FFE9A8' }}>{lang === 'ta' ? 'போட்டித் தேர்வு' : 'Competitive exam'}</small>
                 </div>
-                <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 700, background: '#E2B04A', color: '#2b1c00', padding: '4px 10px', borderRadius: 999 }}>✓ {lang === 'ta' ? 'தேர்வானது' : 'Selected'}</span>
+                <span className="selected-badge">✓ {lang === 'ta' ? 'தேர்வானது' : 'Selected'}</span>
               </div>
             ) : restriction?.restricted ? (
               // Sept 2026 — TNPSC Group IV & VAO Pass (finalized
@@ -569,7 +569,7 @@ export default function QuizStartPage() {
               // IV & VAO. Real enforcement is server-side; this is just
               // the matching UI state.
               <Section title={t.practiceSetup.selectPurpose}>
-                <div style={{ padding: 14, borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 14, color: '#166534', fontWeight: 600 }}>
+                <div className="locked-card">
                   {lang === 'ta' ? 'உங்கள் பாஸ்: TNPSC குரூப்-4' : 'Your Pass: TNPSC Group - IV'}
                 </div>
               </Section>
@@ -749,12 +749,278 @@ export default function QuizStartPage() {
         {error && (
           <div style={{ marginTop: 16 }}>
             <p style={{ color: '#dc2626', marginBottom: 8 }}>{error}</p>
-            <a href="/plans" style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 6, background: '#0f172a', color: '#fff', textDecoration: 'none', fontSize: 13 }}>
+            <a href="/plans" className="error-link">
               {t.dashboard.upgrade}
             </a>
           </div>
         )}
       </div>
+    
+      <style jsx>{`
+        .practice-page {
+          width: 100%;
+          max-width: 620px;
+          min-height: 100dvh;
+          margin: 0 auto;
+          padding-bottom: 28px;
+          background: #fff;
+          color: #20384D;
+          font-family: 'Noto Sans Tamil', 'Nirmala UI', Latha, Arial, sans-serif;
+        }
+        .practice-header {
+          min-height: 68px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 0 14px;
+          background: #fff;
+          border-bottom: 3px solid #FFD22A;
+          position: sticky;
+          top: 0;
+          z-index: 30;
+        }
+        .practice-title {
+          margin: 0 !important;
+          color: #0B3864 !important;
+          font-size: 21px !important;
+          font-weight: 900 !important;
+          line-height: 1.25;
+        }
+        .offline-badge {
+          margin-left: auto;
+          color: #17835E !important;
+          border: 1px solid #B9DEC7 !important;
+          background: #F1FAF3;
+          padding: 7px 11px;
+          border-radius: 999px;
+          text-decoration: none;
+          white-space: nowrap;
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .practice-content { padding: 18px 14px 0 !important; }
+        .exam-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 22px;
+          padding: 14px 15px;
+          color: #fff;
+          background: #0B3864;
+          border-radius: 12px;
+          border-bottom: 4px solid #FFD22A;
+          box-shadow: 0 6px 16px rgba(11,56,100,.10);
+        }
+        .exam-card-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: rgba(255,255,255,.12);
+          display: grid;
+          place-items: center;
+          font-size: 22px;
+          flex: 0 0 44px;
+        }
+        .exam-card b { font-size: 18px !important; }
+        .exam-card small { color: #DDE9F2 !important; font-size: 12px !important; }
+        .selected-badge {
+          margin-left: auto;
+          color: #20384D;
+          background: #FFD22A;
+          padding: 6px 10px;
+          border-radius: 8px;
+          font-size: 11.5px;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+        .section-block {
+          margin-bottom: 22px !important;
+          padding-bottom: 17px;
+          border-bottom: 1px solid #E6ECEF;
+        }
+        .section-title {
+          margin: 0 0 11px !important;
+          color: #0B3864 !important;
+          font-size: 17px !important;
+          line-height: 1.4;
+          font-weight: 900 !important;
+        }
+        .chip-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .practice-chip {
+          padding: 10px 15px !important;
+          border-radius: 9px !important;
+          border: 1px solid #D7E0E5 !important;
+          background: #fff !important;
+          color: #20384D !important;
+          font-weight: 700 !important;
+          font-size: 14.5px !important;
+          box-shadow: none !important;
+        }
+        .practice-chip.active {
+          background: #0B3864 !important;
+          color: #fff !important;
+          border-color: #0B3864 !important;
+        }
+        .start-button, .summary-start {
+          width: 100% !important;
+          min-height: 54px;
+          padding: 13px 16px !important;
+          margin-top: 10px !important;
+          border-radius: 10px !important;
+          border: none !important;
+          background: #0B3864 !important;
+          color: #FFD22A !important;
+          font-size: 17px !important;
+          font-weight: 900 !important;
+          box-shadow: 0 7px 18px rgba(11,56,100,.16) !important;
+        }
+        .profile-gate {
+          margin-top: 14px !important;
+          padding: 22px 16px !important;
+          text-align: center;
+          border-radius: 12px !important;
+          background: #F8FBFC !important;
+          border: 1px solid #DDE5E9 !important;
+          border-top: 4px solid #FFD22A !important;
+        }
+        .profile-gate a {
+          display: block !important;
+          padding: 13px !important;
+          border-radius: 9px !important;
+          background: #0B3864 !important;
+          color: #FFD22A !important;
+        }
+        .access-prompt {
+          margin-top: 14px !important;
+          padding: 15px !important;
+          border-radius: 10px !important;
+          background: #FFF9E8 !important;
+          border: 1px solid #EBD58C !important;
+        }
+        .access-prompt > div { gap: 8px !important; }
+        .access-prompt button, .access-prompt a { border-radius: 9px !important; }
+        .locked-card {
+          padding: 13px !important;
+          border-radius: 9px !important;
+          background: #F1FAF3 !important;
+          border: 1px solid #B9DEC7 !important;
+          color: #176B4E !important;
+        }
+        .error-box {
+          margin-top: 14px !important;
+          padding: 12px;
+          border: 1px solid #F0C2C6;
+          border-radius: 9px;
+          background: #FFF5F5;
+        }
+        .error-box p { color: #B4232F !important; margin: 0 0 8px !important; }
+        .error-link {
+          display: inline-block;
+          padding: 8px 14px;
+          border-radius: 7px;
+          background: #0B3864;
+          color: #fff;
+          text-decoration: none;
+          font-size: 13px;
+        }
+        .subject-pref { margin-bottom: 22px; }
+        .subject-pref-button {
+          background: #fff !important;
+          border: none !important;
+          padding: 0 !important;
+          font-size: 14px !important;
+          font-weight: 800 !important;
+          color: #17835E !important;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+        .subject-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(11,56,100,.42);
+          z-index: 100;
+          display: flex;
+          align-items: flex-end;
+        }
+        .subject-modal {
+          background: #fff;
+          color: #20384D;
+          border-radius: 16px 16px 0 0;
+          padding: 20px;
+          width: 100%;
+          max-width: 620px;
+          margin: 0 auto;
+          max-height: 72vh;
+          overflow-y: auto;
+          box-shadow: 0 -8px 28px rgba(11,56,100,.18);
+        }
+        .subject-option {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 11px 0;
+          font-size: 14px;
+          cursor: pointer;
+          border-bottom: 1px solid #E6ECEF;
+        }
+        .subject-done {
+          width: 100%;
+          padding: 13px;
+          border-radius: 9px;
+          background: #0B3864;
+          color: #FFD22A;
+          border: none;
+          font-weight: 900;
+          font-size: 15px;
+          margin-top: 16px;
+        }
+        .preference-summary { margin-bottom: 22px; }
+        .summary-card {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+          background: #F8FBFC !important;
+          border: 1px solid #DDE5E9 !important;
+          border-left: 4px solid #FFD22A !important;
+          border-radius: 11px !important;
+          padding: 15px !important;
+          margin-bottom: 12px !important;
+        }
+        .summary-label {
+          margin: 0 0 5px !important;
+          color: #B07A16 !important;
+          font-size: 12px !important;
+          font-weight: 900 !important;
+        }
+        .summary-text {
+          margin: 0 !important;
+          color: #20384D !important;
+          font-size: 14.5px !important;
+          line-height: 1.6 !important;
+        }
+        .change-button {
+          flex-shrink: 0;
+          font-size: 12px;
+          font-weight: 800;
+          padding: 6px 11px;
+          border-radius: 7px;
+          border: 1px solid #D7E0E5;
+          background: #fff;
+          color: #0B3864;
+        }
+        @media (max-width: 380px) {
+          .practice-content { padding: 15px 12px 0 !important; }
+          .practice-title { font-size: 19px !important; }
+          .exam-card { padding: 13px 12px; }
+          .exam-card b { font-size: 16px !important; }
+          .practice-chip { font-size: 14px !important; padding: 9px 12px !important; }
+        }
+      `}</style>
     </main>
   );
 }
@@ -769,7 +1035,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function ChipRow({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{children}</div>;
+  return <div className="chip-row">{children}</div>;
 }
 
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -893,7 +1159,7 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
             <p style={{ fontSize: 12.5, color: 'var(--color-inkMuted)', marginBottom: 16 }}>{t.practiceSetup.subjectPreferenceNote}</p>
 
             {subjects.filter((s) => showDisabilityTrack || !DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)).map((s) => (
-              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', fontSize: 14, cursor: 'pointer', borderBottom: '1px solid var(--color-line)' }}>
+              <label key={s.id} className="subject-option">
                 <input type="checkbox" checked={draftIds.has(s.id)} onChange={() => toggleDraft(s.id)} />
                 {practiceLanguage === 'TA' && s.nameTa ? s.nameTa : s.name}
               </label>
@@ -954,10 +1220,10 @@ function PreferenceSummary({
       <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderLeft: '5px solid #E2B04A', borderRadius: 16, padding: 16, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h3 style={{ fontSize: 12, color: 'var(--color-gold)', fontWeight: 700, marginBottom: 6 }}>{t.practiceSetup.yourPreferences}</h3>
-            <p style={{ fontSize: 15, color: 'var(--color-ink)', lineHeight: 1.7, margin: 0 }}>{summary}</p>
+            <h3 className="summary-label">{t.practiceSetup.yourPreferences}</h3>
+            <p className="summary-text">{summary}</p>
           </div>
-          <button onClick={onChange} style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 14px', flexShrink: 0, borderRadius: 999, border: '1.5px solid var(--color-line)', background: 'var(--color-field)', color: 'var(--color-ink)' }}>
+          <button className="change-button" onClick={onChange}>
             {t.practiceSetup.changePreferences}
           </button>
         </div>
