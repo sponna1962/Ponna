@@ -376,33 +376,7 @@ export default function IndexPage() {
 
   if (!checkedAuth) return null;
 
-  // Oct 2026 — new home design for logged-out visitors (the login flow's other
-  // views and the logged-in home below are unchanged).
-  if (view === 'main' && !isLoggedIn) {
-    return (
-      <HomeDesignPreview
-        menu={<StudentMenu iconColor="#0B3864" />}
-        onLogin={openLogin}
-        onStart={handleStartPractising}
-        notice={loggedOutElsewhere ? t.login.sessionInvalidated : undefined}
-      />
-    );
-  }
-
-  return (
-    <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: COLORS.paper, color: COLORS.ink }}>
-      <BitterFontLinks />
-      {/* Header — identical whether logged in or not; only the top-right
-          element changes. Always present, on every view of this page. */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <StudentMenu />
-          <span style={{ display: 'flex', background: '#fefefe', borderRadius: 8, padding: '3px 10px', border: '1px solid var(--color-line)' }}>
-            <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority style={{ height: 32, width: 'auto' }} />
-          </span>
-        </div>
-
-        {isLoggedIn ? (
+  const accountMenu = (
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setAccountMenuOpen((o) => !o)}
@@ -481,8 +455,39 @@ export default function IndexPage() {
               </div>
             )}
           </div>
+  );
+
+  // Oct 2026 — new home design for everyone (logged in or not); only the login
+  // flow's other views keep the old layout.
+  if (view === 'main') {
+    return (
+      <HomeDesignPreview
+        menu={<StudentMenu iconColor="#0B3864" />}
+        onLogin={openLogin}
+        account={isLoggedIn ? accountMenu : undefined}
+        onStart={handleStartPractising}
+        notice={loggedOutElsewhere ? t.login.sessionInvalidated : undefined}
+      />
+    );
+  }
+
+  return (
+    <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: COLORS.paper, color: COLORS.ink }}>
+      <BitterFontLinks />
+      {/* Header — identical whether logged in or not; only the top-right
+          element changes. Always present, on every view of this page. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <StudentMenu />
+          <span style={{ display: 'flex', background: '#fefefe', borderRadius: 8, padding: '3px 10px', border: '1px solid var(--color-line)' }}>
+            <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority style={{ height: 32, width: 'auto' }} />
+          </span>
+        </div>
+
+        {isLoggedIn ? (
+          accountMenu
         ) : (
-          view === 'main' && (
+          (view as View) === 'main' && (
             <button
               onClick={openLogin}
               style={{ padding: '8px 18px', borderRadius: 20, border: `1px solid ${COLORS.line}`, background: COLORS.paper, color: COLORS.ink, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
@@ -495,7 +500,7 @@ export default function IndexPage() {
 
       {/* Body — one of three views. 'main' looks identical logged-in or
           logged-out except for the Active Plans block. */}
-      {view === 'main' && (
+      {(view as View) === 'main' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Oct 2026 — sunrise-over-paddy-fields banner (same illustration as the welcome screen). */}
         <div aria-hidden="true" style={{ position: 'relative', height: 210, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }} />

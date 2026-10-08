@@ -41,9 +41,11 @@ type HomeDesignProps = {
   onStart?: () => void;
   /** Optional notice shown above the hero (e.g. logged out on another device). */
   notice?: string;
+  /** Logged-in account button/menu shown instead of the login button. */
+  account?: ReactNode;
 };
 
-export default function HomeDesignPreview({ menu, onLogin, onStart, notice }: HomeDesignProps = {}) {
+export default function HomeDesignPreview({ menu, onLogin, onStart, notice, account }: HomeDesignProps = {}) {
   const startClick = onStart ? (e: MouseEvent) => { e.preventDefault(); onStart(); } : undefined;
   return (
     <main className="home-preview">
@@ -54,7 +56,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice }: Ho
         <a href="/" className="brand">
           <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority />
         </a>
-        <a href="/?startLogin=1" className="login" onClick={onLogin ? (e) => { e.preventDefault(); onLogin(); } : undefined}>உள்நுழைவு</a>
+        {account ? <div className="account-slot">{account}</div> : <a href="/?startLogin=1" className="login" onClick={onLogin ? (e) => { e.preventDefault(); onLogin(); } : undefined}>உள்நுழைவு</a>}
       </header>
 
       {notice && <div className="notice">{notice}</div>}
@@ -182,6 +184,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice }: Ho
           flex: 0 0 42px;
         }
         .menu-button span { display: block; height: 3px; width: 27px; background: #0B3864; border-radius: 2px; }
+        .account-slot { flex: 0 0 auto; display: flex; align-items: center; }
         .menu-slot { flex: 0 0 42px; display: flex; align-items: center; }
         .notice { background: #FFF3CD; color: #5C4009; border-bottom: 1px solid #E8D28A; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
         .brand { flex: 1; display: flex; align-items: center; min-width: 0; }
