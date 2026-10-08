@@ -31,7 +31,7 @@ export default function TnpscGroup4Page() {
   return (
     <main style={{ background: COLORS.paper, color: COLORS.ink, paddingBottom: 60 }}>
       <BitterFontLinks />
-      <SeoPageHeader />
+      <SeoPageHeader title="TNPSC Group 4" subtitle="தேர்வு வழிகாட்டி மற்றும் இலவசப் பயிற்சி" />
       <Breadcrumb items={[{ name: 'Home', url: '/' }, { name: 'TNPSC Group 4', url: '/tnpsc-group-4' }]} />
 
       <Section>

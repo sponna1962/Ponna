@@ -4,12 +4,12 @@
 // progress bar, table of contents behaviour, share, countdown and the
 // copy-protection layer are client-side (see GuideClient.tsx).
 
-import Image from 'next/image';
 import content from '../../../content/g4-notification.json';
 import { BitterFontLinks } from '../../../lib/brand-theme';
 import { FAQS, PAGE_URL, SITE, STATS } from './guide-data';
 import { Countdown, GuideToc, ProtectLayer, ReadingProgress, ShareButton } from './GuideClient';
 import { GuideStyles } from './guide-styles';
+import { StudentMenu } from '../../../components/StudentMenu';
 
 type Section = { id: string; title: string; html: string };
 const SECTIONS = content.sections as Section[];
@@ -60,12 +60,15 @@ export default function NotificationGuidePage() {
 
       <header className="g4n-top">
         <div className="g4n-top-in">
-          <a href="/" className="g4n-logo" aria-label="PONNA.in முகப்பு">
-            <Image src="/logo-compact.png" alt="PONNA.in" width={140} height={37} priority />
-          </a>
+          <div className="g4n-top-l">
+            <StudentMenu iconColor="#fff" />
+            <div className="g4n-top-title">
+              <div>Group 4 அறிவிப்பு 2026</div>
+              <small>TNPSC முழு வழிகாட்டி</small>
+            </div>
+          </div>
           <div className="g4n-top-r">
             <ShareButton />
-            <a href="/tnpsc-group-4" className="g4n-btn-ghost g4n-noprint">TNPSC Group 4</a>
           </div>
         </div>
         <ReadingProgress />

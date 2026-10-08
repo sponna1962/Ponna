@@ -7,7 +7,7 @@ export default function Page() {
   return (
     <main style={{ background: COLORS.paper, color: COLORS.ink, paddingBottom: 60 }}>
       <BitterFontLinks />
-      <SeoPageHeader />
+      <SeoPageHeader title="Group 4 Online Test" subtitle="இலவச மாதிரித் தேர்வு" />
       <Breadcrumb
         items={[
           { name: 'Home', url: '/' },

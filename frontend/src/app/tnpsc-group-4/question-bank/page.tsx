@@ -15,7 +15,7 @@ export default function Page() {
   return (
     <main style={{ background: COLORS.paper, color: COLORS.ink, paddingBottom: 60 }}>
       <BitterFontLinks />
-      <SeoPageHeader />
+      <SeoPageHeader title="Question Bank" subtitle="TNPSC Group 4 பாடவாரியான கேள்விகள்" />
       <Breadcrumb
         items={[
           { name: 'Home', url: '/' },

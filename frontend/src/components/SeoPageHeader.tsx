@@ -8,8 +8,25 @@
 
 import Image from 'next/image';
 import { COLORS } from '../lib/brand-theme';
+import { StudentMenu } from './StudentMenu';
 
-export function SeoPageHeader() {
+// Oct 2026 — when a `title` is given, the header matches the student pages
+// (☰ menu + page title + small subtitle, like Current Affairs). Without it the
+// original logo + "Start Practising" header is kept (used by the TNTET pages).
+export function SeoPageHeader({ title, subtitle }: { title?: string; subtitle?: string } = {}) {
+  if (title) {
+    return (
+      <div style={{ background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <StudentMenu iconColor="#fff" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.2 }}>{title}</div>
+            {subtitle && <div style={{ fontSize: 12, color: '#FFE9A8' }}>{subtitle}</div>}
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ background: 'linear-gradient(180deg,var(--color-head1),var(--color-head2))', borderBottom: '3px solid #E2B04A' }}>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

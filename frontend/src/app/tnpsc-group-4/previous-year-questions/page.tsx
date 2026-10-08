@@ -7,7 +7,7 @@ export default function Page() {
   return (
     <main style={{ background: COLORS.paper, color: COLORS.ink, paddingBottom: 60 }}>
       <BitterFontLinks />
-      <SeoPageHeader />
+      <SeoPageHeader title="Previous Year Questions" subtitle="TNPSC Group 4 முந்தைய ஆண்டு வினாத்தாள்கள்" />
       <Breadcrumb
         items={[
           { name: 'Home', url: '/' },
