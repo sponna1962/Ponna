@@ -21,6 +21,58 @@ import { StudentMenu } from '../../components/StudentMenu';
 type Note = { subjectId: string; subjectName: string; subjectNameTa: string | null; content: string };
 type Exam = { id: string; name: string };
 
+
+/** Study notes are stored as plain lines (headings and points look alike), so
+ * the structure is recovered here for display only — stored text is untouched:
+ *  - "1. பூமியின் அமைவிடம்"   -> main section heading
+ *  - short line without a full stop -> sub-heading
+ *  - short "term – meaning." lines   -> bullet points (term in bold)
+ *  - everything else                 -> normal paragraph
+ * Leading spaces/tabs from pasted text are ignored so alignment is uniform. */
+function NoteBody({ content }: { content: string }) {
+  const lines = content.replace(/\r/g, '').split('\n').map((l) => l.replace(/^[\s\u00a0\u3000]+|[\s\u00a0\u3000]+$/g, ''));
+  const blocks: JSX.Element[] = [];
+  let bullets: string[] = [];
+  const flush = (key: string) => {
+    if (bullets.length === 0) return;
+    blocks.push(
+      <ul key={key} style={{ margin: '4px 0 10px', padding: 0, listStyle: 'none' }}>
+        {bullets.map((b, i) => {
+          const dash = b.indexOf(' – ');
+          return (
+            <li key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+              <span style={{ color: COLORS.gold, flex: 'none' }}>•</span>
+              <span>{dash > 0 && dash < 40 ? (<><strong>{b.slice(0, dash)}</strong>{b.slice(dash)}</>) : b}</span>
+            </li>
+          );
+        })}
+      </ul>,
+    );
+    bullets = [];
+  };
+  lines.forEach((line, i) => {
+    if (!line) { flush('f' + i); return; }
+    const isMain = /^\d+\.\s/.test(line) && line.length < 80;
+    const endsSentence = /[.!?।]$/.test(line);
+    const isSub = !isMain && !endsSentence && line.length <= 45 && !/\d{3,}/.test(line);
+    const isPoint = !isMain && !isSub && line.length <= 90 && endsSentence;
+    if (isMain || (isSub && i === 0)) {
+      flush('f' + i);
+      blocks.push(<div key={i} style={{ fontWeight: 800, fontSize: isMain ? 16.5 : 15.5, margin: '16px 0 6px', color: COLORS.ink }}>{line}</div>);
+    } else if (isSub) {
+      flush('f' + i);
+      blocks.push(<div key={i} style={{ fontWeight: 700, color: COLORS.gold, margin: '12px 0 4px' }}>{line}</div>);
+    } else if (isPoint) {
+      bullets.push(line);
+    } else {
+      flush('f' + i);
+      blocks.push(<p key={i} style={{ margin: '0 0 10px' }}>{line}</p>);
+    }
+  });
+  flush('end');
+  return <>{blocks}</>;
+}
+
 export default function StudyNotesPage() {
   const [exam, setExam] = useState<Exam | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
@@ -150,7 +202,7 @@ export default function StudyNotesPage() {
                 <span style={{ color: 'var(--color-gold)', fontSize: 22, fontWeight: 600 }}>{openId === note.subjectId ? '−' : '+'}</span>
               </button>
               {openId === note.subjectId && (
-                <div style={{ padding: '0 16px 16px 62px', fontSize: 15, lineHeight: 1.85, color: COLORS.ink, whiteSpace: 'pre-wrap' }}>{note.content}</div>
+                <div style={{ padding: '0 16px 16px 16px', fontSize: 15, lineHeight: 1.8, color: COLORS.ink }}><NoteBody content={note.content} /></div>
               )}
             </div>
           ))}
