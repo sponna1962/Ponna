@@ -74,6 +74,12 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         </div>
       </section>
 
+      <section className="stat-strip" aria-label="PONNA எண்கள்">
+        <div><strong>60,000+</strong><span>கேள்விகளில் பயிற்சி</span></div>
+        <div><strong>3,250+</strong><span>மாதாந்திர பயிற்சி</span></div>
+        <div><strong>4,000+</strong><span>பயிற்சி முயற்சிகள்</span></div>
+      </section>
+
       <section className="content">
         <div className="featured-list">
           {featured.map((item) => (
@@ -303,6 +309,11 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         .hero-actions { position: relative; z-index: 2; padding: 0 14px 18px; }
         .hero-actions .primary-button { margin-top: 14px; }
 
+        .stat-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #0B3864; color: #fff; padding: 14px 4px; }
+        .stat-strip div { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; padding: 0 4px; }
+        .stat-strip div + div { border-left: 1px solid rgba(255,255,255,.25); }
+        .stat-strip strong { color: #FFD22A; font-size: 21px; font-weight: 800; line-height: 1.2; }
+        .stat-strip span { margin-top: 4px; font-size: 11.5px; line-height: 1.5; font-weight: 600; }
         .content { padding: 12px 10px 0; }
         .featured-list { display: grid; gap: 8px; }
         .featured-card {
