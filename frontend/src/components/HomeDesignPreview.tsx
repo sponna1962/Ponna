@@ -136,7 +136,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           </div>
         </section>
 
-        <section className="tools-section" aria-label="உங்கள் பயிற்சிக்கான கருவிகள்">
+        <section className="tools-section" aria-label="PONNA-வில் உள்ள வசதிகள்">
           <div className="tools-heading">
             <h2>PONNA-வில் உள்ள வசதிகள்</h2>
             <p>உங்கள் தேர்வுத் தயாரிப்புக்கு உதவும் பயனுள்ள வசதிகள்</p>
@@ -453,32 +453,35 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           background: #F4F9FC;
           border-top: 1px solid #DDE8EF;
           border-bottom: 1px solid #DDE8EF;
-          padding: 17px 10px 12px;
+          padding: 15px 10px 12px;
         }
         .tools-heading {
-          padding: 0 4px 10px;
+          padding: 0 4px 9px;
         }
         .tools-heading h2 {
           margin: 0;
           color: #0B3864;
-          font-size: 23px;
-          line-height: 1.35;
+          font-size: 20px;
+          line-height: 1.28;
           font-weight: 900;
+          letter-spacing: -0.1px;
+          white-space: nowrap;
         }
         .tools-heading h2::before {
           content: '';
           display: inline-block;
           width: 4px;
-          height: 25px;
-          margin-right: 9px;
+          height: 22px;
+          margin-right: 8px;
           vertical-align: -3px;
           background: #FFD22A;
           border-radius: 2px;
         }
         .tools-heading p {
-          margin: 4px 0 0 13px;
+          margin: 5px 0 0 12px;
+          max-width: 470px;
           color: #667786;
-          font-size: 13px;
+          font-size: 12.5px;
           line-height: 1.45;
         }
 
