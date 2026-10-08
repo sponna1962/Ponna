@@ -1138,23 +1138,17 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
   if (!subjects || subjects.length === 0) return null; // no syllabus seeded for this exam yet — field doesn't appear at all
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <button
+    <div className="subject-pref">
+      <button className="subject-pref-button"
         onClick={openModal}
-        style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 14.5, fontWeight: 600, color: 'var(--color-gold)', textDecoration: 'underline', cursor: 'pointer' }}
+        
       >
         {t.practiceSetup.subjectPreferenceTitle}{selectedIds.size > 0 ? ` (${selectedIds.size})` : ` (${t.practiceSetup.optionalTag})`}
       </button>
 
       {open && (
-        <div
-          onClick={() => setOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ background: 'var(--color-card)', color: 'var(--color-ink)', borderRadius: '20px 20px 0 0', padding: 20, width: '100%', maxWidth: 480, margin: '0 auto', maxHeight: '70vh', overflowY: 'auto' }}
-          >
+        <div className="subject-modal-overlay" onClick={() => setOpen(false)}>
+          <div className="subject-modal" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{t.practiceSetup.chooseSubjects}</h3>
             <p style={{ fontSize: 12.5, color: 'var(--color-inkMuted)', marginBottom: 16 }}>{t.practiceSetup.subjectPreferenceNote}</p>
 
@@ -1182,11 +1176,7 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
               </button>
             )}
 
-            <button
-              onClick={done}
-              disabled={saving}
-              style={{ width: '100%', padding: 14, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 15, marginTop: 16 }}
-            >
+            <button className="subject-done" onClick={done} disabled={saving}>
               {saving ? '…' : t.practiceSetup.done}
             </button>
           </div>
@@ -1216,8 +1206,8 @@ function PreferenceSummary({
   const summary = describeSelections(saved, tree, lang);
 
   return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderLeft: '5px solid #E2B04A', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+    <div className="preference-summary">
+      <div className="summary-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h3 className="summary-label">{t.practiceSetup.yourPreferences}</h3>
@@ -1229,11 +1219,7 @@ function PreferenceSummary({
         </div>
       </div>
 
-      <button
-        onClick={onStart}
-        disabled={starting}
-        style={{ width: '100%', padding: 16, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontSize: 17, fontWeight: 700, boxShadow: '0 10px 24px -10px rgba(15,47,51,0.7)' }}
-      >
+      <button className="summary-start" onClick={onStart} disabled={starting}>
         {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.startPractice}
       </button>
     </div>
