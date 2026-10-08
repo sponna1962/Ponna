@@ -932,11 +932,15 @@ export default function QuizStartPage() {
           cursor: pointer;
         }
         .subject-list {
+          display: block;
+          width: 100%;
           margin-top: 9px;
           border-top: 1px solid #E6ECEF;
         }
         .subject-option {
           display: flex;
+          width: 100%;
+          box-sizing: border-box;
           align-items: center;
           gap: 10px;
           min-height: 42px;
