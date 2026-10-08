@@ -45,7 +45,7 @@ export class CutoffPredictorService {
     return {
       access: 'AVAILABLE' as const,
       community: user.community,
-      records: records.map((r) => ({ year: r.year, cutoffMarks: r.cutoffMarks, totalMarks: r.totalMarks, sourceUrl: r.sourceUrl, verifiedAt: r.verifiedAt })),
+      records: records.map((r) => ({ year: r.year, cutoffMarks: r.cutoffMarks, cutoffMin: r.cutoffMin, cutoffMax: r.cutoffMax, totalMarks: r.totalMarks, isOfficialConfirmed: r.isOfficialConfirmed, sourceUrl: r.sourceUrl, verifiedAt: r.verifiedAt })),
       studentAccuracy: overall ? Math.round(overall.averagePercent) : null,
       studentQuestionsAnswered: overall?.questionsAnswered ?? 0,
     };
