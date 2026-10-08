@@ -77,7 +77,7 @@ export class BulkExplanationService {
   /** Sept 2026 — same DISTINCT+random() Postgres restriction fixed in
    * question-audit.service.ts's selectSampleForSubCategory() (commit
    * 22b36ac) -- subquery wrap avoided here from the start. */
-  async selectMissingExplanationQuestions(subCategoryId: string, targetSize: number): Promise<string[]> {
+  async selectMissingExplanationQuestions(subCategoryId: string, targetSize: number, language?: 'TA' | 'EN'): Promise<string[]> {
     const rows = await prisma.$queryRaw<{ id: string }[]>(
       Prisma.sql`
         SELECT id FROM (
@@ -86,6 +86,7 @@ export class BulkExplanationService {
           WHERE q.status = 'PUBLISHED'
             AND (q."subCategoryId" = ${subCategoryId} OR t."subCategoryId" = ${subCategoryId})
             AND (q."explanationTa" IS NULL OR q."explanationEn" IS NULL)
+            ${language ? Prisma.sql`AND q.language::text = ${language}` : Prisma.empty}
         ) matched
         ORDER BY random()
         LIMIT ${targetSize}

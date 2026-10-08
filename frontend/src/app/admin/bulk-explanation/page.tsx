@@ -28,6 +28,7 @@ export default function BulkExplanationPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [sampleSize, setSampleSize] = useState(500);
   const [scopeSubCategoryId, setScopeSubCategoryId] = useState('');
+  const [language, setLanguage] = useState<'' | 'TA' | 'EN'>('TA');
   const [subCategoryOptions, setSubCategoryOptions] = useState<{ id: string; label: string }[]>([]);
   const [starting, setStarting] = useState(false);
   const [cancellingRunId, setCancellingRunId] = useState<string | null>(null);
@@ -100,11 +101,12 @@ export default function BulkExplanationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sampleSize,
+          language: language || undefined,
           subCategoryId: scopeSubCategoryId,
           // Sept 2026 — was defaulting server-side to "Explanation run —
           // N questions (date)" with no exam name at all, unlike AI
           // Question Audit's own scoped-run label. Now includes it.
-          label: `Explanation run — ${subCategoryOptions.find((o) => o.id === scopeSubCategoryId)?.label ?? 'exam'} — ${sampleSize} questions (${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })})`,
+          label: `Explanation run — ${subCategoryOptions.find((o) => o.id === scopeSubCategoryId)?.label ?? 'exam'} — ${language || 'TA+EN'} — ${sampleSize} questions (${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })})`,
         }),
       });
       if (!res.ok) {
@@ -155,6 +157,18 @@ export default function BulkExplanationPage() {
                 {o.label}
               </option>
             ))}
+          </select>
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <label style={{ fontSize: 13, color: '#334155', display: 'block', marginBottom: 4 }}>Question language:</label>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as '' | 'TA' | 'EN')}
+            style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+          >
+            <option value="TA">Tamil questions only</option>
+            <option value="EN">English questions only</option>
+            <option value="">Both</option>
           </select>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>

@@ -872,7 +872,8 @@ app.post('/admin/bulk-explanation/runs', requireStaffAuth, requireRole('SUPER_AD
       res.status(400).json({ error: 'subCategoryId is required' });
       return;
     }
-    const questionIds = await bulkExplanationService.selectMissingExplanationQuestions(subCategoryId, sampleSize);
+    const language = req.body.language === 'TA' || req.body.language === 'EN' ? (req.body.language as 'TA' | 'EN') : undefined;
+    const questionIds = await bulkExplanationService.selectMissingExplanationQuestions(subCategoryId, sampleSize, language);
     if (questionIds.length === 0) {
       res.status(400).json({ error: 'No published questions missing an explanation were found for this exam.' });
       return;
