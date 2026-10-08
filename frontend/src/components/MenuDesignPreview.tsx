@@ -2,32 +2,30 @@
 
 import Image from 'next/image';
 import {
-  HomeIcon, StudyNotesIcon, PracticeIcon, AskPonnaIcon, MistakesIcon,
-  DailyQuizIcon, LiveExamIcon, ProgressIcon, CutoffPredictorIcon,
-  AboutIcon, HelpIcon, PlansIcon, CloseIcon,
+  PlansIcon, CloseIcon,
 } from './icons';
 
 const primary = [
-  ['/', 'Home', HomeIcon],
-  ['/current-affairs', 'Current Affairs', StudyNotesIcon],
-  ['/tnpsc-group-4/notification-2026', 'Group 4 அறிவிப்பு 2026', StudyNotesIcon],
+  ['/', 'Home'],
+  ['/current-affairs', 'Current Affairs'],
+  ['/tnpsc-group-4/notification-2026', 'Group 4 அறிவிப்பு 2026'],
 ] as const;
 
 const preparation = [
-  ['/quiz', 'Start Practice', PracticeIcon],
-  ['/ask-ponna', 'Ask Ponna', AskPonnaIcon],
-  ['/mistakes', 'Review Mistakes', MistakesIcon],
-  ['/study-notes', 'Study Notes', StudyNotesIcon],
-  ['/daily-quiz', 'Daily Challenge', DailyQuizIcon],
-  ['/live-exam', 'Live Exam', LiveExamIcon],
-  ['/adaptive-mock', 'Adaptive Mock', PracticeIcon],
-  ['/dashboard', 'Performance', ProgressIcon],
-  ['/cutoff-predictor', 'Cut-off Predictor', CutoffPredictorIcon],
+  ['/quiz', 'Start Practice'],
+  ['/ask-ponna', 'Ask Ponna'],
+  ['/mistakes', 'Review Mistakes'],
+  ['/study-notes', 'Study Notes'],
+  ['/daily-quiz', 'Daily Challenge'],
+  ['/live-exam', 'Live Exam'],
+  ['/adaptive-mock', 'Adaptive Mock'],
+  ['/dashboard', 'Performance'],
+  ['/cutoff-predictor', 'Cut-off Predictor'],
 ] as const;
 
 const support = [
-  ['/about', 'About PONNA', AboutIcon],
-  ['/help', 'Help & Support', HelpIcon],
+  ['/about', 'About PONNA'],
+  ['/help', 'Help & Support'],
 ] as const;
 
 const colors = {
@@ -41,8 +39,8 @@ const colors = {
   paper: '#FFFEFB',
 };
 
-function Row({ item, active = false }: { item: readonly [string, string, any]; active?: boolean }) {
-  const [href, label, Icon] = item;
+function Row({ item, active = false, isNew = false }: { item: readonly [string, string]; active?: boolean; isNew?: boolean }) {
+  const [href, label] = item;
   return (
     <a href={href} style={{
       display:'flex', alignItems:'center', gap:12, minHeight:48, padding:'5px 10px',
@@ -51,13 +49,8 @@ function Row({ item, active = false }: { item: readonly [string, string, any]; a
       color:colors.ink, textDecoration:'none', fontSize:17,
       fontWeight: active ? 800 : 500, boxSizing:'border-box',
     }}>
-      <span style={{
-        width:30,height:30,flex:'0 0 30px',display:'grid',placeItems:'center',
-        border:'1px solid '+colors.line,background:'#FAFBFA',borderRadius:6,
-      }}>
-        <Icon size={18} color={active ? colors.navy : '#6B7B88'} />
-      </span>
       <span style={{flex:1,minWidth:0}}>{label}</span>
+      {isNew && <span style={{fontSize:10,fontWeight:900,letterSpacing:'.6px',color:'#0B3864',background:'#FFF1B8',border:'1px solid #E8C95D',padding:'3px 7px',borderRadius:5}}>NEW</span>}
       {active && <span style={{fontSize:10,color:colors.green,fontWeight:800,letterSpacing:'.5px'}}>CURRENT</span>}
     </a>
   );
@@ -106,7 +99,7 @@ export default function MenuDesignPreview() {
         <div style={{flex:1,overflowY:'auto',padding:'10px 12px 12px',boxSizing:'border-box'}}>
           <nav aria-label="PONNA menu">
             <div style={{paddingBottom:6,borderBottom:'1px solid #E1E7EA'}}>
-              {primary.map((item,i)=><Row key={item[0]} item={item} active={i===0}/>)}
+              {primary.map((item,i)=><Row key={item[0]} item={item} active={i===0} isNew={item[0]==='/tnpsc-group-4/notification-2026'}/>)}
             </div>
             <SectionTitle>PREPARATION</SectionTitle>
             {preparation.map(item=><Row key={item[0]} item={item}/>)}
