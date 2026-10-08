@@ -42,7 +42,7 @@ export default function AboutPage() {
             (StudentMenu drawer) as every other app/support page, instead of
             a standalone "back to home" link that made this page feel like a
             separate marketing site. */}
-        <div style={{ background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderBottom: '3px solid #E2B04A' }}>
+        <div style={{ background: COLORS.head1, borderBottom: '3px solid #E2B04A' }}>
           <div style={{ maxWidth: 480, margin: '0 auto', padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
             <StudentMenu iconColor="#fff" />
             <span style={{ fontSize: 19, fontWeight: 700, color: '#fff' }}>About PONNA</span>
@@ -127,7 +127,7 @@ export default function AboutPage() {
       <Rule />
 
       {/* ── Our Commitment to Quality ────────────────────────────────── */}
-      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 16 }}>
+      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 8, padding: 16 }}>
         <H2>Our Commitment to Quality</H2>
         <p style={{ fontSize: 16, lineHeight: 1.75, color: COLORS.inkMuted, marginBottom: 16 }}>
           We are committed to continuously improving our question bank and maintaining the accuracy, relevance, and
@@ -143,7 +143,7 @@ export default function AboutPage() {
       <Rule />
 
       {/* ── Our Approach — a genuine sequence, so a step treatment fits ── */}
-      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 16 }}>
+      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 8, padding: 16 }}>
         <H2>Our Approach</H2>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
           {['Learn', 'Practise', 'Check', 'Improve'].map((step, i, arr) => (
@@ -163,7 +163,7 @@ export default function AboutPage() {
       <Rule />
 
       {/* ── Who Can Use PONNA — kept small, tag-style, not oversized cards ── */}
-      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 14, padding: 16 }}>
+      <Section><div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderLeft: '4px solid #E2B04A', borderRadius: 8, padding: 16 }}>
         <H2>Who Can Use PONNA?</H2>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {['Competitive & Employment Examinations', 'Higher Education & Entrance Examinations', 'Eligibility Examinations'].map((label) => (
@@ -186,7 +186,7 @@ export default function AboutPage() {
       </div></Section>
 
       {/* ── Our Social Purpose — full-bleed band, the emotional core ─── */}
-      <div style={{ background: `linear-gradient(180deg, ${COLORS.head1}, ${COLORS.head2})`, borderTop: '3px solid #E2B04A', borderBottom: '3px solid #E2B04A', color: '#fff', padding: '36px 0', margin: '32px 0' }}>
+      <div style={{ background: COLORS.head1, borderTop: '3px solid #E2B04A', borderBottom: '3px solid #E2B04A', color: '#fff', padding: '36px 0', margin: '32px 0' }}>
         <Section>
           <h2 style={{ fontFamily: FONT_FAMILY, fontSize: 26, fontWeight: 700, color: '#FFE9A8', margin: '0 0 20px', lineHeight: 1.3 }}>
             Quality Practice Should Not Be Limited by Cost
@@ -251,7 +251,7 @@ export default function AboutPage() {
           style={{
             display: 'block',
             padding: 15,
-            borderRadius: 14,
+            borderRadius: 8,
             background: COLORS.btn,
             color: COLORS.btnText,
             textDecoration: 'none',
