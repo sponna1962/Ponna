@@ -83,8 +83,8 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
   return (
     <>
       <BitterFontLinks />
-      <button onClick={openMenu} aria-label="Menu" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, display: 'flex' }}>
-        <MenuIcon size={22} color={iconColor ?? COLORS.ink} />
+      <button onClick={openMenu} aria-label="Menu" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, margin: '-4px 0', lineHeight: 1, display: 'flex' }}>
+        <MenuIcon size={30} color={iconColor ?? COLORS.ink} />
       </button>
 
       {open && typeof document !== 'undefined' && createPortal(

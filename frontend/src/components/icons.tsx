@@ -136,13 +136,14 @@ export function DailyQuizIcon(p: IconProps) {
   );
 }
 
-export function MenuIcon(p: IconProps) {
+// Oct 2026 — bolder, wider bars so the menu button is easy to see and tap.
+export function MenuIcon({ size = 20, color = '#1A2238' }: IconProps) {
   return (
-    <Base {...p}>
-      <path d="M4 7h16" />
-      <path d="M4 12h16" />
-      <path d="M4 17h16" />
-    </Base>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M3 12h18" />
+      <path d="M3 18h18" />
+    </svg>
   );
 }
 

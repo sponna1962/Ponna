@@ -207,7 +207,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           top: 0;
           z-index: 30;
         }
-        .menu-slot { flex: 0 0 42px; display: flex; align-items: center; }
+        .menu-slot { flex: 0 0 auto; display: flex; align-items: center; }
         .account-slot { flex: 0 0 auto; display: flex; align-items: center; }
         .notice { background: #FFF3CD; color: #5C4009; border-bottom: 1px solid #E8D28A; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
         .menu-button {
