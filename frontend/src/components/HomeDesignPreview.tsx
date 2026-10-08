@@ -70,9 +70,9 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
       </section>
 
       <section className="stat-strip" aria-label="PONNA எண்கள்">
-        <div><strong>60,000+</strong><span>கேள்விகளில் பயிற்சி</span></div>
-        <div><strong>3,250+</strong><span>மாதாந்திர பயிற்சி</span></div>
-        <div><strong>4,000+</strong><span>பயிற்சி முயற்சிகள்</span></div>
+        <div><strong>60,000+</strong><span>கேள்விகளில்<br />பயிற்சி</span></div>
+        <div><strong>3,250+</strong><span>மாதாந்திர<br />பயிற்சி</span></div>
+        <div><strong>4,000+</strong><span>பயிற்சி<br />முயற்சிகள்</span></div>
       </section>
 
       <section className="content">
@@ -155,7 +155,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
             <div className="pass-badge">GROUP 4</div>
           </div>
           <div className="pass-list">
-            <div><b>60,000+</b><span>கேள்விகளில் பயிற்சி</span></div>
+            <div><b>60,000+</b><span>கேள்விகளில்<br />பயிற்சி</span></div>
             <div><b>தினசரி</b><span>Current Affairs &amp; Brain Challenge</span></div>
             <div><b>நேரடி</b><span>தேர்வுகளில் பங்கேற்பு</span></div>
           </div>
@@ -239,14 +239,14 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           position: relative;
           display: flex;
           flex-direction: column;
-          min-height: 400px;
+          min-height: 470px;
           background: #F1FAF3;
           border-bottom: 1px solid #DCE9DF;
           overflow: hidden;
         }
-        .hero-copy { position: relative; z-index: 2; flex: 1; width: 55%; padding: 20px 0 0 14px; min-width: 0; display: flex; flex-direction: column; }
-        .eyebrow { color: #17835E; font-weight: 800; font-size: 15px; line-height: 1.4; margin-bottom: 7px; }
-        h1 { margin: 0 0 auto; color: #0B3864; font-size: 26px; line-height: 1.3; letter-spacing: -0.2px; }
+        .hero-copy { position: relative; z-index: 2; flex: 1; width: 58%; padding: 20px 0 0 14px; min-width: 0; display: flex; flex-direction: column; }
+        .eyebrow { color: #17835E; font-weight: 800; font-size: 15.5px; line-height: 1.4; margin-bottom: 10px; white-space: nowrap; }
+        h1 { margin: 0 0 auto; color: #0B3864; font-size: 27px; line-height: 1.4; letter-spacing: -0.2px; }
         h1 em { color: #17835E; font-style: normal; }
         .hero ul {
           list-style: none;
@@ -681,8 +681,8 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           .brand :global(img) { width: 132px !important; }
           .login { font-size: 14px; padding: 10px 12px; }
           .hero-copy { padding: 18px 0 0 12px; }
-          .eyebrow { font-size: 14px; }
-          h1 { font-size: 23px; }
+          .eyebrow { font-size: 15px; }
+          h1 { font-size: 24px; }
           .hero ul { font-size: 14.5px; }
           .primary-button { font-size: 16px; }
           .featured-card small, .tool-copy p { font-size: 16px; }
