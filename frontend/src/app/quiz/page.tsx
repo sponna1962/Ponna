@@ -555,11 +555,7 @@ export default function QuizStartPage() {
           <>
             {fixedSel ? (
               <div className="exam-card">
-                <span className="exam-card-icon">🎯</span>
-                <div>
-                  <b style={{ fontSize: 17, display: 'block' }}>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</b>
-                  <small style={{ fontSize: 12, color: '#FFE9A8' }}>{lang === 'ta' ? 'போட்டித் தேர்வு' : 'Competitive exam'}</small>
-                </div>
+                <div className="exam-copy"><b>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</b><small>{lang === 'ta' ? 'போட்டித் தேர்வு' : 'Competitive exam'}</small></div>
                 <span className="selected-badge">✓ {lang === 'ta' ? 'தேர்வானது' : 'Selected'}</span>
               </div>
             ) : restriction?.restricted ? (
@@ -740,7 +736,7 @@ export default function QuizStartPage() {
                 boxShadow: canStart ? '0 10px 24px -10px rgba(15,47,51,0.7)' : 'none',
               }}
             >
-              {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.startPractice}
+              {starting ? t.practiceSetup.savingAndStarting : 'Start Practising'}
             </button>
           </>
         )}
@@ -804,46 +800,38 @@ export default function QuizStartPage() {
         .exam-card {
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 22px;
-          padding: 14px 15px;
-          color: #fff;
-          background: #0B3864;
-          border-radius: 12px;
-          border-bottom: 4px solid #FFD22A;
-          box-shadow: 0 6px 16px rgba(11,56,100,.10);
+          gap: 10px;
+          margin: 2px 0 24px;
+          padding: 8px 2px 10px;
+          color: #0B3864;
+          background: transparent;
+          border: 0;
+          border-bottom: 1px solid #E1E7EA;
+          box-shadow: none;
         }
-        .exam-card-icon {
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          background: rgba(255,255,255,.12);
-          display: grid;
-          place-items: center;
-          font-size: 22px;
-          flex: 0 0 44px;
-        }
-        .exam-card b { font-size: 18px !important; }
-        .exam-card small { color: #DDE9F2 !important; font-size: 12px !important; }
+        .exam-copy { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+        .exam-card b { font-size: 15px !important; font-weight: 900; white-space: nowrap; }
+        .exam-card small { color: #667687 !important; font-size: 11px !important; }
         .selected-badge {
           margin-left: auto;
-          color: #20384D;
-          background: #FFD22A;
-          padding: 6px 10px;
-          border-radius: 8px;
-          font-size: 11.5px;
+          color: #0B3864;
+          background: #FFF3C4;
+          border: 1px solid #D9B94B;
+          padding: 4px 7px;
+          border-radius: 5px;
+          font-size: 10px;
           font-weight: 900;
           white-space: nowrap;
         }
         .section-block {
-          margin-bottom: 22px !important;
-          padding-bottom: 17px;
+          margin-bottom: 18px !important;
+          padding-bottom: 14px;
           border-bottom: 1px solid #E6ECEF;
         }
         .section-title {
-          margin: 0 0 11px !important;
+          margin: 0 0 9px !important;
           color: #0B3864 !important;
-          font-size: 17px !important;
+          font-size: 16px !important;
           line-height: 1.4;
           font-weight: 900 !important;
         }
@@ -929,15 +917,16 @@ export default function QuizStartPage() {
           text-decoration: none;
           font-size: 13px;
         }
-        .subject-pref { margin-bottom: 22px; }
+        .subject-pref { margin: 0 0 18px; }
         .subject-pref-button {
-          background: #fff !important;
+          background: transparent !important;
           border: none !important;
           padding: 0 !important;
-          font-size: 14px !important;
-          font-weight: 800 !important;
-          color: #17835E !important;
-          text-decoration: underline;
+          font-size: 13px !important;
+          font-weight: 700 !important;
+          color: #0B3864 !important;
+          text-decoration: underline !important;
+          text-underline-offset: 3px;
           cursor: pointer;
         }
         .subject-modal-overlay {
@@ -1145,7 +1134,7 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
         onClick={openModal}
         
       >
-        {t.practiceSetup.subjectPreferenceTitle}{selectedIds.size > 0 ? ` (${selectedIds.size})` : ` (${t.practiceSetup.optionalTag})`}
+        பாடங்கள்${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
       </button>
 
       {open && (
@@ -1222,7 +1211,7 @@ function PreferenceSummary({
       </div>
 
       <button className="summary-start" onClick={onStart} disabled={starting}>
-        {starting ? t.practiceSetup.savingAndStarting : t.practiceSetup.startPractice}
+        {starting ? t.practiceSetup.savingAndStarting : 'Start Practising'}
       </button>
     </div>
   );
