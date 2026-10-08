@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { translations } from '../../lib/translations';
@@ -475,13 +476,19 @@ export default function QuizStartPage() {
 
   return (
     <main className="practice-page">
-      <div className="practice-header">
+      <header className="practice-header">
         <StudentMenu iconColor="#0B3864" />
-        <h1 className="practice-title">{t.quiz.title}</h1>
+        <a href="/" className="practice-brand" aria-label="PONNA.in">
+          <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority />
+        </a>
         {/* Sept 2026 — Offline Practice entry point. Deliberately not a
             new sidebar item (nav structure is finalized) — lives here
             instead, right where a student starts practice. */}
-        <a href="/offline-practice" className="offline-badge">📥 Offline</a>
+        <a href="/offline-practice" className="offline-badge">Offline</a>
+      </header>
+
+      <div className="practice-page-title">
+        <h1 className="practice-title">{t.quiz.title}</h1>
       </div>
 
       <div className="practice-content">
@@ -554,7 +561,7 @@ export default function QuizStartPage() {
           <>
             {fixedSel ? (
               <div className="exam-card">
-                <span className="exam-card-icon">🎯</span>
+                <span className="exam-card-mark" aria-hidden="true">4</span>
                 <div>
                   <b style={{ fontSize: 17, display: 'block' }}>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</b>
                   <small style={{ fontSize: 12, color: '#FFE9A8' }}>{lang === 'ta' ? 'போட்டித் தேர்வு' : 'Competitive exam'}</small>
@@ -754,271 +761,42 @@ export default function QuizStartPage() {
         )}
       </div>
     
-      <style jsx>{`
-        .practice-page {
-          width: 100%;
-          max-width: 620px;
-          min-height: 100dvh;
-          margin: 0 auto;
-          padding-bottom: 28px;
-          background: #fff;
-          color: #20384D;
-          font-family: 'Noto Sans Tamil', 'Nirmala UI', Latha, Arial, sans-serif;
-        }
-        .practice-header {
-          min-height: 68px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 0 14px;
-          background: #fff;
-          border-bottom: 3px solid #FFD22A;
-          position: sticky;
-          top: 0;
-          z-index: 30;
-        }
-        .practice-title {
-          margin: 0 !important;
-          color: #0B3864 !important;
-          font-size: 21px !important;
-          font-weight: 900 !important;
-          line-height: 1.25;
-        }
-        .offline-badge {
-          margin-left: auto;
-          color: #17835E !important;
-          border: 1px solid #B9DEC7 !important;
-          background: #F1FAF3;
-          padding: 7px 11px;
-          border-radius: 999px;
-          text-decoration: none;
-          white-space: nowrap;
-          font-size: 12px;
-          font-weight: 900;
-        }
-        .practice-content { padding: 18px 14px 0 !important; }
-        .exam-card {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 22px;
-          padding: 14px 15px;
-          color: #fff;
-          background: #0B3864;
-          border-radius: 12px;
-          border-bottom: 4px solid #FFD22A;
-          box-shadow: 0 6px 16px rgba(11,56,100,.10);
-        }
-        .exam-card-icon {
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          background: rgba(255,255,255,.12);
-          display: grid;
-          place-items: center;
-          font-size: 22px;
-          flex: 0 0 44px;
-        }
-        .exam-card b { font-size: 18px !important; }
-        .exam-card small { color: #DDE9F2 !important; font-size: 12px !important; }
-        .selected-badge {
-          margin-left: auto;
-          color: #20384D;
-          background: #FFD22A;
-          padding: 6px 10px;
-          border-radius: 8px;
-          font-size: 11.5px;
-          font-weight: 900;
-          white-space: nowrap;
-        }
-        .section-block {
-          margin-bottom: 22px !important;
-          padding-bottom: 17px;
-          border-bottom: 1px solid #E6ECEF;
-        }
-        .section-title {
-          margin: 0 0 11px !important;
-          color: #0B3864 !important;
-          font-size: 17px !important;
-          line-height: 1.4;
-          font-weight: 900 !important;
-        }
-        .chip-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-        .practice-chip {
-          padding: 10px 15px !important;
-          border-radius: 9px !important;
-          border: 1px solid #D7E0E5 !important;
-          background: #fff !important;
-          color: #20384D !important;
-          font-weight: 700 !important;
-          font-size: 14.5px !important;
-          box-shadow: none !important;
-        }
-        .practice-chip.active {
-          background: #0B3864 !important;
-          color: #fff !important;
-          border-color: #0B3864 !important;
-        }
-        .start-button, .summary-start {
-          width: 100% !important;
-          min-height: 54px;
-          padding: 13px 16px !important;
-          margin-top: 10px !important;
-          border-radius: 10px !important;
-          border: none !important;
-          background: #0B3864 !important;
-          color: #FFD22A !important;
-          font-size: 17px !important;
-          font-weight: 900 !important;
-          box-shadow: 0 7px 18px rgba(11,56,100,.16) !important;
-        }
-        .profile-gate {
-          margin-top: 14px !important;
-          padding: 22px 16px !important;
-          text-align: center;
-          border-radius: 12px !important;
-          background: #F8FBFC !important;
-          border: 1px solid #DDE5E9 !important;
-          border-top: 4px solid #FFD22A !important;
-        }
-        .profile-gate a {
-          display: block !important;
-          padding: 13px !important;
-          border-radius: 9px !important;
-          background: #0B3864 !important;
-          color: #FFD22A !important;
-        }
-        .access-prompt {
-          margin-top: 14px !important;
-          padding: 15px !important;
-          border-radius: 10px !important;
-          background: #FFF9E8 !important;
-          border: 1px solid #EBD58C !important;
-        }
-        .access-prompt > div { gap: 8px !important; }
-        .access-prompt button, .access-prompt a { border-radius: 9px !important; }
-        .locked-card {
-          padding: 13px !important;
-          border-radius: 9px !important;
-          background: #F1FAF3 !important;
-          border: 1px solid #B9DEC7 !important;
-          color: #176B4E !important;
-        }
-        .error-box {
-          margin-top: 14px !important;
-          padding: 12px;
-          border: 1px solid #F0C2C6;
-          border-radius: 9px;
-          background: #FFF5F5;
-        }
-        .error-box p { color: #B4232F !important; margin: 0 0 8px !important; }
-        .error-link {
-          display: inline-block;
-          padding: 8px 14px;
-          border-radius: 7px;
-          background: #0B3864;
-          color: #fff;
-          text-decoration: none;
-          font-size: 13px;
-        }
-        .subject-pref { margin-bottom: 22px; }
-        .subject-pref-button {
-          background: #fff !important;
-          border: none !important;
-          padding: 0 !important;
-          font-size: 14px !important;
-          font-weight: 800 !important;
-          color: #17835E !important;
-          text-decoration: underline;
-          cursor: pointer;
-        }
-        .subject-modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(11,56,100,.42);
-          z-index: 100;
-          display: flex;
-          align-items: flex-end;
-        }
-        .subject-modal {
-          background: #fff;
-          color: #20384D;
-          border-radius: 16px 16px 0 0;
-          padding: 20px;
-          width: 100%;
-          max-width: 620px;
-          margin: 0 auto;
-          max-height: 72vh;
-          overflow-y: auto;
-          box-shadow: 0 -8px 28px rgba(11,56,100,.18);
-        }
-        .subject-option {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 11px 0;
-          font-size: 14px;
-          cursor: pointer;
-          border-bottom: 1px solid #E6ECEF;
-        }
-        .subject-done {
-          width: 100%;
-          padding: 13px;
-          border-radius: 9px;
-          background: #0B3864;
-          color: #FFD22A;
-          border: none;
-          font-weight: 900;
-          font-size: 15px;
-          margin-top: 16px;
-        }
-        .preference-summary { margin-bottom: 22px; }
-        .summary-card {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-          background: #F8FBFC !important;
-          border: 1px solid #DDE5E9 !important;
-          border-left: 4px solid #FFD22A !important;
-          border-radius: 11px !important;
-          padding: 15px !important;
-          margin-bottom: 12px !important;
-        }
-        .summary-label {
-          margin: 0 0 5px !important;
-          color: #B07A16 !important;
-          font-size: 12px !important;
-          font-weight: 900 !important;
-        }
-        .summary-text {
-          margin: 0 !important;
-          color: #20384D !important;
-          font-size: 14.5px !important;
-          line-height: 1.6 !important;
-        }
-        .change-button {
-          flex-shrink: 0;
-          font-size: 12px;
-          font-weight: 800;
-          padding: 6px 11px;
-          border-radius: 7px;
-          border: 1px solid #D7E0E5;
-          background: #fff;
-          color: #0B3864;
-        }
-        @media (max-width: 380px) {
-          .practice-content { padding: 15px 12px 0 !important; }
-          .practice-title { font-size: 19px !important; }
-          .exam-card { padding: 13px 12px; }
-          .exam-card b { font-size: 16px !important; }
-          .practice-chip { font-size: 14px !important; padding: 9px 12px !important; }
-        }
-      `}</style>
+      <style jsx>{`\n.practice-page{width:100%;max-width:680px;min-height:100dvh;margin:0 auto;padding-bottom:32px;background:var(--color-paper);color:var(--color-ink);font-family:'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif}
+.practice-header{min-height:64px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--color-card);border-bottom:2px solid var(--color-gold);position:sticky;top:0;z-index:30}
+.practice-brand{display:flex;align-items:center;min-width:0;margin-right:auto;text-decoration:none}
+.practice-brand img{width:158px;height:auto;display:block}
+.practice-title{margin:0!important;color:var(--color-head1)!important;font-size:23px!important;font-weight:900!important;line-height:1.3;letter-spacing:-.2px}
+.practice-page-title{padding:20px 16px 4px}
+.practice-page-title:after{content:'';display:block;width:42px;height:3px;margin-top:9px;background:var(--color-gold);border-radius:2px}
+.offline-badge{color:var(--color-ok)!important;border:1px solid var(--color-ok)!important;background:var(--color-okBg);padding:7px 9px;border-radius:7px;text-decoration:none;white-space:nowrap;font-size:11px;font-weight:900;line-height:1}
+.practice-content{padding:12px 16px 0!important}
+.exam-card{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding:15px 16px;color:#fff;background:var(--color-head1);border-radius:10px;border-bottom:3px solid #FFD22A;box-shadow:0 6px 18px rgba(11,56,100,.12)}
+.exam-card-mark{width:42px;height:42px;border:1px solid rgba(255,255,255,.42);border-radius:8px;background:rgba(255,255,255,.08);display:grid;place-items:center;color:#fff;font-size:20px;font-weight:900;flex:0 0 42px}
+.exam-card b{font-size:18px!important}.exam-card small{color:#E6EFF6!important;font-size:12px!important}
+.selected-badge{margin-left:auto;color:#14253D;background:#FFD22A;padding:6px 9px;border-radius:6px;font-size:11px;font-weight:900;white-space:nowrap}
+.section-block{margin-bottom:22px!important;padding-bottom:18px;border-bottom:1px solid var(--color-line)}
+.section-title{margin:0 0 11px!important;color:var(--color-head1)!important;font-size:17px!important;line-height:1.45;font-weight:900!important}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px}
+.practice-chip{padding:10px 15px!important;min-height:42px;border-radius:8px!important;border:1px solid var(--color-line)!important;background:var(--color-card)!important;color:var(--color-ink)!important;font-weight:700!important;font-size:14.5px!important;box-shadow:none!important}
+.practice-chip.active{background:var(--color-head1)!important;color:#fff!important;border-color:var(--color-head1)!important}
+.start-button,.summary-start{width:100%!important;min-height:54px;padding:13px 16px!important;margin-top:10px!important;border-radius:9px!important;border:none!important;background:var(--color-btn)!important;color:var(--color-btnText)!important;font-size:17px!important;font-weight:900!important;box-shadow:0 7px 18px rgba(11,56,100,.16)!important}
+.profile-gate{margin-top:14px!important;padding:22px 16px!important;text-align:center;border-radius:10px!important;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-top:3px solid var(--color-gold)!important}
+.profile-gate a{display:block!important;padding:13px!important;border-radius:8px!important;background:var(--color-btn)!important;color:var(--color-btnText)!important}
+.access-prompt{margin-top:14px!important;padding:15px!important;border-radius:9px!important;background:var(--color-goldLight)!important;border:1px solid var(--color-gold)!important}
+.access-prompt>div{gap:8px!important}.access-prompt button,.access-prompt a{border-radius:8px!important}
+.locked-card{padding:13px!important;border-radius:8px!important;background:var(--color-okBg)!important;border:1px solid var(--color-ok)!important;color:var(--color-ok)!important}
+.error-box{margin-top:14px!important;padding:12px;border:1px solid var(--color-bad);border-radius:8px;background:var(--color-badBg)}.error-box p{color:var(--color-bad)!important;margin:0 0 8px!important}
+.error-link{display:inline-block;padding:8px 14px;border-radius:7px;background:var(--color-btn);color:var(--color-btnText);text-decoration:none;font-size:13px}
+.subject-pref{margin-bottom:22px}.subject-pref-button{background:transparent!important;border:none!important;padding:0!important;font-size:14px!important;font-weight:800!important;color:var(--color-teal)!important;text-decoration:underline;cursor:pointer}
+.subject-modal-overlay{position:fixed;inset:0;background:rgba(11,56,100,.52);z-index:100;display:flex;align-items:flex-end}
+.subject-modal{background:var(--color-card);color:var(--color-ink);border-radius:14px 14px 0 0;padding:20px;width:100%;max-width:680px;margin:0 auto;max-height:72vh;overflow-y:auto;box-shadow:0 -8px 28px rgba(11,56,100,.18)}
+.subject-option{display:flex;align-items:center;gap:10px;padding:11px 0;font-size:14px;cursor:pointer;border-bottom:1px solid var(--color-line)}
+.subject-done{width:100%;padding:13px;border-radius:8px;background:var(--color-btn);color:var(--color-btnText);border:none;font-weight:900;font-size:15px;margin-top:16px}
+.preference-summary{margin-bottom:22px}.summary-card{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-left:4px solid var(--color-gold)!important;border-radius:9px!important;padding:15px!important;margin-bottom:12px!important}
+.summary-label{margin:0 0 5px!important;color:var(--color-gold)!important;font-size:12px!important;font-weight:900!important}.summary-text{margin:0!important;color:var(--color-ink)!important;font-size:14.5px!important;line-height:1.6!important}
+.change-button{flex-shrink:0;font-size:12px;font-weight:800;padding:6px 11px;border-radius:7px;border:1px solid var(--color-line);background:var(--color-card);color:var(--color-head1)}
+@media(max-width:480px){.practice-header{padding:0 10px;gap:8px}.practice-brand img{width:148px}.practice-page-title{padding:18px 14px 3px}.practice-title{font-size:21px!important}.practice-content{padding:12px 14px 0!important}.exam-card{padding:13px 12px}.exam-card b{font-size:16px!important}.selected-badge{padding:5px 7px;font-size:10px}.practice-chip{font-size:14px!important;padding:9px 12px!important}}
+@media(max-width:380px){.practice-brand img{width:132px}.practice-title{font-size:20px!important}.offline-badge{padding:7px;font-size:10px}.practice-content{padding-left:12px!important;padding-right:12px!important}}\n      `}</style>
     </main>
   );
 }
