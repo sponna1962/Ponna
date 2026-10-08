@@ -112,7 +112,7 @@ export default function DiagnosticPage() {
       {state === 'loading' && <p style={{ color: COLORS.inkMuted, fontSize: 13 }}>…</p>}
 
       {state === 'intro' && (
-        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 24, textAlign: 'center' }}>
+        <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: 24, textAlign: 'center' }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.ink, marginBottom: 8 }}>{t.diagnostic.introTitle}</p>
           <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 20, lineHeight: 1.6 }}>{t.diagnostic.introBody}</p>
           <button onClick={start} disabled={starting} style={{ width: '100%', padding: 14, borderRadius: 10, background: COLORS.ink, color: COLORS.paper, border: 'none', fontWeight: 600, marginBottom: 10 }}>
