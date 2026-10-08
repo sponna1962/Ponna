@@ -81,24 +81,24 @@ export default function HomeDesignPreview() {
           <h2>PONNA-வின் சிறப்பம்சங்கள்</h2>
           <div className="usp-list">
             <article className="usp-item">
-              <strong>60,000+ கேள்விகள்</strong>
+              <strong>60,000+</strong>
               <p>புதிய பாடத்திட்டத்தின் கீழ் நிபுணர்கள் தயாரித்தது<br />பழைய டிஎன்பிசி கேள்வித்தாள்கள்</p>
             </article>
             <article className="usp-item">
-              <strong>இணையம் இல்லாமலும் பயிற்சி</strong>
-              <p>இணைய இணைப்பு இல்லாத நேரத்திலும் கேள்விகளைப் பயிற்சி செய்யலாம்</p>
+              <strong>இணையமின்றி</strong>
+              <p>இணைய இணைப்பு இல்லாத நேரத்திலும்<br />கேள்விகளைப் பயிற்சி செய்யலாம்</p>
             </article>
             <article className="usp-item">
-              <strong>மாதத்திற்கு 3,250+ கேள்விகள்</strong>
-              <p>தினசரி பயிற்சி மற்றும் வாராந்திர நேரடித் தேர்வுகள் மூலம்</p>
+              <strong>மாதத்திற்கு</strong>
+              <p>3,250+ கேள்விகள் தினசரி பயிற்சி மற்றும்<br />வாராந்திர நேரடித் தேர்வுகள் மூலம்</p>
             </article>
             <article className="usp-item">
-              <strong>4,000+ பயிற்சி முயற்சிகள்</strong>
-              <p>நேற்று PONNA-வில்</p>
+              <strong>முயற்சிகள்</strong>
+              <p>4,000+ பயிற்சி முயற்சிகள்<br />நேற்று PONNA-வில்</p>
             </article>
             <article className="usp-item">
-              <strong>குறைந்த கட்டணம்</strong>
-              <p>அதிக செலவின்றி, தரமான முழுமையான பயிற்சியை PONNA-வில் பெறலாம்</p>
+              <strong>கட்டணம்</strong>
+              <p>அதிக செலவின்றி, தரமான முழுமையான பயிற்சியை<br />PONNA-வில் பெறலாம்</p>
             </article>
           </div>
         </section>
@@ -316,8 +316,8 @@ export default function HomeDesignPreview() {
         .usp-item strong {
           display: block;
           color: #0B3864;
-          font-size: 21px;
-          line-height: 1.35;
+          font-size: 24px;
+          line-height: 1.25;
           font-weight: 900;
         }
         .usp-item p {
