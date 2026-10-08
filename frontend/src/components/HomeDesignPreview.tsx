@@ -95,26 +95,25 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           <div className="usp-list">
             <article className="usp-item">
               <strong>60,000+</strong>
-              <p>புதிய பாடத்திட்டத்தின் கீழ் நிபுணர்கள் தயாரித்தது<br />பழைய டிஎன்பிசி கேள்வித்தாள்கள்</p>
+              <p>புதிய பாடத்திட்டத்தின் கீழ் நிபுணர்கள் தயாரித்த<br />பயிற்சிக் கேள்விகள் மற்றும் பழைய டிஎன்பிசி கேள்வித்தாள்கள்</p>
             </article>
             <article className="usp-item">
               <strong>இணையமின்றி</strong>
-              <p>இணைய இணைப்பு இல்லாத நேரத்திலும்<br />கேள்விகளைப் பயிற்சி செய்யலாம்</p>
+              <p>இணைய இணைப்பு இல்லாவிட்டாலும்,<br />ஆஃப்லைன் முறையில் தொடர்ந்து பயிற்சி செய்யலாம்.</p>
             </article>
             <article className="usp-item">
-              <strong>மாதத்திற்கு</strong>
-              <p>3,250+ கேள்விகள் தினசரி பயிற்சி மற்றும்<br />வாராந்திர நேரடித் தேர்வுகள் மூலம்</p>
+              <strong>இரு மொழிகளில்</strong>
+              <p>டிஎன்பிசி தேர்வுக்குத் தேவையான<br />தமிழ் மற்றும் ஆங்கிலத்தில் பயிற்சி செய்யலாம்.</p>
             </article>
             <article className="usp-item">
-              <strong>முயற்சிகள்</strong>
-              <p>4,000+ பயிற்சி முயற்சிகள்<br />நேற்று PONNA-வில்</p>
+              <strong>உங்கள் நேரத்தில்</strong>
+              <p>நேரம் கிடைக்கும் போதெல்லாம்,<br />எப்போது வேண்டுமானாலும் பயிற்சி செய்யலாம்.</p>
             </article>
             <article className="usp-item">
-              <strong>கட்டணம்</strong>
-              <p>அதிக செலவின்றி, தரமான முழுமையான பயிற்சியை<br />PONNA-வில் பெறலாம்</p>
+              <strong>அனைவருக்கும்</strong>
+              <p>மாணவ–மாணவிகள், வேலைக்குச் செல்பவர்கள்,<br />வீட்டில் இருக்கும் பெண்கள் என அனைவரும் எளிதாகப் பயிற்சி செய்யலாம்.</p>
             </article>
-          </div>
-        </section>
+          </div>       </section>
 
         <div className="tools-grid">
           {tools.map((item) => (
