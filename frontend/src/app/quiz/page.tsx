@@ -477,6 +477,7 @@ export default function QuizStartPage() {
     <main className="practice-page">
       <div className="practice-header">
         <StudentMenu iconColor="#0B3864" />
+        <a href="/" aria-label="PONNA.in" className="practice-brand"><img src="/brand-mark.png" width={30} height={30} alt="PONNA.in" /></a>
         <h1 className="practice-title">{t.quiz.title}</h1>
         {/* Sept 2026 — Offline Practice entry point. Deliberately not a
             new sidebar item (nav structure is finalized) — lives here
@@ -777,12 +778,15 @@ export default function QuizStartPage() {
           top: 0;
           z-index: 30;
         }
+        .practice-brand { display: flex; flex: 0 0 34px; width: 34px; height: 34px; margin-left: -6px; align-items: center; justify-content: center; }
+        .practice-brand img { display: block; width: 30px; height: 30px; object-fit: contain; }
         .practice-title {
           margin: 0 !important;
           color: #0B3864 !important;
-          font-size: 21px !important;
+          font-size: 19px !important;
           font-weight: 900 !important;
           line-height: 1.25;
+          min-width: 0;
         }
         .offline-badge {
           margin-left: auto;
