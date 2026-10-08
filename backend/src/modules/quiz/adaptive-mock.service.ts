@@ -7,6 +7,7 @@ import { prisma } from '../../lib/prisma';
 import { scopeAccessService, ScopeRestrictedError } from '../quota/scope-access.service';
 import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
 import { extractFirstSubCategoryId } from '../practice-preference/weak-area.service';
+import { apportion, shuffleInPlace } from '../questions/allocation-mix';
 
 export class AdaptiveMockError extends Error {}
 
@@ -113,12 +114,28 @@ export class AdaptiveMockService {
       OR: [{ subCategoryId }, { authorityTags: { some: { subCategoryId } } }],
     };
 
+    // Random AND spread across subjects (never oldest-first, never one subject
+    // dominating): draw each difficulty band evenly over the subjects present.
+    const drawBalanced = async (difficulty: Difficulty, count: number) => {
+      if (count <= 0) return [] as { id: string; difficulty: Difficulty }[];
+      const rows = await prisma.question.findMany({
+        where: { ...baseWhere, difficulty },
+        select: { id: true, subjectId: true, difficulty: true },
+        take: 6000,
+      });
+      const bySubject = new Map<string, typeof rows>();
+      for (const r of rows) bySubject.set(r.subjectId ?? '', [...(bySubject.get(r.subjectId ?? '') ?? []), r]);
+      const groups = Array.from(bySubject.values()).map((g) => shuffleInPlace(g));
+      const shares = apportion(groups.map(() => 1), groups.map((g) => g.length), count);
+      return groups.flatMap((g, i) => g.slice(0, shares[i]));
+    };
+
     const [mediumQuestions, hardQuestions] = await Promise.all([
-      prisma.question.findMany({ where: { ...baseWhere, difficulty: 'MEDIUM' as Difficulty }, take: mediumCount, orderBy: { createdAt: 'asc' } }),
-      prisma.question.findMany({ where: { ...baseWhere, difficulty: 'HARD' as Difficulty }, take: hardCount, orderBy: { createdAt: 'asc' } }),
+      drawBalanced('MEDIUM' as Difficulty, mediumCount),
+      drawBalanced('HARD' as Difficulty, hardCount),
     ]);
 
-    const questions = [...mediumQuestions, ...hardQuestions];
+    const questions = shuffleInPlace([...mediumQuestions, ...hardQuestions]);
     if (questions.length < Math.min(questionCount, 5)) {
       throw new AdaptiveMockError('Not enough published questions are available for this exam yet. Please try again later.');
     }

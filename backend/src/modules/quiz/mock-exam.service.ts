@@ -23,6 +23,7 @@ import { CorrectOption, MockExamAttemptStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { scopeAccessService, ScopeRestrictedError } from '../quota/scope-access.service';
 import { PracticePreferenceService } from '../practice-preference/practice-preference.service';
+import { apportion } from '../questions/allocation-mix';
 
 export class MockExamError extends Error {}
 
@@ -63,20 +64,12 @@ function normalizeName(value: string): string {
 }
 
 /**
- * Distribute N questions as evenly as possible across the supplied syllabus
- * subjects. The first slots receive the remainder so the sum is EXACTLY N.
+ * Weighted split of N questions (exam-style: e.g. Group IV = Tamil 50%).
+ * Sum is EXACTLY N; leftover seats are given at random by fractional share.
  */
-function allocateEvenly(ids: string[], total: number): Map<string, number> {
-  const result = new Map<string, number>();
-  if (ids.length === 0) return result;
-  const base = Math.floor(total / ids.length);
-  let remainder = total % ids.length;
-  for (const id of ids) {
-    const count = base + (remainder > 0 ? 1 : 0);
-    result.set(id, count);
-    if (remainder > 0) remainder--;
-  }
-  return result;
+function allocateWeighted(ids: string[], weights: number[], total: number): Map<string, number> {
+  const shares = apportion(weights, ids.map(() => total), total);
+  return new Map(ids.map((id, i) => [id, shares[i]]));
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -231,7 +224,11 @@ export class MockExamService {
       );
     }
 
-    const counts = allocateEvenly(mapped.map((m) => m.questionSubject!.id), questionCount);
+    const counts = allocateWeighted(
+      mapped.map((m) => m.questionSubject!.id),
+      mapped.map((m) => m.syllabus.practiceWeight ?? 1),
+      questionCount,
+    );
 
     // Never reuse a question that appeared in an earlier Live Exam for this
     // exam. This is intentionally independent of normal Practice history.
