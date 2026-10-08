@@ -14,13 +14,15 @@ export class CutoffService {
     });
   }
 
-  async create(subCategoryId: string, data: { year: number; community: string; cutoffMarks: number; totalMarks?: number; sourceUrl?: string; verifiedAt: string; isOfficialConfirmed?: boolean }) {
+  async create(subCategoryId: string, data: { year: number; community: string; cutoffMarks: number; cutoffMin?: number; cutoffMax?: number; totalMarks?: number; sourceUrl?: string; verifiedAt: string; isOfficialConfirmed?: boolean }) {
     return prisma.cutoffRecord.create({
       data: {
         subCategoryId,
         year: data.year,
         community: data.community as any,
         cutoffMarks: data.cutoffMarks,
+        cutoffMin: data.cutoffMin ?? null,
+        cutoffMax: data.cutoffMax ?? null,
         totalMarks: data.totalMarks ?? null,
         sourceUrl: data.sourceUrl?.trim() || null,
         verifiedAt: new Date(data.verifiedAt),
@@ -29,11 +31,13 @@ export class CutoffService {
     });
   }
 
-  async update(id: string, data: { cutoffMarks?: number; totalMarks?: number; sourceUrl?: string; verifiedAt?: string; isOfficialConfirmed?: boolean }) {
+  async update(id: string, data: { cutoffMarks?: number; cutoffMin?: number; cutoffMax?: number; totalMarks?: number; sourceUrl?: string; verifiedAt?: string; isOfficialConfirmed?: boolean }) {
     return prisma.cutoffRecord.update({
       where: { id },
       data: {
         ...(data.cutoffMarks !== undefined ? { cutoffMarks: data.cutoffMarks } : {}),
+        ...(data.cutoffMin !== undefined ? { cutoffMin: data.cutoffMin } : {}),
+        ...(data.cutoffMax !== undefined ? { cutoffMax: data.cutoffMax } : {}),
         ...(data.totalMarks !== undefined ? { totalMarks: data.totalMarks } : {}),
         ...(data.sourceUrl !== undefined ? { sourceUrl: data.sourceUrl.trim() || null } : {}),
         ...(data.verifiedAt !== undefined ? { verifiedAt: new Date(data.verifiedAt) } : {}),
