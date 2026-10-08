@@ -117,8 +117,11 @@ export default function HomeDesignPreview() {
         </div>
 
         <section className="purpose-section" aria-label="PONNA-வின் நோக்கம்">
-          <div className="purpose-label">PONNA-வின் நோக்கம்</div>
-          <h2>தரமான போட்டித் தேர்வுப் பயிற்சி<br />அனைவருக்கும் கிடைக்க வேண்டும்.</h2>
+          <div className="purpose-top">
+            <div className="purpose-label">PONNA-வின் நோக்கம்</div>
+            <span className="purpose-mark">நோக்கம்</span>
+          </div>
+          <h2>தரமான போட்டித் தேர்வுப் பயிற்சி<br /><span>அனைவருக்கும் கிடைக்க வேண்டும்.</span></h2>
           <div className="purpose-rule" />
           <p className="purpose-lead">அரசு வேலைக்குத் தயாராகும் ஒரு மாணவரின் பொருளாதார நிலை, அவரது கனவுக்குத் தடையாக இருக்கக் கூடாது.</p>
           <p>தனியார் பயிற்சி மையங்களில் அதிக கட்டணம் செலுத்த முடியாத மாணவர்களுக்கும், குறைந்த கட்டணத்தில் தரமான பயிற்சி கிடைக்க வேண்டும் என்பதற்காக PONNA உருவாக்கப்பட்டுள்ளது.</p>
@@ -131,17 +134,26 @@ export default function HomeDesignPreview() {
         </section>
 
         <section className="pass-section" aria-label="உங்கள் PONNA Pass பெறுங்கள்">
-          <div className="pass-label">உங்கள் PONNA Pass பெறுங்கள்</div>
-          <h2>அரசுப் போட்டித் தேர்வுக்கான உங்கள் தயாரிப்பை முழுமையாக மேற்கொள்ள PONNA Pass-ஐப் பெற்றுக்கொள்ளுங்கள்.</h2>
-          <ul>
-            <li>60,000-க்கும் மேற்பட்ட கேள்விகளில் பயிற்சி பெறலாம்.</li>
-            <li>தினசரி Current Affairs மற்றும் Brain Challenge-ல் பங்கேற்கலாம்.</li>
-            <li>நேரடித் தேர்வுகளில் பங்கேற்கலாம்.</li>
-            <li>உங்கள் தயாரிப்பை மேம்படுத்த உதவும் பயிற்சி வசதிகளைப் பயன்படுத்தலாம்.</li>
-            <li><strong>Ask PONNA</strong> மூலம் தேர்வு தொடர்பான உங்கள் சந்தேகங்களுக்கு உடனடியாக வழிகாட்டுதலைப் பெறலாம்.</li>
-          </ul>
-          <p className="pass-cta-copy">உங்கள் பயிற்சியை இன்றே தொடங்குங்கள்</p>
-          <a href="/plans" className="pass-button">PONNA Pass பெறுங்கள் <b>→</b></a>
+          <div className="pass-head">
+            <div>
+              <div className="pass-label">உங்கள் PONNA Pass பெறுங்கள்</div>
+              <h2>TNPSC Group 4 தேர்வுக்கான<br /><span>முழுமையான பயிற்சி.</span></h2>
+            </div>
+            <div className="pass-badge">GROUP 4</div>
+          </div>
+          <div className="pass-list">
+            <div><b>60,000+</b><span>கேள்விகளில் பயிற்சி</span></div>
+            <div><b>தினசரி</b><span>Current Affairs &amp; Brain Challenge</span></div>
+            <div><b>நேரடி</b><span>தேர்வுகளில் பங்கேற்பு</span></div>
+          </div>
+          <div className="ask-feature">
+            <strong>Ask PONNA</strong>
+            <span>தேர்வு தொடர்பான உங்கள் சந்தேகங்களுக்கு உடனடி வழிகாட்டுதல்</span>
+          </div>
+          <div className="pass-bottom">
+            <p>உங்கள் Group 4 பயிற்சியை இன்றே தொடங்குங்கள்.</p>
+            <a href="/plans" className="pass-button">PONNA Pass பெறுங்கள் <b>→</b></a>
+          </div>
         </section>
 
         <section className="refund-box" aria-label="தேர்ச்சி பெற்றால் பணம் வாபஸ்">
@@ -357,120 +369,218 @@ export default function HomeDesignPreview() {
 
         .purpose-section {
           margin: 20px 0 10px;
-          padding: 24px 17px 20px;
+          padding: 23px 17px 20px;
           background: #0B3864;
           color: #fff;
-          border-radius: 0;
+          border-radius: 12px;
           position: relative;
           overflow: hidden;
+          box-shadow: 0 7px 18px rgba(11,56,100,.10);
         }
         .purpose-section::before {
           content: '';
           position: absolute;
           top: 0;
-          right: 0;
-          width: 74px;
+          left: 0;
+          width: 68px;
           height: 4px;
           background: #FFD22A;
+        }
+        .purpose-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 9px;
         }
         .purpose-label {
           color: #FFD22A;
           font-size: 13px;
           font-weight: 900;
+          letter-spacing: .8px;
+        }
+        .purpose-mark {
+          color: #D9E6EE;
+          border: 1px solid rgba(255,255,255,.25);
+          border-radius: 999px;
+          padding: 3px 8px;
+          font-size: 9px;
+          font-weight: 800;
           letter-spacing: 1px;
-          margin-bottom: 10px;
         }
         .purpose-section h2 {
           margin: 0;
           color: #fff;
-          font-size: 25px;
+          font-size: 24px;
           line-height: 1.42;
           font-weight: 900;
         }
+        .purpose-section h2 span { color: #FFD22A; }
         .purpose-rule {
-          width: 46px;
+          width: 44px;
           height: 3px;
           background: #FFD22A;
-          margin: 15px 0 13px;
+          margin: 14px 0 12px;
         }
         .purpose-section p {
-          margin: 0 0 10px;
+          margin: 0 0 9px;
           color: #E8EFF4;
-          font-size: 16px;
+          font-size: 15.5px;
           line-height: 1.62;
         }
         .purpose-section .purpose-lead {
           color: #fff;
-          font-size: 17px;
+          font-size: 16.5px;
           font-weight: 700;
         }
         .purpose-pillars {
           display: grid;
-          grid-template-columns: 1fr;
-          margin: 15px 0 3px;
+          grid-template-columns: repeat(3, 1fr);
+          margin: 14px 0 2px;
           border-top: 1px solid rgba(255,255,255,.22);
-        }
-        .purpose-pillars div {
-          padding: 11px 0;
           border-bottom: 1px solid rgba(255,255,255,.18);
         }
+        .purpose-pillars div {
+          padding: 11px 7px 10px;
+          border-right: 1px solid rgba(255,255,255,.18);
+        }
+        .purpose-pillars div:last-child { border-right: 0; }
         .purpose-pillars strong {
           display: block;
-          margin: 0;
           color: #fff;
-          font-size: 16px;
+          font-size: 14px;
           line-height: 1.35;
         }
         .purpose-pillars span {
           display: block;
-          margin-top: 2px;
+          margin-top: 3px;
           color: #C9D7E0;
-          font-size: 13px;
-          line-height: 1.45;
+          font-size: 11px;
+          line-height: 1.4;
         }
         .purpose-section .purpose-closing {
           margin: 13px 0 0;
           color: #FFD22A;
-          font-size: 16px;
+          font-size: 15px;
           line-height: 1.45;
         }
-        .purpose-section .purpose-closing strong { color: inherit; }
+
         .pass-section {
-          margin: 14px 0 8px;
-          padding: 22px 16px;
+          margin: 12px 0 10px;
+          padding: 18px 15px 15px;
           border: 1px solid #E2D5AA;
+          border-radius: 12px;
           background: #FFFDF5;
         }
-        .pass-label { color: #B07A16; }
-        .pass-section ul {
-          margin: 12px 0 0;
-          padding-left: 20px;
-          color: #4F6272;
-          font-size: 16px;
-          line-height: 1.62;
+        .pass-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #E9DFC3;
         }
-        .pass-section li { margin: 5px 0; }
-        .pass-cta-copy {
-          margin: 15px 0 0;
+        .pass-label {
+          color: #B07A16;
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: .7px;
+          margin-bottom: 4px;
+        }
+        .pass-section h2 {
+          margin: 0;
+          color: #0B3864;
+          font-size: 20px;
+          line-height: 1.4;
+          font-weight: 900;
+        }
+        .pass-section h2 span { color: #B07A16; }
+        .pass-badge {
+          flex: 0 0 auto;
+          color: #0B3864;
+          background: #FFE9A8;
+          border: 1px solid #E2B04A;
+          border-radius: 7px;
+          padding: 5px 7px;
+          font-size: 9px;
+          font-weight: 900;
+          letter-spacing: .8px;
+        }
+        .pass-list {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          margin-top: 11px;
+          border-bottom: 1px solid #E9DFC3;
+        }
+        .pass-list div {
+          padding: 4px 7px 11px;
+          border-right: 1px solid #E9DFC3;
+        }
+        .pass-list div:last-child { border-right: 0; }
+        .pass-list b {
+          display: block;
+          color: #0B3864;
+          font-size: 14px;
+          line-height: 1.3;
+        }
+        .pass-list span {
+          display: block;
+          margin-top: 3px;
+          color: #667786;
+          font-size: 11px;
+          line-height: 1.4;
+        }
+        .ask-feature {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          margin-top: 11px;
+          padding: 9px 10px;
+          background: #fff;
+          border-left: 4px solid #17835E;
+          border-radius: 6px;
+        }
+        .ask-feature strong {
+          flex: 0 0 auto;
+          color: #17835E;
+          font-size: 15px;
+        }
+        .ask-feature span {
+          color: #4F6272;
+          font-size: 12.5px;
+          line-height: 1.45;
+        }
+        .pass-bottom {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 12px;
+        }
+        .pass-bottom p {
+          flex: 1;
+          margin: 0;
           color: #20384D;
-          font-size: 17px;
-          font-weight: 800;
+          font-size: 13px;
+          line-height: 1.4;
+          font-weight: 700;
         }
         .pass-button {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
-          margin-top: 10px;
-          min-height: 50px;
-          padding: 11px 14px;
-          border-radius: 9px;
+          gap: 5px;
+          flex: 0 0 auto;
+          min-height: 43px;
+          padding: 9px 12px;
+          border-radius: 8px;
           background: #FFD22A;
           color: #20384D;
           text-decoration: none;
-          font-size: 17px;
+          font-size: 14px;
           font-weight: 900;
+          white-space: nowrap;
         }
+
         .tools-grid { display: grid; grid-template-columns: 1fr; gap: 7px; margin-top: 8px; }
         .tool-card {
           min-height: 82px;
