@@ -40,9 +40,8 @@ function markText(r: CutoffRecord) {
   return String(r.cutoffMarks);
 }
 function recordKind(r: CutoffRecord, isTamil: boolean) {
-  if (r.isOfficialConfirmed) return isTamil ? 'அதிகாரப்பூர்வம்' : 'Official';
-  if (r.year >= 2024) return isTamil ? 'எதிர்பார்க்கப்படும்' : 'Expected';
-  return isTamil ? 'முந்தைய ஆண்டு தரவு' : 'Previous-year data';
+  if (r.isOfficialConfirmed) return isTamil ? 'அதிகாரப்பூர்வ தரவு' : 'Official data';
+  return isTamil ? 'அந்த ஆண்டுக்கான தரவு' : 'Year data';
 }
 
 export default function CutoffPredictorPage() {
@@ -93,14 +92,14 @@ export default function CutoffPredictorPage() {
     steps: isTamil ? ['தேர்வைத் தேர்வு செய்யுங்கள்', 'Profile-ல் Community-ஐ பதிவு செய்யுங்கள்', 'PONNA-வில் குறைந்தது 20 கேள்விகள் பயிற்சி செய்யுங்கள்', 'உங்கள் பயிற்சி மதிப்பெண்ணை கட்-ஆஃப் வரம்புடன் ஒப்பிடுங்கள்'] : ['Choose your exam', 'Set your Community in Profile', 'Complete at least 20 practice questions', 'Compare your practice score with the cut-off range'],
     benchmark: isTamil ? 'கட்-ஆஃப் தரவு' : 'Cut-off benchmark',
     yourScore: isTamil ? 'உங்கள் பயிற்சி மதிப்பெண்' : 'Your practice score',
-    range: isTamil ? 'எதிர்பார்க்கப்படும் வரம்பு' : 'Expected range',
+    range: isTamil ? 'கட்-ஆப் வரம்பு' : 'Cut-off range',
     above: isTamil ? 'வரம்பை விட அதிகம்' : 'Above the range',
     within: isTamil ? 'வரம்புக்குள் உள்ளது' : 'Within the range',
     below: isTamil ? 'மேலும் மதிப்பெண் தேவை' : 'Below the range',
     history: isTamil ? 'ஆண்டு வாரியான தரவு' : 'Year-wise data',
     verified: isTamil ? 'சரிபார்க்கப்பட்டது' : 'Verified',
     source: isTamil ? 'ஆதாரம்' : 'Source',
-    note: isTamil ? 'குறிப்பு: 2024, 2025 தரவுகள் எதிர்பார்க்கப்படும் கட்-ஆஃப் வரம்புகள். அவை TNPSC-ன் அதிகாரப்பூர்வ கட்-ஆஃப் அல்ல. 2023 தரவு முந்தைய ஆண்டு வெளியிடப்பட்ட benchmark. இது தேர்வு முடிவு அல்லது தேர்வு நிச்சயத்தை கணிக்காது.' : 'Note: 2024 and 2025 figures are expected ranges, not official TNPSC cut-offs. 2023 is a previous-year benchmark. This tool does not predict a result or guarantee selection.',
+    note: isTamil ? 'குறிப்பு: ஒவ்வொரு ஆண்டும் காட்டப்படும் மதிப்பெண்கள் அந்த ஆண்டுக்கான கிடைக்கக்கூடிய கட்-ஆஃப் / கட்-ஆஃப் மதிப்பீட்டு தரவின் அடிப்படையில் தொகுக்கப்பட்டவை. அதிகாரப்பூர்வ TNPSC தரவு கிடைக்கும் இடங்களில் அதற்கே முன்னுரிமை வழங்கப்படும். இந்தக் கருவி தேர்வு முடிவை உறுதி செய்யாது.' : 'Note: Each year is shown as that year’s available cut-off / cut-off estimate. Official TNPSC data is preferred wherever available. This tool does not guarantee selection.',
     noData: isTamil ? 'இந்தத் தேர்வுக்கான தரவு இல்லை.' : 'No cut-off data is available for this exam.',
     loading: isTamil ? 'தரவைத் தயாரிக்கிறது…' : 'Loading benchmark…',
     choose: isTamil ? 'மேலே உள்ள தேர்வைத் தேர்வு செய்தவுடன் தரவு இங்கே தோன்றும்.' : 'Select an exam above to view the benchmark.',
@@ -182,7 +181,7 @@ export default function CutoffPredictorPage() {
                 {prediction.records.map((r, index) => (
                   <div key={r.year} style={{ padding: '15px 16px', borderBottom: index === prediction.records.length - 1 ? 'none' : '1px solid #E7EDF1' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 12 }}>
-                      <div><div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span style={{ fontSize: 18, fontWeight: 900, color: NAVY }}>{r.year}</span><span style={{ fontSize: 9.5, fontWeight: 850, padding: '4px 7px', borderRadius: 20, background: r.isOfficialConfirmed ? '#EAF6F0' : r.year >= 2024 ? '#FFF5D9' : '#EEF3F7', color: r.isOfficialConfirmed ? GREEN : r.year >= 2024 ? '#7C5A16' : '#536B7C' }}>{recordKind(r, isTamil)}</span></div><div style={{ marginTop: 4, fontSize: 11.5, color: '#718290' }}>{communityLabel(prediction.community)} · 300 மதிப்பெண்கள்</div></div>
+                      <div><div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span style={{ fontSize: 18, fontWeight: 900, color: NAVY }}>{r.year}</span><span style={{ fontSize: 9.5, fontWeight: 850, padding: '4px 7px', borderRadius: 20, background: r.isOfficialConfirmed ? '#EAF6F0' : '#EEF3F7', color: r.isOfficialConfirmed ? GREEN : '#536B7C' }}>{recordKind(r, isTamil)}</span></div><div style={{ marginTop: 4, fontSize: 11.5, color: '#718290' }}>{communityLabel(prediction.community)} · 300 மதிப்பெண்கள்</div></div>
                       <div style={{ textAlign: 'right' }}><div style={{ fontSize: 23, lineHeight: 1, fontWeight: 900, color: NAVY }}>{markText(r)}</div><div style={{ marginTop: 4, fontSize: 9.5, color: '#81909B' }}>marks</div></div>
                     </div>
                     <div style={{ marginTop: 9, display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 10.5, color: '#778896' }}><span>{label.verified}: {new Date(r.verifiedAt).toLocaleDateString()}</span>{r.sourceUrl && <a href={r.sourceUrl} target="_blank" rel="noreferrer" style={{ color: BLUE, fontWeight: 700 }}>{label.source} ↗</a>}</div>
