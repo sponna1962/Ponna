@@ -822,14 +822,14 @@ async function main() {
     data: { practiceWeight: 2 },
   });
 
-  // Oct 2026 — Cut-off Predictor historical/expected benchmark data.
-  // These are deliberately labelled non-official because TNPSC publishes
-  // marks/ranks and selection lists rather than a single universal Group IV
-  // cut-off table for these years. 2024/2025 values are expected ranges;
-  // 2023 values are the published previous-year benchmark. All are out of 300.
-  // Idempotent: update the existing unique (exam, year, community) row.
+  // Oct 2026 — Cut-off Predictor year-wise benchmark data.
+// The student-facing page identifies each row by its examination year.
+// Where TNPSC does not publish a single official cut-off table, the stored
+// range is an externally published estimate and is explicitly described as
+// an estimate in the explanatory note, not as an official TNPSC figure.
+// Idempotent: update the existing unique (exam, year, community) row.
   const cutoffBenchmarks = [
-    // 2025 — expected (category-wise, published after the 12.07.2025 exam)
+    // 2025 — published estimate, category-wise
     { year: 2025, community: 'OC', min: 180, max: 185, mark: 182.5 },
     { year: 2025, community: 'BC', min: 175, max: 178, mark: 176.5 },
     { year: 2025, community: 'MBC_DNC', min: 160, max: 165, mark: 162.5 },
@@ -838,7 +838,7 @@ async function main() {
     { year: 2025, community: 'SCA', min: 176, max: 177, mark: 176.5 },
     { year: 2025, community: 'ST', min: 176, max: 179, mark: 177.5 },
 
-    // 2024 — expected; combined male/female span so the predictor does not
+    // 2024 — published estimate; combined male/female span so the predictor does not
     // pretend to know gender-specific data that this model does not collect.
     { year: 2024, community: 'OC', min: 146, max: 155, mark: 150.5 },
     { year: 2024, community: 'BC', min: 143, max: 150, mark: 146.5 },
@@ -848,7 +848,7 @@ async function main() {
     { year: 2024, community: 'SCA', min: 133, max: 138, mark: 135.5 },
     { year: 2024, community: 'ST', min: 132, max: 136, mark: 134 },
 
-    // 2023 — previous-year published benchmark, combining male/female
+    // 2023 — published previous-year benchmark, combining male/female
     // values into one transparent range for the current community-only profile.
     { year: 2023, community: 'OC', min: 150, max: 153, mark: 151.5 },
     { year: 2023, community: 'BC', min: 145, max: 148, mark: 146.5 },
