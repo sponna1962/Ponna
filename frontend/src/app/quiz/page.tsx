@@ -471,7 +471,7 @@ export default function QuizStartPage() {
   }
 
   if (saved === 'loading') {
-    return <main style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>{t.quiz.loading}</main>;
+    return <main style={{ minHeight: '100dvh', padding: 24, textAlign: 'center', color: 'var(--color-inkMuted)', background: 'var(--color-paper)' }}>{t.quiz.loading}</main>;
   }
 
   return (
@@ -479,7 +479,7 @@ export default function QuizStartPage() {
       <header className="practice-header">
         <StudentMenu iconColor="#0B3864" />
         <a href="/" className="practice-brand" aria-label="PONNA.in">
-          <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority />
+          <Image src="/logo-header.svg" alt="PONNA.in" width={1968} height={450} priority />
         </a>
         {/* Sept 2026 — Offline Practice entry point. Deliberately not a
             new sidebar item (nav structure is finalized) — lives here
@@ -518,7 +518,7 @@ export default function QuizStartPage() {
 
         {accessPrompt && (
           <div className="access-prompt">
-            <p style={{ fontSize: 14, color: '#92400e', marginBottom: 4, fontWeight: 600 }}>{t.practiceSetup.noActivePlan}</p>
+            <p style={{ fontSize: 14, color: 'var(--color-ink)', marginBottom: 4, fontWeight: 600 }}>{t.practiceSetup.noActivePlan}</p>
             <p style={{ fontSize: 13, color: '#92400e', marginBottom: 12 }}>{t.practiceSetup.freeFallbackDesc}</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -698,7 +698,7 @@ export default function QuizStartPage() {
                             <Chip label={t.quiz.modes.HARD} active={mode === 'HARD'} onClick={() => setMode('HARD')} />
                           </ChipRow>
                         ) : (
-                          <p style={{ fontSize: 13, color: '#94a3b8' }}>{t.practiceSetup.difficultyNotApplicable}</p>
+                          <p style={{ fontSize: 13, color: 'var(--color-inkMuted)' }}>{t.practiceSetup.difficultyNotApplicable}</p>
                         )}
                       </Section>
                     )}
@@ -721,7 +721,7 @@ export default function QuizStartPage() {
                     )}
                   </ChipRow>
                 ) : (
-                  <p style={{ fontSize: 13, color: '#d97706' }}>{t.practiceSetup.noQuestionsForSelection}</p>
+                  <p style={{ fontSize: 13, color: 'var(--color-gold)' }}>{t.practiceSetup.noQuestionsForSelection}</p>
                 )}
               </Section>
             )}
@@ -753,7 +753,7 @@ export default function QuizStartPage() {
 
         {error && (
           <div style={{ marginTop: 16 }}>
-            <p style={{ color: '#dc2626', marginBottom: 8 }}>{error}</p>
+            <p style={{ color: 'var(--color-bad)', marginBottom: 8 }}>{error}</p>
             <a href="/plans" className="error-link">
               {t.dashboard.upgrade}
             </a>
@@ -761,11 +761,11 @@ export default function QuizStartPage() {
         )}
       </div>
     
-      <style jsx>{`\n.practice-page{width:100%;max-width:680px;min-height:100dvh;margin:0 auto;padding-bottom:32px;background:var(--color-paper);color:var(--color-ink);font-family:'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif}
+      <style jsx>{`\n.practice-page{color-scheme:light dark;width:100%;max-width:680px;min-height:100dvh;margin:0 auto;padding-bottom:32px;background:var(--color-paper);color:var(--color-ink);font-family:'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif}
 .practice-header{min-height:64px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--color-card);border-bottom:2px solid var(--color-gold);position:sticky;top:0;z-index:30}
 .practice-brand{display:flex;align-items:center;min-width:0;margin-right:auto;text-decoration:none}
-.practice-brand img{width:158px;height:auto;display:block}
-.practice-title{margin:0!important;color:var(--color-head1)!important;font-size:23px!important;font-weight:900!important;line-height:1.3;letter-spacing:-.2px}
+.practice-brand img{width:154px;height:auto;display:block}
+.practice-title{margin:0!important;color:var(--color-ink)!important;font-size:23px!important;font-weight:900!important;line-height:1.3;letter-spacing:-.2px}
 .practice-page-title{padding:20px 16px 4px}
 .practice-page-title:after{content:'';display:block;width:42px;height:3px;margin-top:9px;background:var(--color-gold);border-radius:2px}
 .offline-badge{color:var(--color-ok)!important;border:1px solid var(--color-ok)!important;background:var(--color-okBg);padding:7px 9px;border-radius:7px;text-decoration:none;white-space:nowrap;font-size:11px;font-weight:900;line-height:1}
@@ -775,9 +775,9 @@ export default function QuizStartPage() {
 .exam-card b{font-size:18px!important}.exam-card small{color:#E6EFF6!important;font-size:12px!important}
 .selected-badge{margin-left:auto;color:#14253D;background:#FFD22A;padding:6px 9px;border-radius:6px;font-size:11px;font-weight:900;white-space:nowrap}
 .section-block{margin-bottom:22px!important;padding-bottom:18px;border-bottom:1px solid var(--color-line)}
-.section-title{margin:0 0 11px!important;color:var(--color-head1)!important;font-size:17px!important;line-height:1.45;font-weight:900!important}
+.section-title{margin:0 0 11px!important;color:var(--color-ink)!important;font-size:17px!important;letter-spacing:0}line-height:1.45;font-weight:900!important}
 .chip-row{display:flex;flex-wrap:wrap;gap:8px}
-.practice-chip{padding:10px 15px!important;min-height:42px;border-radius:8px!important;border:1px solid var(--color-line)!important;background:var(--color-card)!important;color:var(--color-ink)!important;font-weight:700!important;font-size:14.5px!important;box-shadow:none!important}
+.practice-chip{padding:10px 15px!important;min-height:44px;border-radius:8px!important;border:1px solid var(--color-line)!important;background:var(--color-card)!important;color:var(--color-ink)!important;font-weight:700!important;font-size:14.5px!important;box-shadow:none!important}
 .practice-chip.active{background:var(--color-head1)!important;color:#fff!important;border-color:var(--color-head1)!important}
 .start-button,.summary-start{width:100%!important;min-height:54px;padding:13px 16px!important;margin-top:10px!important;border-radius:9px!important;border:none!important;background:var(--color-btn)!important;color:var(--color-btnText)!important;font-size:17px!important;font-weight:900!important;box-shadow:0 7px 18px rgba(11,56,100,.16)!important}
 .profile-gate{margin-top:14px!important;padding:22px 16px!important;text-align:center;border-radius:10px!important;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-top:3px solid var(--color-gold)!important}
@@ -794,9 +794,9 @@ export default function QuizStartPage() {
 .subject-done{width:100%;padding:13px;border-radius:8px;background:var(--color-btn);color:var(--color-btnText);border:none;font-weight:900;font-size:15px;margin-top:16px}
 .preference-summary{margin-bottom:22px}.summary-card{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:var(--color-card)!important;border:1px solid var(--color-line)!important;border-left:4px solid var(--color-gold)!important;border-radius:9px!important;padding:15px!important;margin-bottom:12px!important}
 .summary-label{margin:0 0 5px!important;color:var(--color-gold)!important;font-size:12px!important;font-weight:900!important}.summary-text{margin:0!important;color:var(--color-ink)!important;font-size:14.5px!important;line-height:1.6!important}
-.change-button{flex-shrink:0;font-size:12px;font-weight:800;padding:6px 11px;border-radius:7px;border:1px solid var(--color-line);background:var(--color-card);color:var(--color-head1)}
-@media(max-width:480px){.practice-header{padding:0 10px;gap:8px}.practice-brand img{width:148px}.practice-page-title{padding:18px 14px 3px}.practice-title{font-size:21px!important}.practice-content{padding:12px 14px 0!important}.exam-card{padding:13px 12px}.exam-card b{font-size:16px!important}.selected-badge{padding:5px 7px;font-size:10px}.practice-chip{font-size:14px!important;padding:9px 12px!important}}
-@media(max-width:380px){.practice-brand img{width:132px}.practice-title{font-size:20px!important}.offline-badge{padding:7px;font-size:10px}.practice-content{padding-left:12px!important;padding-right:12px!important}}\n      `}</style>
+.change-button{flex-shrink:0;font-size:12px;font-weight:800;padding:6px 11px;border-radius:7px;border:1px solid var(--color-line);background:var(--color-card);color:var(--color-ink)}
+@media(max-width:480px){.practice-header{padding:0 10px;gap:8px}.practice-brand img{width:146px}.practice-page-title{padding:18px 14px 3px}.practice-title{font-size:21px!important}.practice-content{padding:12px 14px 0!important}.exam-card{padding:13px 12px}.exam-card b{font-size:16px!important}.selected-badge{padding:5px 7px;font-size:10px}.practice-chip{font-size:14px!important;padding:9px 12px!important;min-height:44px}}
+@media(max-width:380px){.practice-brand img{width:136px}.practice-title{font-size:20px!important}.offline-badge{padding:7px;font-size:10px}.practice-content{padding-left:12px!important;padding-right:12px!important}}\n      `}</style>
     </main>
   );
 }
