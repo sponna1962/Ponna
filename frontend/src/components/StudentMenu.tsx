@@ -30,7 +30,6 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
   const { t } = useLanguage();
   const [open, setOpenState] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // null = not known yet (nothing shown, avoids a flash of the big Pass button)
   const [hasPass, setHasPass] = useState<boolean | null>(null);
 
   function setOpen(value: boolean) {
@@ -61,20 +60,16 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
     { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
     { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
   ];
-  // Oct 2026 — logged-out visitors see every feature too (shown with a lock);
-  // tapping one opens the Login / Sign up flow instead of a protected page.
+
   const sections: { heading: string; items: NavItem[] }[] = [
     {
       heading: t.menu.sectionPreparation,
       items: isLoggedIn ? preparationItems : preparationItems.map((i) => {
-            // Open to everyone: Study Notes is public; Ask Ponna starts the free 20-question
-            // diagnostic without sign-up; Start Practice opens Login (its 5 free questions
-            // belong to an account) but is not shown as locked.
-            if (i.href === '/study-notes') return i;
-            if (i.href === '/ask-ponna') return i;
-            if (i.href === '/quiz') return { ...i, href: '/?startLogin=1' };
-            return { ...i, href: '/?startLogin=1', locked: true };
-          }),
+        if (i.href === '/study-notes') return i;
+        if (i.href === '/ask-ponna') return i;
+        if (i.href === '/quiz') return { ...i, href: '/?startLogin=1' };
+        return { ...i, href: '/?startLogin=1', locked: true };
+      }),
     },
     {
       heading: t.menu.sectionSupport,
@@ -93,69 +88,118 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
       </button>
 
       {open && typeof document !== 'undefined' && createPortal(
-        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,47,51,0.5)', zIndex: 999 }}>
-          {/* Oct 2026 redesign: teal header band, gold icon discs, current-page highlight,
-              gold Pass button + thin sunrise strip pinned at the bottom. Same links/labels. */}
-          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 'min(78vw, 320px)', background: COLORS.paper, boxShadow: '8px 0 30px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ background: 'linear-gradient(180deg,#0c2f3f,#1c6b6b)', padding: '16px 16px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #E2B04A', flex: 'none' }}>
-              <div style={{ background: '#fefefe', borderRadius: 8, padding: '4px 10px', display: 'flex' }}>
-                <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} style={{ height: 32, width: 'auto' }} />
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(32,56,77,0.34)', zIndex: 999 }}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: 0, left: 0, bottom: 0,
+              width: 'min(86vw, 360px)',
+              background: '#FFFEFB',
+              borderRight: '1px solid #DDE5E9',
+              boxShadow: '12px 0 32px rgba(32,56,77,.16)',
+              display: 'flex', flexDirection: 'column', overflow: 'hidden',
+              color: '#20384D',
+              fontFamily: "'Noto Sans Tamil','Nirmala UI',Latha,Arial,sans-serif",
+            }}
+          >
+            <header style={{
+              flex: '0 0 72px', height: 72, display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', padding: '0 16px',
+              borderBottom: '3px solid #E2B04A', background: '#fff', boxSizing: 'border-box',
+            }}>
+              <div style={{ background: '#fff', border: '1px solid #DDE5E9', padding: '4px 10px', borderRadius: 7, display: 'flex' }}>
+                <Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} style={{ width: 178, height: 'auto' }} />
               </div>
-              <button onClick={() => setOpen(false)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.14)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                <CloseIcon size={16} color="#fff" />
+              <button onClick={() => setOpen(false)} aria-label="Close" style={{
+                width: 36, height: 36, border: '1px solid #DDE5E9', borderRadius: '50%',
+                background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0,
+              }}>
+                <CloseIcon size={18} color="#20384D" />
               </button>
-            </div>
+            </header>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px 10px' }}>
-              {[
-                { href: '/', label: t.menu.home, Icon: HomeIcon, bold: true },
-                { href: '/current-affairs', label: 'Current Affairs', Icon: StudyNotesIcon, bold: true },
-                { href: '/tnpsc-group-4/notification-2026', label: 'Group 4 அறிவிப்பு 2026', Icon: StudyNotesIcon, bold: true },
-              ].map((item) => (
-                <MenuRow key={item.href} href={item.href} label={item.label} Icon={item.Icon} bold={item.bold} />
-              ))}
-              {sections.map((section) => (
-                <div key={section.heading}>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, fontWeight: 700, color: 'var(--color-teal)', letterSpacing: 1.6, margin: '10px 12px 2px' }}>
-                    {section.heading}
-                    <span style={{ flex: 1, borderTop: '1.5px solid var(--color-line)' }} />
-                  </p>
-                  {section.items.map((item) => (
-                    <MenuRow key={item.label} href={item.href} label={item.label} Icon={item.Icon} locked={item.locked} />
-                  ))}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 12px', boxSizing: 'border-box' }}>
+              <nav aria-label="PONNA menu">
+                <div style={{ paddingBottom: 6, borderBottom: '1px solid #E1E7EA' }}>
+                  <MenuRow href="/" label={t.menu.home} Icon={HomeIcon} bold />
+                  <MenuRow href="/current-affairs" label="Current Affairs" Icon={StudyNotesIcon} bold />
+                  <MenuRow href="/tnpsc-group-4/notification-2026" label="Group 4 அறிவிப்பு 2026" Icon={StudyNotesIcon} bold isNew />
                 </div>
-              ))}
-              <div style={{ margin: '14px 12px 4px', paddingTop: 10, borderTop: '1px solid ' + COLORS.line, fontSize: 11.5, color: COLORS.inkMuted, lineHeight: 1.9 }}>
-                {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Refund', '/refund-policy'], ['Delivery', '/shipping-policy'], ['Contact', '/contact']].map(([label, href]) => (
-                  <a key={href} href={href} style={{ color: 'inherit', textDecoration: 'underline', marginRight: 10 }}>{label}</a>
+
+                {sections.map((section) => (
+                  <div key={section.heading}>
+                    <p style={{
+                      display: 'flex', alignItems: 'center', gap: 10, margin: '15px 10px 5px',
+                      color: '#52706D', fontSize: 11, fontWeight: 900, letterSpacing: 1.8,
+                    }}>
+                      <span>{section.heading}</span>
+                      <span style={{ flex: 1, height: 1, background: '#D7DFE2' }} />
+                    </p>
+                    {section.items.map((item) => (
+                      <MenuRow key={item.label} href={item.href} label={item.label} Icon={item.Icon} locked={item.locked} />
+                    ))}
+                  </div>
                 ))}
-                <br />ARLENA (OPC) PRIVATE LIMITED
-              </div>
+
+                <div style={{
+                  margin: '12px 10px 2px', paddingTop: 10, borderTop: '1px solid #E1E7EA',
+                  color: '#71808B', fontSize: 11, lineHeight: 1.8,
+                }}>
+                  <div>
+                    {[
+                      ['Terms', '/terms'], ['Privacy', '/privacy'], ['Refund', '/refund-policy'],
+                      ['Delivery', '/shipping-policy'], ['Contact', '/contact']
+                    ].map(([label, href]) => (
+                      <a key={href} href={href} style={{ color: 'inherit', textDecoration: 'underline', marginRight: 10 }}>{label}</a>
+                    ))}
+                  </div>
+                  <small style={{ fontSize: 10 }}>ARLENA (OPC) PRIVATE LIMITED</small>
+                </div>
+              </nav>
             </div>
 
-            <div style={{ flex: 'none', background: COLORS.paper }}>
+            <div style={{ flex: '0 0 auto', padding: '10px 14px 14px', background: '#fff', borderTop: '1px solid #DDE5E9' }}>
               {!isLoggedIn && (
-                <div style={{ padding: '8px 16px 12px' }}>
-                  <p style={{ margin: '0 0 8px', fontSize: 12.5, color: COLORS.inkMuted, textAlign: 'center' }}>Login செய்தால் எல்லா வசதிகளும் திறக்கும்</p>
-                  <a href="/?startLogin=1" style={{ display: 'block', textAlign: 'center', padding: 14, borderRadius: 14, background: 'var(--color-btn)', color: 'var(--color-btnText)', fontWeight: 700, fontSize: 16, textDecoration: 'none' }}>Login / Sign up</a>
+                <div style={{ padding: '0 2px' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: 12.5, color: '#667786', textAlign: 'center' }}>
+                    Login செய்தால் எல்லா வசதிகளும் திறக்கும்
+                  </p>
+                  <a href="/?startLogin=1" style={{
+                    display: 'block', textAlign: 'center', padding: 13, borderRadius: 9,
+                    background: '#0B3864', color: '#fff', fontWeight: 700, fontSize: 16, textDecoration: 'none',
+                  }}>Login / Sign up</a>
                 </div>
               )}
+
               {isLoggedIn && hasPass === false && (
-                <a href="/plans" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '6px 14px 10px', padding: '10px 14px', borderRadius: 14, background: 'linear-gradient(135deg,#F3C65A,#D99A1E)', color: '#2b1c00', textDecoration: 'none', boxShadow: '0 8px 18px -10px rgba(176,122,16,0.8)' }}>
-                  <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PlansIcon size={20} color="#2b1c00" />
+                <a href="/plans" style={{
+                  display: 'flex', alignItems: 'center', gap: 11, minHeight: 62, padding: '8px 13px',
+                  background: '#F5C548', color: '#20384D', textDecoration: 'none',
+                  border: '1px solid #DDAE35', borderRadius: 10,
+                  boxShadow: '0 5px 12px rgba(176,122,16,.12)', boxSizing: 'border-box',
+                }}>
+                  <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', borderRadius: 7, background: 'rgba(255,255,255,.55)', flex: '0 0 36px' }}>
+                    <PlansIcon size={19} color="#0B3864" />
                   </span>
-                  <b style={{ fontSize: 17 }}>{t.menu.plans}</b>
-                  <span style={{ marginLeft: 'auto', fontSize: 24, lineHeight: 1 }}>›</span>
+                  <span>
+                    <strong style={{ display: 'block', fontSize: 18, lineHeight: 1.2 }}>{t.menu.plans}</strong>
+                    <small style={{ display: 'block', fontSize: 11, marginTop: 2 }}>பயிற்சியைத் தொடருங்கள்</small>
+                  </span>
+                  <b style={{ marginLeft: 'auto', fontSize: 27, fontWeight: 400 }}>›</b>
                 </a>
               )}
+
               {isLoggedIn && hasPass === true && (
-                <a href="/plans" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 16px 8px', padding: '7px 12px', borderRadius: 999, border: '1.5px solid #E2B04A', background: COLORS.goldLight, color: COLORS.ink, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
-                  <span style={{ color: 'var(--color-ok)', fontWeight: 800 }}>✓</span> {t.menu.plans} · Active
+                <a href="/plans" style={{
+                  display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '7px 12px',
+                  border: '1px solid #DDAE35', borderRadius: 9, background: '#FFF7DC',
+                  color: '#20384D', textDecoration: 'none', fontSize: 13, fontWeight: 600,
+                }}>
+                  <span style={{ color: '#17835E', fontWeight: 800 }}>✓</span>
+                  {t.menu.plans} · Active
                   <span style={{ marginLeft: 'auto', fontSize: 18, lineHeight: 1 }}>›</span>
                 </a>
               )}
-              <div aria-hidden="true" style={{ position: 'relative', height: 38, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: HERO_ART_SVG }} />
             </div>
           </div>
         </div>,
@@ -165,23 +209,46 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
   );
 }
 
-function MenuRow({ href, label, Icon, bold, locked }: { href: string; label: string; Icon: NavItem['Icon']; bold?: boolean; locked?: boolean }) {
+function MenuRow({
+  href, label, Icon, bold, locked, isNew,
+}: {
+  href: string;
+  label: string;
+  Icon: NavItem['Icon'];
+  bold?: boolean;
+  locked?: boolean;
+  isNew?: boolean;
+}) {
   const active = !locked && typeof window !== 'undefined' && window.location.pathname === href;
+
   return (
     <a
       href={href}
       style={{
-        display: 'flex', alignItems: 'center', gap: 14, padding: '4px 12px', borderRadius: 12, textDecoration: 'none',
-        color: 'var(--color-ink)', fontSize: 16, fontWeight: active || bold ? 700 : 500,
-        background: active ? 'var(--color-card)' : 'transparent',
-        boxShadow: active ? 'inset 4px 0 0 #E2B04A, 0 1px 0 var(--color-line)' : 'none',
+        display: 'flex', alignItems: 'center', gap: 12, minHeight: 48, padding: '5px 10px',
+        borderLeft: active ? '3px solid #E2B04A' : '3px solid transparent',
+        background: active ? '#F5F8F9' : 'transparent',
+        color: '#20384D', textDecoration: 'none', fontSize: 17,
+        fontWeight: active || bold ? 800 : 500, boxSizing: 'border-box',
       }}
     >
-      <span style={{ width: 32, height: 32, borderRadius: '50%', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? 'var(--color-btn)' : 'var(--color-goldDisc)' }}>
-        <Icon size={18} color={active ? 'var(--color-btnText)' : 'var(--color-gold)'} />
-      </span>
-      {label}
-      {locked && <span aria-label="Login required" style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.55 }}>🔒</span>}
+      <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
+      {isNew && (
+        <span style={{
+          fontSize: 10, fontWeight: 900, letterSpacing: '.6px', color: '#0B3864',
+          background: '#FFF1B8', border: '1px solid #E8C95D',
+          padding: '3px 7px', borderRadius: 5,
+        }}>NEW</span>
+      )}
+      {active && (
+        <span style={{ fontSize: 10, color: '#17835E', fontWeight: 800, letterSpacing: '.5px' }}>CURRENT</span>
+      )}
+      {locked && (
+        <span aria-label="Login required" style={{
+          marginLeft: 'auto', fontSize: 9, fontWeight: 800, letterSpacing: '.5px',
+          color: '#71808B', border: '1px solid #DDE5E9', borderRadius: 4, padding: '2px 5px',
+        }}>LOGIN</span>
+      )}
     </a>
   );
 }
