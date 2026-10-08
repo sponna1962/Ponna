@@ -116,12 +116,18 @@ export default function HomeDesignPreview() {
           ))}
         </div>
 
-        <section className="purpose-section" aria-label="PONNA.in நோக்கம்">
-          <div className="purpose-label">PONNA.in நோக்கம்</div>
-          <h2>அரசுப் போட்டித் தேர்வுகளுக்கான தரமான பயிற்சி அனைவருக்கும் கிடைக்க வேண்டும் என்பதே PONNA-வின் நோக்கம்.</h2>
-          <p>தற்போதைய சூழ்நிலையில், அரசு வேலைக்கான போட்டித் தேர்வுகளுக்குத் தயாராகும் மாணவர்கள் தனியார் பயிற்சி மையங்களில் அதிக கட்டணம் செலுத்தி பயிற்சி பெறும் நிலை உள்ளது. அந்தச் செலவு அனைத்து மாணவர்களுக்கும் சாத்தியமானதாக இருப்பதில்லை.</p>
-          <p>அதனால், குறைந்த கட்டணத்தில் தரமான பயிற்சியை வழங்கி, பொருளாதாரச் சூழ்நிலை தடையாக இருந்தாலும் மாணவர்கள் தங்களது திறமையை வளர்த்துக்கொண்டு அரசு வேலைக்கான கனவை நனவாக்க உதவ வேண்டும் என்பதற்காகவே PONNA உருவாக்கப்பட்டுள்ளது.</p>
-          <strong>தரமான பயிற்சி... குறைந்த கட்டணம்... அரசு வேலைக்கான உங்கள் கனவை நனவாக்க PONNA உங்களுடன்.</strong>
+        <section className="purpose-section" aria-label="PONNA-வின் நோக்கம்">
+          <div className="purpose-label">PONNA-வின் நோக்கம்</div>
+          <h2>தரமான போட்டித் தேர்வுப் பயிற்சி<br />அனைவருக்கும் கிடைக்க வேண்டும்.</h2>
+          <div className="purpose-rule" />
+          <p className="purpose-lead">அரசு வேலைக்குத் தயாராகும் ஒரு மாணவரின் பொருளாதார நிலை, அவரது கனவுக்குத் தடையாக இருக்கக் கூடாது.</p>
+          <p>தனியார் பயிற்சி மையங்களில் அதிக கட்டணம் செலுத்த முடியாத மாணவர்களுக்கும், குறைந்த கட்டணத்தில் தரமான பயிற்சி கிடைக்க வேண்டும் என்பதற்காக PONNA உருவாக்கப்பட்டுள்ளது.</p>
+          <div className="purpose-pillars">
+            <div><strong>தரமான பயிற்சி</strong><span>நிபுணர்கள் உருவாக்கிய பயிற்சி</span></div>
+            <div><strong>குறைந்த கட்டணம்</strong><span>அனைவருக்கும் எளிதில் கிடைக்க</span></div>
+            <div><strong>அரசு வேலை</strong><span>உங்கள் கனவை நனவாக்க</span></div>
+          </div>
+          <p className="purpose-closing"><strong>இதுவே PONNA-வின் நோக்கம்.</strong></p>
         </section>
 
         <section className="pass-section" aria-label="உங்கள் PONNA Pass பெறுங்கள்">
@@ -351,39 +357,85 @@ export default function HomeDesignPreview() {
         }
 
         .purpose-section {
-          margin: 18px 0 8px;
-          padding: 22px 16px;
-          border-top: 2px solid #0B3864;
-          border-bottom: 1px solid #DDE5E9;
-          background: #FFFEFB;
+          margin: 20px 0 10px;
+          padding: 24px 17px 20px;
+          background: #0B3864;
+          color: #fff;
+          border-radius: 0;
+          position: relative;
+          overflow: hidden;
         }
-        .purpose-label, .pass-label {
-          color: #17835E;
-          font-size: 14px;
+        .purpose-section::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 74px;
+          height: 4px;
+          background: #FFD22A;
+        }
+        .purpose-label {
+          color: #FFD22A;
+          font-size: 13px;
           font-weight: 900;
-          letter-spacing: .2px;
-          margin-bottom: 7px;
+          letter-spacing: 1px;
+          margin-bottom: 10px;
         }
-        .purpose-section h2, .pass-section h2 {
+        .purpose-section h2 {
           margin: 0;
-          color: #0B3864;
-          font-size: 21px;
-          line-height: 1.45;
+          color: #fff;
+          font-size: 25px;
+          line-height: 1.42;
           font-weight: 900;
+        }
+        .purpose-rule {
+          width: 46px;
+          height: 3px;
+          background: #FFD22A;
+          margin: 15px 0 13px;
         }
         .purpose-section p {
-          margin: 9px 0 0;
-          color: #4F6272;
+          margin: 0 0 10px;
+          color: #E8EFF4;
           font-size: 16px;
           line-height: 1.62;
         }
-        .purpose-section strong {
-          display: block;
-          margin-top: 12px;
-          color: #20384D;
-          font-size: 16px;
-          line-height: 1.55;
+        .purpose-section .purpose-lead {
+          color: #fff;
+          font-size: 17px;
+          font-weight: 700;
         }
+        .purpose-pillars {
+          display: grid;
+          grid-template-columns: 1fr;
+          margin: 15px 0 3px;
+          border-top: 1px solid rgba(255,255,255,.22);
+        }
+        .purpose-pillars div {
+          padding: 11px 0;
+          border-bottom: 1px solid rgba(255,255,255,.18);
+        }
+        .purpose-pillars strong {
+          display: block;
+          margin: 0;
+          color: #fff;
+          font-size: 16px;
+          line-height: 1.35;
+        }
+        .purpose-pillars span {
+          display: block;
+          margin-top: 2px;
+          color: #C9D7E0;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+        .purpose-section .purpose-closing {
+          margin: 13px 0 0;
+          color: #FFD22A;
+          font-size: 16px;
+          line-height: 1.45;
+        }
+        .purpose-section .purpose-closing strong { color: inherit; }
         .pass-section {
           margin: 14px 0 8px;
           padding: 22px 16px;
