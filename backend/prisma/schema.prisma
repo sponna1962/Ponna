@@ -2000,3 +2000,277 @@ model DiagnosticAttempt {
   userId      String                  @unique
   user        User                    @relation(fields: [userId], references: [id])
   startedAt   DateTime                @default(now())
+  completedAt DateTime?
+  answers     DiagnosticAnswer[]
+}
+
+model DiagnosticAnswer {
+  id             String            @id @default(uuid())
+  attemptId      String
+  attempt        DiagnosticAttempt @relation(fields: [attemptId], references: [id])
+  questionId     String
+  question       Question          @relation(fields: [questionId], references: [id])
+  sequenceNumber Int
+  selectedOption CorrectOption?
+  isCorrect      Boolean?
+  answeredAt     DateTime?
+
+  @@unique([attemptId, questionId])
+}
+
+// ── Parent/Mentor Progress Sharing (finalized requirement — world-class
+// polish, item 2). A student-initiated, revocable, read-only public link
+// to a SAFE summary of their own progress (accuracy, streak, subject
+// strengths/weaknesses) -- never phone/email/other PII. Default private:
+// no token exists until the student explicitly creates one; can be
+// revoked at any time, which immediately invalidates the public link.
+model ShareToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique // one active share link per student at a time -- creating again just returns the same token unless revoked first
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique @default(uuid())
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ── Referral Program (finalized requirement — world-class growth item 3,
+// STRUCTURE ONLY per explicit instruction; the reward trigger is wired up
+// once Razorpay payment confirmation is live) ───────────────────────────
+// One row per successfully-referred person (refereeId unique -- a person
+// can only ever be counted as referred once). status stays PENDING until
+// an admin (today) or an automated payment-confirmation webhook (once
+// Razorpay is integrated) marks it REWARDED.
+enum ReferralStatus {
+  PENDING
+  REWARDED
+}
+
+model ReferralConversion {
+  id         String         @id @default(uuid())
+  referrerId String
+  referrer   User           @relation(fields: [referrerId], references: [id])
+  refereeId  String         @unique
+  status     ReferralStatus @default(PENDING)
+  createdAt  DateTime       @default(now())
+  rewardedAt DateTime?
+}
+
+// ── Milestone Badges (finalized requirement — world-class polish, item 8)
+// Derived entirely from EXISTING data (questionsAnswered, streak) --
+// no new tracking system. This table just records WHEN each milestone
+// was first crossed, so the frontend can show a one-time celebration for
+// a newly-earned badge rather than re-celebrating an old one every visit.
+enum MilestoneType {
+  QUESTIONS_100
+  QUESTIONS_500
+  QUESTIONS_1000
+  QUESTIONS_5000
+  STREAK_7
+  STREAK_30
+  STREAK_100
+  FIRST_PASS
+  MISTAKES_FIXED_50
+  DAILY_CHALLENGE_10
+}
+
+// Push Notifications (Sept 2026, Priority 1 — Accessibility & Reach).
+// One row per subscribed browser/device (a student may have several —
+// phone + desktop, or after reinstalling). endpoint is globally unique
+// (it's the browser's own push-service URL) — re-subscribing the same
+// device just upserts the same row rather than duplicating it.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model StudentMilestone {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  milestoneType MilestoneType
+  achievedAt    DateTime      @default(now())
+
+  @@unique([userId, milestoneType])
+}
+
+// Drives "unseen-first" allocation (§6.4) and performance rollups (§8).
+// Abandoned/unanswered reserved questions are NOT written here — only answered ones.
+model UserQuestionHistory {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  questionId      String
+  question        Question   @relation(fields: [questionId], references: [id])
+  difficulty      Difficulty // denormalized copy at answer-time, for fast bucket aggregation
+  modeTakenIn     QuizMode
+  answeredCorrectly Boolean
+  answeredAt      DateTime   @default(now())
+
+  @@unique([userId, questionId]) // one history row per (user, question) — repeats overwrite/upsert per repetition policy
+  @@index([userId, difficulty])
+  @@index([userId, answeredAt])
+}
+
+// ─────────────────────────────────────────────────────────
+// PERFORMANCE & RANKING  (§8 Ranking System)
+// ─────────────────────────────────────────────────────────
+
+// One row per (user, bucket). Bucket OVERALL = Mixed rollup across all answers;
+// MEDIUM/HARD = filtered by difficulty. Maintained incrementally on each answer
+// submission so rank queries don't scan raw history (§8.1 Recalculation note).
+model UserPerformanceSummary {
+  id               String        @id @default(uuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id])
+  bucket           PerformanceBucket
+  questionsAnswered Int          @default(0)
+  correctAnswers    Int          @default(0)
+  averagePercent    Float        @default(0)
+  rank              Int?         // null until eligibility threshold met (§8.1)
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([userId, bucket])
+  @@index([bucket, averagePercent])
+}
+
+enum PerformanceBucket {
+  OVERALL
+  MEDIUM
+  HARD
+}
+
+// ─────────────────────────────────────────────────────────
+// ADMIN-CONFIGURABLE SETTINGS  (§7.7, §8.1 — nothing hardcoded)
+// ─────────────────────────────────────────────────────────
+
+// Single-row (or keyed) settings table. Seed values match the launch defaults
+// agreed in the requirements doc; every value here is editable from the admin panel.
+model PlatformSettings {
+  id                          String   @id @default("singleton")
+
+  repetitionStrategy          String   @default("UNSEEN_FIRST_THEN_OLDEST") // configurable per §6.4
+  repeatAfterDays             Int?     // used only if strategy = REPEAT_AFTER_DAYS
+
+  caMaxFor5Q                  Int      @default(1)   // Current Affairs caps per session size, §6.4
+  caMaxFor20Q                 Int      @default(2)
+  caMaxFor50Q                 Int      @default(5)
+  caRecencyWindowDays         Int      @default(90)   // §6.4
+
+  aiConfidenceThreshold       Float    @default(85)   // §7.3 / §9
+  rankingEligibilityMinQuestions Int   @default(50)   // §8.1
+
+  sessionInactivityHours      Int      @default(48)   // abandonment window, §4.3 / §13
+
+  // One-time marker (finalized requirement, Sept 15 launch) — guards the
+  // seed script's launch-visibility defaults (hide every Authority except
+  // TNPSC/TNTET, hide Higher Education/Entrance entirely) so they apply
+  // exactly ONCE. Without this, a future admin re-enabling an exam via the
+  // Admin Taxonomy page's "Visible to students" toggle would get silently
+  // reverted back to hidden on the next deploy, since seed.ts runs on
+  // every deploy.
+  launchVisibilityApplied    Boolean  @default(false)
+
+  // One-time marker (finalized requirement) — guards the seed script's
+  // TNPSC exam-group visibility cleanup (hiding Group V/VII/VIII, which
+  // aren't confirmed as officially-defined standalone TNPSC exams
+  // against TNPSC's own published Scheme of Examination, while adding
+  // Group I-A and Group V-A as the correctly-named official ones) so it
+  // applies exactly once and never fights a future admin re-enabling one
+  // of these via the Exam Taxonomy page's "Visible to students" toggle.
+  tnpscGroupsVisibilityCleanupApplied Boolean @default(false)
+
+  // Daily Quiz (finalized requirement) — dailyQuizEnabled is the "Coming
+  // Soon" toggle: false shows the placeholder page to students regardless
+  // of whether any DailyQuiz rows exist yet, so the admin side can be
+  // built/tested well before the student-facing feature goes live, with
+  // no deploy needed to flip it on later (same pattern as
+  // launchVisibilityApplied's studentVisible toggle). dailyQuizDefaultPublishTime
+  // is "HH:MM" in IST (e.g. "07:00") — the default the admin's Create form
+  // pre-fills; NEVER hard-coded elsewhere, and always overridable per day.
+  dailyQuizEnabled            Boolean  @default(false)
+  dailyQuizDefaultPublishTime String   @default("07:00")
+
+  // Brain Challenge (finalized requirement) — separate Coming-Soon toggle
+  // and default publish time from Daily Quiz's own, since the two are
+  // independent content offerings that could go live on different
+  // schedules (e.g. Daily Quiz already live, Brain Challenge still being
+  // prepared) even though they share the same page and question-flow UI.
+  brainChallengeEnabled            Boolean @default(false)
+  brainChallengeDefaultPublishTime String  @default("07:00")
+
+  // Subject & Topic Preference — Stage 2 (finalized requirement,
+  // "Preference-based Question Allocation"). The percentage of a
+  // session's non-Current-Affairs slots reserved for the student's
+  // preferred Subjects/Topics before falling back to the general
+  // eligible pool — configurable here, never hard-coded, so this can be
+  // tuned (or later swapped for a performance-based Adaptive Practice
+  // weight) without a code change. Only ever used when the student has
+  // saved a preference for their current exam; has zero effect otherwise.
+  subjectTopicPreferenceWeightPercent Int @default(75)
+
+  // Ask Ponna — Personal AI Study & Exam Assistant (finalized requirement,
+  // Specification v3, Phase 1 — Gemini as initial provider). Same
+  // Coming-Soon-toggle pattern as Daily Quiz/Brain Challenge —
+  // askPonnaEnabled defaults false so it's invisible until explicitly
+  // switched on post-deploy testing (Spec v2 §14, Stage 1).
+  //
+  // askPonnaProvider/askPonnaModel document EXACTLY which provider/model
+  // is live (Spec v3 §7's "document the exact model/version" requirement)
+  // — read by the Orchestrator to pick which ProviderAdapter to
+  // instantiate, never hard-coded in any other file (Spec v3 §1.3).
+  //
+  // askPonnaDailyLimitFree/Paid (finalized requirement — "Gemini free-tier
+  // limits must NOT be treated as unlimited") are PONNA's own per-student
+  // caps, deliberately set conservatively below Google's own free-tier
+  // daily-request ceiling (roughly 500-1500 requests/day platform-wide on
+  // Gemini's Flash-Lite free tier as of writing) so normal usage across
+  // many students never collectively trips Google's hard block — pure
+  // configuration, changeable here without any code/architecture change.
+  askPonnaEnabled          Boolean @default(false)
+  askPonnaProvider         String  @default("gemini")
+  askPonnaModel            String  @default("gemini-2.5-flash-lite")
+  askPonnaDailyLimitFree   Int     @default(0)
+  askPonnaDailyLimitPaid   Int     @default(20)
+
+  // WhatsApp Daily Reminder (finalized requirement — ₹999 Annual Plan
+  // value-add, item 3b, Meta WhatsApp Business Cloud API). Disabled by
+  // default -- the sending adapter needs WHATSAPP_ACCESS_TOKEN and
+  // WHATSAPP_PHONE_NUMBER_ID env vars (same pattern as GEMINI_API_KEY/
+  // CLOUDINARY_*, not yet set), plus a Meta-approved message template
+  // (business-initiated WhatsApp messages require pre-approval — the
+  // template NAME is configurable here, never hard-coded, since template
+  // approval/renaming happens in Meta Business Manager, outside this
+  // codebase). inactivityDaysThreshold controls how many days without
+  // activity before a student is sent a reminder.
+  whatsappReminderEnabled         Boolean @default(false)
+  whatsappTemplateName            String  @default("daily_study_reminder")
+  whatsappReminderInactivityDays  Int     @default(2)
+
+  updatedAt                   DateTime @updatedAt
+}
+
+
+// Oct 2026 — anonymous site-visit counter for the admin "Visitors" page.
+// One row per page view. No name, phone, IP or account id is stored: only a
+// random browser id (visitorId), the page path, where the visitor came from
+// and a coarse device type.
+model SiteVisit {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  visitorId    String
+  path         String
+  source       String   // facebook | instagram | google | whatsapp | direct | internal | other:<host> | utm value
+  device       String   // mobile | tablet | desktop
+  isNewVisitor Boolean  @default(false)
+  isEntry      Boolean  @default(false) // first page view of a browsing session
+
+  @@index([createdAt])
+  @@index([visitorId, createdAt])
+}
