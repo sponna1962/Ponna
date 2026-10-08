@@ -36,6 +36,7 @@ import { apiUrl } from '../lib/api-config';
 import { studentFetch } from '../lib/student-fetch';
 import { getDeviceId, getDeviceLabel } from '../lib/device-id';
 import { StudentMenu } from '../components/StudentMenu';
+import HomeDesignPreview from '../components/HomeDesignPreview';
 import { LogoutIcon, ProfileIcon, DevicesIcon } from '../components/icons';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../lib/brand-theme';
 import { daysRemaining, shouldShowRemainingDays, formatValidUntil } from '../lib/pass-validity';
@@ -374,6 +375,19 @@ export default function IndexPage() {
   }
 
   if (!checkedAuth) return null;
+
+  // Oct 2026 — new home design for logged-out visitors (the login flow's other
+  // views and the logged-in home below are unchanged).
+  if (view === 'main' && !isLoggedIn) {
+    return (
+      <HomeDesignPreview
+        menu={<StudentMenu iconColor="#0B3864" />}
+        onLogin={openLogin}
+        onStart={handleStartPractising}
+        notice={loggedOutElsewhere ? t.login.sessionInvalidated : undefined}
+      />
+    );
+  }
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: COLORS.paper, color: COLORS.ink }}>
