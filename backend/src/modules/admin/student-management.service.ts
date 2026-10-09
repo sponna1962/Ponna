@@ -16,6 +16,8 @@ export class StudentManagementService {
             { phone: { contains: opts.search } },
             { email: { contains: opts.search, mode: 'insensitive' as const } },
             { name: { contains: opts.search, mode: 'insensitive' as const } },
+            { cityTownVillage: { contains: opts.search, mode: 'insensitive' as const } },
+            { district: { contains: opts.search, mode: 'insensitive' as const } },
           ],
         }
       : {};
@@ -40,6 +42,8 @@ export class StudentManagementService {
         name: u.name,
         phone: u.phone,
         email: u.email,
+        cityTownVillage: u.cityTownVillage,
+        district: u.district,
         preferredLang: u.preferredLang,
         createdAt: u.createdAt,
         isTestAccount: u.isTestAccount,
@@ -88,16 +92,7 @@ export class StudentManagementService {
    * deliberately, not as a self-service flow.
    */
   async changePhoneNumber(userId: string, newPhoneRaw: string) {
-    // Real Firebase Phone-OTP logins always store phone in E.164 format
-    // (e.g. "+919965399896" — see student-auth.service.ts's
-    // `decoded.phone_number`, used verbatim, no reformatting). An admin
-    // typing just "9965399896" here would otherwise be stored WITHOUT the
-    // "+91" prefix — a silent format mismatch that makes the very next
-    // real OTP login for that number fail to resolve back to this
-    // account (it would instead create a brand-new, unrelated one,
-    // losing isTestAccount/history access entirely). Normalize here so
-    // the stored value always matches what a real OTP login will send.
-    const digits = newPhoneRaw.replace(/[^\d]/g, '');
+    const digits = newPhoneRaw.replace(/[^\\d]/g, '');
     const newPhone = newPhoneRaw.trim().startsWith('+') ? newPhoneRaw.trim() : `+91${digits.replace(/^91/, '').slice(-10)}`;
 
     const conflict = await prisma.user.findUnique({ where: { phone: newPhone } });
@@ -109,7 +104,7 @@ export class StudentManagementService {
 
   /** Super Admin only — corrects the display name on an existing account (Oct 2026). */
   async changeName(userId: string, newNameRaw: string) {
-    const name = String(newNameRaw ?? '').trim().replace(/\s+/g, ' ');
+    const name = String(newNameRaw ?? '').trim().replace(/\\s+/g, ' ');
     if (name.length < 2 || name.length > 80) throw new Error('Please enter a name between 2 and 80 characters.');
     return prisma.user.update({ where: { id: userId }, data: { name }, select: { id: true, name: true } });
   }
@@ -118,13 +113,11 @@ export class StudentManagementService {
    * Super Admin only — changes the email address on an EXISTING account,
    * keeping all its history/data (Oct 2026, same trusted-override idea as
    * changePhoneNumber). This edits the account's contact/profile email only:
-   * it does NOT change which Google account the student signs in with (a
-   * student who already signs in through Google keeps doing so by their
-   * Firebase identity, which this never touches).
+   * it does NOT change which Google account the student signs in with.
    */
   async changeEmail(userId: string, newEmailRaw: string) {
     const newEmail = String(newEmailRaw ?? '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(newEmail)) {
       throw new Error('Please enter a valid email address.');
     }
     const conflict = await prisma.user.findUnique({ where: { email: newEmail } });
@@ -136,19 +129,9 @@ export class StudentManagementService {
 
   /**
    * Super Admin only — permanently deletes a student account and every
-   * record tied to it: Devices, Subscriptions, Practice Preference, quiz
-   * history (QuizSession + its QuizSessionQuestion rows,
-   * UserQuestionHistory, UserPerformanceSummary), Question Reports, and
-   * Daily Quiz activity (DailyQuizAttempt + its DailyQuizAnswer rows).
-   * Irreversible — the route requires an explicit confirmation on the
-   * frontend before calling this.
+   * record tied to it. Irreversible — the route requires explicit confirmation.
    */
   async deleteStudentAccount(userId: string): Promise<void> {
-    // Oct 2026 — one transaction, so a failure halfway never leaves a
-    // half-deleted student. Every table that references User is listed here
-    // (the relations have no ON DELETE CASCADE, so anything missing makes the
-    // final user delete fail with a foreign-key error). When adding a new
-    // table that points at User, add it here too.
     await prisma.$transaction(async (tx: any) => {
       await tx.dailyQuizAnswer.deleteMany({ where: { attempt: { userId } } });
       await tx.dailyQuizAttempt.deleteMany({ where: { userId } });
@@ -174,8 +157,6 @@ export class StudentManagementService {
       await tx.shareToken.deleteMany({ where: { userId } });
       await tx.pushSubscription.deleteMany({ where: { userId } });
       await tx.studentMilestone.deleteMany({ where: { userId } });
-      // Referrals: conversions this student earned or was the subject of, and
-      // anyone who signed up through them simply loses the "referred by" link.
       await tx.referralConversion.deleteMany({ where: { OR: [{ referrerId: userId }, { refereeId: userId }] } });
       await tx.user.updateMany({ where: { referredById: userId }, data: { referredById: null } });
       await tx.manualPayment.deleteMany({ where: { userId } });
