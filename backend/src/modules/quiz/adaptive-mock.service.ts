@@ -25,7 +25,7 @@ export class AdaptiveMockService {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { isTestAccount: true } });
     if (user?.isTestAccount) return true;
     const activeSub = await prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE', cycleEnd: { gt: new Date() }, plan: { isFree: false } },
+      where: { userId, status: 'ACTIVE', cycleEnd: { gt: new Date() }, plan: { isFree: false, isTrial: false } },
     });
     return !!activeSub;
   }

@@ -881,6 +881,12 @@ model Plan {
   // this from the admin panel once the actual exam date is confirmed.
   manualExpiryOverride  DateTime?
 
+  // Oct 2026 — low-price taster plan (₹10, 3 days). A student may buy a trial
+  // plan once per account; it never unlocks Live Exam, Adaptive Mock or Ask
+  // Ponna chat (those check isTrial: false). Everything else behaves like a
+  // normal paid plan.
+  isTrial               Boolean   @default(false)
+
   purposeId       String?
   purpose         ExamPurpose? @relation(fields: [purposeId], references: [id])
   authorityScopes PlanAuthorityScope[]

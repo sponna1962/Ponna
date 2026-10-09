@@ -59,6 +59,14 @@ export class PayuService {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const plan = await prisma.plan.findUniqueOrThrow({ where: { id: planId } });
     if (plan.isFree || !plan.active) throw new PayuError(`${plan.name} is not available for purchase.`);
+    if (plan.isTrial) {
+      // One trial per account: refuse if this student ever paid for (or was
+      // given) a trial plan before.
+      const used = await prisma.subscription.findFirst({ where: { userId, plan: { isTrial: true } }, select: { id: true } });
+      const hasPass = await prisma.subscription.findFirst({ where: { userId, status: 'ACTIVE', cycleEnd: { gt: new Date() }, plan: { isFree: false, isTrial: false } }, select: { id: true } });
+      if (hasPass) throw new PayuError('உங்களிடம் ஏற்கனவே Pass உள்ளது.');
+      if (used) throw new PayuError('சோதனைத் திட்டத்தை ஏற்கனவே பயன்படுத்தி விட்டீர்கள். ₹499 Pass வாங்கலாம்.');
+    }
     const price = plan.launchPrice ?? plan.regularPrice;
     if (!price) throw new PayuError(`No price set for ${plan.name}.`);
 
