@@ -102,6 +102,21 @@ export default function AskPonnaPage() {
   const [guestMode, setGuestMode] = useState(false);
   // Logged-out visitor on the normal Ask Ponna screen: only the free diagnostic card is usable.
   const [loggedOut, setLoggedOut] = useState(false);
+  // ₹10 trial student (no ₹499 Pass): only the ability test is open here;
+  // the chat is locked (the server enforces this too).
+  const [trialOnly, setTrialOnly] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !localStorage.getItem('ponna_student_token')) return;
+    studentFetch('/students/me/subscriptions')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((subs: any[]) => {
+        const live = (Array.isArray(subs) ? subs : []).filter((x) => !x.status || x.status === 'ACTIVE');
+        const hasTrial = live.some((x) => x.plan?.isTrial);
+        const hasPaid = live.some((x) => x.plan && !x.plan.isTrial && !x.plan.isFree);
+        setTrialOnly(hasTrial && !hasPaid);
+      })
+      .catch(() => {});
+  }, []);
   const [guestStage, setGuestStage] = useState<'language' | 'quiz' | 'done'>('language');
   const [guestId, setGuestId] = useState<string | null>(null);
   const [guestSubCategoryId, setGuestSubCategoryId] = useState<string | null>(null);
@@ -439,16 +454,16 @@ export default function AskPonnaPage() {
             <p style={{ fontSize: 14, color: COLORS.inkMuted, marginBottom: 20 }}>{t.askPonna.emptyState}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
-                ...(loggedOut ? [{ key: 'diagnostic', icon: '🧪', label: 'உங்கள் திறனை அறியுங்கள் (இலவசம்)', prompt: '', locked: false }] : []),
-                { key: 'learnExam', icon: '🎯', label: 'தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்', prompt: '🎯 தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்', locked: loggedOut },
-                { key: 'howToPrepare', icon: '📚', label: 'எப்படி தயாராக வேண்டும்?', prompt: '📚 எப்படி தயாராக வேண்டும்?', locked: loggedOut },
-                { key: 'askAnything', icon: '💬', label: 'உங்கள் கேள்வியைக் கேளுங்கள்', prompt: '💬 உங்கள் கேள்வியைக் கேளுங்கள்', locked: loggedOut },
+                ...(loggedOut || trialOnly ? [{ key: 'diagnostic', icon: '🧪', label: 'உங்கள் திறனை அறியுங்கள் (இலவசம்)', prompt: '', locked: false }] : []),
+                { key: 'learnExam', icon: '🎯', label: 'தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்', prompt: '🎯 தேர்வைப் பற்றி தெரிந்துகொள்ளுங்கள்', locked: loggedOut || trialOnly },
+                { key: 'howToPrepare', icon: '📚', label: 'எப்படி தயாராக வேண்டும்?', prompt: '📚 எப்படி தயாராக வேண்டும்?', locked: loggedOut || trialOnly },
+                { key: 'askAnything', icon: '💬', label: 'உங்கள் கேள்வியைக் கேளுங்கள்', prompt: '💬 உங்கள் கேள்வியைக் கேளுங்கள்', locked: loggedOut || trialOnly },
               ].map((flow) => (
                 <button
                   key={flow.key}
                   onClick={() => {
-                    if (flow.key === 'diagnostic') startGuestDiagnostic();
-                    else if (flow.locked) window.location.href = '/?startLogin=1';
+                    if (flow.key === 'diagnostic') { if (trialOnly) window.location.href = '/diagnostic'; else startGuestDiagnostic(); }
+                    else if (flow.locked) window.location.href = trialOnly ? '/plans' : '/?startLogin=1';
                     else send(flow.prompt);
                   }}
                   disabled={sending}
@@ -476,7 +491,7 @@ export default function AskPonnaPage() {
                 </button>
               ))}
             </div>
-            {!loggedOut && (
+            {!loggedOut && !trialOnly && (
               <div style={{ marginTop: 20, textAlign: 'left' }}>
                 <p style={{ fontSize: 13.5, fontWeight: 700, color: COLORS.ink, margin: '0 0 10px' }}>⚡ Group 4 அறிவிப்பு 2026 — விரைவுக் கேள்விகள்</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -486,7 +501,8 @@ export default function AskPonnaPage() {
                 </div>
               </div>
             )}
-            {!loggedOut && <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 16 }}>{t.askPonna.orAskDirectly}</p>}
+            {trialOnly && <p style={{ fontSize: 12.5, color: COLORS.inkMuted, marginTop: 16, lineHeight: 1.6 }}>🔒 மற்ற வசதிகள் ₹499 Pass-இல் மட்டும் கிடைக்கும்.</p>}
+            {!loggedOut && !trialOnly && <p style={{ fontSize: 12, color: COLORS.inkMuted, marginTop: 16 }}>{t.askPonna.orAskDirectly}</p>}
             {loggedOut && <p style={{ fontSize: 12.5, color: COLORS.inkMuted, marginTop: 16, lineHeight: 1.6 }}>🔒 குறியிட்ட வசதிகளுக்கு Pass தேவை. Login செய்து Pass பெறுங்கள்.</p>}
             <p style={{ fontSize: 11.5, color: COLORS.inkMuted, marginTop: 20, lineHeight: 1.6, padding: '0 10px' }}>{t.askPonna.aiDisclaimer}</p>
           </div>
@@ -615,7 +631,7 @@ export default function AskPonnaPage() {
         <div ref={bottomRef} />
       </div>
 
-      {accessState !== 'locked' && !guestMode && !loggedOut && (
+      {accessState !== 'locked' && !guestMode && !loggedOut && !trialOnly && (
         <div style={{ display: 'flex', gap: 10, padding: '12px 14px 16px', background: COLORS.paper, borderTop: `1px solid ${COLORS.line}`, flex: 'none', position: 'sticky', bottom: 0 }}>
           <input
             value={input}
