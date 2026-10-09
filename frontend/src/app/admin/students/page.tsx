@@ -47,7 +47,7 @@ export default function StudentsPage() {
 
   async function load() {
     const [studentsRes, statsRes] = await Promise.all([
-      adminFetch(`/admin/students${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+      adminFetch(`/admin/students?pageSize=1000${search ? `&search=${encodeURIComponent(search)}` : ''}`),
       adminFetch('/admin/platform-stats'),
     ]);
     const data = await studentsRes.json();
