@@ -693,8 +693,8 @@ function AdminQuestionsPageInner() {
             New Question — type in either language, the other auto-fills when you click away
           </h2>
           <div style={{ display: 'flex', gap: 16 }}>
-            <LangFormBlock label={`Tamil ${translating === 'ta' ? '(translating…)' : ''}`} fields={ta} setFields={setTa} onBlurQuestion={() => autoTranslate('ta')} />
-            <LangFormBlock label={`English ${translating === 'en' ? '(translating…)' : ''}`} fields={en} setFields={setEn} onBlurQuestion={() => autoTranslate('en')} />
+            <LangFormBlock label={`Tamil ${translating === 'ta' ? '(translating…)' : ''}`} fields={ta} setFields={setTa} translateLabel="தமிழிலிருந்து ஆங்கிலத்துக்கு மொழிபெயர் →" onTranslate={() => autoTranslate('ta')} busy={translating !== null} />
+            <LangFormBlock label={`English ${translating === 'en' ? '(translating…)' : ''}`} fields={en} setFields={setEn} translateLabel="ஆங்கிலத்திலிருந்து தமிழுக்கு மொழிபெயர் →" onTranslate={() => autoTranslate('en')} busy={translating !== null} />
           </div>
 
           <div style={{ marginTop: 16, marginBottom: 12 }}>
@@ -1172,12 +1172,16 @@ function LangFormBlock({
   label,
   fields,
   setFields,
-  onBlurQuestion,
+  translateLabel,
+  onTranslate,
+  busy,
 }: {
   label: string;
   fields: typeof emptyLangFields;
   setFields: (f: typeof emptyLangFields) => void;
-  onBlurQuestion: () => void;
+  translateLabel: string;
+  onTranslate: () => void;
+  busy: boolean;
 }) {
   return (
     <div style={{ flex: 1 }}>
@@ -1186,7 +1190,6 @@ function LangFormBlock({
         placeholder="Question text"
         value={fields.questionText}
         onChange={(e) => setFields({ ...fields, questionText: e.target.value })}
-        onBlur={onBlurQuestion}
         style={{ width: '100%', padding: 8, marginBottom: 8, borderRadius: 6, border: '1px solid #cbd5e1' }}
         rows={2}
       />
@@ -1199,6 +1202,10 @@ function LangFormBlock({
           style={{ width: '100%', padding: 6, marginBottom: 6, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
         />
       ))}
+      {/* Oct 2026 — translation happens ONLY when this button is clicked (never automatically). */}
+      <button type="button" onClick={onTranslate} disabled={busy} style={{ marginTop: 4, padding: '6px 12px', borderRadius: 6, border: '1px solid #0f172a', background: '#fff', color: '#0f172a', fontSize: 13, cursor: busy ? 'default' : 'pointer' }}>
+        {translateLabel}
+      </button>
     </div>
   );
 }
