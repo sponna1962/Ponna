@@ -17,8 +17,8 @@
 // option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer,
 // plus optional explanation_ta, explanation_en (why the answer is correct).
 // A row needs at least one language fully filled in; if only one language
-// is provided, the other is generated via background translation after
-// import (same translation service as the single-question form).
+// is provided, the other stays empty — nothing is auto-translated
+// (Oct 2026: admin must ask for a translation explicitly).
 
 import { Language, CorrectOption, QuestionStatus, QuestionCategory, SourceType } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
@@ -257,11 +257,10 @@ export class BulkUploadService {
       });
     }
 
-    if (idsNeedingTranslation.length > 0) {
-      this.translateQueuedRows(idsNeedingTranslation).catch((err) =>
-        console.error(`Background translation failed for batch ${batchId}:`, err),
-      );
-    }
+    // Oct 2026 — NO automatic translation. A row uploaded in one language stays
+    // in that language only; an English/Tamil copy is created only when an admin
+    // asks for it (single-question form). idsNeedingTranslation is intentionally unused.
+    void idsNeedingTranslation;
 
     return { batchId, inserted };
   }
