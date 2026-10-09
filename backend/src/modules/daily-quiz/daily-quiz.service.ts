@@ -144,6 +144,14 @@ export class DailyQuizService {
     return !!activeSub;
   }
 
+  /** Oct 2026 — the Current Affairs Daily Quiz is free for every signed-in
+   * student (the daily habit that brings people back); Brain Challenge stays
+   * a paid / ₹10-trial feature. */
+  private async hasAccessTo(userId: string, quizType: DailyQuizType): Promise<boolean> {
+    if (quizType === DailyQuizType.DAILY_QUIZ) return true;
+    return this.hasPaidAccess(userId);
+  }
+
   private async findTodaysQuizByDate(quizType: DailyQuizType) {
     // 6 PM -> next 6 PM cycle: the quiz that is live right now wins, even
     // after IST midnight has changed the calendar date.
@@ -159,7 +167,7 @@ export class DailyQuizService {
   }
 
   async getStudentState(userId: string, quizType: DailyQuizType) {
-    if (!(await this.hasPaidAccess(userId))) return { access: 'FREE_LOCKED' as const };
+    if (!(await this.hasAccessTo(userId, quizType))) return { access: 'FREE_LOCKED' as const };
     const quiz = await this.findTodaysQuizByDate(quizType);
     if (!quiz) return { access: 'NOT_AVAILABLE' as const };
     const now = new Date();
@@ -171,8 +179,8 @@ export class DailyQuizService {
   }
 
   async startOrResumeAttempt(userId: string, dailyQuizId: string, language: Language) {
-    if (!(await this.hasPaidAccess(userId))) throw new DailyQuizError('This requires an active Annual Plan.');
     const quiz = await prisma.dailyQuiz.findUniqueOrThrow({ where: { id: dailyQuizId } });
+    if (!(await this.hasAccessTo(userId, quiz.quizType))) throw new DailyQuizError('This requires an active Annual Plan.');
     const now = new Date();
     if (now < quiz.publishAt || now >= quiz.expiresAt) throw new DailyQuizError('This is not available right now.');
     const existing = await prisma.dailyQuizAttempt.findUnique({ where: { userId_dailyQuizId: { userId, dailyQuizId } } });

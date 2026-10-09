@@ -214,3 +214,24 @@ export function ProtectLayer() {
     </div>
   );
 }
+
+// ------------------------------------------------------------ signup nudge
+// Oct 2026 — the guide stays fully open to everyone (it is what Google and
+// WhatsApp visitors come for); this just invites a free sign-up. Hidden once
+// the visitor is signed in.
+export function SignupNudge() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    try { setShow(!localStorage.getItem('ponna_student_token')); } catch { setShow(true); }
+  }, []);
+  if (!show) return null;
+  return (
+    <aside className="g4n-cta g4n-noprint" aria-label="இலவசப் பதிவு">
+      <h2>இன்னும் இலவசமாகப் படிக்க</h2>
+      <p>இலவசமாகப் பதிவு செய்தால் தினமும் இலவச Quiz, எல்லாப் பாடக் குறிப்புகள், தினமும் 5 பயிற்சிக் கேள்விகள் — எல்லாம் உங்களுக்கே.</p>
+      <div className="g4n-cta-row">
+        <a className="g4n-btn-gold" href="/?startLogin=1">இலவசமாகப் பதிவு செய்யுங்கள்</a>
+      </div>
+    </aside>
+  );
+}

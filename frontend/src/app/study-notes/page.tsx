@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiUrl } from '../../lib/api-config';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 import { StudentMenu } from '../../components/StudentMenu';
+import { rememberAfterLogin } from '../../lib/after-login';
 import { ProtectLayer } from '../../components/ProtectLayer';
 import { ShareButton } from '../../components/ShareButton';
 
@@ -94,11 +95,28 @@ export default function StudyNotesPage() {
   const [headH, setHeadH] = useState(62);
   useEffect(() => { if (headRef.current) setHeadH(headRef.current.offsetHeight); }, [selectedExamId]);
   const nameOf = (n: Note) => (language === 'TA' && n.subjectNameTa ? n.subjectNameTa : n.subjectName);
+  // Oct 2026 — the first subject is open to everyone; the rest are free but need
+  // a (free) sign-up. After login the student lands back on the subject they chose.
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => { try { setSignedIn(!!localStorage.getItem('ponna_student_token')); } catch {} }, []);
+  const isLocked = (n: Note) => !signedIn && notes.indexOf(n) > 0;
   function openSubject(id: string | null) {
+    const target = notes.find((n) => n.subjectId === id);
+    if (target && isLocked(target)) {
+      rememberAfterLogin(`/study-notes?subject=${encodeURIComponent(target.subjectId)}`);
+      window.location.href = '/?startLogin=1';
+      return;
+    }
     setOpenId(id);
     setMenuOpen(false);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
   }
+  useEffect(() => {
+    if (notes.length === 0 || openId) return;
+    const want = new URLSearchParams(window.location.search).get('subject');
+    if (want && notes.some((n) => n.subjectId === want) && signedIn) setOpenId(want);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, signedIn]);
   const current = notes.find((n) => n.subjectId === openId) ?? null;
   const curIdx = current ? notes.indexOf(current) : -1;
 
@@ -206,6 +224,11 @@ export default function StudyNotesPage() {
           {!current && notes.length > 0 && (
             <p style={{ fontSize: 14.5, color: COLORS.inkMuted, margin: '0 0 12px' }}>{language === 'TA' ? 'பாடத்தைத் தேர்வு செய்யுங்கள்' : 'Choose a subject'}</p>
           )}
+          {!current && !signedIn && notes.length > 1 && (
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: COLORS.ink, background: 'var(--color-goldDisc)', borderRadius: 10, padding: '10px 12px', margin: '0 0 12px' }}>
+              {language === 'TA' ? 'முதல் பாடம் எல்லோருக்கும் திறந்துள்ளது. மற்ற எல்லாப் பாடங்களும் இலவசம் — ஒரு முறை இலவசமாகப் பதிவு செய்தால் போதும்.' : 'The first subject is open to everyone. All other subjects are free — just sign up once.'}
+            </p>
+          )}
           {!current && notes.map((note) => (
             <button
               key={note.subjectId}
@@ -214,7 +237,9 @@ export default function StudyNotesPage() {
             >
               <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--color-goldDisc)', display: 'grid', placeItems: 'center', fontSize: 16, flex: 'none' }}>📘</span>
               <span style={{ flex: 1 }}>{nameOf(note)}</span>
-              <span aria-hidden="true" style={{ fontSize: 24, color: 'var(--color-gold)' }}>›</span>
+              {isLocked(note)
+                ? <span aria-label="Free sign-up" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--color-gold)', whiteSpace: 'nowrap' }}>🔒 {language === 'TA' ? 'இலவசப் பதிவு' : 'Free sign-up'}</span>
+                : <span aria-hidden="true" style={{ fontSize: 24, color: 'var(--color-gold)' }}>›</span>}
             </button>
           ))}
 

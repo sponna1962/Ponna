@@ -7,7 +7,7 @@
 import content from '../../../content/g4-notification.json';
 import { BitterFontLinks } from '../../../lib/brand-theme';
 import { FAQS, PAGE_URL, SITE, STATS } from './guide-data';
-import { Countdown, GuideToc, ProtectLayer, ReadingProgress, ShareButton } from './GuideClient';
+import { Countdown, GuideToc, ProtectLayer, ReadingProgress, ShareButton, SignupNudge } from './GuideClient';
 import { GuideStyles } from './guide-styles';
 import { StudentMenu } from '../../../components/StudentMenu';
 
@@ -120,6 +120,8 @@ export default function NotificationGuidePage() {
               </details>
             ))}
           </section>
+
+          <SignupNudge />
 
           {SECTIONS.map((s) => (
             <section key={s.id} id={s.id} className="g4n-sec" aria-labelledby={`h-${s.id}`}>
