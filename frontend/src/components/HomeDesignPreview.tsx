@@ -921,6 +921,136 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           margin-top: 12px;
         }
 
+
+        /*
+         * Desktop-only responsive layer.
+         * Intentionally gated above tablet widths so the existing mobile
+         * layout (including its spacing, type sizes, and section order)
+         * remains unchanged.
+         */
+        @media (min-width: 640px) and (max-width: 899px) {
+          .home-preview { max-width: 760px; }
+          .site-header { padding: 0 22px; gap: 16px; }
+          .hero { min-height: 430px; }
+          .hero-copy { width: 46%; padding: 30px 0 100px 26px; }
+          h1 { font-size: 32px; }
+          .eyebrow { font-size: 14px; }
+          .hero-photo img { width: 72%; }
+          .hero-photo::after { background: linear-gradient(90deg, #F1FAF3 30%, rgba(241,250,243,0) 76%); }
+          .hero-actions { padding: 0 24px 20px; }
+          .hero-actions .primary-button { max-width: 470px; }
+          .trial-bar { margin-left: 18px; margin-right: 18px; }
+          .countdown-section { margin-left: 18px; margin-right: 18px; }
+          .content { padding: 18px 18px 0; }
+          .featured-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .usp-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .usp-item { grid-template-columns: 42px minmax(0, 1fr); gap: 9px; }
+          .usp-copy p br { display: none; }
+          .tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+          .tool-card { min-height: 92px; }
+          .tool-copy strong { font-size: 18px; }
+          .tool-copy p { font-size: 14px; }
+          .purpose-section, .pass-section, .refund-box, .final-strip { margin-left: 0; margin-right: 0; }
+        }
+
+        @media (min-width: 900px) {
+          .home-preview {
+            max-width: 1240px;
+            min-height: 100dvh;
+            box-shadow: 0 0 38px rgba(15, 42, 66, .08);
+          }
+          .site-header { height: 78px; padding: 0 34px; gap: 20px; }
+          .menu-button { width: 46px; height: 46px; flex-basis: 46px; }
+          .menu-button span { width: 29px; }
+          .brand :global(img) { width: 178px !important; }
+          .login { font-size: 15px; padding: 12px 20px; }
+          .notice { padding: 12px 34px; font-size: 15px; }
+          .hero { min-height: 500px; display: block; }
+          .hero-copy { width: min(48%, 570px); padding: 54px 0 124px 5.2%; }
+          .eyebrow { font-size: 16px; margin-bottom: 10px; }
+          h1 { font-size: clamp(34px, 3.2vw, 48px); line-height: 1.32; letter-spacing: -.5px; }
+          .hero-photo img { width: 67%; object-position: center 28%; }
+          .hero-photo::after { background: linear-gradient(90deg, #F1FAF3 28%, rgba(241,250,243,.88) 40%, rgba(241,250,243,0) 74%); }
+          .trial-stamp { width: 88px; height: 88px; top: 22px; right: 28px; font-size: 27px; }
+          .trial-stamp small { font-size: 12px; }
+          .hero-actions { padding: 0 5.2% 28px; }
+          .hero-actions .primary-button { max-width: 460px; min-height: 58px; font-size: 18px; }
+          .trial-bar { margin: 18px 34px; padding: 14px 18px; gap: 15px; }
+          .trial-price { font-size: 21px; }
+          .trial-text b { font-size: 16px; }
+          .trial-text small { font-size: 12px; }
+          .countdown-section { margin: 18px 34px 16px; padding: 22px 22px 16px; }
+          .countdown-heading { margin-bottom: 16px; }
+          .countdown-kicker { font-size: 11px; }
+          .countdown-heading h2 { font-size: 27px; }
+          .countdown-heading p { font-size: 14px; }
+          .countdown-grid { gap: 16px; }
+          .countdown-card { padding: 18px 18px 16px; }
+          .countdown-label { font-size: 14px; }
+          .countdown-number { font-size: 38px; }
+          .countdown-number small { font-size: 13px; }
+          .countdown-date span { font-size: 12px; }
+          .countdown-date strong { font-size: 14px; }
+          .countdown-card a { font-size: 13px; padding: 11px 13px; min-height: 42px; }
+          .countdown-note { font-size: 11px; }
+          .stat-strip { padding: 19px 26px; }
+          .stat-strip div { padding: 0 14px; }
+          .stat-strip strong { font-size: 27px; }
+          .stat-strip span { font-size: 13px; }
+          .content { padding: 24px 34px 12px; }
+          .featured-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+          .featured-card { min-height: 112px; padding: 14px; gap: 14px; }
+          .featured-photo { width: 82px; height: 72px; flex-basis: 82px; }
+          .featured-card strong { font-size: 20px; }
+          .featured-card small { font-size: 14px; }
+          .arrow { font-size: 28px; }
+          .usp-section { margin-top: 22px; border: 1px solid #E4E8EA; border-radius: 12px; overflow: hidden; }
+          .usp-heading { padding: 22px 24px 19px; }
+          .usp-heading h2 { font-size: 28px; }
+          .usp-heading span { font-size: 14px; }
+          .usp-list { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px 10px; }
+          .usp-item { grid-template-columns: 48px minmax(0, 1fr); gap: 12px; padding: 20px 16px; }
+          .usp-item:nth-child(odd) { border-right: 1px solid #E2E7EA; }
+          .usp-number { font-size: 31px; }
+          .usp-copy strong { font-size: 21px; }
+          .usp-copy p { font-size: 14px; }
+          .usp-copy p br { display: none; }
+          .tools-section { margin-top: 22px; padding: 22px; border: 1px solid #DDE8EF; border-radius: 12px; }
+          .tools-heading { padding: 0 4px 14px; }
+          .tools-heading h2 { font-size: 24px; white-space: normal; }
+          .tools-heading p { font-size: 14px; margin-left: 12px; }
+          .tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+          .tool-card { min-height: 104px; padding: 14px; gap: 14px; }
+          .tool-photo { width: 66px; height: 66px; flex-basis: 66px; }
+          .tool-copy strong { font-size: 19px; }
+          .tool-copy p { font-size: 14px; }
+          .tool-arrow { font-size: 26px; }
+          .purpose-section { margin: 22px 0 14px; padding: 28px 30px 24px; }
+          .purpose-label { font-size: 14px; }
+          .purpose-section h2 { font-size: 30px; max-width: 850px; }
+          .purpose-section p { font-size: 16px; max-width: 1000px; }
+          .purpose-section .purpose-lead { font-size: 18px; }
+          .purpose-pillars { margin-top: 20px; }
+          .purpose-pillars div { padding: 15px 14px; }
+          .purpose-pillars strong { font-size: 16px; }
+          .purpose-pillars span { font-size: 12px; }
+          .pass-section { margin: 16px 0 14px; padding: 24px 26px 22px; }
+          .pass-section h2 { font-size: 25px; }
+          .pass-list b { font-size: 16px; }
+          .pass-list span { font-size: 13px; }
+          .ask-feature { padding: 12px 14px; }
+          .ask-feature span { font-size: 14px; }
+          .pass-bottom p { font-size: 14px; }
+          .pass-button { font-size: 15px; padding: 11px 18px; }
+          .refund-box { margin: 18px 0 14px; padding: 26px 24px; border-radius: 12px; }
+          .refund-box h3 { font-size: 28px; }
+          .refund-box p { font-size: 16px; }
+          .final-strip { margin: 16px 0 22px; padding: 24px 28px; }
+          .final-strip h3 { font-size: 26px; }
+          .final-strip p { font-size: 16px; }
+          .final-strip a { max-width: 520px; margin-top: 16px; min-height: 54px; font-size: 17px; }
+        }
+
         @media (max-width: 380px) {
           .brand :global(img) { width: 132px !important; }
           .login { font-size: 14px; padding: 10px 12px; }
