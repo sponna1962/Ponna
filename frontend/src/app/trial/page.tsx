@@ -23,7 +23,7 @@ const GIVES: { icon: string; title: string; body: string }[] = [
 ];
 
 const FAQ: { q: string; a: string }[] = [
-  { q: '₹10 சோதனையில் என்ன கிடைக்கும்?', a: 'பயிற்சி, "ஏன் இது சரி?" விளக்கங்கள், Study Notes, Daily Quiz, தவறுகள் மறுபார்வை, திறனறிவுச் சோதனை — 3 நாள்களுக்கு.' },
+  { q: 'என்ன கிடைக்கும்?', a: 'பயிற்சி, "ஏன் இது சரி?" விளக்கங்கள், Study Notes, Daily Quiz, தவறுகள் மறுபார்வை, திறனறிவுச் சோதனை — மூன்று நாட்களுக்கு.' },
   { q: '3 நாளுக்குப் பிறகு பணம் எடுக்கப்படுமா?', a: 'இல்லை. தானாகப் பணம் எடுக்கப்படாது. தொடர்ந்து படிக்க விரும்பினால் நீங்களே ₹499 Pass வாங்கலாம். ₹10 அதில் கழிக்கப்படாது.' },
   { q: 'ஒருவர் எத்தனை முறை சேரலாம்?', a: 'ஒரு கணக்குக்கு ஒரு முறை மட்டும்.' },
   { q: '₹499 Pass-இல் கூடுதலாக என்ன?', a: 'Live Exam, Adaptive Mock தேர்வுகள், Ask PONNA அரட்டை — மேலும் Pass காலம் முழுவதும் (ஜன. 12, 2027 வரை) பயிற்சி.' },
@@ -81,7 +81,7 @@ export default function TrialPage() {
     }
   }
 
-  const ctaLabel = trialSub ? 'பயிற்சியைத் தொடருங்கள்' : hasPass ? 'உங்களிடம் Pass உள்ளது' : busy ? 'காத்திருக்கவும்…' : '3 நாள் சோதனை தொடங்கு | ₹10';
+  const ctaLabel = trialSub ? 'பயிற்சியைத் தொடருங்கள்' : hasPass ? 'உங்களிடம் Pass உள்ளது' : busy ? 'காத்திருக்கவும்…' : 'ரூ. 10, மூன்று நாட்கள்';
   const ctaDisabled = busy || hasPass || (loggedIn && loaded && !plan && !trialSub);
   function onCta() {
     if (trialSub) { window.location.href = '/quiz'; return; }
@@ -101,7 +101,7 @@ export default function TrialPage() {
           <div style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 800 }}>TNPSC Group 4 — முழு பயிற்சி</div>
           <div style={{ color: '#777', margin: '6px 0 2px', fontSize: 14 }}>வெறும்</div>
           <div style={{ fontSize: 72, fontWeight: 900, color: '#D02B2B', lineHeight: 1 }}>₹10</div>
-          <div style={{ fontWeight: 800, marginTop: 6, fontSize: 16 }}>3 நாள் சோதனை</div>
+          <div style={{ fontWeight: 800, marginTop: 6, fontSize: 16 }}>மூன்று நாட்கள்</div>
           <span style={{ display: 'inline-block', border: '1px solid #bbb', borderRadius: 16, padding: '3px 12px', fontSize: 12, margin: '8px 0 4px' }}>● ஒரு முறை மட்டும்</span>
           <div style={{ color: '#888', fontSize: 12.5 }}>தானாகப் பணம் எடுக்கப்படாது</div>
         </div>
@@ -112,7 +112,7 @@ export default function TrialPage() {
           </div>
         )}
 
-        <h2 style={{ textAlign: 'center', fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 800, margin: '22px 0 10px' }}>சோதனையில் இவை உண்டு</h2>
+        <h2 style={{ textAlign: 'center', fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 800, margin: '22px 0 10px' }}>இவை உண்டு</h2>
         <div style={{ background: '#fff', border: '1px solid #e8e8ee', borderRadius: 14, overflow: 'hidden' }}>
           {GIVES.map((g, i) => (
             <div key={g.title} style={{ display: 'flex', gap: 12, padding: '12px 14px', borderTop: i ? '1px solid #f0f0f4' : 'none' }}>
