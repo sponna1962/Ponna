@@ -266,7 +266,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
       <style jsx>{`
         .home-preview {
           width: 100%;
-          max-width: 620px;
+          max-width: 480px;
           margin: 0 auto;
           min-height: 100dvh;
           background: #fff;
