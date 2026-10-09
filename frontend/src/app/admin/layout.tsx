@@ -23,6 +23,7 @@ const navItems = [
   { href: '/admin/visitors', label: 'Visitors' },
   { href: '/admin/students', label: 'Students' },
   { href: '/admin/plans', label: 'Plans' },
+  { href: '/admin/email-test', label: 'Email test' },
   { href: '/admin/manual-payments', label: 'UPI Payments' },
   { href: '/admin/staff', label: 'Staff' },
   { href: '/admin/settings', label: 'Settings' },

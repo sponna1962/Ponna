@@ -11,6 +11,7 @@ import { pushNotificationService } from './notifications/push-notification.servi
 import { questionAuditService } from './audit/question-audit.service';
 import { dailyCurrentAffairsService } from './admin/daily-current-affairs.service';
 import { adminAlertService } from './payments/admin-alert.service';
+import { dailyEmailService } from './notifications/daily-email.service';
 import { prisma } from '../lib/prisma';
 
 const sessionService = new SessionService();
@@ -48,6 +49,17 @@ export function startScheduledJobs() {
       }
     } catch (err) { console.error('[cron] Daily Quiz status sweep failed:', err); }
   });
+
+  // Oct 2026 — daily e-mails (Asia/Kolkata). Each kind is sent at most once per
+  // IST day (DailyEmailLog), so the retry windows below are safe: they just
+  // wait until the day's content exists, then send once.
+  const IST = { timezone: 'Asia/Kolkata' } as const;
+  const runEmail = (kind: 'MORNING' | 'CURRENT_AFFAIRS' | 'QUIZ') => async () => {
+    try { await dailyEmailService.sendDaily(kind); } catch (err) { console.error(`[cron] Daily email ${kind} failed:`, err); }
+  };
+  cron.schedule('30 6 * * *', runEmail('MORNING'), IST);
+  cron.schedule('*/10 17-20 * * *', runEmail('CURRENT_AFFAIRS'), IST); // from 5 PM, as soon as today's items are uploaded
+  cron.schedule('*/10 19-22 * * *', runEmail('QUIZ'), IST); // from 7 PM, as soon as today's quiz is live
 
   cron.schedule('30 13 * * *', async () => {
     try {
