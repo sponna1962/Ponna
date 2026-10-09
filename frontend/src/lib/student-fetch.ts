@@ -3,6 +3,7 @@
 // to every API call, and redirects to /login on a 401.
 
 import { apiUrl } from './api-config';
+import { rememberAfterLogin } from './after-login';
 
 export async function studentFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('ponna_student_token') : null;
@@ -64,6 +65,10 @@ export async function studentFetch(path: string, options: RequestInit = {}) {
       sessionStorage.setItem('ponna_logout_reason', 'SESSION_INVALIDATED');
     }
     localStorage.removeItem('ponna_student_token');
+    // Plans / Trial pages: remember them so login brings the student back.
+    if (/^\/(plans|trial)\/?$/.test(window.location.pathname)) {
+      rememberAfterLogin(window.location.pathname + window.location.search);
+    }
     window.location.href = '/';
     throw new Error('Session expired');
   }

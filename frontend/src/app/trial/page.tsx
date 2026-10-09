@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { studentFetch } from '../../lib/student-fetch';
+import { rememberAfterLogin } from '../../lib/after-login';
 import { StudentMenu } from '../../components/StudentMenu';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
@@ -66,11 +67,30 @@ export default function TrialPage() {
   }, []);
 
   const trialSub = subs.find((s) => s.plan.isTrial);
+
+  // Came back from login with a purchase intent (?buy=trial|pass): go straight
+  // to PayU. The flag stops a loop if the student returns from PayU unpaid.
+  useEffect(() => {
+    if (!loaded || !loggedIn || busy) return;
+    const want = new URLSearchParams(window.location.search).get('buy');
+    if (!want) return;
+    window.history.replaceState({}, '', '/trial');
+    let done = false;
+    try { done = sessionStorage.getItem('ponna_auto_buy') === want; sessionStorage.setItem('ponna_auto_buy', want); } catch {}
+    if (done) return;
+    const target = want === 'pass' ? passPlan : plan;
+    if (target && !(want === 'trial' && trialSub) && !hasPass) start(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
   const hasPass = subs.some((s) => !s.plan.isTrial);
 
   async function start(target: TrialPlan | null = plan) {
     setError('');
-    if (!loggedIn) { window.location.href = '/?startLogin=1'; return; }
+    if (!loggedIn) {
+      rememberAfterLogin(target && target === passPlan ? '/trial?buy=pass' : '/trial?buy=trial');
+      window.location.href = '/?startLogin=1';
+      return;
+    }
     if (!target) return;
     setBusy(true);
     try {

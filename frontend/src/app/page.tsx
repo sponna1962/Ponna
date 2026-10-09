@@ -34,6 +34,7 @@ import { firebaseAuth } from '../lib/firebase';
 import { useLanguage } from '../lib/language-context';
 import { apiUrl } from '../lib/api-config';
 import { studentFetch } from '../lib/student-fetch';
+import { takeAfterLogin } from '../lib/after-login';
 import { getDeviceId, getDeviceLabel } from '../lib/device-id';
 import { StudentMenu } from '../components/StudentMenu';
 import HomeDesignPreview from '../components/HomeDesignPreview';
@@ -231,6 +232,11 @@ export default function IndexPage() {
     // report they were promised. A no-op (harmless) if they never took
     // it -- normal login continues exactly as before.
     const guestDiagnosticId = localStorage.getItem('ponna_guest_diagnostic_id');
+    const backTo = takeAfterLogin();
+    if (backTo && !guestDiagnosticId) {
+      window.location.href = backTo;
+      return;
+    }
     if (guestDiagnosticId) {
       try {
         await studentFetch(`/guest-diagnostic/${guestDiagnosticId}/claim`, { method: 'POST' });
