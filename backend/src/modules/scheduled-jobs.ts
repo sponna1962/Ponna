@@ -66,6 +66,12 @@ export function startScheduledJobs() {
   }, IST);
   // (The separate 5 PM news e-mail was folded into the 7 PM quiz e-mail — max two daily mails.)
   cron.schedule('*/10 19-22 * * *', runEmail('QUIZ'), IST);
+  cron.schedule('0 12 * * *', async () => {
+    try { await lifecycleEmailService.runEvents(); } catch (err) { console.error('[cron] Exam-milestone e-mail failed:', err); }
+  }, IST);
+  cron.schedule('0 9 * * 0', async () => {
+    try { await lifecycleEmailService.runWeekly(); } catch (err) { console.error('[cron] Weekly summary e-mail failed:', err); }
+  }, IST);
   // Push (own opt-in list): streak-broken nudge at 8 AM; current-affairs alert once today's items exist.
   cron.schedule('0 8 * * *', async () => {
     try {
