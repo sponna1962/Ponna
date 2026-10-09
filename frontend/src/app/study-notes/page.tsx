@@ -13,7 +13,7 @@
 // more exams are visible later, and keeps this page consistent with
 // the rest of the app's own pattern.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiUrl } from '../../lib/api-config';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 import { StudentMenu } from '../../components/StudentMenu';
@@ -89,6 +89,18 @@ export default function StudyNotesPage() {
   const [loading, setLoading] = useState(true);
   const [notesLoading, setNotesLoading] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const headRef = useRef<HTMLDivElement>(null);
+  const [headH, setHeadH] = useState(62);
+  useEffect(() => { if (headRef.current) setHeadH(headRef.current.offsetHeight); }, [selectedExamId]);
+  const nameOf = (n: Note) => (language === 'TA' && n.subjectNameTa ? n.subjectNameTa : n.subjectName);
+  function openSubject(id: string | null) {
+    setOpenId(id);
+    setMenuOpen(false);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
+  }
+  const current = notes.find((n) => n.subjectId === openId) ?? null;
+  const curIdx = current ? notes.indexOf(current) : -1;
 
   useEffect(() => {
     fetch(apiUrl('/public/primary-exam'))
@@ -112,7 +124,7 @@ export default function StudyNotesPage() {
     <main className="ponna-protect" style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40, background: COLORS.paper, color: COLORS.ink, minHeight: '100dvh' }}>
       <BitterFontLinks />
       <ProtectLayer />
-      <div className="ponna-noprint" style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <div ref={headRef} className="ponna-noprint" style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Study Notes</h1>
       </div>
@@ -152,10 +164,12 @@ export default function StudyNotesPage() {
 
       {selectedExamId && (
         <div style={{ padding: '0 16px 16px' }}>
+          {!current && (<>
           <button
             onClick={() => {
               setSelectedExamId(null);
               setOpenId(null);
+              setMenuOpen(false);
             }}
             style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-gold)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 14 }}
           >
@@ -184,47 +198,75 @@ export default function StudyNotesPage() {
             ))}
           </div>
 
+          </>)}
+
           {notesLoading && <p style={{ fontSize: 13, color: COLORS.inkMuted }}>…</p>}
           {!notesLoading && notes.length === 0 && <p style={{ fontSize: 13, color: COLORS.inkMuted }}>Study notes coming soon.</p>}
 
-          {notes.map((note) => (
-            <div key={note.subjectId} style={{ background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderLeft: openId === note.subjectId ? '5px solid #E2B04A' : `1px solid ${COLORS.line}`, borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
-              <button
-                onClick={() => setOpenId(openId === note.subjectId ? null : note.subjectId)}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '14px 16px',
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: 15.5,
-                  fontWeight: 700,
-                  color: COLORS.ink,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                }}
-              >
-                <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--color-goldDisc)', display: 'grid', placeItems: 'center', fontSize: 16, flex: 'none' }}>📘</span>
-                <span style={{ flex: 1 }}>{language === 'TA' && note.subjectNameTa ? note.subjectNameTa : note.subjectName}</span>
-                <span style={{ color: 'var(--color-gold)', fontSize: 22, fontWeight: 600 }}>{openId === note.subjectId ? '−' : '+'}</span>
-              </button>
-              {openId === note.subjectId && (
-                <div style={{ padding: '0 16px 16px 16px', fontSize: 15, lineHeight: 1.8, color: COLORS.ink }}>
-                  <NoteBody content={note.content} />
-                  <div style={{ marginTop: 14 }}>
-                    <ShareButton
-                      title={`${language === 'TA' && note.subjectNameTa ? note.subjectNameTa : note.subjectName} — Study Notes`}
-                      text={`📘 ${language === 'TA' && note.subjectNameTa ? note.subjectNameTa : note.subjectName} — TNPSC Group 4 படிப்புக் குறிப்புகள்\nPONNA.in`}
-                      path="/study-notes"
-                      label={language === 'TA' ? 'இந்தக் குறிப்புகளைப் பகிர்க ↗' : 'Share these notes ↗'}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+          {!current && notes.length > 0 && (
+            <p style={{ fontSize: 14.5, color: COLORS.inkMuted, margin: '0 0 12px' }}>{language === 'TA' ? 'பாடத்தைத் தேர்வு செய்யுங்கள்' : 'Choose a subject'}</p>
+          )}
+          {!current && notes.map((note) => (
+            <button
+              key={note.subjectId}
+              onClick={() => openSubject(note.subjectId)}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '14px 16px', marginBottom: 10, background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderLeft: '5px solid #E2B04A', borderRadius: 10, fontSize: 15.5, fontWeight: 700, color: COLORS.ink, cursor: 'pointer' }}
+            >
+              <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--color-goldDisc)', display: 'grid', placeItems: 'center', fontSize: 16, flex: 'none' }}>📘</span>
+              <span style={{ flex: 1 }}>{nameOf(note)}</span>
+              <span aria-hidden="true" style={{ fontSize: 24, color: 'var(--color-gold)' }}>›</span>
+            </button>
           ))}
+
+          {current && (
+            <div>
+              {/* Stays visible while reading: back to the subject list, the subject name, and a one-tap subject switcher. */}
+              <div className="ponna-noprint" style={{ position: 'sticky', top: headH, zIndex: 20, margin: '0 -16px 14px', padding: '9px 16px', background: 'var(--color-card)', borderBottom: '2px solid #E2B04A' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button onClick={() => openSubject(null)} style={{ background: 'transparent', border: 'none', color: 'var(--color-gold)', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', padding: 0, whiteSpace: 'nowrap' }}>
+                    ← {language === 'TA' ? 'பாடங்கள்' : 'Subjects'}
+                  </button>
+                  <span style={{ flex: 1, fontWeight: 800, fontSize: 16, color: COLORS.ink, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📘 {nameOf(current)}</span>
+                  <button onClick={() => setMenuOpen((v) => !v)} style={{ background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', borderRadius: 8, padding: '7px 10px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {language === 'TA' ? 'பாடம் மாற்று' : 'Change'} {menuOpen ? '▴' : '▾'}
+                  </button>
+                </div>
+                {menuOpen && (
+                  <div style={{ position: 'absolute', right: 12, top: '100%', marginTop: 4, width: 250, maxHeight: '60vh', overflowY: 'auto', background: 'var(--color-card)', border: `1px solid ${COLORS.line}`, borderRadius: 10, boxShadow: '0 6px 18px rgba(0,0,0,0.25)' }}>
+                    {notes.map((n) => (
+                      <button key={n.subjectId} onClick={() => openSubject(n.subjectId)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '12px 14px', border: 'none', borderBottom: `1px solid ${COLORS.line}`, background: n.subjectId === current.subjectId ? 'var(--color-goldDisc)' : 'transparent', color: COLORS.ink, fontWeight: n.subjectId === current.subjectId ? 800 : 600, fontSize: 14.5, cursor: 'pointer' }}>
+                        📘 {nameOf(n)} {n.subjectId === current.subjectId ? '✓' : ''}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ fontSize: 15.5, lineHeight: 1.85, color: COLORS.ink }}>
+                <NoteBody content={current.content} />
+                <div style={{ marginTop: 14 }}>
+                  <ShareButton
+                    title={`${nameOf(current)} — Study Notes`}
+                    text={`📘 ${nameOf(current)} — TNPSC Group 4 படிப்புக் குறிப்புகள்\nPONNA.in`}
+                    path="/study-notes"
+                    label={language === 'TA' ? 'இந்தக் குறிப்புகளைப் பகிர்க ↗' : 'Share these notes ↗'}
+                  />
+                </div>
+              </div>
+
+              <div className="ponna-noprint" style={{ display: 'flex', gap: 8, marginTop: 22 }}>
+                {[curIdx > 0 ? notes[curIdx - 1] : null, curIdx < notes.length - 1 ? notes[curIdx + 1] : null].map((n, i) => (
+                  <div key={i} style={{ flex: 1 }}>
+                    {n && (
+                      <button onClick={() => openSubject(n.subjectId)} style={{ width: '100%', padding: '11px 8px', borderRadius: 9, border: '1.5px solid var(--color-gold)', background: 'transparent', color: COLORS.ink, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                        {i === 0 ? `‹ ${language === 'TA' ? 'முந்தைய' : 'Previous'}: ${nameOf(n)}` : `${language === 'TA' ? 'அடுத்த' : 'Next'}: ${nameOf(n)} ›`}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </main>
