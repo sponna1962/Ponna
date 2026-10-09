@@ -917,46 +917,6 @@ export default function QuizStartPage() {
           text-decoration: none;
           font-size: 13px;
         }
-        .subject-pref {
-          margin: 0 0 18px;
-        }
-        .subject-pref-button {
-          background: transparent !important;
-          border: none !important;
-          padding: 0 !important;
-          font-size: 13px !important;
-          font-weight: 700 !important;
-          color: #0B3864 !important;
-          text-decoration: underline !important;
-          text-underline-offset: 3px;
-          cursor: pointer;
-        }
-        .subject-list {
-          display: block;
-          width: 100%;
-          margin-top: 9px;
-          border-top: 1px solid #E6ECEF;
-        }
-        .subject-option {
-          display: flex;
-          width: 100%;
-          box-sizing: border-box;
-          align-items: center;
-          gap: 10px;
-          min-height: 42px;
-          padding: 7px 0;
-          color: #20384D;
-          font-size: 14px;
-          line-height: 1.45;
-          cursor: pointer;
-          border-bottom: 1px solid #E6ECEF;
-        }
-        .subject-option input {
-          width: 19px;
-          height: 19px;
-          flex: 0 0 19px;
-          accent-color: #0B3864;
-        }
         .preference-summary { margin-bottom: 22px; }
         .summary-card {
           display: flex;
@@ -1109,6 +1069,9 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
 
   if (!subjects || subjects.length === 0) return null;
 
+  // Styled-jsx rules are scoped to the component that declares them, so these
+  // must live here — in the parent they never reached these elements and the
+  // subject list rendered as bare inline checkboxes.
   return (
     <div className="subject-pref">
       <button
@@ -1134,6 +1097,48 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
           ))}
         </div>
       )}
+      <style jsx>{`
+        .subject-pref {
+          margin: 0 0 18px;
+        }
+        .subject-pref-button {
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+          font-size: 13px !important;
+          font-weight: 700 !important;
+          color: #0B3864 !important;
+          text-decoration: underline !important;
+          text-underline-offset: 3px;
+          cursor: pointer;
+        }
+        .subject-list {
+          display: block;
+          width: 100%;
+          margin-top: 9px;
+          border-top: 1px solid #E6ECEF;
+        }
+        .subject-option {
+          display: flex;
+          width: 100%;
+          box-sizing: border-box;
+          align-items: center;
+          gap: 10px;
+          min-height: 42px;
+          padding: 7px 0;
+          color: #20384D;
+          font-size: 14px;
+          line-height: 1.45;
+          cursor: pointer;
+          border-bottom: 1px solid #E6ECEF;
+        }
+        .subject-option input {
+          width: 19px;
+          height: 19px;
+          flex: 0 0 19px;
+          accent-color: #0B3864;
+        }
+      `}</style>
     </div>
   );
 }
