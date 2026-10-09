@@ -63,7 +63,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           <div className="eyebrow">போட்டித் தேர்வுக்கான<br />பயிற்சி தளம்</div>
           <h1>Group 4 வெற்றிக்கான<br /><em>உங்கள் முயற்சி</em><br />இங்கே தொடங்கட்டும்</h1>
         </div>
-        <a href="/trial" className="trial-stamp" aria-label="₹10 சோதனை"><span>₹10</span></a>
+        <a href="/trial" className="trial-stamp" aria-label="₹10 சோதனை"><span>₹10<small>மட்டுமே</small></span></a>
         <div className="hero-photo">
           <img src="/ponna-hero-woman.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" />
         </div>
@@ -74,7 +74,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
 
       <a href="/trial" className="trial-bar">
         <span className="trial-price">₹10</span>
-        <span className="trial-text"><b>₹10-க்குத் தொடங்குங்கள்</b><small>பயிற்சி • குறிப்புகள் • Daily Quiz • விளக்கங்கள்</small></span>
+        <span className="trial-text"><b>ரூ.10 மட்டுமே — தொடங்குங்கள்</b><small>பயிற்சி • குறிப்புகள் • Daily Quiz • விளக்கங்கள்</small></span>
         <span className="trial-arrow">›</span>
       </a>
 
@@ -338,8 +338,10 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           position: absolute; top: 12px; right: 12px; z-index: 3; width: 74px; height: 74px; border-radius: 50%;
           background: #D02B2B; color: #fff; display: grid; place-items: center; text-decoration: none;
           border: 3px dashed #FFD22A; transform: rotate(8deg); box-shadow: 0 4px 10px rgba(0,0,0,.28);
-          font-weight: 900; font-size: 26px; line-height: 1;
+          font-weight: 900; font-size: 24px; line-height: 1;
         }
+        .trial-stamp span { display: flex; flex-direction: column; align-items: center; }
+        .trial-stamp small { font-size: 11px; font-weight: 800; margin-top: 3px; }
         .trial-bar {
           display: flex; align-items: center; gap: 12px; margin: 10px 12px; padding: 11px 14px; border-radius: 12px;
           background: #0B3864; color: #fff; text-decoration: none; border-left: 5px solid #E2B04A;
