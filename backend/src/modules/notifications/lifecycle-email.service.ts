@@ -188,7 +188,7 @@ export class LifecycleEmailService {
     const older = await prisma.user.findMany({ where: { ...SUBJECT_OK, createdAt: { lte: new Date(now - 7 * 24 * H) } }, select: { id: true }, take: 2000 });
     for (const u of older) {
       if (mailed.has(u.id)) continue;
-      const recent = await prisma.quizSession.count({ where: { userId: u.id, createdAt: { gte: new Date(now - 7 * 24 * H) } } });
+      const recent = await prisma.quizSession.count({ where: { userId: u.id, startedAt: { gte: new Date(now - 7 * 24 * H) } } });
       if (recent === 0) await go('WINBACK', u.id, `${u.id}:${bucket}`);
     }
     if (Object.keys(out).length) console.log('[lifecycle-email]', JSON.stringify(out));
