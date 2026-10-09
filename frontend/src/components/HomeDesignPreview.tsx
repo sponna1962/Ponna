@@ -63,6 +63,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           <div className="eyebrow">போட்டித் தேர்வுக்கான<br />பயிற்சி தளம்</div>
           <h1>Group 4 வெற்றிக்கான<br /><em>உங்கள் முயற்சி</em><br />இங்கே தொடங்கட்டும்</h1>
         </div>
+        <a href="/trial" className="trial-stamp" aria-label="₹10 சோதனை"><span>₹10</span></a>
         <div className="hero-photo">
           <img src="/ponna-hero-woman.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" />
         </div>
@@ -70,6 +71,12 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           <a href="/quiz" className="primary-button" onClick={startClick}>பயிற்சி தொடங்குங்கள் <b>→</b></a>
         </div>
       </section>
+
+      <a href="/trial" className="trial-bar">
+        <span className="trial-price">₹10</span>
+        <span className="trial-text"><b>₹10-க்குத் தொடங்குங்கள்</b><small>பயிற்சி • குறிப்புகள் • Daily Quiz • விளக்கங்கள்</small></span>
+        <span className="trial-arrow">›</span>
+      </a>
 
       <section className="stat-strip" aria-label="PONNA எண்கள்">
         <div><strong>60,000+</strong><span>கேள்விகளில்<br />பயிற்சி</span></div>
@@ -327,6 +334,21 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
           object-fit: cover;
           object-position: left top;
         }
+        .trial-stamp {
+          position: absolute; top: 12px; right: 12px; z-index: 3; width: 74px; height: 74px; border-radius: 50%;
+          background: #D02B2B; color: #fff; display: grid; place-items: center; text-decoration: none;
+          border: 3px dashed #FFD22A; transform: rotate(8deg); box-shadow: 0 4px 10px rgba(0,0,0,.28);
+          font-weight: 900; font-size: 26px; line-height: 1;
+        }
+        .trial-bar {
+          display: flex; align-items: center; gap: 12px; margin: 10px 12px; padding: 11px 14px; border-radius: 12px;
+          background: #0B3864; color: #fff; text-decoration: none; border-left: 5px solid #E2B04A;
+        }
+        .trial-price { background: #FFD22A; color: #0B3864; font-weight: 900; font-size: 19px; border-radius: 8px; padding: 6px 10px; }
+        .trial-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .trial-text b { font-size: 14.5px; }
+        .trial-text small { color: #CFD8E6; font-size: 11px; margin-top: 2px; }
+        .trial-arrow { font-size: 24px; color: #FFD22A; }
         .hero-actions { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 0 14px 16px; }
         .hero-actions .primary-button { margin-top: 0; box-shadow: 0 6px 16px rgba(11,56,100,.15); }
 

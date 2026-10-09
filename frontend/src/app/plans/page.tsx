@@ -50,6 +50,7 @@ type Plan = Scope & {
   active: boolean;
   isFree: boolean;
   restrictToScope?: boolean;
+  isTrial?: boolean;
 };
 
 type ActiveSubscription = {
@@ -404,7 +405,8 @@ function PlansPageInner() {
 
   const activePlanIds = new Set(activeSubs.map((s) => s.planId));
   const freePlan = plans.find((p) => p.isFree);
-  const otherAvailablePlans = plans.filter((p) => !p.isFree && p.active && !activePlanIds.has(p.id));
+  const otherAvailablePlans = plans.filter((p) => !p.isFree && !p.isTrial && p.active && !activePlanIds.has(p.id));
+  const trialAvailable = plans.some((p) => p.isTrial && p.active) && !plans.some((p) => p.isTrial && activePlanIds.has(p.id));
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
@@ -547,6 +549,14 @@ function PlansPageInner() {
                 </a>
               )}
             </div>
+          )}
+
+          {trialAvailable && otherAvailablePlans.length > 0 && (
+            <a href="/trial" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px', padding: '12px 14px', borderRadius: 12, background: '#0B3864', color: '#fff', textDecoration: 'none', borderLeft: '5px solid #E2B04A' }}>
+              <span style={{ background: '#FFD22A', color: '#0B3864', fontWeight: 900, fontSize: 18, borderRadius: 8, padding: '6px 10px' }}>₹10</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>{lang === 'ta' ? '₹10-க்கு 3 நாள் சோதனை' : '3-day trial for ₹10'}</span>
+              <span style={{ fontSize: 22, color: '#FFD22A' }}>›</span>
+            </a>
           )}
 
           {otherAvailablePlans.length > 0 && (

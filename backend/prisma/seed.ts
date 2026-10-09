@@ -776,6 +776,15 @@ async function main() {
     0,
   );
 
+  // Oct 2026 — ₹10, 3-day taster for the same exam scope as the Pass above.
+  // isTrial plans never unlock Live Exam / Adaptive Mock / Ask Ponna chat.
+  // No manualExpiryOverride (the 3 days are the whole validity). Sort order 0
+  // is fine: the student Plans page shows trial plans in their own card.
+  {
+    const trial = await seedRestrictedSubCategoryPlan('TNPSC குரூப்-4 ₹10 சோதனை', [], [group4Vao.id], 10, 0);
+    await prisma.plan.update({ where: { id: trial.id }, data: { isTrial: true, cycleDays: 3, launchPrice: null } });
+  }
+
   // Higher Education / Entrance — exam-specific plans only (finalized
   // requirement: never a single Purpose-wide plan for this group).
   await seedAuthorityPlan('NEET Annual Plan', [neet.id], 4999, 2999, 2);
