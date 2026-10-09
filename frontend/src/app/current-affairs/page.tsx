@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiUrl } from '../../lib/api-config';
 import { studentFetch } from '../../lib/student-fetch';
-import { StudentMenu } from '../../components/StudentMenu';
+import { StudentMenu, useGoBack } from '../../components/StudentMenu';
 import { ProtectLayer } from '../../components/ProtectLayer';
 import { ShareButton } from '../../components/ShareButton';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
@@ -82,6 +82,7 @@ export default function CurrentAffairsPage() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [lang, setLang] = useState<'ta' | 'en'>('ta');
+  const goBack = useGoBack();
   const s = STRINGS[lang];
 
   useEffect(() => {
@@ -132,7 +133,7 @@ export default function CurrentAffairsPage() {
       <ProtectLayer />
       <header ref={headerRef} className="ponna-noprint" style={{ position: 'fixed', top: 0, left: 0, right: 0, maxWidth: 480, margin: '0 auto', zIndex: 20, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <div style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <StudentMenu iconColor="#fff" />
+          <StudentMenu iconColor="#fff" showBack={false} />
           <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: '#FFE9A8' }}>{s.subtitle}</div></div>
           <div style={{ display: 'flex', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,233,168,0.5)', borderRadius: 8, padding: 3 }}>
             {(['ta', 'en'] as const).map((code) => (
@@ -155,6 +156,15 @@ export default function CurrentAffairsPage() {
             ))}
           </div>
         </div>
+        {/* Back row under the header bar (Current Affairs only — the bar itself is
+            too narrow for an arrow beside the language toggle). */}
+        <button
+          type="button"
+          onClick={goBack}
+          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 16px', background: 'var(--color-paper)', color: COLORS.gold, border: 'none', borderBottom: `1px solid ${COLORS.line}`, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+        >
+          ‹ {lang === 'ta' ? 'பின்செல்' : 'Back'}
+        </button>
       </header>
       <div style={{ height: headerH }} aria-hidden />
 
