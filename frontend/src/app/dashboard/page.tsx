@@ -269,41 +269,6 @@ export default function DashboardPage() {
           <DifficultyCard label={t.dashboard.buckets.HARD} bucket={data?.buckets.HARD} />
         </div>
 
-        {/* Your Rank */}
-        <h2 style={SECTION_H2}>{MARK}{t.dashboard.rank}</h2>
-        <div style={{ ...BOX, padding: 16, background: data?.rankUnlocked ? 'var(--color-goldDisc)' : 'var(--color-card)', border: data?.rankUnlocked ? '1.5px solid #E2B04A' : `1px solid ${COLORS.line}` }}>
-          {data?.rankUnlocked ? (
-            overall?.rank != null ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <p style={{ fontFamily: FONT_FAMILY, fontSize: 38, fontWeight: 800, color: COLORS.ink, margin: 0, lineHeight: 1 }}>{overall.rank}</p>
-                <div>
-                  <p style={{ fontSize: 12.5, color: COLORS.inkMuted, fontWeight: 600, margin: '0 0 3px' }}>{t.dashboard.currentRank}</p>
-                  <p style={{ fontSize: 15, color: COLORS.ink, fontWeight: 700, margin: '0 0 2px' }}>
-                    {accuracy}% {t.dashboard.rankAccuracy}
-                  </p>
-                  <p style={{ fontSize: 12.5, color: COLORS.inkMuted, margin: 0 }}>{t.dashboard.rankPositionNote}</p>
-                </div>
-              </div>
-            ) : (
-              <p style={{ fontSize: 14, color: COLORS.inkMuted, margin: 0 }}>{t.dashboard.notEligible}</p>
-            )
-          ) : data && !data.planEligible ? (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <span style={{ fontSize: 20, lineHeight: 1.3 }}>🔒</span>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, margin: '0 0 4px' }}>{t.dashboard.rankLockedFree}</p>
-                <p style={{ fontSize: 13, color: COLORS.inkMuted, marginBottom: 12, lineHeight: 1.6 }}>{t.dashboard.rankLockedFreeSub}</p>
-                <a href="/plans" style={PILL_BTN}>{t.dashboard.upgrade}</a>
-              </div>
-            </div>
-          ) : data && !data.profileComplete ? (
-            <>
-              <p style={{ fontSize: 14.5, fontWeight: 700, color: COLORS.ink, margin: '0 0 10px' }}>{t.dashboard.completeProfileForRank}</p>
-              <a href="/profile?complete=1" style={PILL_BTN}>{t.dashboard.completeProfileForRank}</a>
-            </>
-          ) : null}
-        </div>
-
         {/* Time-Management Analytics (finalized requirement) — framed as
             "room to improve", never as a negative judgement. Silently
             absent until there's at least some timed data. */}
