@@ -179,6 +179,7 @@ export class StudentManagementService {
       await tx.referralConversion.deleteMany({ where: { OR: [{ referrerId: userId }, { refereeId: userId }] } });
       await tx.user.updateMany({ where: { referredById: userId }, data: { referredById: null } });
       await tx.manualPayment.deleteMany({ where: { userId } });
+      await tx.payuPayment.deleteMany({ where: { userId } });
       await tx.subscription.deleteMany({ where: { userId } });
       await tx.user.delete({ where: { id: userId } });
     });
