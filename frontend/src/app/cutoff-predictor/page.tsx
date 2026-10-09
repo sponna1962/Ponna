@@ -175,6 +175,33 @@ export default function CutoffPredictorPage() {
               )}
             </section>
 
+            <section style={{ ...card, marginBottom: 18, overflow: 'hidden' }}>
+              <div style={{ padding: '15px 16px', background: PALE_GOLD }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: '#806C42' }}>2026 · மாணவர் இலக்கு</div>
+                <h2 style={{ margin: '4px 0 5px', fontSize: 17, color: NAVY }}>எவ்வளவு மதிப்பெண் இலக்காக வைக்க வேண்டும்?</h2>
+                <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.55, color: '#687B8B' }}>2026 வி.ஏ.ஓ. பணிக்கான தற்போது வெளியிடப்பட்ட கட்-ஆப் கணிப்புகளை அடிப்படையாகக் கொண்ட வழிகாட்டி. இது அதிகாரப்பூர்வ TNPSC கட்-ஆப் அல்ல.</p>
+              </div>
+              <div style={{ padding: '4px 16px 10px', overflowX: 'auto' }}>
+                <table style={{ width: '100%', minWidth: 360, borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead><tr style={{ borderBottom: '1px solid #E7EDF1' }}>
+                    <th style={{ textAlign: 'left', padding: '10px 6px', color: '#66798A' }}>சமூகம்</th>
+                    <th style={{ textAlign: 'right', padding: '10px 6px', color: '#66798A' }}>2026 கணிப்பு</th>
+                    <th style={{ textAlign: 'right', padding: '10px 6px', color: NAVY }}>இலக்கு மதிப்பெண்</th>
+                  </tr></thead>
+                  <tbody>
+                    {[['BC',169,174],['BCM',167,172],['MBC / DNC',165,170],['SC',165,170],['ST',164,169]].map(([community,estimate,target]) => (
+                      <tr key={community as string} style={{ borderBottom: '1px solid #EEF2F4' }}>
+                        <td style={{ padding: '10px 6px', fontWeight: 750, color: '#314D63' }}>{community}</td>
+                        <td style={{ padding: '10px 6px', textAlign: 'right', color: '#637586' }}>{estimate}+</td>
+                        <td style={{ padding: '10px 6px', textAlign: 'right', fontWeight: 900, color: NAVY }}>{target}+</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ padding: '8px 6px 3px', fontSize: 10.5, lineHeight: 1.55, color: '#7A8894' }}>இலக்கு மதிப்பெண் என்பது வெளியிடப்பட்ட 2026 கணிப்பை விட 5 மதிப்பெண்கள் அதிகமாக வைத்த PONNA வழிகாட்டி. உண்மையான கட்-ஆப் பதவி, சமூகம், பாலினம் மற்றும் போட்டி நிலைக்கு ஏற்ப மாறலாம்.</div>
+              </div>
+            </section>
+
             <section>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 9 }}><h2 style={{ margin: 0, fontSize: 16, color: NAVY }}>{label.history}</h2><span style={{ fontSize: 10, color: '#778897' }}>{prediction.records.length} years</span></div>
               <div style={{ ...card, overflow: 'hidden' }}>
