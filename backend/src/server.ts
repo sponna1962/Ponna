@@ -3154,12 +3154,9 @@ app.post('/admin/questions/bulk-upload/confirm', requireStaffAuth, canEditQuesti
     const { rows, batchMeta } = req.body;
     const { batchId, inserted } = await bulkUploadService.confirmImport(rows, batchMeta, req.staff!.staffId);
 
-    // Kick off AI classification for this batch in the background — see
-    // note in the previous version of this route for why this is
-    // fire-and-forget rather than awaited.
-    classificationService.classifyPendingQuestions(batchId).catch((err) =>
-      console.error(`Background classification failed for batch ${batchId}:`, err),
-    );
+    // Oct 2026 — NO automatic AI classification or publishing after upload.
+    // Uploaded questions stay as Draft; difficulty/publish happens only when an
+    // admin explicitly asks (Classify / Classify Selected / Classify Batch).
 
     res.json({ batchId, inserted });
   } catch (err: any) {
