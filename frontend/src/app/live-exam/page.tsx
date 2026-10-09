@@ -149,7 +149,7 @@ export default function LiveExamPage() {
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, paddingBottom: state?.access === 'IN_PROGRESS' ? 100 : 30, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.menu.liveExam}</h1>
         {state?.access === 'IN_PROGRESS' && (

@@ -343,7 +343,7 @@ export default function AskPonnaPage() {
     return (
       <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink }}>
         <BitterFontLinks />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
           <StudentMenu iconColor="#fff" />
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
       </div>
@@ -365,7 +365,7 @@ export default function AskPonnaPage() {
     return (
       <main style={{ maxWidth: 480, margin: '0 auto', background: COLORS.paper, minHeight: '100dvh', color: COLORS.ink, paddingBottom: 32 }}>
         <BitterFontLinks />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
           <StudentMenu iconColor="#fff" />
           <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>{t.askPonna.title}</h1>
         </div>
@@ -411,18 +411,11 @@ export default function AskPonnaPage() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, minHeight: '100dvh', display: 'flex', flexDirection: 'column', color: COLORS.ink }}>
+    <main style={{ position: 'fixed', top: 0, left: 0, right: 0, width: '100%', maxWidth: 480, margin: '0 auto', padding: 0, background: COLORS.paper, height: '100dvh', display: 'flex', flexDirection: 'column', color: COLORS.ink, zIndex: 10 }}>
       <BitterFontLinks />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff', flex: 'none' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff', flex: 1 }}>{t.askPonna.title}</h1>
-        <button
-          type="button"
-          onClick={() => { if (typeof window !== 'undefined' && window.history.length > 1) window.history.back(); else window.location.href = '/'; }}
-          style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', borderRadius: 999, padding: '7px 14px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
-        >
-          ← பின் செல்
-        </button>
         {messages.length > 0 && !guestMode && (
           <button type="button" onClick={newChat} disabled={sending} style={{ background: '#E2B04A', border: 'none', color: '#2b1c00', borderRadius: 999, padding: '7px 12px', fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>
             ＋ புதிய அரட்டை
@@ -440,7 +433,7 @@ export default function AskPonnaPage() {
         </div>
       )}
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
         {messages.length === 0 && accessState !== 'locked' && !guestMode && (
           <div style={{ marginTop: 20, textAlign: 'center' }}>
             <p style={{ fontSize: 14, color: COLORS.inkMuted, marginBottom: 20 }}>{t.askPonna.emptyState}</p>
