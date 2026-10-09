@@ -36,6 +36,7 @@ import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
 import { ManualPaymentService, ManualPaymentError } from './modules/payments/manual-payment.service';
 import { payuService, PayuError } from './modules/payments/payu.service';
+import { dailyEmailService, verifyUnsubscribeToken, type DailyEmailKind } from './modules/notifications/daily-email.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
@@ -3961,6 +3962,30 @@ app.get('/admin/platform-stats', requireStaffAuth, async (_req, res) => {
 // ─────────────────────────────────────────────────────────
 // PLANS & SUBSCRIPTIONS  (§7.6) — Super Admin edits, others view
 // ─────────────────────────────────────────────────────────
+
+// ── Daily e-mails (Oct 2026) ─────────────────────────────────────────
+// GET /email/unsubscribe?u=&t= — public, signed link in every mail.
+app.get('/email/unsubscribe', async (req, res) => {
+  const u = String(req.query.u ?? '');
+  const t = String(req.query.t ?? '');
+  const page = (msg: string) => res.type('html').send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:Arial,sans-serif;text-align:center;padding:48px 20px;color:#0B3864"><h2>PONNA.in</h2><p>${msg}</p><p><a href="https://www.ponna.in">PONNA.in-க்குச் செல்ல</a></p></body>`);
+  try {
+    if (!u || !t || !verifyUnsubscribeToken(u, t)) return page('இந்த இணைப்பு செல்லாது.');
+    await prisma.user.updateMany({ where: { id: u }, data: { emailOptOut: true } });
+    return page('நீங்கள் மின்னஞ்சல் பட்டியலிலிருந்து நீக்கப்பட்டீர்கள். இனி தினசரி மின்னஞ்சல்கள் வராது.');
+  } catch (err) {
+    console.error(err);
+    return page('இப்போது முடியவில்லை. சிறிது நேரம் கழித்து முயலவும்.');
+  }
+});
+
+// POST /admin/email/test { kind: MORNING | CURRENT_AFFAIRS | QUIZ, to } — sends ONE real-format e-mail.
+app.post('/admin/email/test', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  const kind = String(req.body?.kind ?? '') as DailyEmailKind;
+  const to = String(req.body?.to ?? '').trim();
+  if (!['MORNING', 'CURRENT_AFFAIRS', 'QUIZ'].includes(kind) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'kind மற்றும் to (மின்னஞ்சல்) தேவை.' });
+  try { res.json(await dailyEmailService.sendTest(kind, to)); } catch (err: any) { console.error(err); res.status(500).json({ error: err.message ?? 'Failed' }); }
+});
 
 app.get('/admin/plans', requireStaffAuth, async (_req, res) => {
   res.json(await plansService.listPlans());

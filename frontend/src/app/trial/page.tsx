@@ -31,6 +31,7 @@ const FAQ: { q: string; a: string }[] = [
 
 export default function TrialPage() {
   const [plan, setPlan] = useState<TrialPlan | null>(null);
+  const [passPlan, setPassPlan] = useState<TrialPlan | null>(null);
   const [subs, setSubs] = useState<Sub[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -45,6 +46,7 @@ export default function TrialPage() {
       studentFetch('/students/me/subscriptions').then((r) => (r.ok ? r.json() : [])).catch(() => []),
     ]).then(([plans, mine]: [TrialPlan[], Sub[]]) => {
       setPlan(plans.find((p) => p.isTrial && p.active) ?? null);
+      setPassPlan(plans.find((p) => !p.isTrial && !(p as any).isFree && p.active && (p as any).restrictToScope) ?? null);
       setSubs(mine);
     }).finally(() => setLoaded(true));
   }, []);
@@ -52,14 +54,14 @@ export default function TrialPage() {
   const trialSub = subs.find((s) => s.plan.isTrial);
   const hasPass = subs.some((s) => !s.plan.isTrial);
 
-  async function start() {
+  async function start(target: TrialPlan | null = plan) {
     setError('');
     if (!loggedIn) { window.location.href = '/?startLogin=1'; return; }
-    if (!plan) return;
+    if (!target) return;
     setBusy(true);
     try {
       const res = await studentFetch('/payments/payu/checkout', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId: plan.id }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId: target.id }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? 'பணம் செலுத்த முடியவில்லை. மீண்டும் முயலவும்.');
@@ -136,7 +138,14 @@ export default function TrialPage() {
           ))}
         </div>
 
-        <a href="/plans" style={{ display: 'block', textAlign: 'center', marginTop: 18, fontSize: 14, fontWeight: 700, color: '#0B3864' }}>முழு ₹499 Pass-ஐப் பார்க்க →</a>
+        {passPlan && !hasPass && (
+          <div style={{ marginTop: 22, background: '#fff', border: '2px solid #E2B04A', borderRadius: 16, padding: 16 }}>
+            <div style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 800 }}>முழு Pass — தேர்வு வரை</div>
+            <div style={{ fontSize: 13, color: '#666', margin: '4px 0 10px' }}>Live Exam, Adaptive Mock, Ask PONNA அரட்டை உட்பட எல்லாம் — ஜன. 12, 2027 வரை.</div>
+            <div style={{ background: '#FFF0C2', borderRadius: 10, padding: '8px 12px', fontSize: 13, color: '#555' }}><b style={{ fontSize: 26, color: '#B07A16' }}>₹{Number(passPlan.launchPrice ?? passPlan.regularPrice ?? 499)}</b> ஒரு முறை</div>
+            <button onClick={() => start(passPlan)} disabled={busy} style={{ width: '100%', marginTop: 12, padding: 13, border: 'none', borderRadius: 9, background: '#0B3864', color: '#FFD22A', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>{busy ? 'காத்திருக்கவும்…' : '₹499 Pass பெறு'}</button>
+          </div>
+        )}
       </div>
 
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth: 480, margin: '0 auto', background: '#fff', borderTop: '1px solid #ddd', padding: '10px 14px 14px', zIndex: 40 }}>
