@@ -1,6 +1,6 @@
 'use client';
 
-import type { MouseEvent, ReactNode } from 'react';
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import Image from 'next/image';
 import { BitterFontLinks } from '../lib/brand-theme';
 
@@ -43,6 +43,24 @@ const featured = [
 ];
 
 export default function HomeDesignPreview({ menu, onLogin, onStart, notice, account }: HomeDesignProps = {}) {
+  const [countdown, setCountdown] = useState<{ application: number; exam: number } | null>(null);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const today = new Date();
+      const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const daysUntil = (year: number, month: number, day: number) =>
+        Math.max(0, Math.ceil((new Date(year, month - 1, day).getTime() - todayLocal) / 86400000));
+      setCountdown({
+        application: daysUntil(2026, 11, 5),
+        exam: daysUntil(2027, 1, 10),
+      });
+    };
+    updateCountdown();
+    const timer = window.setInterval(updateCountdown, 60 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const startClick = onStart ? (e: MouseEvent) => { e.preventDefault(); onStart(); } : undefined;
   return (
     <main className="home-preview">
@@ -70,6 +88,35 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         <div className="hero-actions">
           <a href="/quiz" className="primary-button" onClick={startClick}>பயிற்சி தொடங்குங்கள் <b>→</b></a>
         </div>
+      </section>
+
+      <section className="countdown-section" aria-label="TNPSC Group 4 முக்கிய தேதிகள்">
+        <div className="countdown-heading">
+          <span className="countdown-kicker">TNPSC GROUP 4 · 2026</span>
+          <h2>முக்கிய தேதிகள்</h2>
+          <p>கடைசி நாளைத் தவறவிடாதீர்கள். உங்கள் இலக்குக்குத் தயாராகுங்கள்.</p>
+        </div>
+        <div className="countdown-grid">
+          <article className="countdown-card application-card">
+            <div className="countdown-card-top">
+              <span className="countdown-icon" aria-hidden="true">↗</span>
+              <span className="countdown-label">விண்ணப்பிக்க இன்னும்</span>
+            </div>
+            <div className="countdown-number">{countdown ? countdown.application : '—'} <small>நாட்கள்</small></div>
+            <div className="countdown-date"><span>கடைசி நாள்</span><strong>05 நவம்பர் 2026</strong></div>
+            <a href="https://apply.tnpscexams.in/notification?app_id=UElZMDAwMDAwMQa" target="_blank" rel="noreferrer">விண்ணப்பிக்கவும் <b>→</b></a>
+          </article>
+          <article className="countdown-card exam-card">
+            <div className="countdown-card-top">
+              <span className="countdown-icon" aria-hidden="true">▦</span>
+              <span className="countdown-label">தேர்வுக்கு இன்னும்</span>
+            </div>
+            <div className="countdown-number">{countdown ? countdown.exam : '—'} <small>நாட்கள்</small></div>
+            <div className="countdown-date"><span>தேர்வு நாள்</span><strong>10 ஜனவரி 2027</strong></div>
+            <a href="/tnpsc-group-4/notification-2026">தேர்வு விவரங்கள் <b>→</b></a>
+          </article>
+        </div>
+        <p className="countdown-note">தேதிகள் TNPSC அறிவிப்பின் அடிப்படையில். மாற்றம் ஏற்பட்டால் அதிகாரப்பூர்வ அறிவிப்பைச் சரிபார்க்கவும்.</p>
       </section>
 
       <a href="/trial" className="trial-bar">
@@ -353,6 +400,81 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         .trial-arrow { font-size: 24px; color: #FFD22A; }
         .hero-actions { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 0 14px 16px; }
         .hero-actions .primary-button { margin-top: 0; box-shadow: 0 6px 16px rgba(11,56,100,.15); }
+
+
+        .countdown-section {
+          margin: 12px 12px 10px;
+          padding: 16px 14px 12px;
+          background: #F8FAFC;
+          border: 1px solid #DCE6EE;
+          border-radius: 14px;
+        }
+        .countdown-heading { margin-bottom: 12px; }
+        .countdown-kicker {
+          display: inline-block;
+          color: #55738D;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 1.1px;
+          line-height: 1.4;
+        }
+        .countdown-heading h2 {
+          margin: 3px 0 0;
+          color: #0B3864;
+          font-size: 22px;
+          font-weight: 900;
+          line-height: 1.3;
+        }
+        .countdown-heading p {
+          margin: 3px 0 0;
+          color: #5D6E7D;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+        .countdown-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+        .countdown-card {
+          min-width: 0;
+          padding: 12px 10px 10px;
+          border-radius: 11px;
+          border: 1px solid #E1E8ED;
+          background: #fff;
+        }
+        .application-card { border-top: 3px solid #D95B25; }
+        .exam-card { border-top: 3px solid #0B70B8; }
+        .countdown-card-top { display: flex; align-items: center; gap: 6px; }
+        .countdown-icon {
+          width: 27px; height: 27px; flex: 0 0 27px;
+          display: grid; place-items: center; border-radius: 50%;
+          background: #FFF0E7; color: #B84717; font-size: 17px; font-weight: 900;
+        }
+        .exam-card .countdown-icon { background: #E8F3FC; color: #0B5D9A; }
+        .countdown-label { color: #30495F; font-size: 11.5px; font-weight: 800; line-height: 1.35; }
+        .countdown-number {
+          margin-top: 8px;
+          color: #B84717;
+          font-size: 31px;
+          font-weight: 900;
+          letter-spacing: -1px;
+          line-height: 1.1;
+          font-variant-numeric: tabular-nums;
+        }
+        .exam-card .countdown-number { color: #0B5D9A; }
+        .countdown-number small { font-size: 11px; letter-spacing: 0; font-weight: 800; }
+        .countdown-date {
+          display: flex; flex-direction: column; gap: 2px;
+          margin-top: 9px; padding-top: 8px; border-top: 1px solid #E8ECEF;
+        }
+        .countdown-date span { color: #657787; font-size: 10.5px; line-height: 1.35; }
+        .countdown-date strong { color: #263F53; font-size: 12px; line-height: 1.45; }
+        .countdown-card a {
+          display: flex; justify-content: space-between; align-items: center; gap: 5px;
+          margin-top: 10px; padding: 9px 10px; min-height: 38px; box-sizing: border-box;
+          border-radius: 7px; background: #B84717; color: #fff; text-decoration: none;
+          font-size: 11.5px; font-weight: 900; line-height: 1.35;
+        }
+        .exam-card a { background: #0B5D9A; }
+        .countdown-card a b { font-size: 17px; }
+        .countdown-note { margin: 9px 2px 0; color: #667786; font-size: 10px; line-height: 1.5; }
 
         .stat-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #0B3864; color: #fff; padding: 14px 4px; }
         .stat-strip div { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; padding: 0 4px; }
