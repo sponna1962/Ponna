@@ -12,7 +12,7 @@
 import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 
-export type DailyEmailKind = 'MORNING' | 'CURRENT_AFFAIRS' | 'QUIZ';
+export type DailyEmailKind = 'MORNING' | 'CURRENT_AFFAIRS' | 'QUIZ' | 'WELCOME';
 
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 const FRONT = (process.env.FRONTEND_URL?.trim() || 'https://www.ponna.in').replace(/\/$/, '');
@@ -58,6 +58,7 @@ function layout(b: Built, name: string, userId: string): string {
 }
 
 async function build(kind: DailyEmailKind): Promise<Built | null> {
+  if (kind === 'WELCOME') return welcomeBuilt();
   const today = istDayString();
   if (kind === 'MORNING') {
     const days = daysToExam();
@@ -123,6 +124,26 @@ export async function currentAffairsUploadedToday(): Promise<boolean> {
   return (await prisma.currentAffairsItem.count({ where: { date: new Date(Date.UTC(y, m - 1, d)) } })) > 0;
 }
 
+function welcomeBuilt(): Built {
+  const rows: [string, string, string][] = [
+    ['📝', '60,000+ பயிற்சிக் கேள்விகள்', 'பாடவாரியாக, "ஏன் இது சரி?" விளக்கத்துடன்'],
+    ['📘', 'Study Notes', 'தமிழ் & English குறிப்புகள்'],
+    ['📰', 'நடப்பு நிகழ்வுகள்', 'தினமும் புதிய செய்திகள்'],
+    ['🧠', 'Daily Quiz & Brain Challenge', 'தினமும் மாலை 7 மணிக்கு'],
+    ['🔁', 'தவறுகள் மறுபார்வை', 'தவறிய கேள்விகளை மீண்டும் பயிலுங்கள்'],
+    ['🧭', 'Ask PONNA', 'உங்கள் சந்தேகங்களுக்குப் பதில், திறனறிவுச் சோதனை'],
+    ['🏆', 'Live Exam & Adaptive Mock', 'உண்மைத் தேர்வு போன்ற பயிற்சித் தேர்வுகள்'],
+    ['📋', 'Group 4 அறிவிப்பு வழிகாட்டி', 'காலியிடங்கள், தகுதி, பாடத்திட்டம் — அனைத்தும் ஓரிடத்தில்'],
+  ];
+  const list = rows.map(([i, t, d]) => `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f1f1f1"><span style="font-size:18px;width:26px">${i}</span><div><b style="display:block;font-size:14px">${esc(t)}</b><span style="font-size:12px;color:#666">${esc(d)}</span></div></div>`).join('');
+  return {
+    subject: 'PONNA.in-க்கு வரவேற்கிறோம்! 🎉 உங்கள் Group 4 பயிற்சி இங்கே தொடங்குகிறது',
+    headline: 'வரவேற்பு',
+    bodyHtml: `<p style="margin:0 0 8px">PONNA.in-ல் பதிவு செய்ததற்கு மனமார்ந்த நன்றி! TNPSC Group 4 தேர்வுக்கு உங்களுடன் இணைந்து தயாராகக் காத்திருக்கிறோம். இங்கே உங்களுக்கு என்னென்ன கிடைக்கும்:</p>${list}`,
+    button: { label: 'இன்றே பயிற்சியைத் தொடங்குங்கள் →', url: `${FRONT}/quiz` },
+  };
+}
+
 export class DailyEmailService {
   /** Claims a once-per-IST-day slot for a non-email job (e.g. the push). */
   async claimOnce(kind: string): Promise<boolean> {
@@ -131,6 +152,22 @@ export class DailyEmailService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /** One-time welcome e-mail the first time we know a student's e-mail. Idempotent per
+   * student (a log row keyed by user id) and never throws. Safe to call on every login. */
+  async sendWelcomeIfNew(userId: string): Promise<void> {
+    try {
+      if (!process.env.BREVO_API_KEY || !process.env.MAIL_FROM?.trim()) return;
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true, emailOptOut: true, isTestAccount: true } });
+      if (!user?.email || user.emailOptOut || user.isTestAccount) return;
+      try { await prisma.dailyEmailLog.create({ data: { kind: 'WELCOME', day: userId } }); } catch { return; }
+      const built = welcomeBuilt();
+      const ok = await brevoSend(user.email, user.name, built.subject, layout(built, user.name ?? '', userId));
+      if (!ok) await prisma.dailyEmailLog.delete({ where: { kind_day: { kind: 'WELCOME', day: userId } } }).catch(() => {});
+    } catch (err) {
+      console.error('Welcome email failed:', err);
     }
   }
 

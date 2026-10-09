@@ -36,6 +36,7 @@ import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
 import { ManualPaymentService, ManualPaymentError } from './modules/payments/manual-payment.service';
 import { payuService, PayuError } from './modules/payments/payu.service';
+import { trialContactMissing } from './modules/profile/profile.service';
 import { dailyEmailService, verifyUnsubscribeToken, type DailyEmailKind } from './modules/notifications/daily-email.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
@@ -1475,6 +1476,9 @@ app.get('/quiz/access-status', requireStudentAuth, async (req: StudentAuthedRequ
 // finalized requirement: setup happens once, every session just reuses it.
 app.post('/quiz/start', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
+    if (await trialContactMissing(req.studentUserId!)) {
+      return res.status(403).json({ error: 'பயிற்சியைத் தொடங்கும் முன் உங்கள் தொலைபேசி எண்ணையும் மின்னஞ்சலையும் கொடுங்கள்.', code: 'FREE_PREVIEW_PROFILE_INCOMPLETE' });
+    }
     const session = await sessionService.startSession(req.studentUserId!);
     res.json(session);
   } catch (err: any) {
@@ -1971,7 +1975,14 @@ app.post('/payments/payu/callback', express.urlencoded({ extended: false }), asy
   const front = (process.env.FRONTEND_URL?.trim() || 'https://www.ponna.in').replace(/\/$/, '');
   try {
     const result = await payuService.handleCallback(req.body ?? {});
-    res.redirect(303, `${front}/plans?payu=${result.outcome}`);
+    // ₹10 trial bought: send them straight to Profile to give phone + e-mail first.
+    let trialBought = false;
+    if (result.outcome === 'success' && result.txnid) {
+      const pay = await prisma.payuPayment.findUnique({ where: { txnid: result.txnid }, select: { planId: true } }).catch(() => null);
+      const plan = pay ? await prisma.plan.findUnique({ where: { id: pay.planId }, select: { isTrial: true } }).catch(() => null) : null;
+      trialBought = !!plan?.isTrial;
+    }
+    res.redirect(303, trialBought ? `${front}/profile?complete=1` : `${front}/plans?payu=${result.outcome}`);
   } catch (err) {
     console.error('PayU callback failed:', err);
     res.redirect(303, `${front}/plans?payu=error`);
@@ -3979,11 +3990,11 @@ app.get('/email/unsubscribe', async (req, res) => {
   }
 });
 
-// POST /admin/email/test { kind: MORNING | CURRENT_AFFAIRS | QUIZ, to } — sends ONE real-format e-mail.
+// POST /admin/email/test { kind: MORNING | CURRENT_AFFAIRS | QUIZ | WELCOME, to } — sends ONE real-format e-mail.
 app.post('/admin/email/test', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
   const kind = String(req.body?.kind ?? '') as DailyEmailKind;
   const to = String(req.body?.to ?? '').trim();
-  if (!['MORNING', 'CURRENT_AFFAIRS', 'QUIZ'].includes(kind) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'kind மற்றும் to (மின்னஞ்சல்) தேவை.' });
+  if (!['MORNING', 'CURRENT_AFFAIRS', 'QUIZ', 'WELCOME'].includes(kind) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'kind மற்றும் to (மின்னஞ்சல்) தேவை.' });
   try { res.json(await dailyEmailService.sendTest(kind, to)); } catch (err: any) { console.error(err); res.status(500).json({ error: err.message ?? 'Failed' }); }
 });
 

@@ -6,6 +6,7 @@ import { adminFetch } from '../../../lib/admin-fetch';
 // Oct 2026 — send ONE real-format daily e-mail to a single address so the
 // Brevo setup and the layout can be checked before students get anything.
 const KINDS = [
+  { id: 'WELCOME', label: 'வரவேற்பு மின்னஞ்சல் (புதிய பதிவாளர்)' },
   { id: 'MORNING', label: 'காலை — "இன்னும் N நாள்"' },
   { id: 'CURRENT_AFFAIRS', label: 'நடப்பு நிகழ்வுகள் (இன்றைய செய்திகள் இருந்தால்)' },
   { id: 'QUIZ', label: 'Daily Quiz / Brain Challenge (இன்று வெளியாகி இருந்தால்)' },

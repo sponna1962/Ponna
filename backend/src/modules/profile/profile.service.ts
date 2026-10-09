@@ -12,6 +12,7 @@
 
 import { EducationStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { dailyEmailService } from '../notifications/daily-email.service';
 
 export function isProfileComplete(user: {
   name: string | null;
@@ -41,6 +42,21 @@ export function isProfileComplete(user: {
   if (user.educationStatus === 'COLLEGE_STUDENT') return !!user.courseOrDegree && !!user.yearOfStudy;
   if (user.educationStatus === 'COMPLETED_STUDIES') return !!user.highestQualification;
   return false;
+}
+
+/** ₹10 trial students must give a verified phone number AND an e-mail before they
+ * can practise. Only applies while their ONLY active paid cover is a trial plan
+ * (a ₹499 Pass holder is never blocked). */
+export async function trialContactMissing(userId: string): Promise<boolean> {
+  const now = new Date();
+  const subs = await prisma.subscription.findMany({
+    where: { userId, status: 'ACTIVE', cycleEnd: { gt: now }, plan: { isFree: false } },
+    select: { plan: { select: { isTrial: true } } },
+  });
+  if (subs.length === 0 || subs.some((x) => !x.plan.isTrial)) return false; // free user or Pass holder
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true, email: true, isTestAccount: true } });
+  if (!user || user.isTestAccount) return false;
+  return !user.phone || !user.email;
 }
 
 export class ProfileService {
@@ -141,6 +157,7 @@ export class ProfileService {
         ...(data.community !== undefined ? { community: (data.community || null) as any } : {}),
       },
     });
+    if (data.email) dailyEmailService.sendWelcomeIfNew(userId).catch(() => {});
     return { profileComplete: isProfileComplete(updated) };
   }
 }

@@ -15,6 +15,7 @@
 // in with Phone, then link Google from Profile) — never an automatic merge.
 
 import { prisma } from '../../lib/prisma';
+import { dailyEmailService } from '../notifications/daily-email.service';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
@@ -323,6 +324,7 @@ export class StudentAuthService {
     }
 
     const user = await prisma.user.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } });
+    dailyEmailService.sendWelcomeIfNew(userId).catch(() => {});
     const token = jwt.sign({ userId, sessionVersion: user.sessionVersion }, JWT_SECRET, { expiresIn: '30d' });
     return { token, userId };
   }
