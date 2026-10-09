@@ -229,17 +229,6 @@ export function StudentMenu({ onOpenChange, iconColor, showBack }: { onOpenChang
                 </a>
               )}
 
-              {isLoggedIn && hasPass === false && (
-                <a href="/trial" style={{
-                  display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, padding: '7px 12px',
-                  borderRadius: 9, background: '#0B3864', color: '#fff', textDecoration: 'none', fontSize: 14, fontWeight: 700,
-                }}>
-                  <span style={{ background: '#FFD22A', color: '#0B3864', fontWeight: 900, borderRadius: 6, padding: '3px 8px' }}>₹10</span>
-                  சோதனையைத் தொடங்குங்கள்
-                  <span style={{ marginLeft: 'auto', fontSize: 20, color: '#FFD22A' }}>›</span>
-                </a>
-              )}
-
               {isLoggedIn && hasPass === true && (
                 <a href="/plans" style={{
                   display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '7px 12px',
