@@ -781,8 +781,16 @@ async function main() {
   // No manualExpiryOverride (the 3 days are the whole validity). Sort order 0
   // is fine: the student Plans page shows trial plans in their own card.
   {
-    const trial = await seedRestrictedSubCategoryPlan('TNPSC குரூப்-4 ₹10 சோதனை', [], [group4Vao.id], 10, 0);
-    await prisma.plan.update({ where: { id: trial.id }, data: { isTrial: true, cycleDays: 3, launchPrice: null } });
+    // Created once; after that the admin owns the price (Admin -> Plans), so a
+    // redeploy never resets it back to ₹10.
+    const trialName = 'TNPSC குரூப்-4 ₹10 சோதனை';
+    const existingTrial = await prisma.plan.findUnique({ where: { name: trialName } });
+    if (!existingTrial) {
+      const trial = await seedRestrictedSubCategoryPlan(trialName, [], [group4Vao.id], 10, 0);
+      await prisma.plan.update({ where: { id: trial.id }, data: { isTrial: true, cycleDays: 3, launchPrice: null } });
+    } else {
+      await prisma.plan.update({ where: { id: existingTrial.id }, data: { isTrial: true, cycleDays: 3, restrictToScope: true } });
+    }
   }
 
   // Higher Education / Entrance — exam-specific plans only (finalized
