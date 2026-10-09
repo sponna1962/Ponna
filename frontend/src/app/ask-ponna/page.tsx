@@ -418,7 +418,7 @@ export default function AskPonnaPage() {
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff', flex: 1 }}>{t.askPonna.title}</h1>
         {messages.length > 0 && !guestMode && (
           <button type="button" onClick={newChat} disabled={sending} style={{ background: '#E2B04A', border: 'none', color: '#2b1c00', borderRadius: 999, padding: '7px 12px', fontWeight: 800, fontSize: 13.5, cursor: 'pointer' }}>
-            ＋ புதிய அரட்டை
+            ＋ புதிய கேள்வி
           </button>
         )}
       </div>
