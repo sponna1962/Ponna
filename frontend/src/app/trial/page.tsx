@@ -40,7 +40,7 @@ const FAQ: { q: string; a: string }[] = [
   { q: 'என்ன கிடைக்கும்?', a: 'பயிற்சி, "ஏன் இது சரி?" விளக்கங்கள், Study Notes, Daily Quiz, Current Affairs, Group 4 அறிவிப்பு, தவறுகள் மறுபார்வை, திறனறிச் சோதனை, Dashboard, Cut-off Predictor — மூன்று நாட்களுக்கு.' },
   { q: '3 நாளுக்குப் பிறகு பணம் எடுக்கப்படுமா?', a: 'இல்லை. தானாகப் பணம் எடுக்கப்படாது. தொடர்ந்து படிக்க விரும்பினால் நீங்களே ₹499 Pass வாங்கலாம். ₹10 அதில் கழிக்கப்படாது.' },
   { q: 'ஒருவர் எத்தனை முறை சேரலாம்?', a: 'ஒரு கணக்குக்கு ஒரு முறை மட்டும்.' },
-  { q: '₹499 Pass-இல் கூடுதலாக என்ன?', a: 'Live Exam, Adaptive Mock தேர்வுகள், Ask PONNA Chat — மேலும் Pass காலம் முழுவதும் (ஜன. 12, 2027 வரை) பயிற்சி.' },
+  { q: '₹499 Pass-இல் கூடுதலாக என்ன?', a: 'Live Exam (முழு மாதிரித் தேர்வு), Adaptive Mock (உங்கள் நிலைக்கேற்ப மாறும் தேர்வு), Ask PONNA Chat (தேர்வைப் பற்றிய உங்கள் சந்தேகங்களைத் தீர்த்து வைக்கும்) — இவற்றுடன் மேலே உள்ள எல்லா வசதிகளும், ஜன. 12, 2027 வரை.' },
 ];
 
 export default function TrialPage() {
@@ -161,7 +161,7 @@ export default function TrialPage() {
         {passPlan && !hasPass && (
           <div style={{ marginTop: 22, background: '#fff', border: '2px solid #E2B04A', borderRadius: 16, padding: 16 }}>
             <div style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: 800 }}>முழு Pass — தேர்வு வரை</div>
-            <div style={{ fontSize: 13, color: '#666', margin: '4px 0 10px' }}>Live Exam, Adaptive Mock, Ask PONNA Chat உட்பட எல்லாம் — ஜன. 12, 2027 வரை.</div>
+            <div style={{ fontSize: 13, color: '#666', margin: '4px 0 10px' }}>Live Exam, Adaptive Mock, Ask PONNA Chat (தேர்வு சந்தேகங்களைத் தீர்க்கும்) உட்பட எல்லா வசதிகளும் — ஜன. 12, 2027 வரை.</div>
             <div style={{ background: '#FFF0C2', borderRadius: 10, padding: '8px 12px', fontSize: 13, color: '#555' }}><b style={{ fontSize: 26, color: '#B07A16' }}>₹{Number(passPlan.launchPrice ?? passPlan.regularPrice ?? 499)}</b> ஒரு முறை</div>
             <button onClick={() => start(passPlan)} disabled={busy} style={{ width: '100%', marginTop: 12, padding: 13, border: 'none', borderRadius: 9, background: '#0B3864', color: '#FFD22A', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>{busy ? 'காத்திருக்கவும்…' : '₹499 Pass பெறு'}</button>
           </div>
