@@ -117,10 +117,30 @@ async function brevoSend(to: string, toName: string | null, subject: string, htm
   return res.ok;
 }
 
+/** True once today's current-affairs items exist (shared by the e-mail and the push). */
+export async function currentAffairsUploadedToday(): Promise<boolean> {
+  const [y, m, d] = istDayString().split('-').map(Number);
+  return (await prisma.currentAffairsItem.count({ where: { date: new Date(Date.UTC(y, m - 1, d)) } })) > 0;
+}
+
 export class DailyEmailService {
+  /** Claims a once-per-IST-day slot for a non-email job (e.g. the push). */
+  async claimOnce(kind: string): Promise<boolean> {
+    try {
+      await prisma.dailyEmailLog.create({ data: { kind, day: istDayString() } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** Sends `kind` to every opted-in student, once per IST day. Returns what happened. */
   async sendDaily(kind: DailyEmailKind): Promise<{ status: 'sent' | 'already-sent' | 'nothing-to-send'; sent: number; failed: number }> {
     const day = istDayString();
+    if (!process.env.BREVO_API_KEY || !process.env.MAIL_FROM?.trim()) {
+      console.log('Daily email skipped: BREVO_API_KEY / MAIL_FROM not set');
+      return { status: 'nothing-to-send', sent: 0, failed: 0 };
+    }
     const built = await build(kind);
     if (!built) return { status: 'nothing-to-send', sent: 0, failed: 0 };
     // Claim the (kind, day) slot first; a second concurrent run loses the race.

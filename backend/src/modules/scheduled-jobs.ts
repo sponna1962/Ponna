@@ -11,7 +11,7 @@ import { pushNotificationService } from './notifications/push-notification.servi
 import { questionAuditService } from './audit/question-audit.service';
 import { dailyCurrentAffairsService } from './admin/daily-current-affairs.service';
 import { adminAlertService } from './payments/admin-alert.service';
-import { dailyEmailService } from './notifications/daily-email.service';
+import { dailyEmailService, currentAffairsUploadedToday } from './notifications/daily-email.service';
 import { prisma } from '../lib/prisma';
 
 const sessionService = new SessionService();
@@ -59,7 +59,22 @@ export function startScheduledJobs() {
   };
   cron.schedule('30 6 * * *', runEmail('MORNING'), IST);
   cron.schedule('*/10 17-20 * * *', runEmail('CURRENT_AFFAIRS'), IST); // from 5 PM, as soon as today's items are uploaded
-  cron.schedule('*/10 19-22 * * *', runEmail('QUIZ'), IST); // from 7 PM, as soon as today's quiz is live
+  cron.schedule('*/10 19-22 * * *', runEmail('QUIZ'), IST);
+  // Push (own opt-in list): streak-broken nudge at 8 AM; current-affairs alert once today's items exist.
+  cron.schedule('0 8 * * *', async () => {
+    try {
+      const r = await pushNotificationService.notifyStreakBroken();
+      if (r.sent > 0) console.log(`[cron] Streak-broken push: sent ${r.sent}`);
+    } catch (err) { console.error('[cron] Streak-broken push failed:', err); }
+  }, IST);
+  cron.schedule('*/10 17-20 * * *', async () => {
+    try {
+      if (!(await currentAffairsUploadedToday())) return;
+      if (!(await dailyEmailService.claimOnce('CA_PUSH'))) return;
+      const r = await pushNotificationService.notifyCurrentAffairsReady();
+      console.log(`[cron] Current-affairs push: sent ${r.sent}`);
+    } catch (err) { console.error('[cron] Current-affairs push failed:', err); }
+  }, IST); // from 7 PM, as soon as today's quiz is live
 
   cron.schedule('30 13 * * *', async () => {
     try {

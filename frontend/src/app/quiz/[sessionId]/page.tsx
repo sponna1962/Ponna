@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useLanguage } from '../../../lib/language-context';
+import { PushPrompt } from '../../../components/PushPrompt';
 import { studentFetch } from '../../../lib/student-fetch';
 import { useOnlineStatus } from '../../../lib/use-online-status';
 
@@ -478,6 +479,8 @@ function ResultsView({ results }: { results: Results }) {
           <div style={{ fontSize: 12.5, color: 'var(--color-inkMuted)' }}>{t.quiz.correct}</div>
         </div>
       </div>
+
+      <PushPrompt />
 
       <a
         href="/dashboard"

@@ -115,6 +115,37 @@ export class PushNotificationService {
     });
   }
 
+  /** 8 AM IST — the student's streak broke YESTERDAY (they practised the day
+   * before yesterday, not yesterday). Fires exactly once per break: only
+   * students whose last activity was exactly two IST days ago, so nobody is
+   * nagged every morning. Needs a real streak (2+ days) to be worth a message. */
+  async notifyStreakBroken(): Promise<{ sent: number }> {
+    if (!this.isConfigured()) return { sent: 0 };
+    const nowIst = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000);
+    const twoDaysAgo = new Date(Date.UTC(nowIst.getUTCFullYear(), nowIst.getUTCMonth(), nowIst.getUTCDate() - 2));
+    const users = await prisma.user.findMany({
+      where: { lastStreakDate: twoDaysAgo, currentStreak: { gte: 2 }, isTestAccount: false, pushSubscriptions: { some: {} } },
+      select: { id: true, currentStreak: true },
+    });
+    for (const u of users) {
+      await this.sendToUser(u.id, {
+        title: 'நேத்து streak break ஆயிடுச்சு 😟',
+        body: `${u.currentStreak}-நாள் streak போச்சு. இன்று 10 கேள்வி பண்ணி மறுபடி ஆரம்பிக்கலாம்!`,
+        url: '/quiz',
+      });
+    }
+    return { sent: users.length };
+  }
+
+  /** Today's current-affairs headlines are uploaded — tell every subscribed device. */
+  async notifyCurrentAffairsReady(): Promise<{ sent: number }> {
+    return this.broadcastToAll({
+      title: '📰 இன்றைய நடப்பு நிகழ்வுகள் தயார்',
+      body: 'தேர்வுக்கு முக்கியமான செய்திகள் — இப்போது படியுங்கள்.',
+      url: '/current-affairs',
+    });
+  }
+
   /** Practice/streak reminder — own opt-in list (subscribed students
    * only), own simple "at risk" rule: has a live streak, hasn't
    * practiced yet today. Deliberately a separate, simpler query from the
