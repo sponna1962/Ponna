@@ -3,15 +3,13 @@
 import { useEffect, useState } from 'react';
 import { adminFetch } from '../../../lib/admin-fetch';
 
-// Student & Performance Management — implements §7.5: view student
-// statistics and platform-wide aggregate stats. Read-only by design — this
-// screen is for visibility, not for editing a student's own data.
-
 type Student = {
   id: string;
   name: string | null;
   phone: string | null;
   email: string | null;
+  cityTownVillage: string | null;
+  district: string | null;
   activePlan: string;
   createdAt: string;
   isTestAccount: boolean;
@@ -68,10 +66,6 @@ export default function StudentsPage() {
     load();
   }
 
-  /** Super Admin only — changes the phone number on an EXISTING account,
-   * keeping its history/data. Bypasses OTP verification of the new
-   * number, so this is a deliberate admin override — confirm() guards
-   * against an accidental click. */
   async function changePhone(id: string, currentPhone: string | null) {
     const newPhone = prompt(`Enter the new phone number to link to this account (currently: ${currentPhone ?? 'none'}):`);
     if (!newPhone?.trim()) return;
@@ -89,7 +83,6 @@ export default function StudentsPage() {
     load();
   }
 
-  /** Super Admin only — corrects the account's display name. */
   async function changeName(id: string, currentName: string | null) {
     const newName = prompt(`Enter the corrected name for this account (currently: ${currentName ?? 'none'}):`);
     if (!newName?.trim()) return;
@@ -106,8 +99,6 @@ export default function StudentsPage() {
     load();
   }
 
-  /** Super Admin only — edits the account's contact email, keeping all
-   * history/data. Does not change which Google account they sign in with. */
   async function changeEmail(id: string, currentEmail: string | null) {
     const newEmail = prompt(`Enter the new email address for this account (currently: ${currentEmail ?? 'none'}):`);
     if (!newEmail?.trim()) return;
@@ -125,9 +116,6 @@ export default function StudentsPage() {
     load();
   }
 
-  /** Super Admin only — permanently deletes the account and everything
-   * tied to it. Irreversible, so this asks the admin to type the exact
-   * account identifier back before proceeding, not just a yes/no click. */
   async function deleteStudent(id: string, label: string) {
     const typed = prompt(`This permanently deletes "${label}" and ALL its data (subscriptions, quiz history, Daily Quiz attempts, everything) — this cannot be undone.\n\nType the account's name/phone/email exactly to confirm:`);
     if (typed?.trim() !== label.trim()) {
@@ -157,9 +145,9 @@ export default function StudentsPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, maxWidth: 400 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, maxWidth: 460 }}>
         <input
-          placeholder="Search by name, phone, or email"
+          placeholder="Search name, email, mobile, town or district"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && load()}
@@ -168,75 +156,70 @@ export default function StudentsPage() {
         <button onClick={load} style={{ padding: '8px 16px', borderRadius: 6 }}>Search</button>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', fontSize: 13 }}>
-        <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
-            <th style={{ padding: 10 }}>Student</th>
-            <th style={{ padding: 10 }}>Plan</th>
-            <th style={{ padding: 10 }}>Overall Avg %</th>
-            <th style={{ padding: 10 }}>Questions Answered</th>
-            <th style={{ padding: 10 }}>Rank</th>
-            <th style={{ padding: 10 }}>Joined</th>
-            <th style={{ padding: 10 }}>Test Account</th>
-            <th style={{ padding: 10 }}>Suspicious</th>
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((s) => {
-            const overall = s.performance['OVERALL'];
-            return (
+      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+        <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', background: '#f8fafc' }}>
+              <th style={{ padding: 12 }}>Plan</th>
+              <th style={{ padding: 12 }}>Student Name</th>
+              <th style={{ padding: 12 }}>Email</th>
+              <th style={{ padding: 12 }}>Mobile</th>
+              <th style={{ padding: 12 }}>Town / City</th>
+              <th style={{ padding: 12 }}>Joined Date</th>
+              <th style={{ padding: 12 }}>Admin Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((s) => (
               <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9', background: s.flaggedSuspicious ? '#fef2f2' : undefined }}>
-                <td style={{ padding: 10 }}>
+                <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '4px 9px',
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    background: s.activePlan.toLowerCase() === 'free' ? '#f1f5f9' : '#dcfce7',
+                    color: s.activePlan.toLowerCase() === 'free' ? '#475569' : '#166534',
+                  }}>{s.activePlan}</span>
+                  {s.isTestAccount && <div style={{ marginTop: 4, fontSize: 11, color: '#b45309' }}>🧪 TEST</div>}
+                </td>
+                <td style={{ padding: 12, minWidth: 140 }}>
                   <a href={`/admin/students/${s.id}`} style={{ color: '#0f172a', fontWeight: 600, textDecoration: 'none' }}>
-                    {s.name ?? s.phone ?? s.email ?? s.id.slice(0, 8)}
+                    {s.name || 'Name not provided'}
                   </a>
-                  {s.isTestAccount && <span style={{ marginLeft: 6, fontSize: 11, color: '#d97706' }}>🧪 TEST</span>}
+                  {s.flaggedSuspicious && <div style={{ color: '#b91c1c', fontSize: 11, marginTop: 4 }}>🚩 Flagged for review</div>}
                 </td>
-                <td style={{ padding: 10 }}>{s.activePlan}</td>
-                <td style={{ padding: 10 }}>{overall ? `${overall.averagePercent.toFixed(1)}%` : '—'}</td>
-                <td style={{ padding: 10 }}>{overall?.questionsAnswered ?? 0}</td>
-                <td style={{ padding: 10 }}>{overall?.rank ?? '—'}</td>
-                <td style={{ padding: 10, color: '#94a3b8' }}>{new Date(s.createdAt).toLocaleDateString()}</td>
-                <td style={{ padding: 10 }}>
-                  <button onClick={() => toggleTestAccount(s.id, s.isTestAccount)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
-                    {s.isTestAccount ? 'Unmark' : 'Mark as Test'}
-                  </button>
-                  <button onClick={() => changePhone(s.id, s.phone)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
-                    Change Phone
-                  </button>
-                  <button onClick={() => changeName(s.id, s.name)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
-                    Change Name
-                  </button>
-                  <button onClick={() => changeEmail(s.id, s.email)} style={{ fontSize: 12, padding: '4px 10px', marginRight: 6 }}>
-                    Change Email
-                  </button>
-                  <button
-                    onClick={() => deleteStudent(s.id, s.name ?? s.phone ?? s.email ?? s.id)}
-                    style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626', borderColor: '#fca5a5' }}
-                  >
-                    Delete
-                  </button>
-                </td>
-                <td style={{ padding: 10 }}>
-                  {s.flaggedSuspicious ? (
-                    <div>
-                      <div style={{ fontSize: 11, color: '#991b1b', marginBottom: 4, maxWidth: 220 }}>🚩 {s.flaggedReason}</div>
-                      <button onClick={() => clearSuspiciousFlag(s.id)} style={{ fontSize: 12, padding: '4px 10px' }}>
-                        Clear Flag
-                      </button>
-                    </div>
-                  ) : (
-                    <span style={{ color: '#cbd5e1', fontSize: 12 }}>—</span>
-                  )}
+                <td style={{ padding: 12 }}>{s.email || '—'}</td>
+                <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{s.phone || '—'}</td>
+                <td style={{ padding: 12 }}>{[s.cityTownVillage, s.district].filter(Boolean).join(', ') || '—'}</td>
+                <td style={{ padding: 12, color: '#64748b', whiteSpace: 'nowrap' }}>{new Date(s.createdAt).toLocaleDateString('en-IN')}</td>
+                <td style={{ padding: 12, minWidth: 230 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    <button onClick={() => toggleTestAccount(s.id, s.isTestAccount)} style={{ fontSize: 11, padding: '4px 7px' }}>
+                      {s.isTestAccount ? 'Unmark Test' : 'Mark Test'}
+                    </button>
+                    <button onClick={() => changePhone(s.id, s.phone)} style={{ fontSize: 11, padding: '4px 7px' }}>Change Mobile</button>
+                    <button onClick={() => changeName(s.id, s.name)} style={{ fontSize: 11, padding: '4px 7px' }}>Change Name</button>
+                    <button onClick={() => changeEmail(s.id, s.email)} style={{ fontSize: 11, padding: '4px 7px' }}>Change Email</button>
+                    {s.flaggedSuspicious && (
+                      <button onClick={() => clearSuspiciousFlag(s.id)} style={{ fontSize: 11, padding: '4px 7px' }}>Clear Flag</button>
+                    )}
+                    <button
+                      onClick={() => deleteStudent(s.id, s.name ?? s.phone ?? s.email ?? s.id)}
+                      style={{ fontSize: 11, padding: '4px 7px', color: '#dc2626', borderColor: '#fca5a5' }}
+                    >Delete</button>
+                  </div>
+                  {s.flaggedSuspicious && <div style={{ fontSize: 11, color: '#991b1b', marginTop: 5, maxWidth: 260 }}>{s.flaggedReason}</div>}
                 </td>
               </tr>
-            );
-          })}
-          {students.length === 0 && (
-            <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No students found.</td></tr>
-          )}
-        </tbody>
-      </table>
+            ))}
+            {students.length === 0 && (
+              <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No students found.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
