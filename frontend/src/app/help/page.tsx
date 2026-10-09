@@ -47,7 +47,7 @@ const FAQS: Faq[] = [
     id: 'review-mistakes',
     category: 'practice',
     question: 'How does Review Mistakes work?',
-    answer: 'Wrong answers save here automatically for revision. Doesn\u2019t affect your quota, streak or ranking.',
+    answer: 'Wrong answers save here automatically for revision. Doesn\u2019t affect your quota or streak.',
   },
   {
     id: 'daily-challenge',
