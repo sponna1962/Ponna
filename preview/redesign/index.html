@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ta">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123b72">
+<title>PONNA.in — புதிய முகப்புப் பக்க முன்னோட்டம்</title>
+<style>
+:root{--navy:#123b72;--blue:#1d58a7;--red:#d94148;--gold:#ffd45a;--ink:#17243a;--muted:#5c6b80;--paper:#fff;--pale:#f3f7fc;--green:#237d58;--line:#e3eaf2;--radius:22px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Tamil","Latha",sans-serif;line-height:1.6}
+a{color:inherit;text-decoration:none}
+button,a{touch-action:manipulation}
+.wrap{width:min(1160px,calc(100% - 40px));margin-inline:auto}
+.preview-note{background:#fff5d8;color:#604b10;text-align:center;font-size:12px;padding:7px 12px;border-bottom:1px solid #f2df9e}
+header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:22px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{width:40px;height:40px;border-radius:12px;background:var(--navy);display:grid;place-items:center;color:#fff;font-weight:900;font-size:21px;position:relative;overflow:hidden}
+.brand-mark:after{content:"";position:absolute;width:25px;height:5px;background:var(--gold);transform:rotate(-42deg);right:-4px;bottom:8px}
+.brand-name{font-size:24px;font-weight:900;letter-spacing:-.8px;color:var(--navy);line-height:1.1}
+.brand-name span{color:var(--red)}
+.brand-tag{font-size:11px;color:var(--muted);margin-top:4px}
+.navlinks{display:flex;align-items:center;gap:22px;font-size:14px;font-weight:650;color:#33445b}
+.navlinks a:hover{color:var(--blue)}
+.actions{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px 18px;font:inherit;font-weight:750;cursor:pointer;min-height:44px;white-space:nowrap}
+.btn-primary{background:var(--navy);color:white}
+.btn-primary:hover{background:#0c2c58}
+.btn-gold{background:var(--gold);color:#18233a;box-shadow:0 6px 0 #e8b934}
+.btn-outline{border:1px solid #cbd7e6;color:var(--navy);background:#fff}
+.menu-toggle{display:none;background:#f1f5fa;color:var(--navy);border:0;border-radius:10px;width:44px;height:44px;font-size:23px}
+.hero{padding:62px 0 58px;background:radial-gradient(ellipse at 88% 20%,#e8f2ff 0,transparent 32%),linear-gradient(180deg,#fbfdff,#f4f8fd)}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:46px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);background:#e8f6ef;border:1px solid #d1eddf;border-radius:999px;padding:7px 13px;font-size:13px;font-weight:800}
+.dot{width:7px;height:7px;border-radius:50%;background:#2e9a69}
+h1{font-size:clamp(35px,4.5vw,57px);line-height:1.24;letter-spacing:-1.5px;color:var(--navy);margin:20px 0 16px;font-weight:900}
+h1 .accent{color:var(--red)}
+.lead{font-size:18px;color:#526176;max-width:570px;margin:0 0 24px}
+.checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:25px 0 29px}
+.check{display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:700;color:#34465c}
+.check-icon{flex:0 0 21px;width:21px;height:21px;display:grid;place-items:center;border-radius:50%;background:#dff3e8;color:#167247;font-size:13px}
+.hero-ctas{display:flex;align-items:center;gap:15px;flex-wrap:wrap}
+.helper{font-size:12px;color:var(--muted);margin-top:16px}
+.visual{min-height:405px;position:relative;display:grid;place-items:center}
+.visual-bg{width:min(100%,450px);aspect-ratio:1/1.02;border-radius:36px;background:linear-gradient(145deg,#dcecff,#f3f8ff 62%,#fff0d3);position:relative;overflow:hidden;border:1px solid #e1ebf7}
+.sun{position:absolute;width:105px;height:105px;border-radius:50%;background:#ffd45a;right:48px;top:36px;opacity:.95}
+.book-stack{position:absolute;right:40px;bottom:46px;width:130px;height:95px;transform:rotate(-7deg)}
+.book{height:26px;border-radius:5px 9px 9px 5px;margin-top:4px;box-shadow:0 4px 8px #19375b1a;border-left:7px solid #fff8}
+.book:nth-child(1){background:#e25a56;width:118px}.book:nth-child(2){background:#f4c84e;width:130px}.book:nth-child(3){background:#2869b0;width:110px}
+.student-art{position:absolute;left:50%;top:50%;transform:translate(-50%,-44%);width:64%;height:76%}
+.student-hair{position:absolute;width:57%;height:58%;top:7%;left:22%;background:#24334b;border-radius:48% 48% 42% 42%}
+.student-face{position:absolute;width:43%;height:44%;top:15%;left:29%;background:#b96f4d;border-radius:44% 44% 48% 48%;z-index:2}
+.student-neck{position:absolute;width:18%;height:17%;top:49%;left:42%;background:#a95e43;z-index:1}
+.student-body{position:absolute;width:80%;height:42%;bottom:0;left:10%;background:#2360a3;border-radius:48% 48% 10% 10%;z-index:1}
+.student-collar{position:absolute;top:53%;left:39%;width:23%;height:20%;background:#f8f5e9;clip-path:polygon(0 0,50% 55%,100% 0,70% 100%,30% 100%);z-index:3}
+.student-eye{position:absolute;top:45%;width:7px;height:4px;border-radius:50%;background:#202a39;z-index:4}.student-eye.left{left:28%}.student-eye.right{right:28%}
+.smile{position:absolute;top:62%;left:41%;width:18%;height:8%;border-bottom:3px solid #6b342c;border-radius:0 0 50% 50%;z-index:4}
+.pencil{position:absolute;left:30%;bottom:20%;height:82px;width:8px;background:#ffd45a;border-radius:4px;transform:rotate(24deg);z-index:5;border:1px solid #f3bd2e}
+.float-card{position:absolute;background:#fff;border:1px solid #e2eaf4;border-radius:15px;padding:13px 16px;box-shadow:0 14px 32px #153a6615}
+.float-card strong{display:block;color:var(--navy);font-size:15px}
+.float-card small{color:var(--muted);font-size:11px}
+.float-one{left:-7px;top:68px}.float-two{right:-9px;bottom:72px}
+.mini-stars{color:#e6ad24;letter-spacing:2px;font-size:13px}
+.section{padding:60px 0}
+.section-heading{text-align:center;max-width:680px;margin:0 auto 32px}
+.kicker{color:var(--red);font-size:12px;font-weight:900;letter-spacing:1.2px}
+h2{font-size:clamp(26px,3vw,36px);line-height:1.3;color:var(--navy);margin:9px 0 10px;letter-spacing:-.5px}
+.section-heading p{margin:0;color:var(--muted)}
+.feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.feature{padding:25px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 5px 18px #153a6605}
+.feature-icon{width:48px;height:48px;border-radius:14px;background:#eaf2ff;display:grid;place-items:center;font-size:23px;margin-bottom:16px}
+.feature:nth-child(2) .feature-icon{background:#fff1e7}.feature:nth-child(3) .feature-icon{background:#e6f7ed}
+.feature h3{margin:0 0 7px;color:var(--navy);font-size:18px}
+.feature p{margin:0;color:var(--muted);font-size:14px}
+.current{background:var(--pale)}
+.current-card{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:28px 32px;border-radius:24px;background:#fff;border:1px solid var(--line)}
+.current-left{display:flex;align-items:center;gap:20px}
+.current-icon{width:60px;height:60px;flex:0 0 60px;display:grid;place-items:center;border-radius:18px;background:#fff0e9;font-size:28px}
+.current-card h3{margin:0 0 4px;color:var(--navy);font-size:21px}
+.current-card p{margin:0;color:var(--muted);font-size:14px}
+.mode-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.mode{border:1px solid var(--line);border-radius:18px;padding:22px;background:white}
+.mode-label{font-size:12px;font-weight:850;color:var(--muted)}
+.mode h3{font-size:21px;color:var(--navy);margin:8px 0}
+.mode p{font-size:13px;color:var(--muted);margin:0 0 16px}
+.mode a{font-weight:800;color:var(--blue);font-size:14px}
+.bottom-cta{padding:46px 0 58px}
+.cta-panel{border-radius:28px;background:var(--navy);color:white;padding:38px;display:flex;justify-content:space-between;align-items:center;gap:24px;overflow:hidden;position:relative}
+.cta-panel:after{content:"";position:absolute;width:230px;height:230px;border-radius:50%;border:35px solid #ffffff0c;right:20%;top:-130px}
+.cta-panel h2{color:white;margin:0 0 8px}
+.cta-panel p{color:#d4e0f2;margin:0;max-width:610px}
+.cta-panel .btn{position:relative;z-index:1}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--muted);font-size:12px}
+.footer-inner{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+@media(max-width:900px){.navlinks{gap:12px;font-size:13px}.hero-grid{gap:24px}.visual{min-height:340px}.checks{grid-template-columns:1fr 1fr}.float-one{left:0}.float-two{right:0}}
+@media(max-width:700px){
+ .wrap{width:min(100% - 28px,520px)}
+ .preview-note{font-size:11px}
+ .nav{min-height:66px;gap:10px}.brand-mark{width:35px;height:35px}.brand-name{font-size:21px}.brand-tag{font-size:10px}
+ .menu-toggle{display:grid;place-items:center;flex:0 0 42px}
+ .navlinks{display:none;position:absolute;top:66px;left:0;right:0;background:#fff;border-bottom:1px solid var(--line);padding:12px 20px 18px;box-shadow:0 12px 18px #102b4a12}
+ .navlinks.open{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+ .navlinks a{padding:11px 4px;border-bottom:1px solid #edf1f6}
+ .actions .btn{padding:10px 12px;font-size:13px;min-height:40px}
+ .actions .btn-outline{display:none}
+ .hero{padding:34px 0 38px}
+ .hero-grid{grid-template-columns:1fr;gap:22px}
+ h1{font-size:clamp(34px,9vw,46px);letter-spacing:-.9px;margin:15px 0 12px}
+ .lead{font-size:16px;margin-bottom:18px}
+ .checks{gap:10px 8px;margin:20px 0 24px}
+ .check{font-size:12px}
+ .hero-ctas{display:grid;grid-template-columns:1fr;gap:12px}
+ .hero-ctas .btn{width:100%}
+ .helper{margin-top:12px}
+ .visual{min-height:0;padding:5px 7px 12px}
+ .visual-bg{width:min(100%,380px);border-radius:28px}
+ .float-card{padding:10px 12px}.float-one{left:-2px;top:13%}.float-two{right:-2px;bottom:15%}
+ .float-card strong{font-size:13px}.float-card small{font-size:10px}
+ .section{padding:43px 0}
+ .section-heading{margin-bottom:23px}
+ .feature-grid,.mode-grid{grid-template-columns:1fr;gap:12px}
+ .feature{padding:20px;display:grid;grid-template-columns:44px 1fr;column-gap:14px}
+ .feature-icon{width:44px;height:44px;grid-row:span 2;margin:0}
+ .feature h3{font-size:17px;align-self:end}
+ .feature p{font-size:13px}
+ .current-card{grid-template-columns:1fr;padding:22px;gap:18px}
+ .current-left{align-items:flex-start;gap:13px}
+ .current-icon{width:48px;height:48px;flex-basis:48px;font-size:23px}
+ .current-card h3{font-size:18px}
+ .current-card .btn{width:100%}
+ .mode{padding:19px}
+ .cta-panel{padding:27px 22px;display:grid;gap:20px}
+ .cta-panel .btn{width:100%}
+ .footer-inner{display:grid;gap:7px}
+}
+@media(max-width:360px){.brand-tag{display:none}.brand-name{font-size:19px}.actions .btn{padding:9px}.checks{grid-template-columns:1fr}.hero-ctas{gap:10px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="preview-note">முன்னோட்ட வடிவமைப்பு · தற்போதைய PONNA.in இணையதளத்தில் எந்த மாற்றமும் செய்யப்படவில்லை</div>
+<header>
+ <div class="wrap nav">
+  <a class="brand" href="#" aria-label="PONNA.in முகப்பு">
+   <span class="brand-mark">P</span>
+   <span><span class="brand-name">PONNA<span>.in</span></span><span class="brand-tag" style="display:block">அரசுப் போட்டித் தேர்வுகளுக்கான பயிற்சி</span></span>
+  </a>
+  <nav class="navlinks" id="navlinks" aria-label="முதன்மை வழிசெலுத்தல்">
+   <a href="#features">சிறப்பம்சங்கள்</a><a href="#current">நடப்பு நிகழ்வுகள்</a><a href="#practice">பயிற்சி முறைகள்</a><a href="#about">எங்களைப் பற்றி</a>
+  </nav>
+  <div class="actions"><a class="btn btn-outline" href="#practice">பயிற்சி விவரங்கள்</a><a class="btn btn-primary" href="#practice">உள்நுழைவு</a><button class="menu-toggle" id="menuToggle" aria-label="மெனுவைத் திறக்கவும்" aria-expanded="false">☰</button></div>
+ </div>
+</header>
+<main>
+<section class="hero">
+ <div class="wrap hero-grid">
+  <div>
+   <span class="eyebrow"><span class="dot"></span> TNPSC தேர்வுக்கான பயிற்சி</span>
+   <h1>அரசுப் போட்டித் தேர்வுக்கு<br><span class="accent">திட்டமிட்டு</span> பயிற்சி<br>செய்யுங்கள்.</h1>
+   <p class="lead">உங்கள் இலக்கை நோக்கி ஒவ்வொரு நாளும் முன்னேறுங்கள். பாடவாரியான கேள்விகள் மூலம் பயிற்சி செய்து, உங்கள் தயார்நிலையை அறிந்துகொள்ளுங்கள்.</p>
+   <div class="checks">
+    <div class="check"><span class="check-icon">✓</span><span>பாடவாரியாகப் பயிற்சி</span></div>
+    <div class="check"><span class="check-icon">✓</span><span>மாதிரித் தேர்வுகள்</span></div>
+    <div class="check"><span class="check-icon">✓</span><span>முன்னேற்றத்தை அறியலாம்</span></div>
+   </div>
+   <div class="hero-ctas"><a class="btn btn-gold" href="#practice">இப்போது பயிற்சியைத் தொடங்குங்கள் <span aria-hidden="true">→</span></a><a class="btn btn-outline" href="#features">மேலும் அறியுங்கள்</a></div>
+   <p class="helper">எளிமையான பயிற்சி · தெளிவான முன்னேற்றம் · உங்கள் வேகத்தில் கற்கலாம்</p>
+  </div>
+  <div class="visual" aria-label="படிப்பைக் குறிக்கும் விளக்கப்படம்">
+   <div class="visual-bg">
+    <div class="sun"></div>
+    <div class="student-art"><div class="student-hair"></div><div class="student-face"><span class="student-eye left"></span><span class="student-eye right"></span><span class="smile"></span></div><div class="student-neck"></div><div class="student-body"></div><div class="student-collar"></div><div class="pencil"></div></div>
+    <div class="book-stack"><div class="book"></div><div class="book"></div><div class="book"></div></div>
+   </div>
+   <div class="float-card float-one"><span class="mini-stars">★★★★★</span><strong>தொடர்ந்து பயிற்சி</strong><small>ஒவ்வொரு நாளும் முன்னேறுங்கள்</small></div>
+   <div class="float-card float-two"><strong>உங்கள் இலக்கு. உங்கள் பயணம்.</strong><small>சிறு முன்னேற்றமும் முக்கியம்</small></div>
+  </div>
+ </div>
+</section>
+<section class="section" id="features">
+ <div class="wrap">
+  <div class="section-heading"><span class="kicker">ஏன் PONNA.in?</span><h2>தேர்வுத் தயாரிப்பை எளிதாக்குங்கள்</h2><p>தேவையான பயிற்சிகளை ஒரே இடத்தில் பெற்று, உங்கள் கற்றலைத் திட்டமிடுங்கள்.</p></div>
+  <div class="feature-grid">
+   <article class="feature"><div class="feature-icon">📚</div><h3>பாடவாரியான கேள்விகள்</h3><p>பாடங்களை அடிப்படையாகக் கொண்டு கேள்விகளுக்குப் பதிலளித்து உங்கள் அறிவைச் சோதியுங்கள்.</p></article>
+   <article class="feature"><div class="feature-icon">📝</div><h3>மாதிரித் தேர்வுப் பயிற்சி</h3><p>தேர்வுக்கு முன்பாகப் பயிற்சி செய்து, கேள்விகளை அணுகும் திறனை வளர்த்துக்கொள்ளுங்கள்.</p></article>
+   <article class="feature"><div class="feature-icon">📈</div><h3>முன்னேற்ற அறிக்கை</h3><p>நீங்கள் அளித்த பதில்களின் அடிப்படையில் உங்கள் பயிற்சி முன்னேற்றத்தைப் பாருங்கள்.</p></article>
+  </div>
+ </div>
+</section>
+<section class="section current" id="current">
+ <div class="wrap">
+  <div class="current-card">
+   <div class="current-left"><div class="current-icon">🗞️</div><div><h3>தேர்வுக்குத் தேவையான முக்கியச் செய்திகள்</h3><p>நடப்பு நிகழ்வுகளைத் தொடர்ந்து அறிந்து, உங்கள் தேர்வுத் தயாரிப்பை மேம்படுத்துங்கள்.</p></div></div>
+   <a class="btn btn-primary" href="#practice">பார்க்கலாம் <span aria-hidden="true">→</span></a>
+  </div>
+ </div>
+</section>
+<section class="section" id="practice">
+ <div class="wrap">
+  <div class="section-heading"><span class="kicker">பயிற்சியைத் தொடங்குங்கள்</span><h2>உங்களுக்கு ஏற்ற பயிற்சி முறையைத் தேர்ந்தெடுங்கள்</h2><p>உங்கள் அறிவுத் திறனுக்கு ஏற்ப கேள்விகளைப் பயிற்சி செய்யுங்கள்.</p></div>
+  <div class="mode-grid">
+   <article class="mode"><span class="mode-label">பயிற்சி முறை 01</span><h3>எளிய தொடக்கம்</h3><p>அடிப்படைத் தயாரிப்பை வலுப்படுத்தி நம்பிக்கையுடன் முன்னேறுங்கள்.</p><a href="#about">விவரங்களை அறியுங்கள் →</a></article>
+   <article class="mode"><span class="mode-label">பயிற்சி முறை 02</span><h3>கலந்த பயிற்சி</h3><p>வெவ்வேறு நிலைகளிலான கேள்விகளுக்குப் பதிலளித்து உங்கள் திறனைச் சோதியுங்கள்.</p><a href="#about">விவரங்களை அறியுங்கள் →</a></article>
+   <article class="mode"><span class="mode-label">பயிற்சி முறை 03</span><h3>மேம்பட்ட பயிற்சி</h3><p>சவாலான கேள்விகள் மூலம் உங்கள் தயார்நிலையை மேம்படுத்துங்கள்.</p><a href="#about">விவரங்களை அறியுங்கள் →</a></article>
+  </div>
+ </div>
+</section>
+<section class="bottom-cta" id="about"><div class="wrap"><div class="cta-panel"><div><h2>இன்றே உங்கள் பயிற்சியைத் தொடங்குங்கள்</h2><p>தொடர்ச்சியான பயிற்சியும் உங்கள் முன்னேற்றத்தைப் புரிந்துகொள்வதும் இலக்கை நோக்கி நகர உதவும்.</p></div><a class="btn btn-gold" href="#practice">பயிற்சிக்குச் செல்லுங்கள் →</a></div></div></section>
+</main>
+<footer><div class="wrap footer-inner"><span>© PONNA.in · முன்னோட்ட வடிவமைப்பு</span><span>மொபைல், டேப்லெட், கணினி ஆகியவற்றுக்கேற்ப வடிவமைக்கப்பட்டது</span></div></footer>
+<script>
+const toggle=document.getElementById('menuToggle');
+const links=document.getElementById('navlinks');
+toggle.addEventListener('click',()=>{const open=links.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'×':'☰';});
+links.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{links.classList.remove('open');toggle.setAttribute('aria-expanded','false');toggle.textContent='☰';}));
+</script>
+</body>
+</html>
