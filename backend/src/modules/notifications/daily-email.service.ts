@@ -15,7 +15,7 @@ import { prisma } from '../../lib/prisma';
 export type DailyEmailKind = 'MORNING' | 'CURRENT_AFFAIRS' | 'QUIZ' | 'WELCOME';
 
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
-const FRONT = (process.env.FRONTEND_URL?.trim() || 'https://www.ponna.in').replace(/\/$/, '');
+export const FRONT = (process.env.FRONTEND_URL?.trim() || 'https://www.ponna.in').replace(/\/$/, '');
 const API = (process.env.API_PUBLIC_URL?.trim() || 'https://ponna.onrender.com').replace(/\/$/, '');
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 // TNPSC Group 4 exam day (admin can override with EXAM_DATE=YYYY-MM-DD on Render).
@@ -42,9 +42,9 @@ export function daysToExam(now = Date.now()): number {
   return Math.round((Date.UTC(ey, em - 1, ed) - Date.UTC(ty, tm - 1, td)) / 86_400_000);
 }
 
-type Built = { subject: string; headline: string; bodyHtml: string; button: { label: string; url: string } };
+export type Built = { subject: string; headline: string; bodyHtml: string; button: { label: string; url: string } };
 
-function layout(b: Built, name: string, userId: string): string {
+export function layout(b: Built, name: string, userId: string): string {
   const unsub = `${API}/email/unsubscribe?u=${encodeURIComponent(userId)}&t=${unsubscribeToken(userId)}`;
   return `<div style="background:#f3f1ea;padding:16px 8px;font-family:Arial,'Noto Sans Tamil',sans-serif">
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #ddd">
@@ -94,15 +94,18 @@ async function build(kind: DailyEmailKind): Promise<Built | null> {
   const hasBrain = quizzes.some((q) => q.quizType === 'BRAIN_CHALLENGE');
   const hasDaily = quizzes.some((q) => q.quizType === 'DAILY_QUIZ');
   const what = hasBrain && hasDaily ? 'Daily Quiz மற்றும் Brain Challenge' : hasBrain ? 'Brain Challenge' : 'Daily Quiz';
+  // One evening e-mail instead of two: today's news headlines ride along with the quiz.
+  const news = await prisma.currentAffairsItem.findMany({ where: { date: new Date(Date.UTC(y, m - 1, d)) }, orderBy: { createdAt: 'asc' }, take: 3, select: { headline: true } });
+  const newsHtml = news.length === 0 ? '' : `<p style="margin:12px 0 4px"><b>📰 இன்றைய முக்கிய செய்திகள்:</b></p><ul style="padding-left:20px;margin:6px 0">${news.map((i) => `<li style="margin-bottom:5px">${esc(i.headline.replace(/^\[[^\]]+\]\s*/, ''))}</li>`).join('')}</ul>`;
   return {
     subject: `🧠 இன்றைய ${what} தயார் — 5 நிமிடம் போதும்`,
     headline: 'Daily Quiz',
-    bodyHtml: `<p>இன்றைய ${esc(what)} தொடங்கிவிட்டது. தினமும் தொடர்ந்தால் தேர்வில் வித்தியாசம் தெரியும்.</p>`,
+    bodyHtml: `<p>இன்றைய ${esc(what)} தொடங்கிவிட்டது. தினமும் தொடர்ந்தால் தேர்வில் வித்தியாசம் தெரியும்.</p>${newsHtml}`,
     button: { label: 'இப்போது முயல்க →', url: `${FRONT}/daily-quiz` },
   };
 }
 
-async function brevoSend(to: string, toName: string | null, subject: string, html: string): Promise<boolean> {
+export async function brevoSend(to: string, toName: string | null, subject: string, html: string): Promise<boolean> {
   const key = process.env.BREVO_API_KEY;
   const from = process.env.MAIL_FROM?.trim();
   if (!key || !from) {

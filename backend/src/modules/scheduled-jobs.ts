@@ -12,6 +12,7 @@ import { questionAuditService } from './audit/question-audit.service';
 import { dailyCurrentAffairsService } from './admin/daily-current-affairs.service';
 import { adminAlertService } from './payments/admin-alert.service';
 import { dailyEmailService, currentAffairsUploadedToday } from './notifications/daily-email.service';
+import { lifecycleEmailService } from './notifications/lifecycle-email.service';
 import { prisma } from '../lib/prisma';
 
 const sessionService = new SessionService();
@@ -58,7 +59,12 @@ export function startScheduledJobs() {
     try { await dailyEmailService.sendDaily(kind); } catch (err) { console.error(`[cron] Daily email ${kind} failed:`, err); }
   };
   cron.schedule('30 6 * * *', runEmail('MORNING'), IST);
-  cron.schedule('*/10 17-20 * * *', runEmail('CURRENT_AFFAIRS'), IST); // from 5 PM, as soon as today's items are uploaded
+  // Lifecycle e-mails (welcome nudge, ₹10 offer, unfinished payment, trial ending/ended):
+  // every 20 min between 10:00 and 20:59 IST; each is sent once per student/payment.
+  cron.schedule('*/20 10-20 * * *', async () => {
+    try { await lifecycleEmailService.runAll(); } catch (err) { console.error('[cron] Lifecycle e-mails failed:', err); }
+  }, IST);
+  // (The separate 5 PM news e-mail was folded into the 7 PM quiz e-mail — max two daily mails.)
   cron.schedule('*/10 19-22 * * *', runEmail('QUIZ'), IST);
   // Push (own opt-in list): streak-broken nudge at 8 AM; current-affairs alert once today's items exist.
   cron.schedule('0 8 * * *', async () => {
