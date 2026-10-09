@@ -125,6 +125,8 @@ export type G4SearchResult =
 export function searchGroup4Notification(query: string): G4SearchResult {
   if (!INDEX) INDEX = build();
   const terms = expandQuery(query || '');
+  // "How do I apply?" style questions -> the consolidated step-by-step walkthrough ranks first
+  const howToApply = terms.includes('apply') && /\bhow\b|steps?|procedure|process|எப்படி|படி|முறை|நடைமுறை|வழிமுறை/i.test(query || '');
   const N = INDEX.length;
   const scored = INDEX.map((it) => {
     let s = 0;
@@ -135,6 +137,7 @@ export function searchGroup4Notification(query: string): G4SearchResult {
     }
     s = s / Math.pow(Math.max(it.len, 50), 0.15); // mild length normalisation
     if (it.chunk.kind === 'guide') s *= 1.25; // curated, row-structured text first
+    if (howToApply && it.chunk.id === 'guide:howto') s *= 3;
     return { it, s };
   })
     .filter((x) => x.s > 0)
@@ -168,7 +171,7 @@ export function searchGroup4Notification(query: string): G4SearchResult {
     source: it.chunk.kind === 'guide' ? 'PONNA guide section (compiled from the official notification)' : it.chunk.title,
     title: it.chunk.title,
     link: SITE + it.chunk.url,
-    text: selectLines(it.chunk.text, terms, it.chunk.id === 'guide:age' ? 7000 : budgetEach),
+    text: selectLines(it.chunk.text, terms, it.chunk.id === 'guide:age' || it.chunk.id === 'guide:howto' ? 7000 : budgetEach),
   }));
   return {
     found: true,
