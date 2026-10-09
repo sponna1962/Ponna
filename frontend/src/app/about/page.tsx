@@ -42,7 +42,7 @@ export default function AboutPage() {
             (StudentMenu drawer) as every other app/support page, instead of
             a standalone "back to home" link that made this page feel like a
             separate marketing site. */}
-        <div style={{ background: COLORS.head1, borderBottom: '3px solid #E2B04A' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 30, background: COLORS.head1, borderBottom: '3px solid #E2B04A' }}>
           <div style={{ maxWidth: 480, margin: '0 auto', padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
             <StudentMenu iconColor="#fff" />
             <span style={{ fontSize: 19, fontWeight: 700, color: '#fff' }}>About PONNA</span>

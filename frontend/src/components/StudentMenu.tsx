@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useLanguage } from '../lib/language-context';
@@ -26,8 +27,19 @@ import {
 
 type NavItem = { href: string; label: string; locked?: boolean; Icon: (p: { size?: number; color?: string }) => React.ReactElement };
 
-export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open: boolean) => void; iconColor?: string }) {
+export function StudentMenu({ onOpenChange, iconColor, showBack }: { onOpenChange?: (open: boolean) => void; iconColor?: string; showBack?: boolean }) {
   const { t } = useLanguage();
+  const router = useRouter();
+  // Oct 2026 — a back arrow sits beside the menu button on every inner page
+  // (navy headers pass a white icon; Start Practice passes showBack itself).
+  // Goes to the previous page in this tab's history; when the page was opened
+  // directly (a shared link, a bookmark) there is nothing to go back to, so it
+  // falls back to the home page.
+  const backVisible = showBack ?? iconColor === '#fff';
+  function goBack() {
+    if (typeof window !== 'undefined' && window.history.length > 1) router.back();
+    else router.push('/');
+  }
   const [open, setOpenState] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [hasPass, setHasPass] = useState<boolean | null>(null);
@@ -86,6 +98,17 @@ export function StudentMenu({ onOpenChange, iconColor }: { onOpenChange?: (open:
       <button onClick={openMenu} aria-label="Menu" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, margin: '-4px 0', lineHeight: 1, display: 'flex' }}>
         <MenuIcon size={30} color={iconColor ?? COLORS.ink} />
       </button>
+      {backVisible && (
+        <button
+          onClick={goBack}
+          aria-label="Back"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 6px', margin: '-4px 0 -4px -8px', lineHeight: 1, display: 'flex', flex: '0 0 auto' }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={iconColor ?? COLORS.ink} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </button>
+      )}
       {/* Oct 2026 — brand mark beside the menu button on every navy page header
           (pages that pass a white menu icon); the home page and the Start Practice
           page carry their own full logo. */}

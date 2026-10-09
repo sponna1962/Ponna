@@ -476,7 +476,7 @@ export default function QuizStartPage() {
   return (
     <main className="practice-page">
       <div className="practice-header">
-        <StudentMenu iconColor="#0B3864" />
+        <StudentMenu iconColor="#0B3864" showBack />
         <a href="/" aria-label="PONNA.in" className="practice-brand"><img src="/brand-mark.png" width={30} height={30} alt="PONNA.in" /></a>
         <h1 className="practice-title">{t.quiz.title}</h1>
         {/* Sept 2026 — Offline Practice entry point. Deliberately not a

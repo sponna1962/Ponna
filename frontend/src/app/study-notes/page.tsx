@@ -112,7 +112,7 @@ export default function StudyNotesPage() {
     <main className="ponna-protect" style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40, background: COLORS.paper, color: COLORS.ink, minHeight: '100dvh' }}>
       <BitterFontLinks />
       <ProtectLayer />
-      <div className="ponna-noprint" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <div className="ponna-noprint" style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Study Notes</h1>
       </div>

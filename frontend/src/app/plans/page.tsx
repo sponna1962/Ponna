@@ -412,7 +412,7 @@ function PlansPageInner() {
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
       {/* Oct 2026 redesign — teal header band; presentation only, all logic unchanged. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px 22px', background: 'linear-gradient(180deg, var(--color-head1, #0c2f3f), var(--color-head2, #1c6b6b))', borderBottom: '3px solid #E2B04A' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px 22px', background: 'linear-gradient(180deg, var(--color-head1, #0c2f3f), var(--color-head2, #1c6b6b))', borderBottom: '3px solid #E2B04A' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 21, fontWeight: 800, margin: 0, color: '#fff', flex: 1 }}>{lang === 'ta' ? 'எனது பாஸ்கள்' : 'My Passes'}</h1>
         {/* Free chip sits in the header when there is no Active pass yet; once

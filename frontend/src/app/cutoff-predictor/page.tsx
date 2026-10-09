@@ -115,7 +115,7 @@ export default function CutoffPredictorPage() {
   return (
     <main style={{ minHeight: '100dvh', background: '#F7F9FA', color: '#18344C' }}>
       <BitterFontLinks />
-      <header style={{ background: NAVY, color: '#fff' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 30, background: NAVY, color: '#fff' }}>
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <StudentMenu iconColor="#fff" />
           <div><div style={{ fontSize: 10, letterSpacing: 1.2, fontWeight: 800, opacity: .72 }}>{label.eyebrow}</div><h1 style={{ margin: '2px 0 0', fontSize: 20, lineHeight: 1.25, fontWeight: 800, color: '#fff' }}>{label.title}</h1></div>
