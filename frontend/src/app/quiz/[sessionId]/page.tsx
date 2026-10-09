@@ -57,6 +57,28 @@ export default function QuizSessionPage() {
   // design decision — plain "காரணம் பார்க்க" wording only.
   const [explanation, setExplanation] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  // Oct 2026: the explanation now opens by itself once a question is answered
+  // (students asked for it). A student who closes it once keeps it closed for
+  // the following questions; the 'ஏன் இது சரி?' button still opens it on demand.
+  // Stored per-browser only; every read/write is guarded because storage can be
+  // unavailable (private mode, blocked site data).
+  const [autoExplain, setAutoExplain] = useState(true);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem('ponna_auto_explain') === '0') setAutoExplain(false);
+    } catch {
+      /* storage unavailable — keep the default */
+    }
+  }, []);
+  function closeExplanation() {
+    setShowExplanation(false);
+    setAutoExplain(false);
+    try {
+      window.localStorage.setItem('ponna_auto_explain', '0');
+    } catch {
+      /* ignore */
+    }
+  }
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<Results | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -129,6 +151,7 @@ export default function QuizSessionPage() {
     const { correctOption: correct, explanation: exp } = await res.json();
     setCorrectOption(correct);
     setExplanation(exp ?? null);
+    setShowExplanation(Boolean(exp) && autoExplain);
     setSubmitting(false);
   }
 
@@ -167,7 +190,7 @@ export default function QuizSessionPage() {
     setSelected(nextQ.answered ? nextQ.selectedOption : null);
     setCorrectOption(nextQ.answered ? nextQ.correctOption : null);
     setExplanation(nextQ.answered ? nextQ.explanation : null);
-    setShowExplanation(false);
+    setShowExplanation(Boolean(nextQ.answered && nextQ.explanation) && autoExplain);
   }
 
   function openReport() {
@@ -326,8 +349,17 @@ export default function QuizSessionPage() {
               <span aria-hidden="true">💡</span> ஏன் இது சரி?
             </button>
           ) : (
-            <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderLeft: '4px solid #FFD22A', borderRadius: 8, padding: '12px 14px', fontSize: 14.5, color: 'var(--color-inkMuted)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-              {explanation}
+            <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)', borderLeft: '4px solid #FFD22A', borderRadius: 8, padding: '12px 14px', fontSize: 14.5, color: 'var(--color-inkMuted)', lineHeight: 1.7 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 700, color: 'var(--color-ink)' }}><span aria-hidden="true">💡</span> ஏன் இது சரி?</span>
+                <button
+                  onClick={closeExplanation}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-inkMuted)', fontSize: 13, textDecoration: 'underline', cursor: 'pointer', padding: 4 }}
+                >
+                  மூடு ✕
+                </button>
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{explanation}</div>
             </div>
           )}
         </div>
