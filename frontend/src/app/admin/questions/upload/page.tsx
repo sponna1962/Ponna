@@ -174,7 +174,7 @@ export default function BulkUploadPage() {
       <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16, maxWidth: 640 }}>
         <h2 style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>Step 3 — Upload CSV</h2>
         <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
-          Columns: <code>question_ta, question_en, option_a_ta, option_a_en, option_b_ta, option_b_en, option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer</code>.
+          Columns: <code>question_ta, question_en, option_a_ta, option_a_en, option_b_ta, option_b_en, option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer</code>, plus optional <code>explanation_ta, explanation_en</code> (why the answer is correct).
           A row needs at least one language fully filled in — the other is generated automatically after import if missing.
         </p>
         <input type="file" accept=".csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ marginBottom: 12 }} />
