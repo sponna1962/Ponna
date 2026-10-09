@@ -90,6 +90,12 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         </div>
       </section>
 
+      <a href="/trial" className="trial-bar">
+        <span className="trial-price">₹10</span>
+        <span className="trial-text"><b>ரூ.10 மட்டுமே — தொடங்குங்கள்</b><small>பயிற்சி • குறிப்புகள் • Daily Quiz • விளக்கங்கள்</small></span>
+        <span className="trial-arrow">›</span>
+      </a>
+
       <section className="countdown-section" aria-label="TNPSC Group 4 முக்கிய தேதிகள்">
         <div className="countdown-heading">
           <span className="countdown-kicker">TNPSC GROUP 4 · 2026</span>
@@ -118,12 +124,6 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         </div>
         <p className="countdown-note">தேதிகள் TNPSC அறிவிப்பின் அடிப்படையில். மாற்றம் ஏற்பட்டால் அதிகாரப்பூர்வ அறிவிப்பைச் சரிபார்க்கவும்.</p>
       </section>
-
-      <a href="/trial" className="trial-bar">
-        <span className="trial-price">₹10</span>
-        <span className="trial-text"><b>ரூ.10 மட்டுமே — தொடங்குங்கள்</b><small>பயிற்சி • குறிப்புகள் • Daily Quiz • விளக்கங்கள்</small></span>
-        <span className="trial-arrow">›</span>
-      </a>
 
       <section className="stat-strip" aria-label="PONNA எண்கள்">
         <div><strong>60,000+</strong><span>கேள்விகளில்<br />பயிற்சி</span></div>
