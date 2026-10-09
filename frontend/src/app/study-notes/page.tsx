@@ -17,6 +17,8 @@ import { useEffect, useState } from 'react';
 import { apiUrl } from '../../lib/api-config';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 import { StudentMenu } from '../../components/StudentMenu';
+import { ProtectLayer } from '../../components/ProtectLayer';
+import { ShareButton } from '../../components/ShareButton';
 
 type Note = { subjectId: string; subjectName: string; subjectNameTa: string | null; content: string };
 type Exam = { id: string; name: string };
@@ -107,9 +109,10 @@ export default function StudyNotesPage() {
   }, [selectedExamId, language]);
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40, background: COLORS.paper, color: COLORS.ink, minHeight: '100dvh' }}>
+    <main className="ponna-protect" style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40, background: COLORS.paper, color: COLORS.ink, minHeight: '100dvh' }}>
       <BitterFontLinks />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <ProtectLayer />
+      <div className="ponna-noprint" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, marginBottom: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <StudentMenu iconColor="#fff" />
         <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Study Notes</h1>
       </div>
@@ -208,7 +211,17 @@ export default function StudyNotesPage() {
                 <span style={{ color: 'var(--color-gold)', fontSize: 22, fontWeight: 600 }}>{openId === note.subjectId ? '−' : '+'}</span>
               </button>
               {openId === note.subjectId && (
-                <div style={{ padding: '0 16px 16px 16px', fontSize: 15, lineHeight: 1.8, color: COLORS.ink }}><NoteBody content={note.content} /></div>
+                <div style={{ padding: '0 16px 16px 16px', fontSize: 15, lineHeight: 1.8, color: COLORS.ink }}>
+                  <NoteBody content={note.content} />
+                  <div style={{ marginTop: 14 }}>
+                    <ShareButton
+                      title={`${language === 'TA' && note.subjectNameTa ? note.subjectNameTa : note.subjectName} — Study Notes`}
+                      text={`📘 ${language === 'TA' && note.subjectNameTa ? note.subjectNameTa : note.subjectName} — TNPSC Group 4 படிப்புக் குறிப்புகள்\nPONNA.in`}
+                      path="/study-notes"
+                      label={language === 'TA' ? 'இந்தக் குறிப்புகளைப் பகிர்க ↗' : 'Share these notes ↗'}
+                    />
+                  </div>
+                </div>
               )}
             </div>
           ))}

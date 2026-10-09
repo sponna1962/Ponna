@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiUrl } from '../../lib/api-config';
 import { studentFetch } from '../../lib/student-fetch';
 import { StudentMenu } from '../../components/StudentMenu';
+import { ProtectLayer } from '../../components/ProtectLayer';
+import { ShareButton } from '../../components/ShareButton';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
 type Item = {
@@ -125,9 +127,10 @@ export default function CurrentAffairsPage() {
   }, [items, joinedAt, loggedIn, profileLoaded]);
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
+    <main className="ponna-protect" style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: COLORS.paper, color: COLORS.ink, fontFamily: FONT_FAMILY }}>
       <BitterFontLinks />
-      <header ref={headerRef} style={{ position: 'fixed', top: 0, left: 0, right: 0, maxWidth: 480, margin: '0 auto', zIndex: 20, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <ProtectLayer />
+      <header ref={headerRef} className="ponna-noprint" style={{ position: 'fixed', top: 0, left: 0, right: 0, maxWidth: 480, margin: '0 auto', zIndex: 20, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
         <div style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <StudentMenu iconColor="#fff" />
           <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2 }}>{PAGE_TITLE}</div><div style={{ fontSize: 12, color: '#FFE9A8' }}>{s.subtitle}</div></div>
@@ -188,7 +191,15 @@ export default function CurrentAffairsPage() {
                   <p style={{ margin: 0, fontSize: 15, lineHeight: 1.8 }}>{summary}</p>
                   {relevance && <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--color-field)', borderLeft: '4px solid #E2B04A', borderRadius: 6, fontSize: 13.5, lineHeight: 1.65 }}><strong>{s.relevanceLabel}</strong> {relevance}</div>}
                   {memory && <div style={{ marginTop: 8, fontSize: 13, color: COLORS.inkMuted }}><strong>{s.memoryLabel}</strong> {memory}</div>}
-                  {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: COLORS.gold, textDecoration: 'none', fontWeight: 700 }}>{s.source}</a>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 10 }}>
+                    <ShareButton
+                      title={title}
+                      text={[`📰 ${title}`, '', summary, relevance ? `\n${s.relevanceLabel} ${relevance}` : '', '', 'PONNA.in — நடப்பு நிகழ்வுகள்'].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n')}
+                      path="/current-affairs"
+                      label={lang === 'ta' ? 'பகிர்க ↗' : 'Share ↗'}
+                    />
+                    {item.sourceUrl && <a className="ponna-noprint" href={item.sourceUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: COLORS.gold, textDecoration: 'none', fontWeight: 700 }}>{s.source}</a>}
+                  </div>
                 </article>
               );
             })}
