@@ -14,7 +14,8 @@
 //
 // CSV columns (one format only, matching the agreed spec): question_ta,
 // question_en, option_a_ta, option_a_en, option_b_ta, option_b_en,
-// option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer.
+// option_c_ta, option_c_en, option_d_ta, option_d_en, correct_answer,
+// plus optional explanation_ta, explanation_en (why the answer is correct).
 // A row needs at least one language fully filled in; if only one language
 // is provided, the other is generated via background translation after
 // import (same translation service as the single-question form).
@@ -59,6 +60,10 @@ export interface PreviewRow {
     optionBTa?: string; optionBEn?: string;
     optionCTa?: string; optionCEn?: string;
     optionDTa?: string; optionDEn?: string;
+    // Optional "why this answer is correct" text, written by the author
+    // together with the question (more accurate than generating it later).
+    explanationTa?: string;
+    explanationEn?: string;
     correctAnswer: CorrectOption;
   };
 }
@@ -135,6 +140,7 @@ export class BulkUploadService {
       data.optionBTa = fields.optionB;
       data.optionCTa = fields.optionC;
       data.optionDTa = fields.optionD;
+      if (raw.explanation_ta?.trim()) data.explanationTa = raw.explanation_ta.trim();
       hashes.push(computeContentHash(fields) + ':TA');
     }
 
@@ -154,6 +160,7 @@ export class BulkUploadService {
       data.optionBEn = fields.optionB;
       data.optionCEn = fields.optionC;
       data.optionDEn = fields.optionD;
+      if (raw.explanation_en?.trim()) data.explanationEn = raw.explanation_en.trim();
       hashes.push(computeContentHash(fields) + ':EN');
     }
 
@@ -275,6 +282,7 @@ export class BulkUploadService {
     const created = await prisma.question.create({
       data: {
         ...fields,
+        ...(lang === 'TA' ? { explanationTa: row.explanationTa } : { explanationEn: row.explanationEn }),
         correctOption: row.correctAnswer,
         language: lang as Language,
         authorityId: batchMeta.authorityId,
