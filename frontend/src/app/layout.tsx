@@ -6,6 +6,7 @@ import { ThemeStyles } from '../lib/brand-theme';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { LegalFooter } from '../components/LegalFooter';
 import { VisitTracker } from '../components/VisitTracker';
+import StyledJsxRegistry from '../components/StyledJsxRegistry';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.ponna.in'),
@@ -118,6 +119,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </noscript>
       </head>
       <body style={{ fontFamily: "'Noto Sans Tamil', 'Noto Sans', -apple-system, sans-serif", margin: 0 }}>
+        <StyledJsxRegistry>
         <ThemeProvider>
           <LanguageProvider>
             {/* Oct 2026 — footer pinned to the bottom of the screen while a page is
@@ -133,6 +135,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <VisitTracker />
           </LanguageProvider>
         </ThemeProvider>
+        </StyledJsxRegistry>
       </body>
     </html>
   );
