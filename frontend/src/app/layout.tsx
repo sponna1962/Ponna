@@ -36,6 +36,9 @@ const websiteJsonLd = {
   url: 'https://www.ponna.in/',
 };
 
+const FONTS_HREF =
+  'https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700;800&family=Bitter:wght@400;600;700;800&display=swap';
+
 // LanguageProvider (§4.5) wraps the whole app here so every page shares one
 // language state, persisted in localStorage — see lib/language-context.tsx.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -67,10 +70,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             request rather than loaded as a second <link rel="stylesheet">
             — Lighthouse flagged two separate Google Fonts CSS requests as
             render-blocking (~750ms each). One request, one round trip. */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700;800&family=Bitter:wght@400;600;700;800&display=swap"
-          rel="stylesheet"
+        {/* Oct 2026 speed — the font stylesheet is loaded WITHOUT blocking the
+            first paint (PageSpeed: render-blocking ~1.3 s on mobile). Text
+            shows immediately in the fallback font and swaps to Noto/Bitter
+            as soon as they arrive (display=swap). The <noscript> link keeps
+            fonts working if JavaScript is off. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='" + FONTS_HREF + "';document.head.appendChild(l);})();",
+          }}
         />
+        <noscript>
+          <link href={FONTS_HREF} rel="stylesheet" />
+        </noscript>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
         {/* Oct 2026 — Meta (Facebook/Instagram) Pixel, site-wide, for the
