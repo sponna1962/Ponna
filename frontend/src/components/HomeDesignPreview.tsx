@@ -83,7 +83,10 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         </div>
         <a href="/trial" className="trial-stamp" aria-label="₹10 சோதனை"><span>₹10<small>மட்டுமே</small></span></a>
         <div className="hero-photo">
-          <img src="/ponna-hero-woman.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" />
+          <picture>
+            <source srcSet="/ponna-hero-woman.webp" type="image/webp" />
+            <img src="/ponna-hero-woman-sm.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" width={540} height={810} fetchPriority="high" decoding="async" />
+          </picture>
         </div>
         <div className="hero-actions">
           <a href="/quiz" className="primary-button" onClick={startClick}>பயிற்சி தொடங்குங்கள் <b>→</b></a>

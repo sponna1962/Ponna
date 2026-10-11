@@ -8,4 +8,12 @@ const withPWA = require('next-pwa')({
 
 module.exports = withPWA({
   reactStrictMode: true,
+  // Speed: let phones keep static images for a week instead of re-downloading.
+  async headers() {
+    const longCache = [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }];
+    return [
+      { source: '/home/:path*', headers: longCache },
+      { source: '/:file(ponna-hero-woman.*|logo.*|brand-mark.png)', headers: longCache },
+    ];
+  },
 });
