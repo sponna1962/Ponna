@@ -29,8 +29,14 @@
 import { HERO_ART_SVG } from './test-your-ability/hero-art';
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
-import { RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, GoogleAuthProvider, ConfirmationResult } from 'firebase/auth';
-import { firebaseAuth } from '../lib/firebase';
+import type { RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
+// Oct 2026 speed — Firebase (login) code is NOT loaded with the home page any
+// more; it is fetched only when the student opens the login screen (warmed in
+// openLogin) or taps a login button. See loadFirebase().
+async function loadFirebase() {
+  const [auth, fb] = await Promise.all([import('firebase/auth'), import('../lib/firebase')]);
+  return { ...auth, firebaseAuth: fb.firebaseAuth };
+}
 import { useLanguage } from '../lib/language-context';
 import { apiUrl } from '../lib/api-config';
 import { studentFetch } from '../lib/student-fetch';
@@ -291,6 +297,7 @@ export default function IndexPage() {
       }
     }
     setView('chooseMethod');
+    void loadFirebase().catch(() => {}); // warm the login code while the student reads the screen
   }
 
   // Sept 2026 (Item 4, explicit navigation fix) — a query-param trigger
@@ -339,6 +346,7 @@ export default function IndexPage() {
     setError(null);
     setLoading(true);
     try {
+      const { firebaseAuth, signInWithPopup, GoogleAuthProvider } = await loadFirebase();
       const credential = await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
       const firebaseIdToken = await credential.user.getIdToken();
       await attemptLogin(firebaseIdToken);
@@ -357,6 +365,7 @@ export default function IndexPage() {
     setError(null);
     setLoading(true);
     try {
+      const { firebaseAuth, RecaptchaVerifier, signInWithPhoneNumber } = await loadFirebase();
       // Oct 2026 — one RecaptchaVerifier per element: clear any previous one
       // so a retry (or "send again") never hits "already been rendered".
       try { verifierRef.current?.clear(); } catch { /* already cleared */ }
@@ -401,7 +410,9 @@ export default function IndexPage() {
     }
   }
 
-  if (!checkedAuth) return null;
+  // Oct 2026 speed — the home page used to render NOTHING until the browser had
+  // finished running all its JavaScript (blank screen for several seconds on slow
+  // phones). It is now sent as ready HTML; the account icon appears right after load.
 
   const accountMenu = (
           <div style={{ position: 'relative' }}>

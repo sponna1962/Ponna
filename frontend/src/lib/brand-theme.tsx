@@ -42,7 +42,7 @@ export const COLORS = {
  * theme-context.tsx) switches which block applies. */
 export function ThemeStyles() {
   return (
-    <style>{`
+    <style suppressHydrationWarning>{`
       :root {
         --color-paper: #FBFAF6;
         --color-paperAlt: #F4F1E8;
