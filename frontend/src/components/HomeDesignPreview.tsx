@@ -84,8 +84,8 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
         <a href="/trial" className="trial-stamp" aria-label="₹10 சோதனை"><span>₹10<small>மட்டுமே</small></span></a>
         <div className="hero-photo">
           <picture>
-            <source srcSet="/ponna-hero-woman.webp" type="image/webp" />
-            <img src="/ponna-hero-woman-sm.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" width={540} height={810} fetchPriority="high" decoding="async" />
+            <source srcSet="/ponna-hero-woman-460.webp" type="image/webp" />
+            <img src="/ponna-hero-woman-460.jpg" alt="PONNA தேர்வுக்குத் தயாராகும் மாணவி" width={460} height={690} fetchPriority="high" decoding="async" />
           </picture>
         </div>
         <div className="hero-actions">
