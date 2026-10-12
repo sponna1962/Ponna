@@ -4122,6 +4122,7 @@ app.listen(PORT, () => {
       }
     } catch (err: any) {
       console.error('[cron] Current Affairs learning generation failed', err);
+      adminAlertService.notifyJobFailure('Current Affairs generation', err, 120);
       if (istNow.getHours() === 19 && istNow.getMinutes() >= 30) {
         adminAlertService.notify('⚠️ PONNA: இன்றைய Current Affairs சேரவில்லை', String(err?.message ?? err).slice(0, 200), '/admin');
       }

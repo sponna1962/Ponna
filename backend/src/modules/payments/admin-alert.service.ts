@@ -12,7 +12,20 @@
 import { prisma } from '../../lib/prisma';
 import { pushNotificationService } from '../notifications/push-notification.service';
 
+// Per-job throttle so a job that fails every minute can never flood the phone.
+const lastJobAlert = new Map<string, number>();
+
 export class AdminAlertService {
+  /** A scheduled job failed. Same job alerts at most once per `gapMinutes`. */
+  notifyJobFailure(job: string, detail: unknown, gapMinutes = 60): void {
+    const now = Date.now();
+    const last = lastJobAlert.get(job) ?? 0;
+    if (now - last < gapMinutes * 60_000) return;
+    lastJobAlert.set(job, now);
+    const msg = String((detail as any)?.message ?? detail ?? '').slice(0, 200);
+    this.notify(`⚠️ PONNA: பணி தோல்வி — ${job}`, `${msg}\nRender logs-ஐப் பார்க்கவும்.`, '/admin');
+  }
+
   /** Fire-and-forget. Always resolves; failures are logged only. */
   notify(title: string, body: string, url = '/admin/manual-payments'): void {
     this.send(title, body, url).catch((err) => console.error('Admin alert failed:', err?.message ?? err));
