@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Free Diagnostic Test for TNPSC & TNTET | PONNA.in',
+  title: 'Free Diagnostic Test for TNPSC Group 4 | PONNA.in',
   description:
-    'Take a free, quick diagnostic quiz to see where you stand for TNPSC or TNTET before you start practising. No sign-up needed to try it.',
+    'Take a free, quick diagnostic quiz to see where you stand for TNPSC Group 4 before you start practising. No sign-up needed to try it.',
   alternates: { canonical: '/test-your-ability' },
 };
 

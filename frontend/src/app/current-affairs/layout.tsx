@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Current Affairs for TNPSC & TNTET — Daily Updates | PONNA.in',
+  title: 'Current Affairs for TNPSC Group 4 — Daily Updates | PONNA.in',
   description:
-    'AI-verified current affairs relevant to TNPSC and TNTET exams, updated daily in Tamil and English. Read the events that actually matter for your exam.',
+    'AI-verified current affairs relevant to TNPSC Group 4 exams, updated daily in Tamil and English. Read the events that actually matter for your exam.',
   alternates: { canonical: '/current-affairs' },
 };
 
