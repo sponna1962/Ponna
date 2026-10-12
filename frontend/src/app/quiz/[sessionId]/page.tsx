@@ -59,27 +59,16 @@ export default function QuizSessionPage() {
   // design decision — plain "காரணம் பார்க்க" wording only.
   const [explanation, setExplanation] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
-  // Oct 2026: the explanation now opens by itself once a question is answered
-  // (students asked for it). A student who closes it once keeps it closed for
-  // the following questions; the 'ஏன் இது சரி?' button still opens it on demand.
-  // Stored per-browser only; every read/write is guarded because storage can be
-  // unavailable (private mode, blocked site data).
-  const [autoExplain, setAutoExplain] = useState(true);
+  // Oct 2026 — the explanation always opens by itself after an answer. Closing
+  // it only hides it for the CURRENT question (it used to switch auto-open off
+  // for good on that phone, so students stopped seeing it). The old saved
+  // "off" flag is cleared so phones that already closed it once get it back.
+  const autoExplain = true;
   useEffect(() => {
-    try {
-      if (window.localStorage.getItem('ponna_auto_explain') === '0') setAutoExplain(false);
-    } catch {
-      /* storage unavailable — keep the default */
-    }
+    try { window.localStorage.removeItem('ponna_auto_explain'); } catch { /* storage unavailable */ }
   }, []);
   function closeExplanation() {
     setShowExplanation(false);
-    setAutoExplain(false);
-    try {
-      window.localStorage.setItem('ponna_auto_explain', '0');
-    } catch {
-      /* ignore */
-    }
   }
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<Results | null>(null);
