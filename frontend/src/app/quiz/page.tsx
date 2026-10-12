@@ -13,6 +13,9 @@ import { studentFetch } from '../../lib/student-fetch';
 // Hidden by default in the Subject Preference picker, behind a toggle, so
 // it doesn't confuse the vast majority of students it doesn't apply to.
 const DISABILITY_ONLY_SUBJECT_NAMES = new Set(['General English']);
+// The Tamil Eligibility-cum-Scoring Test is what differently-abled candidates
+// replace with General English, so their track hides it.
+const isTamilEligibilitySubject = (name: string) => name.includes('தமிழ் தகுதி') || /tamil eligibility/i.test(name);
 
 // Practice Setup + Start — implements the finalized structure:
 //   Exam Type/Purpose → Exam Authority (multi) → Category (multi, per
@@ -1044,6 +1047,35 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subCategoryId]);
 
+  const englishTrackSubject = (subjects ?? []).find((s) => DISABILITY_ONLY_SUBJECT_NAMES.has(s.name));
+  // Ticked == General English is part of the saved subject choice.
+  const disabilityTrack = !!englishTrackSubject && selectedIds.has(englishTrackSubject.id);
+
+  async function saveSubjects(next: Set<string>) {
+    setSelectedIds(next);
+    setSaving(true);
+    try {
+      await studentFetch(`/subject-preference/${subCategoryId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subjectIds: Array.from(next), topicIds: [] }),
+      });
+    } catch {
+      // Keep the UI usable; the next Start Practising request still uses
+      // the existing server-side preference flow.
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Differently-abled track: every subject EXCEPT the Tamil Eligibility Test,
+  // plus General English in its place. Unticking returns to the full syllabus.
+  async function toggleDisabilityTrack() {
+    if (saving || !subjects || !englishTrackSubject) return;
+    if (disabilityTrack) return saveSubjects(new Set());
+    return saveSubjects(new Set(subjects.filter((s) => !isTamilEligibilitySubject(s.name)).map((s) => s.id)));
+  }
+
   async function toggleSubject(id: string) {
     if (saving) return;
 
@@ -1074,6 +1106,12 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
   // subject list rendered as bare inline checkboxes.
   return (
     <div className="subject-pref">
+      {englishTrackSubject && (
+        <label className="disability-track">
+          <input type="checkbox" checked={disabilityTrack} onChange={toggleDisabilityTrack} disabled={saving} />
+          <span>{appT.practiceSetup.showDisabilityTrack}</span>
+        </label>
+      )}
       <button
         type="button"
         className="subject-pref-button"
@@ -1085,7 +1123,7 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
 
       {open && (
         <div className="subject-list">
-          {subjects.filter((s) => !DISABILITY_ONLY_SUBJECT_NAMES.has(s.name)).map((s) => (
+          {subjects.filter((s) => (disabilityTrack ? !isTamilEligibilitySubject(s.name) : !DISABILITY_ONLY_SUBJECT_NAMES.has(s.name))).map((s) => (
             <label key={s.id} className="subject-option">
               <input
                 type="checkbox"
@@ -1110,6 +1148,14 @@ function SubjectPreferenceField({ subCategoryId, t: appT, resetOnFreshVisit, pra
           color: #0B3864 !important;
           text-decoration: underline !important;
           text-underline-offset: 3px;
+          cursor: pointer;
+        }
+        .disability-track {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          margin: 0 0 10px;
           cursor: pointer;
         }
         .subject-list {

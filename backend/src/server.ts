@@ -62,7 +62,7 @@ import { ShareProgressService } from './modules/practice-preference/share-progre
 import { ReferralService } from './modules/practice-preference/referral.service';
 import { MilestoneService } from './modules/practice-preference/milestone.service';
 import { getTimeAnalytics } from './modules/practice-preference/time-analytics.service';
-import { SubjectPreferenceService, SubjectPreferenceError } from './modules/practice-preference/subject-preference.service';
+import { SubjectPreferenceService, SubjectPreferenceError, ensureGeneralEnglishTrack } from './modules/practice-preference/subject-preference.service';
 import { DailyQuizService, DailyQuizError } from './modules/daily-quiz/daily-quiz.service';
 import { SyllabusService } from './modules/admin/syllabus.service';
 import { ExamFactsService } from './modules/admin/exam-facts.service';
@@ -4093,6 +4093,7 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`PONNA API listening on :${PORT}`);
   startScheduledJobs();
+  ensureGeneralEnglishTrack();
   // Automatic daily Current Affairs (student-learning feed) generation.
   // The service refuses to create a day when it cannot find enough
   // genuinely new, verified events, so there is no filler. Moved here

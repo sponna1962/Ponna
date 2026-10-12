@@ -156,3 +156,31 @@ export class SubjectPreferenceService {
     if (deleted.count > 0) await this.reallocateUnansweredTail(userId, subCategoryId, [], []);
   }
 }
+
+
+/**
+ * Oct 2026 — differently-abled General English track. The syllabus entry
+ * "General English" existed but was never linked to the flat "English"
+ * subject that holds its questions, so it had none. Idempotent, runs at
+ * startup, NEVER throws:
+ *  - links it to the "English" subject of the same exam (only if still unlinked)
+ *  - practiceWeight 0 so ordinary students' mixed practice never includes it
+ *    (it is only used when a student ticks the differently-abled box, which
+ *    saves an explicit subject choice).
+ */
+export async function ensureGeneralEnglishTrack(): Promise<void> {
+  try {
+    const track = await prisma.syllabusSubject.findMany({ where: { name: 'General English', linkedSubjectIds: { isEmpty: true } } });
+    for (const s of track) {
+      const english = await prisma.subject.findMany({ where: { subCategoryId: s.subCategoryId, name: 'English' }, select: { id: true } });
+      if (english.length !== 1) continue; // ambiguous or missing — leave for the admin
+      await prisma.syllabusSubject.update({
+        where: { id: s.id },
+        data: { linkedSubjectIds: [english[0].id], practiceWeight: 0, nameTa: s.nameTa ?? 'பொது ஆங்கிலம்' },
+      });
+      console.log('[startup] Linked General English track to its English questions');
+    }
+  } catch (err) {
+    console.error('[startup] ensureGeneralEnglishTrack failed:', err);
+  }
+}
