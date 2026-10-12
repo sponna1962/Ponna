@@ -122,7 +122,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
       </section>
 
       <section className="stat-strip" aria-label="PONNA எண்கள்">
-        <div><strong>60,000+</strong><span>கேள்விகளில்<br />பயிற்சி</span></div>
+        <div><strong>50,000+</strong><span>கேள்விகளில்<br />பயிற்சி</span></div>
         <div><strong>3,250+</strong><span>மாதாந்திர<br />பயிற்சி</span></div>
         <div><strong>4,000+</strong><span>பயிற்சி<br />முயற்சிகள்</span></div>
       </section>
@@ -151,7 +151,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
             <article className="usp-item">
               <div className="usp-number">01</div>
               <div className="usp-copy">
-                <strong>60,000+</strong>
+                <strong>50,000+</strong>
                 <p>புதிய பாடத்திட்டத்தின் கீழ் நிபுணர்கள் தயாரித்த<br />பயிற்சிக் கேள்விகள் மற்றும் பழைய டிஎன்பிசி கேள்வித்தாள்கள்</p>
               </div>
             </article>
@@ -231,7 +231,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
             <div className="pass-badge">GROUP 4</div>
           </div>
           <div className="pass-list">
-            <div><b>60,000+</b><span>கேள்விகளில்<br />பயிற்சி</span></div>
+            <div><b>50,000+</b><span>கேள்விகளில்<br />பயிற்சி</span></div>
             <div><b>தினசரி</b><span>Current Affairs &amp; Brain Challenge</span></div>
             <div><b>நேரடி</b><span>தேர்வுகளில் பங்கேற்பு</span></div>
           </div>

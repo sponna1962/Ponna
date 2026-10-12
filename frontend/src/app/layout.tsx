@@ -10,9 +10,9 @@ import StyledJsxRegistry from '../components/StyledJsxRegistry';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.ponna.in'),
-  title: 'PONNA.in – TNPSC & TNTET Online Practice | Previous Year Questions',
+  title: 'PONNA.in – நம்பர்-1 ஆன்லைன் பயிற்சி தளம் | TNPSC & TNTET Online Practice',
   description:
-    'Practice for TNPSC and TNTET with previous exam questions, expert-designed practice questions, and instant answers after every question. Affordable exam preparation for Tamil Nadu students — practice anytime, in Tamil or English.',
+    'PONNA.in – நம்பர்-1 ஆன்லைன் பயிற்சி தளம் (No.1 online practice platform) for TNPSC Group 4 and TNTET: 50,000+ questions, previous exam questions, expert-designed practice questions, and instant answers after every question. Affordable exam preparation for Tamil Nadu students — practice anytime, in Tamil or English.',
   alternates: { canonical: '/' },
   manifest: '/manifest.json',
   themeColor: '#0f172a',
@@ -27,7 +27,7 @@ const organizationJsonLd = {
   name: 'PONNA.in',
   url: 'https://www.ponna.in',
   logo: 'https://www.ponna.in/logo-compact.png',
-  description: 'Online exam practice platform for TNPSC and TNTET aspirants in Tamil Nadu.',
+  description: 'நம்பர்-1 ஆன்லைன் பயிற்சி தளம் — No.1 online exam practice platform for TNPSC and TNTET aspirants in Tamil Nadu.',
 };
 const websiteJsonLd = {
   '@context': 'https://schema.org',

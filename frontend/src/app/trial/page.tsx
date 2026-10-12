@@ -16,7 +16,7 @@ type TrialPlan = { id: string; name: string; regularPrice: string | null; launch
 type Sub = { id: string; planId: string; validUntil: string; plan: { isTrial?: boolean } };
 
 const GIVES: { icon: string; title: string; body: string }[] = [
-  { icon: '📝', title: 'Start Practice', body: '60,000+ கேள்விகள், பாடவாரியாக — ஒவ்வொன்றுக்கும் "ஏன் இது சரி?" விளக்கம்' },
+  { icon: '📝', title: 'Start Practice', body: '50,000+ கேள்விகள், பாடவாரியாக — ஒவ்வொன்றுக்கும் "ஏன் இது சரி?" விளக்கம்' },
   { icon: '🌐', title: 'Tamil & English', body: 'எந்தக் கேள்வியையும் தமிழிலோ English-இலோ படிக்கலாம்' },
   { icon: '🎛️', title: 'Subject & Topic Preference', body: 'நீங்கள் விரும்பும் பாடம், தலைப்பில் மட்டும் பயிற்சி' },
   { icon: '🗓️', title: 'Daily Quiz', body: 'தினமும் புதிய வினாடி வினா' },
