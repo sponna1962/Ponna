@@ -13,6 +13,7 @@ import { PracticePreferenceService, InvalidSelectionError } from './modules/prac
 import { RankingService } from './modules/ranking/ranking.service';
 import { activitySummaryService } from './modules/students/activity-summary.service';
 import { guestDiagnosticService } from './modules/students/guest-diagnostic.service';
+import { guestPracticeService, guestPracticeAllowed } from './modules/students/guest-practice.service';
 import { gapAnalysisService } from './modules/practice-preference/gap-analysis.service';
 import { weakAreaService } from './modules/practice-preference/weak-area.service';
 import { progressCoachService } from './modules/practice-preference/progress-coach.service';
@@ -1586,6 +1587,40 @@ app.get('/public/primary-exam', async (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load primary exam' });
+  }
+});
+
+// ── Free-start practice (Oct 2026): 5 questions with NO sign-up ──
+// Public and stateless on purpose -- see guest-practice.service.ts.
+app.get('/guest-practice/questions', async (req, res) => {
+  try {
+    if (!guestPracticeAllowed(req.ip ?? '', 'questions')) {
+      res.status(429).json({ error: 'Too many requests. Please try again a little later.' });
+      return;
+    }
+    const language = req.query.language === 'EN' ? 'EN' : 'TA';
+    res.json(await guestPracticeService.getQuestions(language));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to load questions' });
+  }
+});
+
+app.post('/guest-practice/answer', async (req, res) => {
+  try {
+    if (!guestPracticeAllowed(req.ip ?? '', 'answer')) {
+      res.status(429).json({ error: 'Too many requests. Please try again a little later.' });
+      return;
+    }
+    const { questionId, selectedOption } = req.body ?? {};
+    if (typeof questionId !== 'string' || typeof selectedOption !== 'string') {
+      res.status(400).json({ error: 'questionId and selectedOption are required' });
+      return;
+    }
+    res.json(await guestPracticeService.checkAnswer(questionId, selectedOption as any));
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({ error: err.message ?? 'Failed to check answer' });
   }
 });
 
