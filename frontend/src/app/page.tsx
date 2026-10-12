@@ -338,7 +338,9 @@ export default function IndexPage() {
     if (isLoggedIn) {
       window.location.href = '/quiz';
     } else {
-      openLogin();
+      // Oct 2026 (explicit request): a logged-out visitor starts free, with no
+      // sign-up wall -- the sign-up is asked only when they want their result.
+      window.location.href = '/test-your-ability';
     }
   }
 
