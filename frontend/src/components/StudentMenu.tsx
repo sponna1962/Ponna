@@ -147,7 +147,7 @@ export function StudentMenu({ onOpenChange, iconColor, showBack }: { onOpenChang
               <a href="/" aria-label="PONNA.in" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', minWidth: 0 }}>
                 {/* Same clean wordmark (no tagline strip) as the home page header. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo-wordmark.png" alt="PONNA.in" style={{ display: 'block', width: 168, height: 'auto' }} />
+                <img src="/logo-wordmark-sm.png" alt="PONNA.in" style={{ display: 'block', width: 168, height: 'auto' }} />
               </a>
               <button onClick={() => setOpen(false)} aria-label="Close" style={{
                 width: 36, height: 36, border: '1px solid #DDE5E9', borderRadius: 8,
