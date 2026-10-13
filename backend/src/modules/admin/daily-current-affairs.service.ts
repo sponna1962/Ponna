@@ -289,8 +289,17 @@ export class DailyCurrentAffairsService {
     // previous Brain Challenge quiz questions. The prompt handles semantic
     // similarity while this deterministic gate catches exact repeats.
     const previousQuestions = await this.previousBrainChallengeQuestions();
-    const generatedQuestions = await this.generateQuestionsForBrainChallenge(previousQuestions);
-    const questions = this.removeExactPreviousDuplicates(generatedQuestions, previousQuestions);
+    // Oct 2026 — the AI sometimes returns 10 questions of which one is a repeat
+    // or fails the quality review, leaving 9. Ask again (up to 3 rounds), telling
+    // it about the questions already collected, and top up with genuinely NEW
+    // ones. Old questions are never used as filler.
+    let questions: GeneratedQuestion[] = [];
+    for (let round = 0; round < 3 && questions.length < QUESTIONS_PER_DAY; round++) {
+      const avoid = [...previousQuestions, ...questions.flatMap((q) => [q.questionTextTa, q.questionTextEn])];
+      const generatedQuestions = await this.generateQuestionsForBrainChallenge(avoid);
+      questions = this.removeExactPreviousDuplicates([...questions, ...generatedQuestions], previousQuestions);
+    }
+    questions = questions.slice(0, QUESTIONS_PER_DAY);
 
     // Never pad with an old question. If the no-repeat gate leaves fewer than
     // 10 genuinely new questions, today's Brain Challenge is not created.
