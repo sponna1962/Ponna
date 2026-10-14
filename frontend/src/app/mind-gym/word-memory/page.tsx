@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { GameShell, mgCard, mgPrimaryBtn } from '../../../components/MindGym';
+import { ShareResultCard } from '../../../components/ShareResultCard';
 import { MG_BAD, MG_BADBG, MG_CARD, MG_GOLD, MG_GOOD, MG_INK, MG_LINE, MG_MUTED, MG_OKBG, MG_SEL, readBest, saveBest, shuffle } from '../../../lib/mind-gym';
 
 const WORDS = [
@@ -110,6 +111,7 @@ export default function WordMemoryPage() {
               <p style={{ margin: '16px 0 4px', fontSize: 18, fontWeight: 700 }}>{correct} / {SHOWN} சரியாக நினைவில் வைத்தீர்கள்{wrong > 0 ? `; ${wrong} தவறான தேர்வு` : ''}</p>
               <p style={{ margin: '0 0 8px', fontSize: 14.5, color: MG_MUTED }}>மதிப்பெண்: {score} / {SHOWN}</p>
               {newBest && <p style={{ margin: '0 0 8px', color: MG_GOLD, fontWeight: 700 }}>உங்கள் புதிய சிறந்த மதிப்பெண்! 🎉</p>}
+              <ShareResultCard title="Mind Gym — Word Memory" score={`${score} / ${SHOWN}`} percent={(score / SHOWN) * 100} />
               <button style={{ ...mgPrimaryBtn, marginTop: 8 }} onClick={begin}>மீண்டும் விளையாடு</button>
             </>
           )}

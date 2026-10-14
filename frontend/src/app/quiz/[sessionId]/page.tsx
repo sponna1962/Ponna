@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useLanguage } from '../../../lib/language-context';
 import { PushPrompt } from '../../../components/PushPrompt';
+import { ShareResultCard } from '../../../components/ShareResultCard';
 import { studentFetch } from '../../../lib/student-fetch';
 import { useOnlineStatus } from '../../../lib/use-online-status';
 
@@ -479,6 +480,8 @@ function ResultsView({ results }: { results: Results }) {
           <div style={{ fontSize: 12.5, color: 'var(--color-inkMuted)' }}>{t.quiz.correct}</div>
         </div>
       </div>
+
+      <ShareResultCard title="PONNA பயிற்சி" score={`${results.correctCount} / ${results.answeredCount}`} note={`${results.accuracyPercent.toFixed(0)}% சரியான விடைகள்`} percent={results.accuracyPercent} />
 
       <PushPrompt />
 

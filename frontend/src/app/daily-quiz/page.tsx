@@ -22,6 +22,7 @@ import { useLanguage } from '../../lib/language-context';
 import { studentFetch } from '../../lib/student-fetch';
 import { apiUrl } from '../../lib/api-config';
 import { StudentMenu } from '../../components/StudentMenu';
+import { ShareResultCard } from '../../components/ShareResultCard';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../../lib/brand-theme';
 
 type QuizType = 'DAILY_QUIZ' | 'BRAIN_CHALLENGE';
@@ -327,6 +328,7 @@ export default function DailyQuizPage() {
           totalQuestions={state.totalQuestions}
           correctCount={state.correctCount}
           incorrectCount={state.incorrectCount}
+          shareTitle={quizType === 'DAILY_QUIZ' ? 'Daily Quiz — நடப்பு நிகழ்வுகள்' : 'Brain Challenge'}
           onReview={() => loadReview(state.attemptId)}
         />
       )}
@@ -417,11 +419,13 @@ function CompletedSummary({
   totalQuestions,
   correctCount,
   incorrectCount,
+  shareTitle,
   onReview,
 }: {
   totalQuestions: number;
   correctCount: number;
   incorrectCount: number;
+  shareTitle: string;
   onReview: () => void;
 }) {
   const { t } = useLanguage();
@@ -444,6 +448,7 @@ function CompletedSummary({
           <p style={{ fontSize: 12, color: COLORS.inkMuted, margin: 0 }}>{t.dailyQuiz.incorrect}</p>
         </div>
       </div>
+      <ShareResultCard title={shareTitle} score={`${correctCount} / ${totalQuestions}`} note={`${pct}% சரியான விடைகள்`} percent={pct} />
       {/* No retake — a Daily Quiz attempt is one-time (finalized requirement) */}
       <button onClick={onReview} style={{ width: '100%', padding: 16, borderRadius: 8, background: 'var(--color-btn)', color: 'var(--color-btnText)', border: 'none', fontWeight: 700, fontSize: 16.5 }}>
         {t.dailyQuiz.viewReview}

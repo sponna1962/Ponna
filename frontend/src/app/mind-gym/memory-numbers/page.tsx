@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { MindGymHeader } from '../../../components/MindGym';
+import { ShareResultCard } from '../../../components/ShareResultCard';
 import { DISPLAY_FONT } from '../../../lib/brand-theme';
 
 const PAPER = 'var(--color-paper)';
@@ -201,6 +202,7 @@ export default function MemoryTestPage() {
             {newBest && <p style={{ margin: '0 0 8px', color: GOLD, fontWeight: 700 }}>உங்கள் புதிய சிறந்த நிலை! 🎉</p>}
             {!newBest && best > 0 && <p style={{ margin: '0 0 8px', fontSize: 14.5, color: 'var(--color-inkMuted)' }}>உங்கள் சிறந்த நிலை: {best} இலக்கங்கள்</p>}
             <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--color-inkMuted)' }}>தினமும் சில நிமிடங்கள் பயிற்சி செய்தால் நினைவாற்றல் மேம்படும்.</p>
+            {reached > 0 && <ShareResultCard title="Mind Gym — Memory Numbers" score={`${reached} இலக்கங்கள்`} note="நினைவில் வைத்தேன்" />}
             <button style={primaryBtn} onClick={begin}>மீண்டும் விளையாடு</button>
           </div>
         )}

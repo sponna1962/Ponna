@@ -7,6 +7,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { COLORS, DISPLAY_FONT } from '../lib/brand-theme';
 import { StudentMenu } from './StudentMenu';
+import { ShareResultCard } from './ShareResultCard';
 import { MG_BAD, MG_BADBG, MG_CARD, MG_GOLD, MG_GOOD, MG_INK, MG_LINE, MG_MUTED, MG_OKBG, MG_PAPER, MG_TEAL, readBest, saveBest } from '../lib/mind-gym';
 
 const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
@@ -171,6 +172,7 @@ export function ChoiceGame({
           {newBest && <p style={{ margin: '0 0 8px', color: MG_GOLD, fontWeight: 700 }}>உங்கள் புதிய சிறந்த மதிப்பெண்! 🎉</p>}
           {!newBest && best > 0 && <p style={{ margin: '0 0 8px', fontSize: 14.5, color: MG_MUTED }}>உங்கள் சிறந்த மதிப்பெண்: {best} / {count}</p>}
           <p style={{ margin: '0 0 16px', fontSize: 14, color: MG_MUTED }}>தினமும் சில நிமிடங்கள் பயிற்சி செய்தால் வேகமும் தெளிவும் கூடும்.</p>
+          <ShareResultCard title={`Mind Gym — ${title}`} score={`${score} / ${questions.length}`} percent={questions.length ? (score / questions.length) * 100 : 0} />
           <button style={mgPrimaryBtn} onClick={begin}>மீண்டும் விளையாடு</button>
         </div>
       )}
