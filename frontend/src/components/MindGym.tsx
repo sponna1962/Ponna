@@ -5,7 +5,8 @@
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
-import { DISPLAY_FONT } from '../lib/brand-theme';
+import { COLORS, DISPLAY_FONT } from '../lib/brand-theme';
+import { StudentMenu } from './StudentMenu';
 import { MG_BAD, MG_GOLD, MG_GOOD, MG_INK, MG_PAPER, MG_TEAL, readBest, saveBest } from '../lib/mind-gym';
 
 const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
@@ -19,12 +20,25 @@ export const mgPrimaryBtn: CSSProperties = {
   background: MG_TEAL, color: '#fff', fontSize: 17, fontWeight: 700, cursor: 'pointer', fontFamily: SERIF,
 };
 
+/** Same top bar as Study Notes: menu (with back arrow + logo) and page name. */
+export function MindGymHeader() {
+  return (
+    <div style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: COLORS.head1, borderBottom: '3px solid #E2B04A', color: '#fff' }}>
+      <StudentMenu iconColor="#fff" />
+      <h1 style={{ fontFamily: DISPLAY_FONT, fontSize: 19, fontWeight: 700, margin: 0, color: '#fff' }}>Mind Gym</h1>
+    </div>
+  );
+}
+
 export function GameShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
     <main style={{ minHeight: '100vh', background: MG_PAPER, color: MG_INK, fontFamily: SERIF }}>
+      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+        <MindGymHeader />
+      </div>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 40px' }}>
         <Link href="/mind-gym" style={{ color: MG_TEAL, fontSize: 14, textDecoration: 'none' }}>← Mind Gym</Link>
-        <h1 style={{ fontSize: 24, margin: '12px 0 4px' }}>{title}</h1>
+        <h2 style={{ fontSize: 24, margin: '12px 0 4px' }}>{title}</h2>
         <p style={{ fontSize: 14.5, color: '#4b5d5f', margin: '0 0 16px' }}>{subtitle}</p>
         {children}
       </div>

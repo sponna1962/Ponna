@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { MindGymHeader } from '../../../components/MindGym';
 import { DISPLAY_FONT } from '../../../lib/brand-theme';
 
 const PAPER = '#FBF6E9';
@@ -126,9 +127,12 @@ export default function MemoryTestPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: PAPER, color: INK, fontFamily: SERIF }}>
+      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+        <MindGymHeader />
+      </div>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 40px' }}>
         <Link href="/mind-gym" style={{ color: TEAL, fontSize: 14, textDecoration: 'none' }}>← Mind Gym</Link>
-        <h1 style={{ fontSize: 24, margin: "12px 0 4px" }}>Memory Numbers</h1>
+        <h2 style={{ fontSize: 24, margin: "12px 0 4px" }}>Memory Numbers</h2>
         <p style={{ fontSize: 14.5, color: '#4b5d5f', margin: '0 0 16px' }}>
           எண்ணைப் பார்த்து நினைவில் வைத்துக்கொண்டு, மறைந்த பின் தட்டச்சு செய்யுங்கள்.
         </p>

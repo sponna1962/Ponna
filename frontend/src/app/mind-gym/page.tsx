@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DISPLAY_FONT } from '../../lib/brand-theme';
+import { MindGymHeader } from '../../components/MindGym';
 import { MG_GOLD, MG_INK, MG_PAPER, MG_TEAL, readBest } from '../../lib/mind-gym';
 
 const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
@@ -30,9 +31,10 @@ export default function MindGymPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: MG_PAPER, color: MG_INK, fontFamily: SERIF }}>
+      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+        <MindGymHeader />
+      </div>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 40px' }}>
-        <Link href="/" style={{ color: MG_TEAL, fontSize: 14, textDecoration: 'none' }}>← PONNA.in</Link>
-        <h1 style={{ fontSize: 28, margin: '12px 0 4px' }}>Mind Gym</h1>
         <p style={{ fontSize: 14.5, color: '#4b5d5f', margin: '0 0 18px' }}>நினைவாற்றல், வேகம், சிந்தனைக்கான இலவசப் பயிற்சிகள். பதிவு தேவையில்லை.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
           {GAMES.map((g) => {
