@@ -3,7 +3,12 @@
 import { ChoiceGame, type ChoiceQuestion } from '../../../components/MindGym';
 import { buildOptions, pick, randInt, shuffle } from '../../../lib/mind-gym';
 
-const WORDS = ['CAT', 'DOG', 'BED', 'FAN', 'PEN', 'MAP', 'SUN', 'BOX', 'HEN', 'JAR', 'KEY', 'LAB', 'NET', 'OWL', 'RAT', 'TEA', 'BAG', 'CUP', 'LID', 'FOX'];
+const WORDS = [
+  'CAT', 'DOG', 'BED', 'FAN', 'PEN', 'MAP', 'SUN', 'BOX', 'HEN', 'JAR', 'KEY', 'LAB', 'NET', 'OWL', 'RAT', 'TEA', 'BAG', 'CUP', 'LID', 'FOX',
+  'BUS', 'CAR', 'COW', 'EGG', 'FIG', 'GUN', 'HAT', 'INK', 'JUG', 'KIT', 'LAP', 'MUG', 'NUT', 'OIL', 'PIG', 'RUG', 'SKY', 'TOY', 'URN', 'VAN',
+  'WEB', 'YAK', 'ZOO', 'ARM', 'BAT', 'COT', 'DEN', 'EAR', 'FIN', 'GEM', 'HIP', 'ICE', 'JAM', 'KID', 'LEG', 'MOP', 'NAP', 'OAK', 'PAN', 'RIB',
+  'SOW', 'TIN', 'WIG', 'YAM', 'BUD', 'DEW', 'ELM', 'FUR', 'GAP', 'HUT', 'IVY', 'JET', 'LOG', 'MAT', 'NIB', 'ORE', 'PEG', 'RAM', 'SAP', 'TUB',
+];
 const A = 'A'.charCodeAt(0);
 const shift = (w: string, n: number) => w.split('').map((c) => String.fromCharCode(((c.charCodeAt(0) - A + n + 26) % 26) + A)).join('');
 const digits = (w: string) => w.split('').map((c) => c.charCodeAt(0) - A + 1).join('');
