@@ -115,6 +115,14 @@ export function ChoiceGame({
 
   const q = questions[index];
 
+  // A correct answer moves on by itself after a short pause.
+  useEffect(() => {
+    if (phase !== 'play' || chosen === null || !q || chosen !== q.answerIndex) return;
+    const t = setTimeout(() => next(), 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, chosen, index]);
+
   return (
     <GameShell title={title} subtitle={subtitle}>
       {phase === 'intro' && (
@@ -147,7 +155,7 @@ export function ChoiceGame({
               );
             })}
           </div>
-          {chosen !== null && (
+          {chosen !== null && chosen !== q.answerIndex && (
             <>
               <p style={{ margin: '14px 0 12px', fontSize: 14.5, color: MG_MUTED, lineHeight: 1.6 }}>{q.explanation}</p>
               <button style={mgPrimaryBtn} onClick={next}>{index + 1 < questions.length ? 'அடுத்த கேள்வி →' : 'முடிவைப் பார்க்க →'}</button>

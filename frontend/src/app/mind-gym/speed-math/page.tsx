@@ -47,6 +47,14 @@ export default function SpeedMathPage() {
 
   useEffect(() => { if (phase === 'play' && !feedback) inputRef.current?.focus(); }, [phase, feedback, index]);
 
+  // A correct answer moves on by itself after a short pause.
+  useEffect(() => {
+    if (phase !== 'play' || !feedback?.ok) return;
+    const t = setTimeout(() => next(), 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, feedback, index]);
+
   function begin() {
     const seen = new Set<string>(); const list: Q[] = [];
     while (list.length < COUNT) { const q = makeQuestion(); if (!seen.has(q.text)) { seen.add(q.text); list.push(q); } }
@@ -92,7 +100,12 @@ export default function SpeedMathPage() {
           <input
             ref={inputRef}
             value={answer}
-            onChange={(e) => setAnswer(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+              setAnswer(v);
+              // Right answer typed: accept it straight away, no button needed.
+              if (v !== '' && Number(v) === q.answer) settle(Number(v));
+            }}
             disabled={!!feedback}
             inputMode="numeric"
             pattern="[0-9]*"
@@ -105,7 +118,7 @@ export default function SpeedMathPage() {
               <p style={{ margin: '14px 0 12px', fontSize: 18, fontWeight: 700, color: feedback.ok ? MG_GOOD : MG_BAD }}>
                 {feedback.ok ? 'சரி ✓' : `இல்லை — சரியான விடை ${feedback.correct}`}
               </p>
-              <button type="submit" style={mgPrimaryBtn}>{index + 1 < qs.length ? 'அடுத்த கணக்கு →' : 'முடிவைப் பார்க்க →'}</button>
+              {!feedback.ok && <button type="submit" style={mgPrimaryBtn}>{index + 1 < qs.length ? 'அடுத்த கணக்கு →' : 'முடிவைப் பார்க்க →'}</button>}
             </>
           ) : (
             <button type="submit" disabled={answer === ''} style={{ ...mgPrimaryBtn, marginTop: 14, opacity: answer === '' ? 0.45 : 1 }}>சரிபார்</button>
