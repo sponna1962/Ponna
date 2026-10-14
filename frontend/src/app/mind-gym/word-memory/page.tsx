@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { GameShell, mgCard, mgPrimaryBtn } from '../../../components/MindGym';
-import { MG_BAD, MG_GOLD, MG_GOOD, MG_INK, readBest, saveBest, shuffle } from '../../../lib/mind-gym';
+import { MG_BAD, MG_BADBG, MG_CARD, MG_GOLD, MG_GOOD, MG_INK, MG_LINE, MG_MUTED, MG_OKBG, MG_SEL, readBest, saveBest, shuffle } from '../../../lib/mind-gym';
 
 const WORDS = [
   'மரம்', 'நதி', 'மலை', 'கடல்', 'பறவை', 'யானை', 'குதிரை', 'மான்', 'புலி', 'சிங்கம்',
@@ -65,8 +65,8 @@ export default function WordMemoryPage() {
     const on = ticked.has(w);
     const reveal = phase === 'over';
     const isSeen = seen.includes(w);
-    const border = reveal ? (isSeen ? MG_GOOD : on ? MG_BAD : '#d9cfb0') : on ? MG_INK : '#d9cfb0';
-    const bg = reveal ? (isSeen ? '#e6f4ea' : on ? '#fbe9e7' : '#fff') : on ? '#efe6cc' : '#fff';
+    const border = reveal ? (isSeen ? MG_GOOD : on ? MG_BAD : MG_LINE) : on ? MG_INK : MG_LINE;
+    const bg = reveal ? (isSeen ? MG_OKBG : on ? MG_BADBG : MG_CARD) : on ? MG_SEL : MG_CARD;
     return { padding: '12px 8px', borderRadius: 10, border: `2px solid ${border}`, background: bg, color: MG_INK, fontSize: 16.5, fontWeight: 600, cursor: reveal ? 'default' : 'pointer', fontFamily: 'inherit' };
   };
 
@@ -82,11 +82,11 @@ export default function WordMemoryPage() {
 
       {phase === 'show' && (
         <div style={mgCard} aria-live="polite">
-          <p style={{ margin: 0, fontSize: 14, color: '#4b5d5f' }}>இந்த வார்த்தைகளை நினைவில் வைத்துக்கொள்ளுங்கள்</p>
+          <p style={{ margin: 0, fontSize: 14, color: MG_MUTED }}>இந்த வார்த்தைகளை நினைவில் வைத்துக்கொள்ளுங்கள்</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, margin: '16px 0' }}>
-            {seen.map((w) => <div key={w} style={{ padding: '14px 8px', borderRadius: 10, background: '#efe6cc', fontSize: 20, fontWeight: 700, color: MG_INK }}>{w}</div>)}
+            {seen.map((w) => <div key={w} style={{ padding: '14px 8px', borderRadius: 10, background: 'var(--color-goldDisc)', fontSize: 20, fontWeight: 700, color: MG_INK }}>{w}</div>)}
           </div>
-          <div style={{ height: 6, background: '#efe6cc', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: 6, background: 'var(--color-goldDisc)', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{ height: '100%', background: MG_GOLD, animation: `mgshrink ${SHOW_MS}ms linear forwards` }} />
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function WordMemoryPage() {
           {phase === 'over' && (
             <>
               <p style={{ margin: '16px 0 4px', fontSize: 18, fontWeight: 700 }}>{correct} / {SHOWN} சரியாக நினைவில் வைத்தீர்கள்{wrong > 0 ? `; ${wrong} தவறான தேர்வு` : ''}</p>
-              <p style={{ margin: '0 0 8px', fontSize: 14.5, color: '#4b5d5f' }}>மதிப்பெண்: {score} / {SHOWN}</p>
+              <p style={{ margin: '0 0 8px', fontSize: 14.5, color: MG_MUTED }}>மதிப்பெண்: {score} / {SHOWN}</p>
               {newBest && <p style={{ margin: '0 0 8px', color: MG_GOLD, fontWeight: 700 }}>உங்கள் புதிய சிறந்த மதிப்பெண்! 🎉</p>}
               <button style={{ ...mgPrimaryBtn, marginTop: 8 }} onClick={begin}>மீண்டும் விளையாடு</button>
             </>

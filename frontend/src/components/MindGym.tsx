@@ -7,12 +7,12 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { COLORS, DISPLAY_FONT } from '../lib/brand-theme';
 import { StudentMenu } from './StudentMenu';
-import { MG_BAD, MG_GOLD, MG_GOOD, MG_INK, MG_PAPER, MG_TEAL, readBest, saveBest } from '../lib/mind-gym';
+import { MG_BAD, MG_BADBG, MG_CARD, MG_GOLD, MG_GOOD, MG_INK, MG_LINE, MG_MUTED, MG_OKBG, MG_PAPER, MG_TEAL, readBest, saveBest } from '../lib/mind-gym';
 
 const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
 
 export const mgCard: CSSProperties = {
-  background: '#fff', border: '1px solid #e7dcc0', borderRadius: 16, padding: '22px 18px',
+  background: MG_CARD, border: `1px solid ${MG_LINE}`, borderRadius: 16, padding: '22px 18px',
   boxShadow: '0 2px 10px rgba(15,47,51,0.06)', textAlign: 'center',
 };
 export const mgPrimaryBtn: CSSProperties = {
@@ -39,7 +39,7 @@ export function GameShell({ title, subtitle, children }: { title: string; subtit
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 40px' }}>
         <Link href="/mind-gym" style={{ color: MG_TEAL, fontSize: 14, textDecoration: 'none' }}>← Mind Gym</Link>
         <h2 style={{ fontSize: 24, margin: '12px 0 4px' }}>{title}</h2>
-        <p style={{ fontSize: 14.5, color: '#4b5d5f', margin: '0 0 16px' }}>{subtitle}</p>
+        <p style={{ fontSize: 14.5, color: MG_MUTED, margin: '0 0 16px' }}>{subtitle}</p>
         {children}
       </div>
       <style>{`@keyframes mgshrink { from { width: 100%; } to { width: 0%; } }`}</style>
@@ -127,14 +127,14 @@ export function ChoiceGame({
 
       {phase === 'play' && q && (
         <div style={mgCard}>
-          <p style={{ margin: 0, fontSize: 13.5, color: '#4b5d5f' }}>கேள்வி {index + 1} / {questions.length}</p>
+          <p style={{ margin: 0, fontSize: 13.5, color: MG_MUTED }}>கேள்வி {index + 1} / {questions.length}</p>
           <p style={{ margin: '12px 0 16px', fontSize: bigPrompt ? 26 : 17, fontWeight: bigPrompt ? 800 : 600, lineHeight: 1.6, letterSpacing: bigPrompt ? '0.08em' : 0 }}>{q.prompt}</p>
           <div style={{ display: 'grid', gap: 10 }}>
             {q.options.map((o, i) => {
               const isAnswer = i === q.answerIndex;
               const isChosen = chosen === i;
-              const bg = chosen === null ? '#fff' : isAnswer ? '#e6f4ea' : isChosen ? '#fbe9e7' : '#fff';
-              const border = chosen === null ? '#d9cfb0' : isAnswer ? MG_GOOD : isChosen ? MG_BAD : '#d9cfb0';
+              const bg = chosen === null ? MG_CARD : isAnswer ? MG_OKBG : isChosen ? MG_BADBG : MG_CARD;
+              const border = chosen === null ? MG_LINE : isAnswer ? MG_GOOD : isChosen ? MG_BAD : MG_LINE;
               return (
                 <button
                   key={i}
@@ -149,7 +149,7 @@ export function ChoiceGame({
           </div>
           {chosen !== null && (
             <>
-              <p style={{ margin: '14px 0 12px', fontSize: 14.5, color: '#4b5d5f', lineHeight: 1.6 }}>{q.explanation}</p>
+              <p style={{ margin: '14px 0 12px', fontSize: 14.5, color: MG_MUTED, lineHeight: 1.6 }}>{q.explanation}</p>
               <button style={mgPrimaryBtn} onClick={next}>{index + 1 < questions.length ? 'அடுத்த கேள்வி →' : 'முடிவைப் பார்க்க →'}</button>
             </>
           )}
@@ -158,11 +158,11 @@ export function ChoiceGame({
 
       {phase === 'over' && (
         <div style={mgCard}>
-          <p style={{ margin: 0, fontSize: 14, color: '#4b5d5f' }}>உங்கள் மதிப்பெண்</p>
+          <p style={{ margin: 0, fontSize: 14, color: MG_MUTED }}>உங்கள் மதிப்பெண்</p>
           <p style={{ margin: '6px 0 8px', fontSize: 36, fontWeight: 800 }}>{score} / {questions.length}</p>
           {newBest && <p style={{ margin: '0 0 8px', color: MG_GOLD, fontWeight: 700 }}>உங்கள் புதிய சிறந்த மதிப்பெண்! 🎉</p>}
-          {!newBest && best > 0 && <p style={{ margin: '0 0 8px', fontSize: 14.5, color: '#4b5d5f' }}>உங்கள் சிறந்த மதிப்பெண்: {best} / {count}</p>}
-          <p style={{ margin: '0 0 16px', fontSize: 14, color: '#4b5d5f' }}>தினமும் சில நிமிடங்கள் பயிற்சி செய்தால் வேகமும் தெளிவும் கூடும்.</p>
+          {!newBest && best > 0 && <p style={{ margin: '0 0 8px', fontSize: 14.5, color: MG_MUTED }}>உங்கள் சிறந்த மதிப்பெண்: {best} / {count}</p>}
+          <p style={{ margin: '0 0 16px', fontSize: 14, color: MG_MUTED }}>தினமும் சில நிமிடங்கள் பயிற்சி செய்தால் வேகமும் தெளிவும் கூடும்.</p>
           <button style={mgPrimaryBtn} onClick={begin}>மீண்டும் விளையாடு</button>
         </div>
       )}

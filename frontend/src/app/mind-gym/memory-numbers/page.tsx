@@ -11,8 +11,8 @@ import Link from 'next/link';
 import { MindGymHeader } from '../../../components/MindGym';
 import { DISPLAY_FONT } from '../../../lib/brand-theme';
 
-const PAPER = '#FBF6E9';
-const INK = '#0F2F33';
+const PAPER = 'var(--color-paper)';
+const INK = 'var(--color-ink)';
 const TEAL = '#1c6b6b';
 const GOLD = '#C98A12';
 const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
@@ -113,7 +113,7 @@ export default function MemoryTestPage() {
   }
 
   const card: React.CSSProperties = {
-    background: '#fff', border: '1px solid #e7dcc0', borderRadius: 16, padding: '22px 18px',
+    background: 'var(--color-card)', border: '1px solid var(--color-line)', borderRadius: 16, padding: '22px 18px',
     boxShadow: '0 2px 10px rgba(15,47,51,0.06)', textAlign: 'center',
   };
   const primaryBtn: React.CSSProperties = {
@@ -133,14 +133,14 @@ export default function MemoryTestPage() {
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 40px' }}>
         <Link href="/mind-gym" style={{ color: TEAL, fontSize: 14, textDecoration: 'none' }}>← Mind Gym</Link>
         <h2 style={{ fontSize: 24, margin: "12px 0 4px" }}>Memory Numbers</h2>
-        <p style={{ fontSize: 14.5, color: '#4b5d5f', margin: '0 0 16px' }}>
+        <p style={{ fontSize: 14.5, color: 'var(--color-inkMuted)', margin: '0 0 16px' }}>
           எண்ணைப் பார்த்து நினைவில் வைத்துக்கொண்டு, மறைந்த பின் தட்டச்சு செய்யுங்கள்.
         </p>
 
         {phase === 'intro' && (
           <div style={card}>
             <p style={{ margin: '0 0 6px', fontSize: 16 }}>{START_DIGITS} இலக்க எண்ணில் தொடங்கும்.</p>
-            <p style={{ margin: '0 0 16px', fontSize: 14.5, color: '#4b5d5f' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 14.5, color: 'var(--color-inkMuted)' }}>
               ஒவ்வொரு முறை சரியாகச் சொன்னாலும் ஓர் இலக்கம் கூடும். ஒவ்வொரு நிலையிலும் {TRIES_PER_LEVEL} வாய்ப்புகள் உண்டு.
             </p>
             {best > 0 && <p style={{ margin: '0 0 14px', fontSize: 15, color: GOLD, fontWeight: 700 }}>உங்கள் சிறந்த நிலை: {best} இலக்கங்கள்</p>}
@@ -150,9 +150,9 @@ export default function MemoryTestPage() {
 
         {phase === 'show' && (
           <div style={card} aria-live="polite">
-            <p style={{ margin: 0, fontSize: 14, color: '#4b5d5f' }}>{digits} இலக்கங்கள் — நினைவில் வைத்துக்கொள்ளுங்கள்</p>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--color-inkMuted)' }}>{digits} இலக்கங்கள் — நினைவில் வைத்துக்கொள்ளுங்கள்</p>
             <div style={bigNumber}>{target}</div>
-            <div style={{ height: 6, background: '#efe6cc', borderRadius: 3, overflow: 'hidden', marginTop: 14 }}>
+            <div style={{ height: 6, background: 'var(--color-goldDisc)', borderRadius: 3, overflow: 'hidden', marginTop: 14 }}>
               <div style={{ height: '100%', background: GOLD, animation: `memshrink ${showMs(digits)}ms linear forwards` }} />
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function MemoryTestPage() {
               pattern="[0-9]*"
               autoComplete="off"
               aria-label="நினைவில் உள்ள எண்"
-              style={{ width: '100%', boxSizing: 'border-box', fontSize: 32, textAlign: 'center', letterSpacing: '0.2em', padding: 12, borderRadius: 10, border: `2px solid ${TEAL}`, background: '#fff', color: INK }}
+              style={{ width: '100%', boxSizing: 'border-box', fontSize: 32, textAlign: 'center', letterSpacing: '0.2em', padding: 12, borderRadius: 10, border: `2px solid ${TEAL}`, background: 'var(--color-card)', color: INK }}
             />
             <button type="submit" disabled={answer.length !== digits} style={{ ...primaryBtn, marginTop: 14, opacity: answer.length === digits ? 1 : 0.45 }}>சரிபார்</button>
           </form>
@@ -187,20 +187,20 @@ export default function MemoryTestPage() {
           <div style={card}>
             <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#b3392b' }}>இல்லை</p>
             <p style={{ margin: '8px 0 4px', fontSize: 15 }}>சரியான எண்: <b style={{ letterSpacing: '0.15em' }}>{target}</b></p>
-            <p style={{ margin: '0 0 16px', fontSize: 14.5, color: '#4b5d5f' }}>இன்னும் {triesLeft} வாய்ப்பு உள்ளது. புதிய எண் காட்டப்படும்.</p>
+            <p style={{ margin: '0 0 16px', fontSize: 14.5, color: 'var(--color-inkMuted)' }}>இன்னும் {triesLeft} வாய்ப்பு உள்ளது. புதிய எண் காட்டப்படும்.</p>
             <button style={primaryBtn} onClick={retryLevel}>மீண்டும் முயல்க</button>
           </div>
         )}
 
         {phase === 'over' && (
           <div style={card}>
-            <p style={{ margin: 0, fontSize: 14, color: '#4b5d5f' }}>சரியான எண்: <b style={{ letterSpacing: '0.15em' }}>{target}</b></p>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--color-inkMuted)' }}>சரியான எண்: <b style={{ letterSpacing: '0.15em' }}>{target}</b></p>
             <p style={{ margin: '12px 0 4px', fontSize: 20, fontWeight: 700 }}>
               {reached > 0 ? `${reached} இலக்கங்கள் வரை நினைவில் வைத்தீர்கள்` : 'இந்த முறை முடியவில்லை'}
             </p>
             {newBest && <p style={{ margin: '0 0 8px', color: GOLD, fontWeight: 700 }}>உங்கள் புதிய சிறந்த நிலை! 🎉</p>}
-            {!newBest && best > 0 && <p style={{ margin: '0 0 8px', fontSize: 14.5, color: '#4b5d5f' }}>உங்கள் சிறந்த நிலை: {best} இலக்கங்கள்</p>}
-            <p style={{ margin: '0 0 16px', fontSize: 14, color: '#4b5d5f' }}>தினமும் சில நிமிடங்கள் பயிற்சி செய்தால் நினைவாற்றல் மேம்படும்.</p>
+            {!newBest && best > 0 && <p style={{ margin: '0 0 8px', fontSize: 14.5, color: 'var(--color-inkMuted)' }}>உங்கள் சிறந்த நிலை: {best} இலக்கங்கள்</p>}
+            <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--color-inkMuted)' }}>தினமும் சில நிமிடங்கள் பயிற்சி செய்தால் நினைவாற்றல் மேம்படும்.</p>
             <button style={primaryBtn} onClick={begin}>மீண்டும் விளையாடு</button>
           </div>
         )}

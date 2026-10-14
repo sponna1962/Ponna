@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DISPLAY_FONT } from '../../lib/brand-theme';
 import { MindGymHeader } from '../../components/MindGym';
-import { MG_GOLD, MG_INK, MG_PAPER, MG_TEAL, readBest } from '../../lib/mind-gym';
+import { MG_CARD, MG_GOLD, MG_INK, MG_LINE, MG_MUTED, MG_PAPER, MG_TEAL, readBest } from '../../lib/mind-gym';
 
 const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
 
@@ -35,14 +35,14 @@ export default function MindGymPage() {
         <MindGymHeader />
       </div>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 40px' }}>
-        <p style={{ fontSize: 14.5, color: '#4b5d5f', margin: '0 0 18px' }}>நினைவாற்றல், வேகம், சிந்தனைக்கான இலவசப் பயிற்சிகள். பதிவு தேவையில்லை.</p>
+        <p style={{ fontSize: 14.5, color: MG_MUTED, margin: '0 0 18px' }}>நினைவாற்றல், வேகம், சிந்தனைக்கான இலவசப் பயிற்சிகள். பதிவு தேவையில்லை.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
           {GAMES.map((g) => {
             const b = bests[g.key] ?? 0;
             return (
-              <Link key={g.href} href={g.href} style={{ textDecoration: 'none', color: 'inherit', background: '#fff', border: '1px solid #e7dcc0', borderRadius: 14, padding: '14px 12px', boxShadow: '0 2px 8px rgba(15,47,51,0.05)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <Link key={g.href} href={g.href} style={{ textDecoration: 'none', color: 'inherit', background: MG_CARD, border: `1px solid ${MG_LINE}`, borderRadius: 14, padding: '14px 12px', boxShadow: '0 2px 8px rgba(15,47,51,0.05)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ fontSize: 17, fontWeight: 800 }}>{g.title}</span>
-                <span style={{ fontSize: 13, color: '#4b5d5f', lineHeight: 1.5, flex: 1 }}>{g.body}</span>
+                <span style={{ fontSize: 13, color: MG_MUTED, lineHeight: 1.5, flex: 1 }}>{g.body}</span>
                 <span style={{ fontSize: 12.5, color: MG_GOLD, fontWeight: 700 }}>
                   {b > 0 ? `உங்கள் சிறந்தது: ${b} ${g.unit}` : 'இன்னும் விளையாடவில்லை'}
                 </span>
@@ -50,7 +50,7 @@ export default function MindGymPage() {
             );
           })}
         </div>
-        <p style={{ fontSize: 12.5, color: '#6b7a7c', marginTop: 18, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12.5, color: MG_MUTED, marginTop: 18, lineHeight: 1.6 }}>
           இவை நினைவாற்றல் மற்றும் வேகத்துக்கான பயிற்சிகள். உங்கள் சிறந்த நிலை உங்கள் போனில் மட்டுமே சேமிக்கப்படும்.
         </p>
       </div>

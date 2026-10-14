@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { GameShell, mgCard, mgPrimaryBtn } from '../../../components/MindGym';
-import { MG_BAD, MG_GOLD, MG_GOOD, MG_INK, MG_TEAL, pick, randInt, readBest, saveBest } from '../../../lib/mind-gym';
+import { MG_BAD, MG_CARD, MG_GOLD, MG_GOOD, MG_INK, MG_MUTED, MG_TEAL, pick, randInt, readBest, saveBest } from '../../../lib/mind-gym';
 
 const COUNT = 10;
 const SECONDS = 10;
@@ -84,9 +84,9 @@ export default function SpeedMathPage() {
 
       {phase === 'play' && q && (
         <form style={mgCard} onSubmit={(e) => { e.preventDefault(); if (feedback) { next(); return; } if (answer !== '') settle(Number(answer)); }}>
-          <p style={{ margin: 0, fontSize: 13.5, color: '#4b5d5f' }}>கணக்கு {index + 1} / {qs.length}</p>
+          <p style={{ margin: 0, fontSize: 13.5, color: MG_MUTED }}>கணக்கு {index + 1} / {qs.length}</p>
           <p style={{ margin: '12px 0 10px', fontSize: 34, fontWeight: 800, color: MG_INK }}>{q.text}</p>
-          <div style={{ height: 6, background: '#efe6cc', borderRadius: 3, overflow: 'hidden', marginBottom: 14 }}>
+          <div style={{ height: 6, background: 'var(--color-goldDisc)', borderRadius: 3, overflow: 'hidden', marginBottom: 14 }}>
             <div style={{ height: '100%', width: `${(left / SECONDS) * 100}%`, background: left <= 3 ? MG_BAD : MG_GOLD, transition: 'width 1s linear' }} />
           </div>
           <input
@@ -98,7 +98,7 @@ export default function SpeedMathPage() {
             pattern="[0-9]*"
             autoComplete="off"
             aria-label="விடை"
-            style={{ width: '100%', boxSizing: 'border-box', fontSize: 30, textAlign: 'center', padding: 12, borderRadius: 10, border: `2px solid ${MG_TEAL}`, background: '#fff', color: MG_INK }}
+            style={{ width: '100%', boxSizing: 'border-box', fontSize: 30, textAlign: 'center', padding: 12, borderRadius: 10, border: `2px solid ${MG_TEAL}`, background: MG_CARD, color: MG_INK }}
           />
           {feedback ? (
             <>
@@ -115,11 +115,11 @@ export default function SpeedMathPage() {
 
       {phase === 'over' && (
         <div style={mgCard}>
-          <p style={{ margin: 0, fontSize: 14, color: '#4b5d5f' }}>உங்கள் மதிப்பெண்</p>
+          <p style={{ margin: 0, fontSize: 14, color: MG_MUTED }}>உங்கள் மதிப்பெண்</p>
           <p style={{ margin: '6px 0 8px', fontSize: 36, fontWeight: 800 }}>{score} / {COUNT}</p>
           {newBest && <p style={{ margin: '0 0 8px', color: MG_GOLD, fontWeight: 700 }}>உங்கள் புதிய சிறந்த மதிப்பெண்! 🎉</p>}
-          {!newBest && best > 0 && <p style={{ margin: '0 0 8px', fontSize: 14.5, color: '#4b5d5f' }}>உங்கள் சிறந்த மதிப்பெண்: {best} / {COUNT}</p>}
-          <p style={{ margin: '0 0 16px', fontSize: 14, color: '#4b5d5f' }}>தினமும் சில நிமிடங்கள் பயிற்சி செய்தால் வேகமும் தெளிவும் கூடும்.</p>
+          {!newBest && best > 0 && <p style={{ margin: '0 0 8px', fontSize: 14.5, color: MG_MUTED }}>உங்கள் சிறந்த மதிப்பெண்: {best} / {COUNT}</p>}
+          <p style={{ margin: '0 0 16px', fontSize: 14, color: MG_MUTED }}>தினமும் சில நிமிடங்கள் பயிற்சி செய்தால் வேகமும் தெளிவும் கூடும்.</p>
           <button style={mgPrimaryBtn} onClick={begin}>மீண்டும் விளையாடு</button>
         </div>
       )}

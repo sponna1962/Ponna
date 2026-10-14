@@ -3,8 +3,14 @@
 // AI, no cost. A student's own best result is kept in THIS browser only and is
 // never compared with anyone else.
 
-export const MG_PAPER = '#FBF6E9';
-export const MG_INK = '#0F2F33';
+export const MG_PAPER = 'var(--color-paper)';
+export const MG_CARD = 'var(--color-card)';
+export const MG_LINE = 'var(--color-line)';
+export const MG_MUTED = 'var(--color-inkMuted)';
+export const MG_OKBG = 'var(--color-okBg)';
+export const MG_BADBG = 'var(--color-badBg)';
+export const MG_SEL = 'var(--color-goldDisc)';
+export const MG_INK = 'var(--color-ink)';
 export const MG_TEAL = '#1c6b6b';
 export const MG_GOLD = '#C98A12';
 export const MG_GOOD = '#237a3b';
