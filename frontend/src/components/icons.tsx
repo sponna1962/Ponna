@@ -124,6 +124,17 @@ export function LiveExamIcon(p: IconProps) {
   );
 }
 
+export function MindGymIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <path d="M9 4.5a3 3 0 0 0-3 3v.4a3 3 0 0 0-1.5 2.6 3 3 0 0 0 1.2 2.4A3.2 3.2 0 0 0 9 17.4V19" />
+      <path d="M15 4.5a3 3 0 0 1 3 3v.4a3 3 0 0 1 1.5 2.6 3 3 0 0 1-1.2 2.4A3.2 3.2 0 0 1 15 17.4V19" />
+      <path d="M9 4.5A3 3 0 0 1 12 6a3 3 0 0 1 3-1.5" />
+      <path d="M12 6v13" />
+    </Base>
+  );
+}
+
 export function DailyQuizIcon(p: IconProps) {
   return (
     <Base {...p}>

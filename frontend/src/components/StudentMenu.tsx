@@ -13,6 +13,7 @@ import {
   PracticeIcon,
   LiveExamIcon,
   DailyQuizIcon,
+  MindGymIcon,
   PlansIcon,
   ProgressIcon,
   AboutIcon,
@@ -76,6 +77,7 @@ export function StudentMenu({ onOpenChange, iconColor, showBack }: { onOpenChang
     { href: '/adaptive-mock', label: t.menu.adaptiveMock, Icon: PracticeIcon },
     { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
     { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
+    { href: '/mind-gym', label: 'Mind Gym', Icon: MindGymIcon },
   ];
 
   const sections: { heading: string; items: NavItem[] }[] = [
@@ -84,6 +86,7 @@ export function StudentMenu({ onOpenChange, iconColor, showBack }: { onOpenChang
       items: isLoggedIn ? preparationItems : preparationItems.map((i) => {
         if (i.href === '/study-notes') return i;
         if (i.href === '/ask-ponna') return i;
+        if (i.href === '/mind-gym') return i; // open to everyone, no sign-in needed
         if (i.href === '/quiz') return { ...i, href: '/?startLogin=1' };
         return { ...i, href: '/?startLogin=1', locked: true };
       }),

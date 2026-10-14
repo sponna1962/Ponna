@@ -1,6 +1,6 @@
 'use client';
 
-// Memory practice (Oct 2026, requested): a number is shown briefly, hides, and
+// Mind Gym · Memory Numbers (Oct 2026, requested): a number is shown briefly, hides, and
 // the student types it back from memory. Each correct answer adds one digit.
 // No sign-up, no server, no AI -- random digits made in the browser. The
 // student's own best level is kept in this browser only; it is never compared
@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { DISPLAY_FONT } from '../../lib/brand-theme';
+import { DISPLAY_FONT } from '../../../lib/brand-theme';
 
 const PAPER = '#FBF6E9';
 const INK = '#0F2F33';
@@ -127,8 +127,8 @@ export default function MemoryTestPage() {
   return (
     <main style={{ minHeight: '100vh', background: PAPER, color: INK, fontFamily: SERIF }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 40px' }}>
-        <Link href="/" style={{ color: TEAL, fontSize: 14, textDecoration: 'none' }}>← PONNA.in</Link>
-        <h1 style={{ fontSize: 24, margin: '12px 0 4px' }}>ஞாபக சக்தி பயிற்சி</h1>
+        <Link href="/mind-gym" style={{ color: TEAL, fontSize: 14, textDecoration: 'none' }}>← Mind Gym</Link>
+        <h1 style={{ fontSize: 24, margin: "12px 0 4px" }}>Memory Numbers</h1>
         <p style={{ fontSize: 14.5, color: '#4b5d5f', margin: '0 0 16px' }}>
           எண்ணைப் பார்த்து நினைவில் வைத்துக்கொண்டு, மறைந்த பின் தட்டச்சு செய்யுங்கள்.
         </p>
