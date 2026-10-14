@@ -13,7 +13,7 @@ const tools = [
   { title: 'Daily Challenge', body: 'Current Affairs மற்றும் Brain Challenge என இரண்டு தினசரி பயிற்சிகளைப் பெறலாம்.', href: '/daily-quiz', photo: '/home/tile-1.jpg' },
   { title: 'Live Exam', body: 'தேர்வு போன்ற சூழலில் தேர்வு எழுதலாம்.', href: '/live-exam', photo: '/home/tile-7.jpg' },
   { title: 'Adaptive Mock', body: 'உங்கள் பயிற்சிக்கேற்ப மாற்றித் தேர்வு வழங்கப்படும்.', href: '/adaptive-mock', photo: '/home/tile-8.jpg' },
-  { title: 'Mind Gym', body: 'நினைவாற்றல், வேகம், சிந்தனைத் திறனை வளர்க்கும் பயிற்சிகள்.', href: '/mind-gym', photo: '/home/tile-3.jpg' },
+  { title: 'Mind Gym', body: 'நினைவாற்றல், வேகம், சிந்தனைக்கான இலவசப் பயிற்சிகள். பதிவு தேவையில்லை.', href: '/mind-gym', photo: '/home/tile-3.jpg' },
   { title: 'Performance', body: 'உங்கள் மதிப்பெண் மற்றும் முன்னேற்றத்தைப் பார்க்கலாம்.', href: '/dashboard', photo: '/home/tile-9.jpg' },
   { title: 'Cut-off Predictor', body: 'உங்கள் மதிப்பெண் அடிப்படையில் கட்-ஆஃப் கணிப்பைப் பார்க்கலாம்.', href: '/cutoff-predictor', photo: '/home/tile-2.jpg' },
 ];
