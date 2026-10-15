@@ -237,8 +237,13 @@ export default function IndexPage() {
       setLoading(false);
       return;
     }
-    const { token } = await res.json();
+    const { token, isNewUser } = await res.json();
     completeLogin(token);
+    // Oct 2026 — tell Meta Pixel a brand-new student signed up (not on
+    // returning logins), so the ads can learn who actually registers.
+    if (isNewUser) {
+      try { (window as any).fbq?.('track', 'CompleteRegistration'); } catch { /* pixel blocked */ }
+    }
     // Sept 2026 (Item 4, Signup-less Diagnostic) — if this student took
     // the Test Your Ability guest diagnostic before signing up (guestId
     // stored locally by that page), claim it now so their already-

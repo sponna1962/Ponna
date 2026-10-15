@@ -119,7 +119,9 @@ export class StudentAuthService {
       user = await prisma.user.create({ data: { firebaseUid: uid, phone, signupIp: ip, lastLoginIp: ip } });
       await referralService.recordReferralIfPresent(user.id, referralCode);
       await this.registerDevice(user.id, deviceId, deviceLabel);
-      return this.issueSession(user.id);
+      // Oct 2026 — isNewUser lets the frontend tell Meta Pixel a sign-up
+      // happened (CompleteRegistration), so ads can optimise for sign-ups.
+      return { ...(await this.issueSession(user.id)), isNewUser: true };
     }
 
     if (email) {
@@ -146,7 +148,9 @@ export class StudentAuthService {
       user = await prisma.user.create({ data: { firebaseUid: uid, email, photoUrl: googlePicture, signupIp: ip, lastLoginIp: ip } });
       await referralService.recordReferralIfPresent(user.id, referralCode);
       await this.registerDevice(user.id, deviceId, deviceLabel);
-      return this.issueSession(user.id);
+      // Oct 2026 — isNewUser lets the frontend tell Meta Pixel a sign-up
+      // happened (CompleteRegistration), so ads can optimise for sign-ups.
+      return { ...(await this.issueSession(user.id)), isNewUser: true };
     }
 
     throw new Error('Firebase token included neither a phone number nor an email — cannot identify the student.');
