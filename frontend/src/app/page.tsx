@@ -67,6 +67,13 @@ export default function IndexPage() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  // Oct 2026 — 30-second wait before "Resend OTP" is offered.
+  const [resendLeft, setResendLeft] = useState(0);
+  useEffect(() => {
+    if (resendLeft <= 0) return;
+    const id = setTimeout(() => setResendLeft((n) => n - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendLeft]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Device-limit-reached flow — the pending Firebase token (so we can
@@ -390,6 +397,7 @@ export default function IndexPage() {
       const fullPhone = phone.startsWith('+') ? phone : `+91${phone}`;
       confirmationRef.current = await signInWithPhoneNumber(firebaseAuth, fullPhone, verifier);
       setOtpSent(true);
+      setResendLeft(30);
     } catch (err) {
       console.error(err);
       try { verifierRef.current?.clear(); } catch { /* ignore */ }
@@ -843,7 +851,10 @@ export default function IndexPage() {
       )}
 
       {view === 'phone' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#F7F3EA', padding: '16px 16px 28px' }}>
+          {/* Oct 2026 — phone/OTP screen redesigned to match the "உள் நுழைக"
+              card: title, large +91 number field, large OTP
+              field with SMS auto-fill, change-number and resend timer. */}
           <button
             onClick={() => {
               setView('chooseMethod');
@@ -854,45 +865,122 @@ export default function IndexPage() {
                 window.history.replaceState({ ponnaLogin: true }, '', '/?startLogin=1');
               }
             }}
-            style={{ background: 'none', border: 'none', color: COLORS.inkMuted, fontSize: 13, padding: 0, marginBottom: 16, cursor: 'pointer', textAlign: 'left' }}
+            style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: '#52677A', fontSize: 14, padding: '4px 0', cursor: 'pointer' }}
           >
             {t.login.back}
           </button>
 
-          <label style={{ display: 'block', fontSize: 14, marginBottom: 6, color: COLORS.ink }}>{t.login.phoneLabel}</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            disabled={otpSent}
-            placeholder="9876543210"
-            style={{ width: '100%', padding: 12, borderRadius: 8, border: `1px solid ${COLORS.line}`, marginBottom: 12, boxSizing: 'border-box' }}
-          />
+          <div style={{ height: 18 }} />
 
-          {otpSent && (
-            <>
-              <label style={{ display: 'block', fontSize: 14, marginBottom: 6, color: COLORS.ink }}>{t.login.otpLabel}</label>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder={t.login.otpPlaceholder}
-                style={{ width: '100%', padding: 12, borderRadius: 8, border: `1px solid ${COLORS.line}`, marginBottom: 12, boxSizing: 'border-box' }}
-              />
-            </>
-          )}
-
-          <div ref={recaptchaContainerRef} />
-
-          <button
-            onClick={otpSent ? verifyOtp : requestOtp}
-            disabled={loading || !phone}
-            style={{ width: '100%', padding: 14, borderRadius: 8, background: COLORS.ink, color: COLORS.paper, border: 'none' }}
+          <section
+            style={{
+              width: '100%',
+              maxWidth: 430,
+              margin: '0 auto',
+              background: '#fff',
+              border: '1px solid #E6E1D3',
+              borderRadius: 20,
+              boxShadow: '0 12px 32px rgba(20,45,70,.10)',
+              padding: '24px 18px 22px',
+              boxSizing: 'border-box',
+            }}
           >
-            {loading ? '…' : otpSent ? t.login.verify : t.login.sendOtp}
-          </button>
+            <h1 style={{ fontFamily: FONT_FAMILY, fontSize: 22, lineHeight: 1.4, fontWeight: 800, color: '#0B3864', margin: 0, textAlign: 'center' }}>
+              {otpSent ? t.login.otpTitle : t.login.phoneTitle}
+            </h1>
+            <p style={{ fontSize: 14, lineHeight: 1.55, color: '#52677A', margin: '6px 0 20px', textAlign: 'center' }}>
+              {otpSent ? (
+                <>
+                  {t.login.otpSentTo(`+91 ${phone}`)}
+                  {' · '}
+                  <button
+                    type="button"
+                    onClick={() => { setOtpSent(false); setOtp(''); setError(null); }}
+                    style={{ background: 'none', border: 'none', padding: 0, color: '#0B3864', fontSize: 14, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    {t.login.changeNumber}
+                  </button>
+                </>
+              ) : (
+                t.login.phoneSub
+              )}
+            </p>
 
-          {error && <p style={{ color: '#B4544A', marginTop: 12 }}>{error}</p>}
+            {!otpSent && (
+              <>
+                <label htmlFor="ponna-phone" style={{ display: 'block', fontSize: 14, marginBottom: 6, color: '#173247', fontWeight: 600 }}>{t.login.phoneLabel}</label>
+                <div style={{ display: 'flex', border: '1.5px solid #0B3864', borderRadius: 12, overflow: 'hidden', height: 56, marginBottom: 18 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', padding: '0 14px', background: '#EEF2F6', color: '#0B3864', fontSize: 19, fontWeight: 700, borderRight: '1px solid #D9D5C9' }}>+91</span>
+                  <input
+                    id="ponna-phone"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    maxLength={10}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(-10))}
+                    placeholder="98765 43210"
+                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', padding: '0 14px', fontSize: 21, letterSpacing: 1.5, color: '#173247', background: '#fff' }}
+                  />
+                </div>
+              </>
+            )}
+
+            {otpSent && (
+              <>
+                <input
+                  aria-label={t.login.otpLabel}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="••••••"
+                  autoFocus
+                  style={{ width: '100%', height: 60, border: '1.5px solid #0B3864', borderRadius: 12, outline: 'none', textAlign: 'center', fontSize: 28, letterSpacing: 12, color: '#173247', boxSizing: 'border-box', marginBottom: 10 }}
+                />
+                <p style={{ textAlign: 'center', fontSize: 13.5, color: '#52677A', margin: '0 0 16px' }}>
+                  {resendLeft > 0 ? (
+                    `${t.login.resendIn} 0:${String(resendLeft).padStart(2, '0')}`
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={requestOtp}
+                      disabled={loading}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#0B3864', fontSize: 14, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}
+                    >
+                      {t.login.resendOtp}
+                    </button>
+                  )}
+                </p>
+              </>
+            )}
+
+            <div ref={recaptchaContainerRef} />
+
+            <button
+              onClick={otpSent ? verifyOtp : requestOtp}
+              disabled={loading || (otpSent ? otp.length < 6 : phone.length < 10)}
+              style={{
+                width: '100%',
+                minHeight: 54,
+                borderRadius: 12,
+                background: '#0B3864',
+                color: '#FFD22A',
+                border: '1px solid #0B3864',
+                fontSize: 17,
+                fontWeight: 800,
+                cursor: 'pointer',
+                opacity: loading || (otpSent ? otp.length < 6 : phone.length < 10) ? 0.55 : 1,
+                boxShadow: '0 6px 16px rgba(11,56,100,.18)',
+              }}
+            >
+              {loading ? '…' : otpSent ? t.login.loginButton : t.login.sendOtp}
+            </button>
+
+            {error && <p style={{ color: '#A33D35', margin: '12px 0 0', fontSize: 13.5, lineHeight: 1.5, textAlign: 'center' }}>{error}</p>}
+          </section>
         </div>
       )}
 
