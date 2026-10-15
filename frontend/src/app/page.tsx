@@ -42,6 +42,7 @@ import { apiUrl } from '../lib/api-config';
 import { studentFetch } from '../lib/student-fetch';
 import { takeAfterLogin } from '../lib/after-login';
 import { getDeviceId, getDeviceLabel } from '../lib/device-id';
+import { detectInAppBrowser } from '../lib/in-app-browser';
 import { StudentMenu } from '../components/StudentMenu';
 import HomeDesignPreview from '../components/HomeDesignPreview';
 import { LogoutIcon, ProfileIcon, DevicesIcon } from '../components/icons';
@@ -77,6 +78,13 @@ export default function IndexPage() {
   const confirmationRef = useRef<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
   const verifierRef = useRef<RecaptchaVerifier | null>(null);
+  // Oct 2026 — inside Facebook/Instagram's in-app browser Google blocks
+  // "Sign in with Google" (403 disallowed_useragent), so there we hide the
+  // Google button and make phone OTP the way in.
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  useEffect(() => {
+    setInAppBrowser(detectInAppBrowser() !== null);
+  }, []);
 
   // Logged-in extras
   const [activeSubs, setActiveSubs] = useState<ActiveSubscription[] | null>(null);
@@ -726,6 +734,7 @@ export default function IndexPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {!inAppBrowser && (<>
               <button
                 onClick={signInWithGoogle}
                 disabled={loading}
@@ -756,6 +765,7 @@ export default function IndexPage() {
                 <span>அல்லது</span>
                 <div style={{ flex: 1, height: 1, background: '#E1E4E5' }} />
               </div>
+              </>)}
 
               <button
                 onClick={() => {
@@ -783,6 +793,12 @@ export default function IndexPage() {
                 <span aria-hidden="true" style={{ fontSize: 17 }}>📱</span>
                 Continue with Phone
               </button>
+
+              {inAppBrowser && (
+                <p style={{ margin: '2px 0 0', fontSize: 12.5, lineHeight: 1.55, color: '#52677A', textAlign: 'center' }}>
+                  Google மூலம் உள்நுழைய, மேலே உள்ள பொத்தானைத் தொட்டு Chrome-இல் திறக்கவும்.
+                </p>
+              )}
 
               {error && (
                 <p

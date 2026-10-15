@@ -12,6 +12,7 @@ import { useLanguage } from '../../lib/language-context';
 import { useTheme } from '../../lib/theme-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { studentFetch } from '../../lib/student-fetch';
+import { detectInAppBrowser } from '../../lib/in-app-browser';
 
 type EducationStatus = 'SCHOOL_STUDENT' | 'COLLEGE_STUDENT' | 'COMPLETED_STUDIES' | '';
 
@@ -104,6 +105,9 @@ export default function ProfilePage() {
   const phoneConfirmationRef = useRef<ConfirmationResult | null>(null);
   const phoneRecaptchaRef = useRef<HTMLDivElement>(null);
   const phoneVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  // Oct 2026 — Google linking is blocked inside Facebook/Instagram's browser.
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  useEffect(() => { setInAppBrowser(detectInAppBrowser() !== null); }, []);
   const [resettingHistory, setResettingHistory] = useState(false);
   const [milestones, setMilestones] = useState<{ type: string; label: string; emoji: string; achievedAt: string }[]>([]);
   const [pushStatus, setPushStatus] = useState<{ configured: boolean; subscribed: boolean; vapidPublicKey: string | null } | null>(null);
@@ -563,13 +567,13 @@ export default function ProfilePage() {
         <TextField label={t.profile.district} required value={district} onChange={setDistrict} />
         <TextField label={t.profile.cityTownVillage} required value={city} onChange={setCity} last />
 
-        <div style={{ borderTop: '1px solid var(--color-line)', marginTop: 16, paddingTop: 16 }}>
+        {!inAppBrowser && <div style={{ borderTop: '1px solid var(--color-line)', marginTop: 16, paddingTop: 16 }}>
           <button onClick={connectGoogle} disabled={connectingGoogle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: 13, borderRadius: 12, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)', fontWeight: 700, fontSize: 15 }}>
             {connectingGoogle ? '…' : `🔵 ${t.profile.connectGoogle} (விருப்பம்)`}
           </button>
           <p style={{ fontSize: 12, color: 'var(--color-inkMuted)', margin: '8px 2px 0', lineHeight: 1.5 }}>எண் மாறினாலும் உங்கள் பாஸ் பாதுகாப்பாக இருக்கும்.</p>
           {googleLinkMessage && <p style={{ fontSize: 13, color: googleLinkMessage.ok ? 'var(--color-ok)' : 'var(--color-bad)', margin: '10px 0 0' }}>{googleLinkMessage.text}</p>}
-        </div>
+        </div>}
       </Card>
 
       <Card title={t.profile.education}>

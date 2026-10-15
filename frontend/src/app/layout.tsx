@@ -6,6 +6,7 @@ import { ThemeStyles } from '../lib/brand-theme';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { LegalFooter } from '../components/LegalFooter';
 import { VisitTracker } from '../components/VisitTracker';
+import { InAppBrowserBanner } from '../components/InAppBrowserBanner';
 import StyledJsxRegistry from '../components/StyledJsxRegistry';
 
 export const metadata: Metadata = {
@@ -125,6 +126,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Oct 2026 — footer pinned to the bottom of the screen while a page is
                 still loading, so it never flashes at the top and jumps down. */}
             <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+              {/* Oct 2026 — Facebook/Instagram in-app browser escape (Google
+                  sign-in is blocked there). Renders nothing in normal browsers. */}
+              <InAppBrowserBanner />
               <div style={{ flex: 1 }}>{children}</div>
               <LegalFooter />
             </div>
