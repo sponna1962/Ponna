@@ -149,7 +149,37 @@ export async function getVisitSummary(range: 'today' | '7' | '30') {
   ]);
 
   const rangeVisitors = (await win(rangeStart, null)).visitors;
+
+  // Oct 2026 — step-by-step funnel for the selected range: new visitors ->
+  // free practice steps (recorded by /free-practice as /free-practice/<step>)
+  // -> new sign-ups -> paid passes. Distinct visitors per step.
+  const [fnNew, fnSteps, fnPaid] = await Promise.all([
+    prisma.$queryRawUnsafe<{ n: number; fb: number }[]>(
+      `SELECT COUNT(DISTINCT "visitorId")::int AS n,
+              COUNT(DISTINCT CASE WHEN "isEntry" AND ("source" IN ('facebook','instagram') OR "source" LIKE 'fb%' OR "source" LIKE 'ig%') THEN "visitorId" END)::int AS fb
+         FROM "SiteVisit" WHERE "createdAt" >= $1 AND "isNewVisitor" = true`, rangeStart),
+    prisma.$queryRawUnsafe<{ path: string; n: number }[]>(
+      `SELECT "path", COUNT(DISTINCT "visitorId")::int AS n FROM "SiteVisit"
+        WHERE "createdAt" >= $1 AND "path" LIKE '/free-practice/%' GROUP BY 1`, rangeStart),
+    prisma.$queryRawUnsafe<{ n: number }[]>(
+      `SELECT COUNT(DISTINCT s."userId")::int AS n FROM "Subscription" s
+         JOIN "Plan" p ON p."id" = s."planId" JOIN "User" u ON u."id" = s."userId"
+        WHERE s."createdAt" >= $1 AND p."isFree" = false AND u."isTestAccount" = false`, rangeStart),
+  ]);
+  const step = (k: string) => fnSteps.find((r) => r.path === `/free-practice/${k}`)?.n ?? 0;
+  const funnel = {
+    newVisitors: fnNew[0]?.n ?? 0,
+    newFromFacebook: fnNew[0]?.fb ?? 0,
+    practiceStarted: step('started'),
+    firstAnswered: step('q1-answered'),
+    finishedFive: step('finished'),
+    signupClicked: step('signup-click'),
+    signedUp: signupsRange[0]?.n ?? 0,
+    paid: fnPaid[0]?.n ?? 0,
+  };
+
   return {
+    funnel,
     range,
     liveNow: live[0]?.n ?? 0,
     today, yesterday, last7, last30,

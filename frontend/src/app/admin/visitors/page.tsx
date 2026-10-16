@@ -20,7 +20,66 @@ type Summary = {
   hoursToday: { hour: number; pageviews: number }[];
   rangeSignups: number;
   rangeVisitors: number;
+  funnel?: {
+    newVisitors: number; newFromFacebook: number; practiceStarted: number; firstAnswered: number;
+    finishedFive: number; signupClicked: number; signedUp: number; paid: number;
+  };
 };
+
+// Oct 2026 — "மாணவர் பயணம்": where new visitors drop off, step by step.
+function Funnel({ f, label }: { f: NonNullable<Summary['funnel']>; label: string }) {
+  const rows: { name: string; n: number; note?: string }[] = [
+    { name: 'தளத்திற்கு வந்தவர்கள் (புதியவர்கள்)', n: f.newVisitors, note: `இதில் Facebook / Instagram: ${f.newFromFacebook}` },
+    { name: 'இலவசப் பயிற்சி தொடங்கியவர்கள்', n: f.practiceStarted },
+    { name: 'முதல் வினாவுக்குப் பதில்', n: f.firstAnswered },
+    { name: '5 வினாக்களையும் முடித்தவர்கள்', n: f.finishedFive },
+    { name: 'பதிவு பொத்தானைத் தொட்டவர்கள்', n: f.signupClicked },
+    { name: 'பதிவு செய்தவர்கள்', n: f.signedUp },
+    { name: 'பணம் கட்டியவர்கள்', n: f.paid },
+  ];
+  const max = Math.max(1, rows[0].n, ...rows.map((r) => r.n));
+  // Biggest drop = lowest % carried over from the previous step (only where the previous step had people).
+  let worst = -1;
+  let worstPct = 101;
+  rows.forEach((r, i) => {
+    if (i === 0 || rows[i - 1].n === 0) return;
+    const pct = (r.n / rows[i - 1].n) * 100;
+    if (pct < worstPct) { worstPct = pct; worst = i; }
+  });
+  return (
+    <div style={{ ...card, marginBottom: 18 }}>
+      <h2 style={{ ...h2, marginBottom: 4 }}>மாணவர் பயணம் — {label}</h2>
+      <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 14px' }}>
+        ஒவ்வொரு படியிலும் எத்தனை பேர் தொடர்ந்தார்கள். அடைப்புக்குறிக்குள் உள்ள % = முந்தைய படியிலிருந்து தொடர்ந்தவர்கள்.
+      </p>
+      {rows.map((r, i) => {
+        const pct = i > 0 && rows[i - 1].n > 0 ? Math.round((r.n / rows[i - 1].n) * 100) : null;
+        const bad = i === worst;
+        return (
+          <div key={r.name} style={{ marginBottom: 11 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13.5, marginBottom: 4 }}>
+              <span>{r.name}</span>
+              <span>
+                <strong>{r.n}</strong>
+                {pct !== null && <span style={{ marginLeft: 6, fontSize: 12, color: bad ? '#b91c1c' : '#64748b', fontWeight: bad ? 700 : 400 }}>({pct}%)</span>}
+              </span>
+            </div>
+            <Bar value={r.n} max={max} color={bad ? '#dc2626' : '#2563eb'} />
+            {r.note && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>{r.note}</div>}
+          </div>
+        );
+      })}
+      {worst > 0 && worstPct < 100 && (
+        <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: '#fef3c7', color: '#92400e', fontSize: 13, lineHeight: 1.55 }}>
+          ⚠ அதிக விலகல்: “{rows[worst - 1].name}” → “{rows[worst].name}” ({Math.round(100 - worstPct)}% விலகல்)
+        </div>
+      )}
+      <p style={{ fontSize: 11.5, color: '#94a3b8', margin: '10px 0 0' }}>
+        “பதிவு செய்தவர்கள்”, “பணம் கட்டியவர்கள்” — இலவசப் பயிற்சி இல்லாமல் நேரடியாக உள்நுழைந்தவர்களும் இதில் அடங்குவர், அதனால் சில நேரம் முந்தைய படியை விடக் கூடுதலாக இருக்கலாம். சோதனைக் கணக்குகள் சேர்க்கப்படவில்லை.
+      </p>
+    </div>
+  );
+}
 
 const PAGE_NAMES: Record<string, string> = {
   '/': 'Home (முகப்பு)',
@@ -152,6 +211,8 @@ export default function VisitorsPage() {
           <button key={k} onClick={() => setRange(k)} style={{ padding: '7px 14px', borderRadius: 999, border: '1px solid ' + (range === k ? '#0f172a' : '#cbd5e1'), background: range === k ? '#0f172a' : '#fff', color: range === k ? '#fff' : '#0f172a', fontWeight: 600, cursor: 'pointer' }}>{label}</button>
         ))}
       </div>
+
+      {data.funnel && <Funnel f={data.funnel} label={rangeLabel} />}
 
       <div style={{ ...card, marginBottom: 18, background: '#f0fdfa', borderColor: '#99f6e4' }}>
         <div style={{ fontSize: 14, color: '#0f172a' }}>
