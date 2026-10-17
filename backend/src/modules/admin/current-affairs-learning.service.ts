@@ -4,7 +4,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.7-flash';
 const WINDOW_HOURS = 48;
 const IST_OFFSET_MINUTES = 330;
-const MIN_ITEMS = 8;
+const MIN_ITEMS = 4;
 const MAX_ITEMS = 20;
 
 type Candidate = { category: string; headline: string; eventDateTime: string; location: string; facts: string[] };
