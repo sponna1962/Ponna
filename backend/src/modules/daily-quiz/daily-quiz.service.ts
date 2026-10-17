@@ -62,7 +62,7 @@ export class DailyQuizService {
     } catch (err: any) {
       return { rows: [], errors: [`Could not parse CSV: ${err.message}`] };
     }
-    if (records.length !== 10) errors.push(`Expected exactly 10 questions, found ${records.length}.`);
+    if (records.length < 5 || records.length > 10) errors.push(`Expected 5 questions, found ${records.length}.`);
     const rows: ParsedRow[] = [];
     records.forEach((r, i) => {
       const rowNum = i + 1;
@@ -116,7 +116,7 @@ export class DailyQuizService {
 
   async publishNow(id: string) {
     const quiz = await prisma.dailyQuiz.findUniqueOrThrow({ where: { id }, include: { questions: true } });
-    if (quiz.questions.length !== 10) throw new DailyQuizError(`Cannot publish — expected 10 questions, found ${quiz.questions.length}.`);
+    if (quiz.questions.length < 5 || quiz.questions.length > 10) throw new DailyQuizError(`Cannot publish — expected 5 questions, found ${quiz.questions.length}.`);
     if (quiz.status === DailyQuizStatus.EXPIRED) throw new DailyQuizError('Cannot publish an expired quiz.');
     const publishAt = new Date();
     const expiresAt = new Date(publishAt.getTime() + 24 * 60 * 60 * 1000);

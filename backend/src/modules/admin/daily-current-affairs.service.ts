@@ -8,7 +8,7 @@ import { prisma } from '../../lib/prisma';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.7-flash';
-const QUESTIONS_PER_DAY = 10;
+const QUESTIONS_PER_DAY = 5;
 const CURRENT_AFFAIRS_WINDOW_HOURS = 48;
 const IST_OFFSET_MINUTES = 5 * 60 + 30;
 
@@ -93,7 +93,7 @@ PURPOSE: This is a reasoning challenge, NOT a current-affairs quiz and NOT a nor
 
 DIFFICULTY: Use ONLY Medium and Hard questions. Target 5 Medium + 5 Hard. Do not generate Easy questions.
 
-MIX THE QUESTION TYPES across the 10 questions. Use a balanced mixture of:
+MIX THE QUESTION TYPES across the ${QUESTIONS_PER_DAY} questions. Use a balanced mixture of:
 - logical reasoning
 - number/pattern reasoning
 - arithmetic reasoning
@@ -127,7 +127,7 @@ ${previousText}
 Return ONLY valid JSON in this exact shape:
 {"questions":[{"questionTextTa":"...","optionATa":"...","optionBTa":"...","optionCTa":"...","optionDTa":"...","questionTextEn":"...","optionAEn":"...","optionBEn":"...","optionCEn":"...","optionDEn":"...","correctOption":"A","explanationTa":"...","explanationEn":"..."}]}
 
-Final checks before returning: exactly 10 questions; approximately 5 Medium and 5 Hard; four options each; one correct answer each; no duplicate or near-duplicate concepts; no previous question reused; no current-affairs facts; all calculations verified.`;
+Final checks before returning: exactly ${QUESTIONS_PER_DAY} questions; a mix of Medium and Hard (about 3 Medium and 2 Hard); four options each; one correct answer each; no duplicate or near-duplicate concepts; no previous question reused; no current-affairs facts; all calculations verified.`;
 }
 
 export class DailyCurrentAffairsService {
@@ -265,7 +265,7 @@ export class DailyCurrentAffairsService {
     const eligible = verification.verified.slice(0, QUESTIONS_PER_DAY);
 
     if (eligible.length < QUESTIONS_PER_DAY) {
-      return { created: 0, quizId: null, quizDate, skippedNoResults: true, verification: { step1Discovered: candidates.length, step2Verified: verification.verified.length, rejectedOld: verification.rejectedOld, rejectedUnverified: verification.rejectedUnverified, reason: `Only ${eligible.length} eligible events in the last ${CURRENT_AFFAIRS_WINDOW_HOURS} hours; 10 required. Nothing created.` } };
+      return { created: 0, quizId: null, quizDate, skippedNoResults: true, verification: { step1Discovered: candidates.length, step2Verified: verification.verified.length, rejectedOld: verification.rejectedOld, rejectedUnverified: verification.rejectedUnverified, reason: `Only ${eligible.length} eligible events in the last ${CURRENT_AFFAIRS_WINDOW_HOURS} hours; ${QUESTIONS_PER_DAY} required. Nothing created.` } };
     }
 
     const previousQuestions = await this.previousCurrentAffairsQuestions();
@@ -273,7 +273,7 @@ export class DailyCurrentAffairsService {
     const questions = this.removeExactPreviousDuplicates(generatedQuestions, previousQuestions);
 
     if (questions.length < QUESTIONS_PER_DAY) {
-      return { created: 0, quizId: null, quizDate, skippedNoResults: true, verification: { step1Discovered: candidates.length, step2Verified: verification.verified.length, eligibleUsed: eligible.length, generated: generatedQuestions.length, acceptedAfterNoRepeat: questions.length, rejectedOld: verification.rejectedOld, rejectedUnverified: verification.rejectedUnverified, reason: `Only ${questions.length} genuinely new questions remained after the no-repeat check; 10 required. Nothing created.` } };
+      return { created: 0, quizId: null, quizDate, skippedNoResults: true, verification: { step1Discovered: candidates.length, step2Verified: verification.verified.length, eligibleUsed: eligible.length, generated: generatedQuestions.length, acceptedAfterNoRepeat: questions.length, rejectedOld: verification.rejectedOld, rejectedUnverified: verification.rejectedUnverified, reason: `Only ${questions.length} genuinely new questions remained after the no-repeat check; ${QUESTIONS_PER_DAY} required. Nothing created.` } };
     }
 
     const quiz = await this.createDailyQuiz(quizDate, DailyQuizType.DAILY_QUIZ, questions);
@@ -302,9 +302,9 @@ export class DailyCurrentAffairsService {
     questions = questions.slice(0, QUESTIONS_PER_DAY);
 
     // Never pad with an old question. If the no-repeat gate leaves fewer than
-    // 10 genuinely new questions, today's Brain Challenge is not created.
+    // N genuinely new questions, today's Brain Challenge is not created.
     if (questions.length < QUESTIONS_PER_DAY) {
-      throw new Error(`Only ${questions.length} genuinely new Brain Challenge questions remained after the no-repeat check; 10 are required, so nothing was created.`);
+      throw new Error(`Only ${questions.length} genuinely new Brain Challenge questions remained after the no-repeat check; ${QUESTIONS_PER_DAY} are required, so nothing was created.`);
     }
 
     const quiz = await this.createDailyQuiz(quizDate, DailyQuizType.BRAIN_CHALLENGE, questions);
