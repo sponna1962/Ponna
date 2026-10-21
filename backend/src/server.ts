@@ -40,6 +40,7 @@ import { payuService, PayuError } from './modules/payments/payu.service';
 import { trialContactMissing } from './modules/profile/profile.service';
 import { dailyEmailService, verifyUnsubscribeToken, type DailyEmailKind } from './modules/notifications/daily-email.service';
 import { sendWhatsAppTemplate, WhatsAppSendError } from './modules/notifications/whatsapp-adapter';
+import { handleWhatsAppWebhookValue, listConversations, listMessages, sendManualReply } from './modules/notifications/whatsapp-inbox.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
@@ -2189,6 +2190,8 @@ app.post('/api/whatsapp/webhook', (req, res) => {
     }
 
     res.sendStatus(200);
+    // Stored + answered after the fast 200 so Meta never waits on our reply.
+    for (const entry of entries) for (const change of entry.changes ?? []) void handleWhatsAppWebhookValue(change.value ?? {});
   } catch (err) {
     console.error('[whatsapp-webhook] Processing failed:', err);
     // Still 200 — Meta retries aggressively on non-2xx and a malformed or
@@ -4047,6 +4050,22 @@ app.post('/admin/whatsapp/test', requireStaffAuth, requireRole('SUPER_ADMIN'), a
   } catch (err: any) {
     res.status(502).json({ ok: false, error: err instanceof WhatsAppSendError ? err.message : 'Failed' });
   }
+});
+
+// WhatsApp inbox (SUPER_ADMIN): conversations, one thread, and a manual reply.
+app.get('/admin/whatsapp/conversations', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try { res.json(await listConversations()); } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+app.get('/admin/whatsapp/messages', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  const phone = String(req.query.phone ?? '').replace(/\D/g, '');
+  if (!phone) return res.status(400).json({ error: 'phone தேவை.' });
+  try { res.json(await listMessages(phone)); } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+app.post('/admin/whatsapp/reply', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  const phone = String(req.body?.phone ?? '').replace(/\D/g, '');
+  const text = String(req.body?.text ?? '').trim();
+  if (!phone || !text) return res.status(400).json({ ok: false, error: 'phone மற்றும் text தேவை.' });
+  try { await sendManualReply(phone, text); res.json({ ok: true }); } catch (err: any) { res.status(400).json({ ok: false, error: err.message ?? 'Failed' }); }
 });
 
 app.get('/admin/plans', requireStaffAuth, async (_req, res) => {

@@ -2294,3 +2294,29 @@ model DailyEmailLog {
 
   @@unique([kind, day])
 }
+
+// Oct 2026 — WhatsApp inbox: every message to/from the PONNA business number
+// and one row per person who has messaged us (their message IS their opt-in).
+model WhatsAppContact {
+  phone           String    @id // digits only, e.g. 919876543210
+  name            String?
+  optedIn         Boolean   @default(true)
+  optedOutAt      DateTime?
+  firstInboundAt  DateTime  @default(now())
+  lastInboundAt   DateTime?
+  lastAutoReplyAt DateTime?
+  welcomedAt      DateTime?
+}
+
+model WhatsAppMessage {
+  id          String   @id @default(uuid())
+  waMessageId String?  @unique
+  phone       String
+  direction   String   // IN | OUT
+  kind        String   // text | image | ... | auto (automatic reply) | manual (typed in Admin)
+  body        String?
+  createdAt   DateTime @default(now())
+
+  @@index([phone, createdAt])
+  @@index([createdAt])
+}

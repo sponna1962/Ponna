@@ -60,3 +60,26 @@ export async function sendWhatsAppTemplate(
   const data: any = await res.json().catch(() => null);
   return data?.messages?.[0]?.id;
 }
+
+/**
+ * Sends one free-form text message. Only works inside the 24-hour window that
+ * opens when the person messages us first; outside it Meta rejects the call.
+ */
+export async function sendWhatsAppText(toPhone: string, text: string): Promise<string | undefined> {
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!accessToken || !phoneNumberId) {
+    throw new WhatsAppSendError('WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID are not configured.');
+  }
+  const res = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to: toPhone.replace(/^\+/, ''), type: 'text', text: { preview_url: true, body: text } }),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new WhatsAppSendError(`WhatsApp API error (${res.status}): ${errText.slice(0, 300)}`);
+  }
+  const data: any = await res.json().catch(() => null);
+  return data?.messages?.[0]?.id;
+}
