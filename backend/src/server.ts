@@ -39,6 +39,7 @@ import { ManualPaymentService, ManualPaymentError } from './modules/payments/man
 import { payuService, PayuError } from './modules/payments/payu.service';
 import { trialContactMissing } from './modules/profile/profile.service';
 import { dailyEmailService, verifyUnsubscribeToken, type DailyEmailKind } from './modules/notifications/daily-email.service';
+import { sendWhatsAppTemplate, WhatsAppSendError } from './modules/notifications/whatsapp-adapter';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
@@ -4028,6 +4029,24 @@ app.post('/admin/email/test', requireStaffAuth, requireRole('SUPER_ADMIN'), asyn
   const to = String(req.body?.to ?? '').trim();
   if (!['MORNING', 'CURRENT_AFFAIRS', 'QUIZ', 'WELCOME'].includes(kind) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'kind மற்றும் to (மின்னஞ்சல்) தேவை.' });
   try { res.json(await dailyEmailService.sendTest(kind, to)); } catch (err: any) { console.error(err); res.status(500).json({ error: err.message ?? 'Failed' }); }
+});
+
+// POST /admin/whatsapp/test { kind: HELLO_WORLD | WELCOME, to } — sends ONE template message to the given number only.
+const WHATSAPP_TEST_TEMPLATES: Record<string, { name: string; language: string }> = {
+  HELLO_WORLD: { name: 'hello_world', language: 'en_US' },
+  WELCOME: { name: 'ponna_welcome', language: 'en' },
+};
+app.post('/admin/whatsapp/test', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  const tpl = WHATSAPP_TEST_TEMPLATES[String(req.body?.kind ?? '')];
+  const digits = String(req.body?.to ?? '').replace(/[\s+\-()]/g, '');
+  if (!tpl || !/^(91)?[6-9]\d{9}$/.test(digits)) return res.status(400).json({ ok: false, error: 'kind மற்றும் சரியான 10 இலக்க இந்திய எண் தேவை.' });
+  const to = digits.length === 10 ? `+91${digits}` : `+${digits}`;
+  try {
+    const id = await sendWhatsAppTemplate(to, tpl.name, [], tpl.language);
+    res.json({ ok: true, messageId: id ?? null });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err instanceof WhatsAppSendError ? err.message : 'Failed' });
+  }
 });
 
 app.get('/admin/plans', requireStaffAuth, async (_req, res) => {

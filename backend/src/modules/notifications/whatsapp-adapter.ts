@@ -18,7 +18,12 @@ export class WhatsAppSendError extends Error {}
  * Business Manager, this function has no knowledge of it beyond the name
  * and how many params it expects.
  */
-export async function sendWhatsAppTemplate(toPhoneE164: string, templateName: string, templateParams: string[]): Promise<void> {
+export async function sendWhatsAppTemplate(
+  toPhoneE164: string,
+  templateName: string,
+  templateParams: string[],
+  languageCode: string = 'ta',
+): Promise<string | undefined> {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!accessToken || !phoneNumberId) {
@@ -34,7 +39,7 @@ export async function sendWhatsAppTemplate(toPhoneE164: string, templateName: st
     type: 'template',
     template: {
       name: templateName,
-      language: { code: 'ta' }, // matches the approved Tamil template; a future English variant would need its own approved template name
+      language: { code: languageCode }, // default 'ta' = the approved Tamil reminder template; callers pass another code for templates approved in a different language
       components:
         templateParams.length > 0
           ? [{ type: 'body', parameters: templateParams.map((text) => ({ type: 'text', text })) }]
@@ -52,4 +57,6 @@ export async function sendWhatsAppTemplate(toPhoneE164: string, templateName: st
     const errText = await res.text().catch(() => '');
     throw new WhatsAppSendError(`WhatsApp API error (${res.status}): ${errText.slice(0, 300)}`);
   }
+  const data: any = await res.json().catch(() => null);
+  return data?.messages?.[0]?.id;
 }
