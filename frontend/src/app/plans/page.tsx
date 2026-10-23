@@ -625,7 +625,7 @@ function PlansPageInner() {
                         <>
                           <span style={{ fontFamily: FONT_FAMILY, fontSize: 32, fontWeight: 800, color: COLORS.gold }}>₹{couponQuote.finalAmount}</span>
                           <span style={{ fontSize: 13, color: COLORS.inkMuted, textDecoration: 'line-through' }}>₹{couponQuote.price}</span>
-                          <span style={{ fontSize: 13, color: '#065f46', fontWeight: 700 }}>₹{couponQuote.discount} தள்ளுபடி</span>
+                          <span style={{ fontSize: 13, color: '#065f46', fontWeight: 700 }}>₹{couponQuote.discount} off</span>
                         </>
                       ) : hasLaunch ? (
                         <>
@@ -667,13 +667,9 @@ function PlansPageInner() {
                       <div style={{ marginBottom: 14 }}>
                         {couponQuote && couponQuote.planId === p.id ? (
                           <p style={{ margin: 0, fontSize: 13, color: '#065f46' }}>
-                            ✅ கூப்பன் {couponQuote.code} ஏற்கப்பட்டது.{' '}
-                            <button onClick={() => { setCouponQuote(null); setCouponInput(''); }} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', color: COLORS.inkMuted, cursor: 'pointer', fontSize: 13 }}>நீக்கு</button>
+                            ✅ Coupon {couponQuote.code} applied.{' '}
+                            <button onClick={() => { setCouponQuote(null); setCouponInput(''); }} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', color: COLORS.inkMuted, cursor: 'pointer', fontSize: 13 }}>Remove</button>
                           </p>
-                        ) : !couponOpen ? (
-                          <button onClick={() => setCouponOpen(true)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, color: COLORS.gold, cursor: 'pointer' }}>
-                            கூப்பன் குறியீடு உள்ளதா?
-                          </button>
                         ) : (
                           <div>
                             <div style={{ display: 'flex', gap: 8 }}>
@@ -681,12 +677,12 @@ function PlansPageInner() {
                                 value={couponInput}
                                 onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
                                 onKeyDown={(e) => { if (e.key === 'Enter') applyCoupon(p.id, couponInput); }}
-                                placeholder="கூப்பன் குறியீடு"
+                                placeholder="Coupon Code"
                                 autoCapitalize="characters" autoComplete="off" spellCheck={false}
                                 style={{ flex: 1, minWidth: 0, padding: '10px 12px', fontSize: 15, letterSpacing: 1, border: `1px solid ${COLORS.line}`, borderRadius: 8, background: '#fff', color: '#0f172a' }}
                               />
                               <button onClick={() => applyCoupon(p.id, couponInput)} disabled={couponBusy || !couponInput.trim()} style={{ padding: '0 16px', border: 'none', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, fontWeight: 700, cursor: 'pointer', opacity: couponBusy || !couponInput.trim() ? 0.6 : 1 }}>
-                                {couponBusy ? '…' : 'பயன்படுத்து'}
+                                {couponBusy ? '…' : 'Apply'}
                               </button>
                             </div>
                             {couponError && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#b91c1c' }}>{couponError}</p>}
