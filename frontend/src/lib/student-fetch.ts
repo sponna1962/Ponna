@@ -66,7 +66,7 @@ export async function studentFetch(path: string, options: RequestInit = {}) {
     }
     localStorage.removeItem('ponna_student_token');
     // Plans / Trial pages: remember them so login brings the student back.
-    if (/^\/(plans|trial)\/?$/.test(window.location.pathname)) {
+    if (/^\/(plans|trial|coupon)\/?$/.test(window.location.pathname)) {
       rememberAfterLogin(window.location.pathname + window.location.search);
     }
     window.location.href = '/';

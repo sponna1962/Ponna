@@ -1047,11 +1047,31 @@ model PayuPayment {
   mihpayid       String?           @unique // PayU's own payment id, set on success
   subscriptionId String?
   failureReason  String?
+  couponId       String?
+  coupon         Coupon?           @relation(fields: [couponId], references: [id])
+  discountAmount Decimal?          @db.Decimal(10, 2)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
   @@index([userId])
   @@index([status, createdAt])
+  @@index([couponId])
+}
+
+// Oct 2026 — discount coupons. Not shown anywhere in the app: the owner gives
+// a code by phone/WhatsApp and the student types it on /coupon. A code takes
+// `amountOff` rupees off the Pass price, works for `maxUses` successful
+// payments (1 = personal code) and stops at `expiresAt`.
+model Coupon {
+  id        String        @id @default(uuid())
+  code      String        @unique
+  amountOff Decimal       @db.Decimal(10, 2)
+  maxUses   Int           @default(1)
+  expiresAt DateTime
+  active    Boolean       @default(true)
+  note      String?
+  createdAt DateTime      @default(now())
+  payments  PayuPayment[]
 }
 
 enum PayuPaymentStatus {

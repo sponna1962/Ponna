@@ -37,6 +37,7 @@ import { startScheduledJobs } from './modules/scheduled-jobs';
 import { PaymentService, ProfileIncompleteError } from './modules/payments/payment.service';
 import { ManualPaymentService, ManualPaymentError } from './modules/payments/manual-payment.service';
 import { payuService, PayuError } from './modules/payments/payu.service';
+import { quoteCoupon, createCoupon, listCoupons, deactivateCoupon, CouponError } from './modules/payments/coupon.service';
 import { trialContactMissing } from './modules/profile/profile.service';
 import { dailyEmailService, verifyUnsubscribeToken, type DailyEmailKind } from './modules/notifications/daily-email.service';
 import { sendWhatsAppTemplate, WhatsAppSendError } from './modules/notifications/whatsapp-adapter';
@@ -1984,12 +1985,51 @@ app.get('/payments/payu/info', requireStudentAuth, async (_req, res) => {
 
 app.post('/payments/payu/checkout', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    const { planId } = req.body;
+    const { planId, couponCode } = req.body;
     const callbackUrl = `${req.protocol}://${req.get('host')}/payments/payu/callback`;
-    res.json(await payuService.createCheckout(req.studentUserId!, planId, callbackUrl));
+    res.json(await payuService.createCheckout(req.studentUserId!, planId, callbackUrl, couponCode ? String(couponCode) : undefined));
   } catch (err: any) {
     console.error('PayU checkout failed:', err);
     res.status(400).json({ error: err instanceof PayuError ? err.message : 'Could not start payment' });
+  }
+});
+
+// POST /coupons/quote {code} — what the Pass would cost with this code.
+// Not linked anywhere in the app; students reach /coupon only via a link/code we give them.
+app.post('/coupons/quote', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
+  try {
+    const q = await quoteCoupon(req.body?.code, undefined, req.studentUserId!);
+    res.json({ code: q.code, planId: q.planId, planName: q.planName, price: q.price, discount: q.discount, finalAmount: q.finalAmount, expiresAt: q.expiresAt });
+  } catch (err: any) {
+    if (err instanceof CouponError) return res.status(400).json({ error: err.message });
+    console.error('Coupon quote failed:', err);
+    res.status(500).json({ error: 'குறியீட்டைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயலுங்கள்.' });
+  }
+});
+
+// Admin coupons (SUPER_ADMIN): list / create / deactivate.
+app.get('/admin/coupons', requireStaffAuth, requireRole('SUPER_ADMIN'), async (_req, res) => {
+  res.json(await listCoupons());
+});
+app.post('/admin/coupons', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const c = await createCoupon({
+      code: req.body?.code, amountOff: req.body?.amountOff, maxUses: req.body?.maxUses,
+      hoursValid: req.body?.hoursValid, note: req.body?.note,
+    });
+    res.json({ id: c.id, code: c.code });
+  } catch (err: any) {
+    if (err instanceof CouponError) return res.status(400).json({ error: err.message });
+    console.error('Coupon create failed:', err);
+    res.status(500).json({ error: 'உருவாக்க முடியவில்லை' });
+  }
+});
+app.post('/admin/coupons/:id/deactivate', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    await deactivateCoupon(String(req.params.id));
+    res.json({ ok: true });
+  } catch {
+    res.status(404).json({ error: 'குறியீடு கிடைக்கவில்லை' });
   }
 });
 

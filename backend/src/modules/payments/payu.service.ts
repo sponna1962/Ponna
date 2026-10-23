@@ -14,6 +14,7 @@ import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { milestoneService } from '../practice-preference/milestone.service';
 import { adminAlertService } from './admin-alert.service';
+import { quoteCoupon, CouponError } from './coupon.service';
 
 export class PayuError extends Error {}
 
@@ -52,7 +53,7 @@ export class PayuService {
   }
 
   /** Builds the form fields the browser must POST to PayU. */
-  async createCheckout(userId: string, planId: string, callbackUrl: string) {
+  async createCheckout(userId: string, planId: string, callbackUrl: string, couponCode?: string) {
     const cfg = this.config();
     if (!cfg.enabled || !cfg.key || !cfg.salt) throw new PayuError('Online payment is not available right now.');
 
@@ -70,7 +71,21 @@ export class PayuService {
     const price = plan.launchPrice ?? plan.regularPrice;
     if (!price) throw new PayuError(`No price set for ${plan.name}.`);
 
-    const amount = Number(price).toFixed(2);
+    // Optional discount code (validated again here, on the server).
+    let amountNum = Number(price);
+    let couponId: string | null = null;
+    let discountAmount: number | null = null;
+    if (couponCode) {
+      try {
+        const q = await quoteCoupon(couponCode, planId);
+        amountNum = q.finalAmount;
+        couponId = q.couponId;
+        discountAmount = q.discount;
+      } catch (err) {
+        throw new PayuError(err instanceof CouponError ? err.message : 'கூப்பன் குறியீட்டைச் சரிபார்க்க முடியவில்லை.');
+      }
+    }
+    const amount = amountNum.toFixed(2);
     const txnid = `PN${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`.toUpperCase();
     const fields = {
       key: cfg.key,
@@ -86,7 +101,7 @@ export class PayuService {
     };
     const hash = requestHash(fields, cfg.salt);
 
-    await prisma.payuPayment.create({ data: { txnid, userId, planId, amount } });
+    await prisma.payuPayment.create({ data: { txnid, userId, planId, amount, couponId, discountAmount } });
     return { action: cfg.action, fields: { ...fields, hash } };
   }
 
@@ -131,7 +146,7 @@ export class PayuService {
 
     if (created) {
       milestoneService.checkAndAward(payment.userId).catch((err) => console.error('Milestone check failed after PayU payment:', err));
-      adminAlertService.notify('✅ PONNA: PayU பணம் வந்தது', `${plan.name} · ₹${payment.amount} · txn ${txnid}`);
+      adminAlertService.notify('✅ PONNA: PayU பணம் வந்தது', `${plan.name} · ₹${payment.amount}${payment.couponId ? ' (கூப்பன்)' : ''} · txn ${txnid}`);
     }
     return { outcome: 'success', txnid };
   }

@@ -26,6 +26,7 @@ const navItems = [
   { href: '/admin/email-test', label: 'Email test' },
   { href: '/admin/whatsapp-inbox', label: 'WhatsApp Inbox' },
   { href: '/admin/whatsapp-test', label: 'WhatsApp test' },
+  { href: '/admin/coupons', label: 'Coupons' },
   { href: '/admin/manual-payments', label: 'UPI Payments' },
   { href: '/admin/staff', label: 'Staff' },
   { href: '/admin/settings', label: 'Settings' },
