@@ -14,18 +14,20 @@ const DAY = 24 * 60 * 60 * 1000;
 const MENU =
   'வணக்கம்! PONNA.in-க்கு வரவேற்கிறோம். TNPSC குரூப் 4 தேர்வுக்கான பயிற்சித் தளம்.\n\n' +
   'உங்களுக்கு என்ன வேண்டும்? எண்ணை மட்டும் அனுப்புங்கள்:\n' +
-  '1 - இலவசப் பயிற்சி\n2 - இன்றைய Daily Quiz\n3 - PONNA Pass விவரம்\n4 - உதவி\n\n' +
+  '1 - இலவசப் பயிற்சி\n2 - இன்றைய Daily Quiz\n3 - PONNA Pass விவரம்\n4 - உதவி\n5 - எங்களைத் தொடர்பு கொள்ளுங்கள் (நாங்கள் உங்களுக்கு போன் செய்கிறோம்)\n\n' +
   'செய்திகளை நிறுத்த STOP என அனுப்புங்கள்.';
 
 // Ready-typed first message of the website's WhatsApp button (frontend
 // WhatsAppButton.tsx). A person who taps the button always gets the menu,
 // even if they already received it earlier today.
-const BUTTON_TEXT = 'வணக்கம், PONNA.in பற்றி ஒரு சந்தேகம்';
+const OLD_BUTTON_TEXT = 'வணக்கம், PONNA.in பற்றி ஒரு சந்தேகம்'; // first version of the button
+const BUTTON_TEXT = 'வணக்கம், பொன்னா.இன் பற்றி எனக்கு முழுமையாகச் சொல்லவும்';
 
 const REPLIES: Record<string, string> = {
   '1': `இலவசப் பயிற்சியைத் தொடங்க:\n${SITE}/free-practice?utm_source=wa`,
   '2': `இன்றைய Daily Quiz:\n${SITE}/daily-quiz?utm_source=wa`,
   '3': `PONNA Pass விவரங்கள் மற்றும் விலை:\n${SITE}/plans?utm_source=wa`,
+  '5': 'நன்றி! உங்கள் பெயரையும், போன் செய்ய வசதியான நேரத்தையும் இங்கே எழுதி அனுப்புங்கள். நாங்கள் இந்த எண்ணில் உங்களைத் தொடர்பு கொள்கிறோம்.',
   '4': `உதவிக்கு:\n${SITE}/help?utm_source=wa\n\nஉங்கள் கேள்வியை இங்கேயே எழுதுங்கள், விரைவில் பதிலளிக்கிறோம்.`,
 };
 const STOP_REPLY = 'சரி, இனி செய்திகள் அனுப்பமாட்டோம். மீண்டும் பெற விரும்பினால் START என அனுப்புங்கள்.';
@@ -91,7 +93,7 @@ export async function handleWhatsAppWebhookValue(value: any): Promise<void> {
         } else if (Object.prototype.hasOwnProperty.call(REPLIES, word)) {
           await reply(phone, REPLIES[word], 'auto');
           await prisma.whatsAppContact.update({ where: { phone }, data: { lastAutoReplyAt: now } });
-        } else if (text && text.trim() === BUTTON_TEXT) {
+        } else if (text && (text.trim() === BUTTON_TEXT || text.trim() === OLD_BUTTON_TEXT)) {
           await reply(phone, MENU, 'auto');
           await prisma.whatsAppContact.update({ where: { phone }, data: { welcomedAt: contact.welcomedAt ?? now, lastAutoReplyAt: now } });
         } else if (!contact.welcomedAt) {

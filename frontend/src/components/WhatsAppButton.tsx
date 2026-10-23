@@ -10,7 +10,7 @@
 import { usePathname } from 'next/navigation';
 
 const WA_NUMBER = '919965399896'; // same number as the Contact page
-const FIRST_MESSAGE = 'வணக்கம், PONNA.in பற்றி ஒரு சந்தேகம்';
+const FIRST_MESSAGE = 'வணக்கம், பொன்னா.இன் பற்றி எனக்கு முழுமையாகச் சொல்லவும்';
 
 const HIDDEN_PREFIXES = [
   '/admin', '/quiz', '/live-exam', '/free-practice', '/test-your-ability',
