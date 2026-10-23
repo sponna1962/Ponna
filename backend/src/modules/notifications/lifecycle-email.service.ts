@@ -43,7 +43,7 @@ function build(kind: Kind): Built {
         bodyHtml: `<p>தினமும் 5 கேள்விகள் போதவில்லை என்றால், <b>₹10 சோதனை</b> உங்களுக்கு:</p>
 <ul style="padding-left:20px;margin:6px 0"><li>3 நாள், தினமும் 75 கேள்விகள் வரை பயிற்சி</li><li>தவறுகள் மறுஆய்வு</li><li>Cut-off Predictor</li></ul>
 <p style="color:#666;margin-top:8px">தானாகப் பணம் எடுக்கப்படாது. 3 நாள் முடிந்தால் நின்றுவிடும்.</p>`,
-        button: { label: '₹10 சோதனையைத் தொடங்குங்கள் →', url: `${FRONT}/trial` },
+        button: { label: '₹10 சோதனையைத் தொடங்குங்கள் →', url: `${FRONT}/plans` },
       };
     case 'PAY_ABANDONED':
       return {
@@ -51,7 +51,7 @@ function build(kind: Kind): Built {
         headline: 'பணம் செலுத்துதல்',
         bodyHtml: `<p>நீங்கள் பணம் செலுத்தத் தொடங்கினீர்கள், ஆனால் அது முடிவடையவில்லை. மீண்டும் முயல கீழே உள்ள பொத்தானை அழுத்துங்கள்; ஏற்கனவே உள்நுழைந்திருந்தால் நேரடியாகப் பணம் செலுத்தும் பக்கம் திறக்கும்.</p>
 <p style="color:#666">உங்கள் வங்கியில் பணம் எடுக்கப்பட்டிருந்தால், அது இங்கே பதிவாகியுள்ளதா என்று பார்க்க <a href="${FRONT}/contact" style="color:#0B3864">தொடர்புப் பக்கம்</a> மூலம் எங்களுக்குத் தெரிவியுங்கள்.</p>`,
-        button: { label: 'மீண்டும் முயல்க →', url: `${FRONT}/trial` },
+        button: { label: 'மீண்டும் முயல்க →', url: `${FRONT}/plans` },
       };
     case 'TRIAL_ENDING':
       return {
@@ -180,7 +180,8 @@ export class LifecycleEmailService {
       if (practised && age >= 48 * H) {
         const everPaid = (await prisma.subscription.count({ where: { userId: u.id, plan: { isFree: false } } })) > 0
           || (await prisma.payuPayment.count({ where: { userId: u.id, status: 'SUCCESS' } })) > 0;
-        if (!everPaid) await go('TRIAL_OFFER', u.id, u.id);
+        // Oct 2026 — the ₹10 trial is withdrawn, so the TRIAL_OFFER mail is no longer sent.
+        void everPaid;
       }
     }
     // Win-back: registered > 7 days ago, no practice for 7 days. Keyed by a 14-day bucket.

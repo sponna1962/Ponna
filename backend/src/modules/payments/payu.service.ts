@@ -60,8 +60,9 @@ export class PayuService {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const plan = await prisma.plan.findUniqueOrThrow({ where: { id: planId } });
     if (plan.isFree || !plan.active) throw new PayuError(`${plan.name} is not available for purchase.`);
+    if (plan.isTrial) throw new PayuError('₹10 சோதனைத் திட்டம் இப்போது இல்லை. ₹499 Pass-ஐப் பாருங்கள்.');
     if (plan.isTrial) {
-      // One trial per account: refuse if this student ever paid for (or was
+      // (unreachable while the trial is withdrawn) One trial per account: refuse if this student ever paid for (or was
       // given) a trial plan before.
       const used = await prisma.subscription.findFirst({ where: { userId, plan: { isTrial: true } }, select: { id: true } });
       const hasPass = await prisma.subscription.findFirst({ where: { userId, status: 'ACTIVE', cycleEnd: { gt: new Date() }, plan: { isFree: false, isTrial: false } }, select: { id: true } });

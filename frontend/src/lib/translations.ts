@@ -215,7 +215,7 @@ export const translations = {
     dailyQuiz: {
       lockedTitle: 'Daily Quiz — Paid Plan மட்டும்',
       lockedSuffix: 'Paid Plan மட்டும்',
-      lockedBody: '₹10 சோதனை அல்லது ₹499 Pass-இல் இது கிடைக்கும்.',
+      lockedBody: '₹499 Pass-இல் இது கிடைக்கும்.',
       viewPlans: 'Plans-ஐ பார்க்கவும்',
       notAvailable: (mode: string) => `இன்றைய ${mode} இன்னும் கிடைக்கவில்லை.`,
       readyTitle: (mode: string) => `இன்றைய ${mode} தயார்!`,
@@ -575,7 +575,7 @@ export const translations = {
     dailyQuiz: {
       lockedTitle: 'Daily Quiz — Paid Plan Only',
       lockedSuffix: 'Paid Plan Only',
-      lockedBody: 'Included in the ₹10 trial and the ₹499 Pass.',
+      lockedBody: 'Included in the ₹499 Pass.',
       viewPlans: 'View Plans',
       notAvailable: (mode: string) => `Today's ${mode} is not available yet.`,
       readyTitle: (mode: string) => `Today's ${mode} is ready!`,

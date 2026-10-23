@@ -43,7 +43,7 @@ export class ManualPaymentService {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
 
     const plan = await prisma.plan.findUniqueOrThrow({ where: { id: planId } });
-    if (plan.isFree || !plan.active) throw new ManualPaymentError(`${plan.name} is not available for purchase.`);
+    if (plan.isFree || !plan.active || plan.isTrial) throw new ManualPaymentError(`${plan.name} is not available for purchase.`);
     const price = plan.launchPrice ?? plan.regularPrice;
     if (!price) throw new ManualPaymentError(`No price set for ${plan.name}.`);
 
