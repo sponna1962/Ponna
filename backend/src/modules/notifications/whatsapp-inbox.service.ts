@@ -23,6 +23,11 @@ const MENU =
 const OLD_BUTTON_TEXT = 'வணக்கம், PONNA.in பற்றி ஒரு சந்தேகம்'; // first version of the button
 const BUTTON_TEXT = 'வணக்கம், பொன்னா.இன் பற்றி எனக்கு முழுமையாகச் சொல்லவும்';
 
+// First message of the /teachers page's WhatsApp button.
+const TEACHER_TEXT = 'வணக்கம், நான் TNPSC ஆசிரியர். PONNA.in-உடன் இணைய விரும்புகிறேன்';
+const TEACHER_REPLY =
+  'வணக்கம்! PONNA.in-உடன் இணைய விரும்பியதற்கு நன்றி. உங்கள் பெயர், பயிற்சி மையம் அல்லது சேனல் பெயர், போன் எண் ஆகியவற்றை இங்கே எழுதி அனுப்புங்கள். நாங்கள் உங்களைத் தொடர்பு கொள்கிறோம்.';
+
 const REPLIES: Record<string, string> = {
   '1': `இலவசப் பயிற்சியைத் தொடங்க:\n${SITE}/free-practice?utm_source=wa`,
   '2': `இன்றைய Daily Quiz:\n${SITE}/daily-quiz?utm_source=wa`,
@@ -92,6 +97,9 @@ export async function handleWhatsAppWebhookValue(value: any): Promise<void> {
           await reply(phone, START_REPLY, 'auto');
         } else if (Object.prototype.hasOwnProperty.call(REPLIES, word)) {
           await reply(phone, REPLIES[word], 'auto');
+          await prisma.whatsAppContact.update({ where: { phone }, data: { lastAutoReplyAt: now } });
+        } else if (text && text.trim() === TEACHER_TEXT) {
+          await reply(phone, TEACHER_REPLY, 'auto');
           await prisma.whatsAppContact.update({ where: { phone }, data: { lastAutoReplyAt: now } });
         } else if (text && (text.trim() === BUTTON_TEXT || text.trim() === OLD_BUTTON_TEXT)) {
           await reply(phone, MENU, 'auto');

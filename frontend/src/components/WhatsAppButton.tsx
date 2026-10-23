@@ -14,7 +14,7 @@ const FIRST_MESSAGE = 'வணக்கம், பொன்னா.இன் ப�
 
 const HIDDEN_PREFIXES = [
   '/admin', '/quiz', '/live-exam', '/free-practice', '/test-your-ability',
-  '/mind-gym', '/diagnostic', '/offline-practice', '/trial', '/daily-quiz', '/login',
+  '/teachers', '/mind-gym', '/diagnostic', '/offline-practice', '/trial', '/daily-quiz', '/login',
 ];
 
 export function WhatsAppButton() {
