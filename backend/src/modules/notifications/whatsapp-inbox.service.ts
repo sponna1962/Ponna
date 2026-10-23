@@ -17,6 +17,11 @@ const MENU =
   '1 - இலவசப் பயிற்சி\n2 - இன்றைய Daily Quiz\n3 - PONNA Pass விவரம்\n4 - உதவி\n\n' +
   'செய்திகளை நிறுத்த STOP என அனுப்புங்கள்.';
 
+// Ready-typed first message of the website's WhatsApp button (frontend
+// WhatsAppButton.tsx). A person who taps the button always gets the menu,
+// even if they already received it earlier today.
+const BUTTON_TEXT = 'வணக்கம், PONNA.in பற்றி ஒரு சந்தேகம்';
+
 const REPLIES: Record<string, string> = {
   '1': `இலவசப் பயிற்சியைத் தொடங்க:\n${SITE}/free-practice?utm_source=wa`,
   '2': `இன்றைய Daily Quiz:\n${SITE}/daily-quiz?utm_source=wa`,
@@ -86,6 +91,9 @@ export async function handleWhatsAppWebhookValue(value: any): Promise<void> {
         } else if (Object.prototype.hasOwnProperty.call(REPLIES, word)) {
           await reply(phone, REPLIES[word], 'auto');
           await prisma.whatsAppContact.update({ where: { phone }, data: { lastAutoReplyAt: now } });
+        } else if (text && text.trim() === BUTTON_TEXT) {
+          await reply(phone, MENU, 'auto');
+          await prisma.whatsAppContact.update({ where: { phone }, data: { welcomedAt: contact.welcomedAt ?? now, lastAutoReplyAt: now } });
         } else if (!contact.welcomedAt) {
           await reply(phone, MENU, 'auto');
           await prisma.whatsAppContact.update({ where: { phone }, data: { welcomedAt: now, lastAutoReplyAt: now } });
