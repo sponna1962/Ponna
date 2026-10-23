@@ -96,6 +96,7 @@ export function StudentMenu({ onOpenChange, iconColor, showBack }: { onOpenChang
       items: [
         { href: '/about', label: t.menu.about, Icon: AboutIcon },
         { href: '/help', label: t.menu.help, Icon: HelpIcon },
+        { href: '/teachers', label: 'Teachers', Icon: AboutIcon },
       ],
     },
   ];
