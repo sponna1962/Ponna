@@ -23,6 +23,7 @@ type ProfileData = {
   dateOfBirth: string | null;
   email: string | null;
   whatsappNumber: string | null;
+  whatsappOptIn?: boolean;
   district: string | null;
   cityTownVillage: string | null;
   educationStatus: EducationStatus | null;
@@ -81,6 +82,7 @@ export default function ProfilePage() {
   const [email, setEmail] = useState('');
   const [phoneToVerify, setPhoneToVerify] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [district, setDistrict] = useState('');
   const [city, setCity] = useState('');
   const [educationStatus, setEducationStatus] = useState<EducationStatus>('');
@@ -124,6 +126,7 @@ export default function ProfilePage() {
         setEmail(data.email ?? '');
         setPhoneToVerify(data.phone ?? '');
         setWhatsapp(data.whatsappNumber ?? '');
+        setWhatsappOptIn(!!data.whatsappOptIn);
         setDistrict(data.district ?? '');
         setCity(data.cityTownVillage ?? '');
         setEducationStatus(data.educationStatus ?? '');
@@ -281,6 +284,7 @@ export default function ProfilePage() {
         dateOfBirth,
         email,
         whatsappNumber: whatsapp,
+        whatsappOptIn,
         district,
         cityTownVillage: city,
         educationStatus,
@@ -564,6 +568,10 @@ export default function ProfilePage() {
         </div>
 
         <TextField label={t.profile.whatsapp} required type="tel" value={whatsapp} onChange={setWhatsapp} />
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', margin: '-4px 0 14px', padding: 12, borderRadius: 12, border: '1.5px solid var(--color-line)', background: 'var(--color-card)', color: 'var(--color-ink)', fontSize: 13.5, lineHeight: 1.5 }}>
+          <input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} style={{ marginTop: 3, width: 18, height: 18, flexShrink: 0 }} />
+          <span>{t.profile.whatsappConsent}</span>
+        </label>
         <TextField label={t.profile.district} required value={district} onChange={setDistrict} />
         <TextField label={t.profile.cityTownVillage} required value={city} onChange={setCity} last />
 

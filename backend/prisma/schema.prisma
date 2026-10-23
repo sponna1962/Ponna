@@ -51,6 +51,10 @@ model User {
   // tries to view Rank or pay for a plan.
   dateOfBirth    DateTime? // stored as a real date, never free text
   whatsappNumber String?
+  // Oct 2026 — explicit consent to receive WhatsApp messages from PONNA (Profile checkbox).
+  whatsappOptIn         Boolean   @default(false)
+  whatsappOptInAt       DateTime?
+  whatsappWelcomeSentAt DateTime?
 
   // Profile completion fields (§ profile-completion requirement) — nullable
   // because initial signup is intentionally minimal (name + phone/OTP only).

@@ -77,6 +77,8 @@ export async function handleWhatsAppWebhookValue(value: any): Promise<void> {
         const word = text ? normalize(text) : '';
         if (['stop', 'unsubscribe', 'நிறுத்து', 'நிறுத்தவும்'].includes(word)) {
           await prisma.whatsAppContact.update({ where: { phone }, data: { optedIn: false, optedOutAt: now } });
+          const last10 = phone.slice(-10);
+          await prisma.user.updateMany({ where: { OR: [{ phone: { in: [`+${phone}`, phone] } }, { whatsappNumber: { contains: last10 } }] }, data: { whatsappOptIn: false } });
           await reply(phone, STOP_REPLY, 'auto');
         } else if (['start', 'subscribe', 'தொடங்கு'].includes(word)) {
           await prisma.whatsAppContact.update({ where: { phone }, data: { optedIn: true, optedOutAt: null } });
@@ -131,4 +133,14 @@ export async function sendManualReply(phone: string, text: string): Promise<void
     throw new Error('24 மணி நேரத்துக்குள் அவர் செய்தி அனுப்பியிருந்தால் மட்டுமே பதிலளிக்கலாம்.');
   }
   await reply(phone, text.slice(0, 1500), 'manual');
+}
+
+/** Records a template message sent from Admin, so it shows up in the Inbox thread. */
+export async function recordOutbound(phone: string, kind: string, body: string, waMessageId?: string): Promise<void> {
+  await record(phone, 'OUT', kind, body, waMessageId);
+}
+
+export async function isOptedOut(phone: string): Promise<boolean> {
+  const c = await prisma.whatsAppContact.findUnique({ where: { phone } });
+  return !!c && !c.optedIn;
 }

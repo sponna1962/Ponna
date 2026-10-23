@@ -13,6 +13,34 @@
 import { EducationStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { dailyEmailService } from '../notifications/daily-email.service';
+import { sendWhatsAppTemplate } from '../notifications/whatsapp-adapter';
+
+/** Digits-only WhatsApp number with country code, or null if it cannot be used. */
+function waNumber(raw: string | null | undefined): string | null {
+  const d = (raw ?? '').replace(/\D/g, '');
+  if (d.length === 10 && /^[6-9]/.test(d)) return `91${d}`;
+  if (d.length === 12 && d.startsWith('91')) return d;
+  return null;
+}
+
+/** One-time welcome template, only after the student ticked the consent box. Never throws. */
+async function sendWhatsAppWelcomeIfOptedIn(userId: string): Promise<void> {
+  try {
+    const u = await prisma.user.findUnique({ where: { id: userId } });
+    if (!u || !u.whatsappOptIn || u.whatsappWelcomeSentAt || u.isTestAccount) return;
+    const to = waNumber(u.whatsappNumber) ?? waNumber(u.phone);
+    if (!to) return;
+    await prisma.user.update({ where: { id: userId }, data: { whatsappWelcomeSentAt: new Date() } }); // claim first: never send twice
+    try {
+      await sendWhatsAppTemplate(`+${to}`, 'ponna_welcome', [], 'en');
+    } catch (err) {
+      await prisma.user.update({ where: { id: userId }, data: { whatsappWelcomeSentAt: null } });
+      console.error('[whatsapp-welcome] failed:', err instanceof Error ? err.message : err);
+    }
+  } catch (err) {
+    console.error('[whatsapp-welcome] error:', err instanceof Error ? err.message : err);
+  }
+}
 
 export function isProfileComplete(user: {
   name: string | null;
@@ -70,6 +98,7 @@ export class ProfileService {
       dateOfBirth: user.dateOfBirth,
       email: user.email,
       whatsappNumber: user.whatsappNumber,
+      whatsappOptIn: user.whatsappOptIn,
       district: user.district,
       cityTownVillage: user.cityTownVillage,
       educationStatus: user.educationStatus,
@@ -117,6 +146,7 @@ export class ProfileService {
       dateOfBirth?: string; // ISO date string from the form; converted to a real Date below
       email?: string;
       whatsappNumber?: string;
+      whatsappOptIn?: boolean;
       district?: string;
       cityTownVillage?: string;
       educationStatus?: EducationStatus | '';
@@ -144,6 +174,7 @@ export class ProfileService {
         ...(data.dateOfBirth !== undefined ? { dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null } : {}),
         ...(data.email !== undefined ? { email: data.email || null } : {}),
         ...(data.whatsappNumber !== undefined ? { whatsappNumber: data.whatsappNumber } : {}),
+        ...(data.whatsappOptIn !== undefined ? { whatsappOptIn: !!data.whatsappOptIn, ...(data.whatsappOptIn ? { whatsappOptInAt: new Date() } : {}) } : {}),
         ...(data.district !== undefined ? { district: data.district } : {}),
         ...(data.cityTownVillage !== undefined ? { cityTownVillage: data.cityTownVillage } : {}),
         ...(data.educationStatus !== undefined
@@ -158,6 +189,7 @@ export class ProfileService {
       },
     });
     if (data.email) dailyEmailService.sendWelcomeIfNew(userId).catch(() => {});
+    if (data.whatsappOptIn) void sendWhatsAppWelcomeIfOptedIn(userId);
     return { profileComplete: isProfileComplete(updated) };
   }
 }

@@ -40,7 +40,7 @@ import { payuService, PayuError } from './modules/payments/payu.service';
 import { trialContactMissing } from './modules/profile/profile.service';
 import { dailyEmailService, verifyUnsubscribeToken, type DailyEmailKind } from './modules/notifications/daily-email.service';
 import { sendWhatsAppTemplate, WhatsAppSendError } from './modules/notifications/whatsapp-adapter';
-import { handleWhatsAppWebhookValue, listConversations, listMessages, sendManualReply } from './modules/notifications/whatsapp-inbox.service';
+import { handleWhatsAppWebhookValue, listConversations, listMessages, sendManualReply, recordOutbound, isOptedOut } from './modules/notifications/whatsapp-inbox.service';
 import { StudentAuthService, requireStudentAuth, StudentAuthedRequest, AccountLinkingConflictError, DeviceLimitReachedError } from './modules/auth/student-auth.service';
 import { ProfilePhotoService } from './modules/profile/profile-photo.service';
 import { QuestionReportService } from './modules/questions/question-report.service';
@@ -4050,6 +4050,37 @@ app.post('/admin/whatsapp/test', requireStaffAuth, requireRole('SUPER_ADMIN'), a
   } catch (err: any) {
     res.status(502).json({ ok: false, error: err instanceof WhatsAppSendError ? err.message : 'Failed' });
   }
+});
+
+// Feedback message (template ponna_feedback) to recent sign-ups — Admin picks who. Max 30 per call.
+app.get('/admin/whatsapp/targets', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  const days = Math.min(60, Math.max(1, Number(req.query.days) || 10));
+  try {
+    const users = await prisma.user.findMany({
+      where: { isTestAccount: false, phone: { not: null }, createdAt: { gte: new Date(Date.now() - days * 86400000) } },
+      select: { id: true, name: true, phone: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(users);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+app.post('/admin/whatsapp/send-feedback', requireStaffAuth, requireRole('SUPER_ADMIN'), async (req, res) => {
+  const ids: string[] = Array.isArray(req.body?.userIds) ? req.body.userIds.slice(0, 30).map(String) : [];
+  if (ids.length === 0) return res.status(400).json({ error: 'userIds தேவை.' });
+  const users = await prisma.user.findMany({ where: { id: { in: ids }, isTestAccount: false, phone: { not: null } }, select: { id: true, name: true, phone: true } });
+  const results: { name: string | null; ok: boolean; error?: string }[] = [];
+  for (const u of users) {
+    const digits = (u.phone ?? '').replace(/\D/g, '');
+    try {
+      if (await isOptedOut(digits)) { results.push({ name: u.name, ok: false, error: 'STOP சொன்னவர்' }); continue; }
+      const id = await sendWhatsAppTemplate(`+${digits}`, 'ponna_feedback', [u.name?.split(' ')[0] || 'நண்பரே'], 'ta');
+      await recordOutbound(digits, 'template', 'ponna_feedback (கருத்துக் கேட்பு)', id);
+      results.push({ name: u.name, ok: true });
+    } catch (err: any) {
+      results.push({ name: u.name, ok: false, error: err instanceof WhatsAppSendError ? err.message : 'Failed' });
+    }
+  }
+  res.json({ results });
 });
 
 // WhatsApp inbox (SUPER_ADMIN): conversations, one thread, and a manual reply.
