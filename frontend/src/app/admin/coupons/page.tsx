@@ -11,7 +11,7 @@ const SITE = 'https://www.ponna.in';
 
 function waLink(code: string, amountOff: number, expiresAt: string, phone?: string) {
   const until = new Date(expiresAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
-  const text = `வணக்கம்! உங்களுக்காக PONNA.in-ல் ₹${amountOff} சிறப்புச் சலுகை. உங்கள் குறியீடு: ${code}\nஇங்கே உள்ளிடுங்கள்: ${SITE}/coupon?code=${code}\n(${until} வரை செல்லும்)`;
+  const text = `வணக்கம்! உங்களுக்காக PONNA.in-ல் ₹${amountOff} சிறப்புச் சலுகை. உங்கள் குறியீடு: ${code}\nஇங்கே உள்ளிடுங்கள்: ${SITE}/plans?coupon=${code}\n(${until} வரை செல்லும்)`;
   const num = (phone ?? '').replace(/\D/g, '').slice(-10);
   return `https://wa.me/${num ? '91' + num : ''}?text=${encodeURIComponent(text)}`;
 }
@@ -59,7 +59,7 @@ export default function CouponsPage() {
   return (
     <div style={{ maxWidth: 760 }}>
       <h1>Coupons</h1>
-      <p style={{ color: '#555' }}>குறியீடுகள் தளத்தில் எங்கும் தெரியாது. நீங்கள் கொடுப்பவர்கள் மட்டுமே /coupon பக்கத்தில் உள்ளிட முடியும். தள்ளுபடி ₹499 Pass-க்கு மட்டும்.</p>
+      <p style={{ color: '#555' }}>குறியீடுகள் தளத்தில் எங்கும் தெரியாது. Plans பக்கத்தில் "கூப்பன் குறியீடு உள்ளதா?" என்ற பெட்டியில் நீங்கள் கொடுத்த குறியீட்டை மட்டுமே உள்ளிட முடியும். தள்ளுபடி ₹499 Pass-க்கு மட்டும்.</p>
 
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 14, marginBottom: 20 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
@@ -88,7 +88,7 @@ export default function CouponsPage() {
                 <td>{c.used}/{c.maxUses}</td>
                 <td>{new Date(c.expiresAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })}<div style={{ fontSize: 12 }}>{state}</div></td>
                 <td style={{ whiteSpace: 'nowrap' }}>
-                  <button onClick={() => navigator.clipboard?.writeText(`${SITE}/coupon?code=${c.code}`)} style={{ marginRight: 6 }}>இணைப்பு நகல்</button>
+                  <button onClick={() => navigator.clipboard?.writeText(`${SITE}/plans?coupon=${c.code}`)} style={{ marginRight: 6 }}>இணைப்பு நகல்</button>
                   <a href={waLink(c.code, c.amountOff, c.expiresAt, (c.note ?? '').match(/\d{10}/)?.[0])} target="_blank" rel="noopener noreferrer" style={{ marginRight: 6 }}>WhatsApp</a>
                   {state === 'செயலில்' && <button onClick={() => off(c.id)}>நிறுத்து</button>}
                 </td>

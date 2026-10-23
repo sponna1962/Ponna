@@ -1998,7 +1998,7 @@ app.post('/payments/payu/checkout', requireStudentAuth, async (req: StudentAuthe
 // Not linked anywhere in the app; students reach /coupon only via a link/code we give them.
 app.post('/coupons/quote', requireStudentAuth, async (req: StudentAuthedRequest, res) => {
   try {
-    const q = await quoteCoupon(req.body?.code, undefined, req.studentUserId!);
+    const q = await quoteCoupon(req.body?.code, req.body?.planId ? String(req.body.planId) : undefined, req.studentUserId!);
     res.json({ code: q.code, planId: q.planId, planName: q.planName, price: q.price, discount: q.discount, finalAmount: q.finalAmount, expiresAt: q.expiresAt });
   } catch (err: any) {
     if (err instanceof CouponError) return res.status(400).json({ error: err.message });

@@ -204,6 +204,28 @@ function PlansPageInner() {
   const [payuEnabled, setPayuEnabled] = useState(false);
   const payuReturn = searchParams.get('payu');
 
+  // Oct 2026 — optional discount code. The box is visible, but no code value is
+  // ever shown or listed anywhere: students type the code we gave them.
+  type CouponQuote = { code: string; planId: string; price: number; discount: number; finalAmount: number; expiresAt: string };
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponQuote, setCouponQuote] = useState<CouponQuote | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+
+  async function applyCoupon(planId: string, raw: string) {
+    setCouponError(''); setCouponQuote(null);
+    if (!raw.trim()) return;
+    setCouponBusy(true);
+    try {
+      const res = await studentFetch('/coupons/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: raw, planId }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) setCouponError(body.error ?? 'குறியீட்டைச் சரிபார்க்க முடியவில்லை.');
+      else setCouponQuote(body);
+    } catch { setCouponError('இணையத் தொடர்பைச் சரிபாருங்கள்.'); }
+    setCouponBusy(false);
+  }
+
   // Meta Pixel Purchase event once per successful PayU return (value from the
   // newest active pass). Guarded so a page refresh cannot count it twice.
   useEffect(() => {
@@ -302,6 +324,18 @@ function PlansPageInner() {
   // (full-width hero cards, no more tap-to-open-sheet for purchasing), so
   // this just scrolls it into view; the gold border (set via
   // highlightPlanId below) is what actually draws the eye to it.
+  // /plans?coupon=CODE (link we send by WhatsApp): open the box, fill and apply it once.
+  const couponParam = searchParams.get('coupon');
+  useEffect(() => {
+    if (!couponParam || !plansLoaded || !payuEnabled) return;
+    const target = otherAvailablePlans[0];
+    if (!target) return;
+    setCouponOpen(true);
+    setCouponInput(couponParam.toUpperCase());
+    applyCoupon(target.id, couponParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couponParam, plansLoaded, payuEnabled]);
+
   useEffect(() => {
     if (!plansLoaded || !highlightPlanId) return;
     document.getElementById(`plan-${highlightPlanId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -321,11 +355,11 @@ function PlansPageInner() {
   }
 
   /** PayU: ask our server to sign the order, then POST the browser to PayU. */
-  async function payWithPayu(planId: string) {
+  async function payWithPayu(planId: string, couponCode?: string) {
     const res = await studentFetch('/payments/payu/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({ planId, couponCode }),
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error ?? t.plans.paymentError);
@@ -349,7 +383,7 @@ function PlansPageInner() {
 
     try {
       if (payuEnabled) {
-        await payWithPayu(planId);
+        await payWithPayu(planId, couponQuote && couponQuote.planId === planId ? couponQuote.code : undefined);
         return; // the browser is now navigating to PayU
       }
       // Oct 2026 — when UPI_ID is configured on the server, pay by UPI and
@@ -587,7 +621,13 @@ function PlansPageInner() {
                     )}
 
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 16, padding: '12px 14px', borderRadius: 8, background: COLORS.goldLight }}>
-                      {hasLaunch ? (
+                      {couponQuote && couponQuote.planId === p.id ? (
+                        <>
+                          <span style={{ fontFamily: FONT_FAMILY, fontSize: 32, fontWeight: 800, color: COLORS.gold }}>₹{couponQuote.finalAmount}</span>
+                          <span style={{ fontSize: 13, color: COLORS.inkMuted, textDecoration: 'line-through' }}>₹{couponQuote.price}</span>
+                          <span style={{ fontSize: 13, color: '#065f46', fontWeight: 700 }}>₹{couponQuote.discount} தள்ளுபடி</span>
+                        </>
+                      ) : hasLaunch ? (
                         <>
                           <span style={{ fontFamily: FONT_FAMILY, fontSize: 32, fontWeight: 800, color: COLORS.gold }}>₹{p.launchPrice}</span>
                           <span style={{ fontSize: 13, color: COLORS.inkMuted }}>{t.plans.perYear}</span>
@@ -622,6 +662,38 @@ function PlansPageInner() {
                     >
                       View More Features →
                     </button>
+
+                    {payuEnabled && !p.isTrial && !p.isFree && (
+                      <div style={{ marginBottom: 14 }}>
+                        {couponQuote && couponQuote.planId === p.id ? (
+                          <p style={{ margin: 0, fontSize: 13, color: '#065f46' }}>
+                            ✅ கூப்பன் {couponQuote.code} ஏற்கப்பட்டது.{' '}
+                            <button onClick={() => { setCouponQuote(null); setCouponInput(''); }} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', color: COLORS.inkMuted, cursor: 'pointer', fontSize: 13 }}>நீக்கு</button>
+                          </p>
+                        ) : !couponOpen ? (
+                          <button onClick={() => setCouponOpen(true)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, color: COLORS.gold, cursor: 'pointer' }}>
+                            கூப்பன் குறியீடு உள்ளதா?
+                          </button>
+                        ) : (
+                          <div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <input
+                                value={couponInput}
+                                onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                                onKeyDown={(e) => { if (e.key === 'Enter') applyCoupon(p.id, couponInput); }}
+                                placeholder="கூப்பன் குறியீடு"
+                                autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                                style={{ flex: 1, minWidth: 0, padding: '10px 12px', fontSize: 15, letterSpacing: 1, border: `1px solid ${COLORS.line}`, borderRadius: 8, background: '#fff', color: '#0f172a' }}
+                              />
+                              <button onClick={() => applyCoupon(p.id, couponInput)} disabled={couponBusy || !couponInput.trim()} style={{ padding: '0 16px', border: 'none', borderRadius: 8, background: COLORS.ink, color: COLORS.paper, fontWeight: 700, cursor: 'pointer', opacity: couponBusy || !couponInput.trim() ? 0.6 : 1 }}>
+                                {couponBusy ? '…' : 'பயன்படுத்து'}
+                              </button>
+                            </div>
+                            {couponError && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#b91c1c' }}>{couponError}</p>}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <button
                       onClick={() => buy(p.id)}
