@@ -6,6 +6,7 @@ import { ThemeStyles } from '../lib/brand-theme';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { LegalFooter } from '../components/LegalFooter';
 import { VisitTracker } from '../components/VisitTracker';
+import { WhatsAppButton } from '../components/WhatsAppButton';
 import { InAppBrowserBanner } from '../components/InAppBrowserBanner';
 import StyledJsxRegistry from '../components/StyledJsxRegistry';
 
@@ -137,6 +138,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 real-PWA-only / no-nagging / already-installed rules. */}
             <InstallPrompt />
             <VisitTracker />
+            <WhatsAppButton />
           </LanguageProvider>
         </ThemeProvider>
         </StyledJsxRegistry>
