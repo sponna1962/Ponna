@@ -28,6 +28,8 @@ const TEACHER_TEXT = 'வணக்கம், நான் TNPSC ஆசிரி�
 const TEACHER_REPLY =
   'வணக்கம்! PONNA.in-உடன் இணைய விரும்பியதற்கு நன்றி. உங்கள் பெயர், பயிற்சி மையம் அல்லது சேனல் பெயர், போன் எண் ஆகியவற்றை இங்கே எழுதி அனுப்புங்கள். நாங்கள் உங்களைத் தொடர்பு கொள்கிறோம்.';
 
+const DETAILS_ACK = 'நன்றி! உங்கள் விவரங்களைப் பெற்றுக்கொண்டோம். விரைவில் உங்களைத் தொடர்பு கொள்கிறோம்.';
+
 const REPLIES: Record<string, string> = {
   '1': `இலவசப் பயிற்சியைத் தொடங்க:\n${SITE}/free-practice?utm_source=wa`,
   '2': `இன்றைய Daily Quiz:\n${SITE}/daily-quiz?utm_source=wa`,
@@ -55,6 +57,12 @@ async function record(phone: string, direction: 'IN' | 'OUT', kind: string, body
 async function reply(phone: string, text: string, kind: 'auto' | 'manual'): Promise<void> {
   const id = await sendWhatsAppText(phone, text);
   await record(phone, 'OUT', kind, text, id);
+}
+
+/** True when our latest outgoing message to this person asked them for their details. */
+async function askedForDetails(phone: string): Promise<boolean> {
+  const last = await prisma.whatsAppMessage.findFirst({ where: { phone, direction: 'OUT' }, orderBy: { createdAt: 'desc' } });
+  return !!last && (last.body === REPLIES['5'] || last.body === TEACHER_REPLY);
 }
 
 /** Handles one `value` object of Meta's webhook payload. Never throws. */
@@ -100,7 +108,11 @@ export async function handleWhatsAppWebhookValue(value: any): Promise<void> {
           await prisma.whatsAppContact.update({ where: { phone }, data: { lastAutoReplyAt: now } });
         } else if (text && text.trim() === TEACHER_TEXT) {
           await reply(phone, TEACHER_REPLY, 'auto');
-          await prisma.whatsAppContact.update({ where: { phone }, data: { lastAutoReplyAt: now } });
+          await prisma.whatsAppContact.update({ where: { phone }, data: { welcomedAt: contact.welcomedAt ?? now, lastAutoReplyAt: now } });
+        } else if (text && (await askedForDetails(phone))) {
+          // They are answering our "write your name and time" request (option 5 or the teachers page).
+          await reply(phone, DETAILS_ACK, 'auto');
+          await prisma.whatsAppContact.update({ where: { phone }, data: { welcomedAt: contact.welcomedAt ?? now, lastAutoReplyAt: now } });
         } else if (text && (text.trim() === BUTTON_TEXT || text.trim() === OLD_BUTTON_TEXT)) {
           await reply(phone, MENU, 'auto');
           await prisma.whatsAppContact.update({ where: { phone }, data: { welcomedAt: contact.welcomedAt ?? now, lastAutoReplyAt: now } });
