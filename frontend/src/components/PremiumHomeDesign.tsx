@@ -68,9 +68,7 @@ export default function PremiumHomeDesign({ menu, onLogin, onStart, notice, acco
           <nav className="desktop-nav" aria-label="முதன்மை வழிசெலுத்தல்">
             {navLinks.map(link => <a key={link.label} href={link.href}>{link.label}<span aria-hidden="true">⌄</span></a>)}
           </nav>
-          <a href="/?startLogin=1" className="login-button" onClick={onLogin ? e => { e.preventDefault(); onLogin(); } : undefined}>
-            {account ?? 'உள்நுழைவு'}
-          </a>
+          {account ? <div className="account-control">{account}</div> : <a href="/?startLogin=1" className="login-button" onClick={onLogin ? e => { e.preventDefault(); onLogin(); } : undefined}>உள்நுழைவு</a>}
         </div>
         {mobileOpen && <nav className="mobile-nav" aria-label="கைப்பேசி வழிசெலுத்தல்">
           {navLinks.map(link => <a key={link.label} href={link.href} onClick={() => setMobileOpen(false)}>{link.label}<span>→</span></a>)}
@@ -141,7 +139,7 @@ export default function PremiumHomeDesign({ menu, onLogin, onStart, notice, acco
         *{box-sizing:border-box}.topbar{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.97);border-bottom:1px solid var(--line)}
         .nav-inner{max-width:1440px;min-height:70px;margin:auto;padding:0 5.5%;display:flex;align-items:center;gap:26px}.logo{display:flex;align-items:center;flex:0 0 165px}.logo :global(img){width:165px;height:auto;max-width:100%}
         .desktop-nav{display:flex;align-items:center;justify-content:flex-end;gap:clamp(10px,1.5vw,24px);flex:1}.desktop-nav a,.footer nav a{font-size:13px;font-weight:800;color:var(--navy);text-decoration:none;white-space:nowrap}.desktop-nav a span{margin-left:5px;color:#b18722}
-        .login-button{flex:0 0 auto;background:var(--navy);color:#fff;text-decoration:none;padding:12px 21px;border-radius:5px;font-size:14px;font-weight:900;white-space:nowrap}.hamburger{display:none}
+        .login-button{flex:0 0 auto;background:var(--navy);color:#fff;text-decoration:none;padding:12px 21px;border-radius:5px;font-size:14px;font-weight:900;white-space:nowrap}.account-control{flex:0 0 auto;max-width:210px}.account-control :global(button){max-width:100%}.hamburger{display:none}
         .mobile-nav{display:none}.notice{padding:10px 5%;background:#fff2c6;color:#4d3c10;font-size:14px}
         .hero{background:var(--paper);border-bottom:1px solid var(--line)}.hero-inner{max-width:1440px;min-height:390px;margin:auto;padding:34px 6.5% 24px;display:grid;grid-template-columns:1fr .95fr;align-items:center;gap:4%}
         .hero-copy{padding:10px 0 20px;position:relative;z-index:1}.hero-eyebrow,.eyebrow{display:block;color:#9b751c;font-size:13px;font-weight:900;letter-spacing:.04em;margin-bottom:12px}
