@@ -53,7 +53,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
       const daysUntil = (year: number, month: number, day: number) =>
         Math.max(0, Math.ceil((new Date(year, month - 1, day).getTime() - todayLocal) / 86400000));
       setCountdown({
-        application: daysUntil(2026, 11, 5),
+        application: daysUntil(2026, 11, 8),
         exam: daysUntil(2027, 1, 10),
       });
     };
@@ -106,7 +106,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
               <span className="countdown-label">விண்ணப்பிக்க இன்னும்</span>
             </div>
             <div className="countdown-number">{countdown ? countdown.application : '—'} <small>நாட்கள்</small></div>
-            <div className="countdown-date"><span>கடைசி நாள்</span><strong>05 நவம்பர் 2026</strong></div>
+            <div className="countdown-date"><span>கடைசி நாள்</span><strong>08 நவம்பர் 2026</strong></div>
             <a href="https://apply.tnpscexams.in/notification?app_id=UElZMDAwMDAwMQa" target="_blank" rel="noreferrer">விண்ணப்பிக்கவும் <b>→</b></a>
           </article>
           <article className="countdown-card exam-card">
@@ -119,7 +119,7 @@ export default function HomeDesignPreview({ menu, onLogin, onStart, notice, acco
             <a href="/tnpsc-group-4/notification-2026">தேர்வு விவரங்கள் <b>→</b></a>
           </article>
         </div>
-        <p className="countdown-note">தேதிகள் TNPSC அறிவிப்பின் அடிப்படையில். மாற்றம் ஏற்பட்டால் அதிகாரப்பூர்வ அறிவிப்பைச் சரிபார்க்கவும்.</p>
+        <p className="countdown-note">கடைசி நாள் 08.11.2026 இரவு 11.59 வரை நீட்டிக்கப்பட்டுள்ளது (TNPSC செய்திக்குறிப்பு 127/2026). வயது உச்ச வரம்பும் 5 ஆண்டு உயர்த்தப்பட்டுள்ளது. தேதிகள் TNPSC அறிவிப்பின் அடிப்படையில். மாற்றம் ஏற்பட்டால் அதிகாரப்பூர்வ அறிவிப்பைச் சரிபார்க்கவும்.</p>
       </section>
 
       <section className="stat-strip" aria-label="PONNA எண்கள்">

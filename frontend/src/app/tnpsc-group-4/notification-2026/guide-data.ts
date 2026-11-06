@@ -6,8 +6,8 @@
 export const PAGE_URL = '/tnpsc-group-4/notification-2026';
 export const SITE = 'https://www.ponna.in';
 
-// Application deadline: 05.11.2026, 11.59 PM IST.
-export const DEADLINE_ISO = '2026-11-05T23:59:00+05:30';
+// Application deadline: extended to 08.11.2026, 11.59 PM IST (TNPSC Press Release 127/2026, 04.11.2026; originally 05.11.2026).
+export const DEADLINE_ISO = '2026-11-08T23:59:00+05:30';
 
 // Section ids (from the guide) grouped for the table of contents.
 export const TOC_GROUPS: { title: string; ids: string[] }[] = [
@@ -22,7 +22,7 @@ export const TOC_GROUPS: { title: string; ids: string[] }[] = [
 
 export const STATS: { value: string; label: string; href: string }[] = [
   { value: '6,574', label: 'காலிப்பணியிடங்கள் · 46 பணிகள்', href: '#posts' },
-  { value: '05.11.2026', label: 'விண்ணப்பிக்கக் கடைசி நாள்', href: '#dates' },
+  { value: '08.11.2026', label: 'விண்ணப்பிக்கக் கடைசி நாள் (நீட்டிப்பு)', href: '#dates' },
   { value: '10.01.2027', label: 'எழுத்துத் தேர்வு', href: '#dates' },
   { value: '₹100', label: 'தேர்வுக் கட்டணம்', href: '#fee' },
   { value: '200 / 300', label: 'கேள்விகள் / மதிப்பெண்கள்', href: '#exam' },
@@ -39,7 +39,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Group 4 விண்ணப்பிக்கக் கடைசி தேதி என்ன?',
-    a: 'ஆன்லைன் விண்ணப்பத்துக்கு கடைசி நாள் 05.11.2026 இரவு 11.59 மணி. திருத்தம் செய்யும் காலம் (Application Correction Window): 09.11.2026 காலை 12.01 மணி முதல் 11.11.2026 இரவு 11.59 மணி வரை.',
+    a: 'ஆன்லைன் விண்ணப்பத்துக்கு கடைசி நாள் முதலில் 05.11.2026 என்று அறிவிக்கப்பட்டது; TNPSC செய்திக்குறிப்பு 127/2026 (04.11.2026) படி 08.11.2026 இரவு 11.59 மணி வரை நீட்டிக்கப்பட்டுள்ளது. திருத்தம் செய்யும் காலம் (Application Correction Window) அறிவிப்பில் 09.11.2026 முதல் 11.11.2026 வரை என்று இருந்தது; நீட்டிப்பால் இது மாறலாம் — tnpscexams.in-ல் சரிபார்க்கவும்.',
   },
   {
     q: 'Group 4 எழுத்துத் தேர்வு எப்போது நடைபெறும்?',
@@ -59,7 +59,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Group 4 வயது வரம்பு எவ்வளவு?',
-    a: 'வயது 01.07.2026 நிலவரப்படி கணக்கிடப்படும். பணி மற்றும் சமூகப் பிரிவு வாரியாக வயது வரம்பு மாறுபடும்; அறிவிப்பின் முழு அட்டவணை இந்தப் பக்கத்தின் "வயது வரம்பு" பிரிவில் உள்ளது.',
+    a: 'அரசு உத்தரவு (30.10.2026) படி வயது உச்ச வரம்பு 5 ஆண்டு உயர்த்தப்பட்டுள்ளது. வயது 01.07.2026 நிலவரப்படி கணக்கிடப்படும். பணி மற்றும் சமூகப் பிரிவு வாரியாக வயது வரம்பு மாறுபடும்; அறிவிப்பின் முழு அட்டவணை இந்தப் பக்கத்தின் "வயது வரம்பு" பிரிவில் உள்ளது.',
   },
   {
     q: 'Group 4-ல் என்னென்ன பணிகள் உள்ளன?',

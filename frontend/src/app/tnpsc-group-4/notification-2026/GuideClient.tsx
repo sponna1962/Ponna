@@ -177,8 +177,8 @@ export function Countdown() {
     const t = setInterval(calc, 60000);
     return () => clearInterval(t);
   }, []);
-  if (!label) return <span className="g4n-count" suppressHydrationWarning>கடைசி நாள்: 05.11.2026 இரவு 11.59 மணி</span>;
-  return <span className="g4n-count">⏳ {label} · கடைசி நாள் 05.11.2026</span>;
+  if (!label) return <span className="g4n-count" suppressHydrationWarning>கடைசி நாள்: 08.11.2026 இரவு 11.59 மணி (நீட்டிப்பு)</span>;
+  return <span className="g4n-count">⏳ {label} · கடைசி நாள் 08.11.2026</span>;
 }
 
 // ----------------------------------------------- copy protection + watermark
