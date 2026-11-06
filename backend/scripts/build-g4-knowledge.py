@@ -73,5 +73,12 @@ for i,txt in enumerate(pages, start=1):
     t=re.sub(r'[ \t]{3,}','  ',txt); t=re.sub(r'\n\s*\n+','\n',t).strip()
     a=anchor(i)
     chunks.append({'id':f'pdf:{i}','kind':'pdf','title':f'Official notification text — page {i} of 85','text':t,'url':PAGE+(f'#{a}' if a else '')})
+# post-notification updates (government orders / TNPSC press releases) go first
+import os
+_u=os.path.join(os.path.dirname(os.path.abspath(__file__)),'g4-updates.json')
+if os.path.exists(_u):
+    chunks=json.load(open(_u))+chunks
+    for c in chunks:
+        if c['id']=='guide:age': c['text']='முக்கிய புதுப்பிப்பு: கீழ்க்காணும் அட்டவணை 06.10.2026 அசல் அறிவிப்பின் வரம்புகள். 30.10.2026 முதல் அரசு உத்தரவால் எல்லா உச்ச வரம்புகளும் +5 ஆண்டு (புதிய வரம்புகளுக்கு "update:age-raise" பகுதியைப் பார்க்கவும்).\n'+c['text']
 json.dump(chunks,open(out,'w'),ensure_ascii=False,separators=(',',':'))
 print(len(chunks),'chunks',sum(len(c['text']) for c in chunks),'chars')
