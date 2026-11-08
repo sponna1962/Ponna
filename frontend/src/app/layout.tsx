@@ -16,6 +16,16 @@ export const metadata: Metadata = {
   description:
     'PONNA.in – நம்பர்-1 ஆன்லைன் பயிற்சி தளம் (No.1 online practice platform) for TNPSC Group 4: 50,000+ questions, previous exam questions, expert-designed practice questions, and instant answers after every question. Affordable exam preparation for Tamil Nadu students — practice anytime, in Tamil or English.',
   alternates: { canonical: '/' },
+  // Link-preview image for WhatsApp / Facebook / Telegram (was missing, so shared links showed no picture).
+  openGraph: {
+    type: 'website',
+    siteName: 'PONNA.in',
+    url: '/',
+    title: 'PONNA.in – TNPSC Group 4 Online Practice',
+    description: 'தமிழில் TNPSC Group 4 பயிற்சி — 50,000+ கேள்விகள், ஒவ்வொரு கேள்விக்கும் உடனடி விளக்கம்.',
+    images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: 'PONNA.in – TNPSC Group 4 Online Practice' }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/og-image.jpg'] },
   manifest: '/manifest.json',
   themeColor: '#0f172a',
 };
