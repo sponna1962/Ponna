@@ -12,6 +12,7 @@
 
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import { apiUrl } from '../lib/api-config';
+import { rememberAfterLogin } from '../lib/after-login';
 import { EXAMS, EXAM_GROUPS, examHref } from '../lib/exams';
 import { SiteHeader, SiteFooter, Ico, PhonePath, PHONE_DISPLAY, useGroup4Days } from './site/SiteChrome';
 import './home-v2.css';
@@ -114,6 +115,16 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
     }
   }
 
+  // Pass button: a signed-in student goes straight to the Plans (payment)
+  // page; a visitor is taken to sign-in first and returned to Plans after.
+  const passClick = (e: MouseEvent) => {
+    let signedIn = false;
+    try { signedIn = !!localStorage.getItem('ponna_student_token'); } catch { /* private mode */ }
+    if (signedIn || !onLogin) return;
+    e.preventDefault();
+    rememberAfterLogin('/plans');
+    onLogin();
+  };
   const startClick = onStart ? (e: MouseEvent) => { e.preventDefault(); onStart(); } : undefined;
 
   const explanation = result?.explanation
@@ -362,7 +373,7 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
               <div className="price-top">PONNA Pass — எல்லா TNPSC தேர்வுகளுக்கும்</div>
               <div className="price-body">
                 <div className="amt">₹499<small>Group 4 தேர்வு நாள் வரை</small></div>
-                <a className="btn btn-gold btn-lg" href="/plans">Pass விவரம் பாருங்கள்</a>
+                <a className="btn btn-gold btn-lg" href="/plans" onClick={passClick}>PONNA Pass பெறுங்கள்</a>
                 <p className="pay">PayU வழியாகப் பாதுகாப்பான கட்டணம்</p>
               </div>
             </div>
