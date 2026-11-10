@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { EXAMS } from '../../lib/exams';
 import { useLanguage } from '../../lib/language-context';
 import { StudentMenu } from '../../components/StudentMenu';
 import { translations } from '../../lib/translations';
@@ -557,10 +558,23 @@ export default function QuizStartPage() {
         {editing && (
           <>
             {fixedSel ? (
-              <div className="exam-card">
+              <>
+              <div className="exam-card" style={{ marginBottom: 6 }}>
                 <div className="exam-copy"><b>{lang === 'ta' ? 'TNPSC குரூப்-4' : 'TNPSC Group 4'}</b><small>{lang === 'ta' ? 'போட்டித் தேர்வு' : 'Competitive exam'}</small></div>
                 <span className="selected-badge">✓ {lang === 'ta' ? 'தேர்வானது' : 'Selected'}</span>
               </div>
+              {/* Nov 2026 — the other TNPSC exams are announced here as "விரைவில்".
+                  Display only: nothing is selectable until an exam is opened, so
+                  the practice logic above/below is untouched. */}
+              <details className="other-exams">
+                <summary>{lang === 'ta' ? 'மற்ற TNPSC தேர்வுகள்' : 'Other TNPSC exams'}</summary>
+                <ul>
+                  {EXAMS.filter((e) => !e.ready).map((e) => (
+                    <li key={e.slug}><span>{e.name}</span><em>{lang === 'ta' ? 'விரைவில்' : 'Coming soon'}</em></li>
+                  ))}
+                </ul>
+              </details>
+              </>
             ) : restriction?.restricted ? (
               // Sept 2026 — TNPSC Group IV & VAO Pass (finalized
               // requirement): no picker at all, locked straight to Group
@@ -813,6 +827,12 @@ export default function QuizStartPage() {
           box-shadow: none;
         }
         .exam-copy { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+        .other-exams { margin: 0 0 22px; font-size: 13.5px; }
+        .other-exams summary { cursor: pointer; color: var(--color-inkMuted); font-weight: 600; padding: 4px 2px; }
+        .other-exams ul { list-style: none; margin: 8px 0 0; padding: 0; border: 1px solid var(--color-line); border-radius: 10px; overflow: hidden; background: var(--color-card); }
+        .other-exams li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--color-line); color: var(--color-inkMuted); font-weight: 600; }
+        .other-exams li:first-child { border-top: 0; }
+        .other-exams em { font-style: normal; font-size: 11.5px; font-weight: 700; background: var(--color-paperAlt); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
         .exam-card b { font-size: 15px !important; font-weight: 900; white-space: nowrap; }
         .exam-card small { color: #667687 !important; font-size: 11px !important; }
         .selected-badge {
