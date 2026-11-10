@@ -66,12 +66,15 @@ export async function studentFetch(path: string, options: RequestInit = {}) {
     }
     localStorage.removeItem('ponna_student_token');
     // Plans / Trial pages: remember them so login brings the student back.
-    // Nov 2026 fix — a signed-out visitor who tapped "Pass" used to be dropped
-    // back on the home page with no explanation, so they never reached the
-    // payment page. Now the sign-in screen opens, and after signing in the
-    // home page sends them straight back here (see takeAfterLogin).
-    if (/^\/(plans|trial|coupon)\/?$/.test(window.location.pathname)) {
-      rememberAfterLogin(window.location.pathname + window.location.search);
+    // Nov 2026 fix — a signed-out visitor who opened a students-only page
+    // (Pass, Live Exam, Performance, …) used to be dropped back on the home
+    // page with no explanation. Now the sign-in screen opens, and after
+    // signing in the home page sends them straight back to the page they
+    // wanted (see takeAfterLogin). "Signed in on another device" keeps its
+    // own message on the home page, as before.
+    const here = window.location.pathname;
+    if (body.code !== 'SESSION_INVALIDATED' && here !== '/' && !here.startsWith('/admin')) {
+      rememberAfterLogin(here + window.location.search);
       window.location.href = '/?startLogin=1';
       throw new Error('Session expired');
     }
