@@ -44,24 +44,26 @@ export function ThemeStyles() {
   return (
     <style suppressHydrationWarning>{`
       :root {
-        --color-paper: #FBFAF6;
-        --color-paperAlt: #F4F1E8;
-        --color-ink: #14253D;
-        --color-inkMuted: #596579;
+        /* Nov 2026 — light theme moved from warm cream to the redesigned home's
+           palette (cool white, navy, gold) so inner pages match the home page. */
+        --color-paper: #F4F6FA;
+        --color-paperAlt: #E9EEF6;
+        --color-ink: #16233B;
+        --color-inkMuted: #55627A;
         --color-gold: #C28A16;
         --color-goldLight: #FFF3C4;
-        --color-line: #DDD9CE;
+        --color-line: #DCE3EE;
         /* Oct 2026 — extra tokens for the redesigned profile page */
         --color-card: #FFFFFF;
-        --color-field: #FBF8EE;
+        --color-field: #F7F9FC;
         --color-teal: #17835E;
         --color-ok: #17835E;
         --color-bad: #c0392b;
         --color-goldDisc: #FFF7D9;
-        --color-head1: #0B3864;
-        --color-head2: #0B3864;
-        --color-btn: #0B3864;
-        --color-btnText: #FFD22A;
+        --color-head1: #0A2A5E;
+        --color-head2: #0A2A5E;
+        --color-btn: #0A2A5E;
+        --color-btnText: #FFFFFF;
         --color-okBg: #E4F4E2;
         --color-badBg: #FCE9E6;
       }
@@ -92,7 +94,9 @@ export function ThemeStyles() {
 }
 
 
-export const DISPLAY_FONT = "'Bitter', 'Noto Sans Tamil', 'Noto Sans', serif";
+// Nov 2026 — headings use Anek Tamil (the redesigned home's display face)
+// instead of the Bitter slab serif, so every page reads as one site.
+export const DISPLAY_FONT = "'Anek Tamil', 'Noto Sans Tamil', 'Noto Sans', sans-serif";
 
 // Sept 2026 — Bitter is now requested from the root layout's single
 // Google Fonts <link> (merged alongside Noto Sans, one stylesheet

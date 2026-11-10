@@ -14,9 +14,9 @@ import { DISPLAY_FONT } from '../../../lib/brand-theme';
 
 const PAPER = 'var(--color-paper)';
 const INK = 'var(--color-ink)';
-const TEAL = '#1c6b6b';
+const TEAL = '#0A2A5E';
 const GOLD = '#C98A12';
-const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
+const SERIF = DISPLAY_FONT; // Nov 2026: one display face site-wide
 
 const START_DIGITS = 4;
 const MAX_DIGITS = 12;

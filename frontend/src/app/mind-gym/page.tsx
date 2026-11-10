@@ -10,7 +10,7 @@ import { DISPLAY_FONT } from '../../lib/brand-theme';
 import { MindGymHeader } from '../../components/MindGym';
 import { MG_CARD, MG_GOLD, MG_INK, MG_LINE, MG_MUTED, MG_PAPER, MG_TEAL, readBest } from '../../lib/mind-gym';
 
-const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
+const SERIF = DISPLAY_FONT; // Nov 2026: one display face site-wide
 
 const GAMES = [
   { href: '/mind-gym/memory-numbers', title: 'Memory Numbers', body: 'எண்ணை நினைவில் வைத்து, மறைந்த பின் தட்டச்சு செய்யுங்கள்.', key: 'ponna_memory_best', unit: 'இலக்கங்கள்', total: 0 },

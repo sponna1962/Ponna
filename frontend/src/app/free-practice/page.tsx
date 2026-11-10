@@ -13,11 +13,11 @@ import { apiUrl } from '../../lib/api-config';
 import { rememberAfterLogin } from '../../lib/after-login';
 import { DISPLAY_FONT } from '../../lib/brand-theme';
 
-const PAPER = '#FBF6E9';
-const INK = '#0F2F33';
-const TEAL = '#1c6b6b';
+const PAPER = '#F4F6FA';
+const INK = '#16233B';
+const TEAL = '#0A2A5E';
 const GOLD = '#C98A12';
-const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
+const SERIF = DISPLAY_FONT; // Nov 2026: one display face site-wide
 
 type Lang = 'TA' | 'EN';
 type Q = { sequenceNumber: number; id: string; questionText: string; optionA: string; optionB: string; optionC: string; optionD: string };
@@ -162,7 +162,7 @@ export default function FreePracticePage() {
   }
 
   const header = (
-    <div style={{ background: '#fefefe', borderBottom: '1px solid #eadfc4', padding: '10px 18px' }}>
+    <div style={{ background: '#fefefe', borderBottom: '1px solid #DCE3EE', padding: '10px 18px' }}>
       <div style={{ maxWidth: 460, margin: '0 auto' }}>
         <a href="/"><Image src="/logo-wordmark.png" alt="PONNA.in" width={982} height={258} priority style={{ height: 36, width: 'auto', display: 'block' }} /></a>
       </div>
@@ -175,7 +175,7 @@ export default function FreePracticePage() {
     body = (
       <>
         <h1 style={{ fontFamily: SERIF, fontWeight: 800, fontSize: 26, lineHeight: 1.5, margin: '8px 0 6px', color: INK }}>{TEXT.TA.title}</h1>
-        <p style={{ fontSize: 15, lineHeight: 1.7, color: '#4a5d59', margin: '0 0 22px' }}>{TEXT.TA.sub}</p>
+        <p style={{ fontSize: 15, lineHeight: 1.7, color: '#55627A', margin: '0 0 22px' }}>{TEXT.TA.sub}</p>
         <p style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 16.5, color: TEAL, margin: '0 0 12px' }}>{TEXT.TA.pick}</p>
         <button type="button" onClick={() => load('TA')} style={langBtn}>தமிழ்</button>
         <button type="button" onClick={() => load('EN')} style={langBtn}>English</button>
@@ -196,9 +196,9 @@ export default function FreePracticePage() {
         <div style={{ fontSize: 46, lineHeight: 1 }} aria-hidden="true">🎉</div>
         <h1 style={{ fontFamily: SERIF, fontWeight: 800, fontSize: 27, margin: '12px 0 6px', color: INK }}>{t.doneTitle}</h1>
         <p style={{ fontSize: 18, fontWeight: 700, color: TEAL, margin: '0 0 22px' }}>{t.score(correctCount)}</p>
-        <div style={{ background: '#fff', border: '1px solid #eadfc4', borderRadius: 12, padding: '18px 16px', boxShadow: '0 10px 30px -12px rgba(15,47,51,.3)' }}>
+        <div style={{ background: '#fff', border: '1px solid #DCE3EE', borderRadius: 12, padding: '18px 16px', boxShadow: '0 10px 30px -12px rgba(15,47,51,.3)' }}>
           <p style={{ fontFamily: SERIF, fontWeight: 800, fontSize: 18.5, lineHeight: 1.55, margin: '0 0 8px', color: INK }}>{t.cta}</p>
-          <p style={{ fontSize: 14, lineHeight: 1.75, color: '#4a5d59', margin: '0 0 16px' }}>{t.ctaSub}</p>
+          <p style={{ fontSize: 14, lineHeight: 1.75, color: '#55627A', margin: '0 0 16px' }}>{t.ctaSub}</p>
           <button type="button" onClick={signUp} style={primaryBtn}>{t.signup}</button>
         </div>
         <a href="/?skipWelcome=1" style={{ display: 'inline-block', marginTop: 18, fontSize: 13.5, color: '#2851A3', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t.home}</a>
@@ -208,7 +208,7 @@ export default function FreePracticePage() {
     const q = questions[index];
     const opts = [q.optionA, q.optionB, q.optionC, q.optionD];
     body = (
-      <div style={{ background: '#fff', borderRadius: 10, padding: '18px 16px 14px', boxShadow: '0 10px 30px -12px rgba(15,47,51,.35)', border: '1px solid #eadfc4' }}>
+      <div style={{ background: '#fff', borderRadius: 10, padding: '18px 16px 14px', boxShadow: '0 10px 30px -12px rgba(15,47,51,.35)', border: '1px solid #DCE3EE' }}>
         <div style={{ fontSize: 12.5, color: GOLD, fontWeight: 700, marginBottom: 8 }}>{t.qOf(index + 1)} · TNPSC Group 4</div>
         <p style={{ fontFamily: SERIF, fontWeight: 800, fontSize: 19, lineHeight: 1.65, margin: '0 0 14px', color: INK }}>{q.questionText}</p>
         {opts.map((text, i) => {
@@ -224,7 +224,7 @@ export default function FreePracticePage() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 50, textAlign: 'left',
                 background: isRight ? '#E4F4E2' : isWrong ? '#FCE9E6' : PAPER,
-                border: `1.5px solid ${isRight ? '#2e8b3d' : isWrong ? '#c0392b' : picked === key ? TEAL : '#e6dab8'}`,
+                border: `1.5px solid ${isRight ? '#2e8b3d' : isWrong ? '#c0392b' : picked === key ? TEAL : '#DCE3EE'}`,
                 borderRadius: 8, padding: '12px 14px', marginBottom: 10, fontSize: 17, fontWeight: 500, color: INK,
                 cursor: checked ? 'default' : 'pointer', fontFamily: 'inherit',
               }}
@@ -238,7 +238,7 @@ export default function FreePracticePage() {
             </button>
           );
         })}
-        {!checked && <p style={{ fontSize: 13, color: '#6f7f7a', textAlign: 'center', margin: '2px 0 0' }}>{t.touch}</p>}
+        {!checked && <p style={{ fontSize: 13, color: '#55627A', textAlign: 'center', margin: '2px 0 0' }}>{t.touch}</p>}
         {checked && (
           <p role="status" style={{ fontSize: 14.5, lineHeight: 1.75, background: '#FFF6DA', borderRadius: 10, padding: '10px 12px', margin: '4px 0 0', color: INK }}>
             <b>{checked.isCorrect ? t.correct : t.wrong(LABELS[lang][KEYS.indexOf(checked.correctOption)])}</b>
@@ -263,6 +263,6 @@ const langBtn: React.CSSProperties = {
   border: `2px solid ${TEAL}`, borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
 };
 const primaryBtn: React.CSSProperties = {
-  display: 'block', width: '100%', textAlign: 'center', background: '#FFD22A', color: '#0B3864', fontWeight: 800, fontSize: 17.5,
+  display: 'block', width: '100%', textAlign: 'center', background: '#FFD22A', color: '#0A2A5E', fontWeight: 800, fontSize: 17.5,
   padding: 15, borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
 };

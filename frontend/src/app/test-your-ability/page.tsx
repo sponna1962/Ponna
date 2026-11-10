@@ -12,12 +12,12 @@ import Image from 'next/image';
 import { DISPLAY_FONT } from '../../lib/brand-theme';
 import { HERO_ART_SVG } from './hero-art';
 
-const PAPER = '#FBF6E9';
-const INK = '#0F2F33';
-const TEAL = '#1c6b6b';
+const PAPER = '#F4F6FA';
+const INK = '#16233B';
+const TEAL = '#0A2A5E';
 const GOLD = '#C98A12';
 
-const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
+const SERIF = DISPLAY_FONT; // Nov 2026: one display face site-wide
 
 // Fixed sample question (not drawn from the question bank).
 const QUESTION = 'இந்திய அரசியலமைப்புச் சட்டம் எந்த ஆண்டு நடைமுறைக்கு வந்தது?';
@@ -61,7 +61,7 @@ export default function TestYourAbilityPage() {
           சரியான விடையைத் தேர்வு செய்யுங்கள்
         </p>
 
-        <div style={{ background: '#fff', borderRadius: 10, padding: '18px 16px 14px', boxShadow: '0 10px 30px -12px rgba(15,47,51,.35)', border: '1px solid #eadfc4' }}>
+        <div style={{ background: '#fff', borderRadius: 10, padding: '18px 16px 14px', boxShadow: '0 10px 30px -12px rgba(15,47,51,.35)', border: '1px solid #DCE3EE' }}>
           <div style={{ fontSize: 12.5, color: GOLD, fontWeight: 700, marginBottom: 8 }}>கேள்வி 1 · TNPSC குரூப்-4 · பொது அறிவு</div>
           <p style={{ fontFamily: SERIF, fontWeight: 800, fontSize: 19, lineHeight: 1.65, margin: '0 0 14px' }}>{QUESTION}</p>
 
@@ -78,7 +78,7 @@ export default function TestYourAbilityPage() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 50, textAlign: 'left',
                   background: isRight ? '#E4F4E2' : isWrong ? '#FCE9E6' : PAPER,
-                  border: `1.5px solid ${isRight ? '#2e8b3d' : isWrong ? '#c0392b' : '#e6dab8'}`,
+                  border: `1.5px solid ${isRight ? '#2e8b3d' : isWrong ? '#c0392b' : '#DCE3EE'}`,
                   borderRadius: 8, padding: '12px 14px', marginBottom: 10,
                   fontSize: 17, fontWeight: 500, color: INK, cursor: answered ? 'default' : 'pointer', fontFamily: 'inherit',
                 }}
@@ -99,7 +99,7 @@ export default function TestYourAbilityPage() {
             );
           })}
 
-          {!answered && <p style={{ fontSize: 13, color: '#6f7f7a', textAlign: 'center', margin: '2px 0 0' }}>ஒன்றைத் தொடுங்கள்</p>}
+          {!answered && <p style={{ fontSize: 13, color: '#55627A', textAlign: 'center', margin: '2px 0 0' }}>ஒன்றைத் தொடுங்கள்</p>}
           {answered && (
             <p role="status" style={{ fontSize: 14.5, lineHeight: 1.75, background: '#FFF6DA', borderRadius: 10, padding: '10px 12px', margin: '4px 0 0' }}>
               <b>{picked === CORRECT ? 'சரி!' : 'இல்லை, சரியான விடை 1950.'}</b> {EXPLANATION}

@@ -10,7 +10,7 @@ import { StudentMenu } from './StudentMenu';
 import { ShareResultCard } from './ShareResultCard';
 import { MG_BAD, MG_BADBG, MG_CARD, MG_GOLD, MG_GOOD, MG_INK, MG_LINE, MG_MUTED, MG_OKBG, MG_PAPER, MG_TEAL, readBest, saveBest } from '../lib/mind-gym';
 
-const SERIF = `'Noto Serif Tamil', ${DISPLAY_FONT}`;
+const SERIF = DISPLAY_FONT; // Nov 2026: one display face site-wide
 
 export const mgCard: CSSProperties = {
   background: MG_CARD, border: `1px solid ${MG_LINE}`, borderRadius: 16, padding: '22px 18px',
