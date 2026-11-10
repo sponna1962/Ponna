@@ -51,7 +51,7 @@ const websiteJsonLd = {
 };
 
 const FONTS_HREF =
-  'https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700;800&family=Bitter:wght@400;600;700;800&display=swap';
+  'https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700;800&family=Bitter:wght@400;600;700;800&family=Anek+Tamil:wght@600;700;800&display=swap';
 
 // LanguageProvider (§4.5) wraps the whole app here so every page shares one
 // language state, persisted in localStorage — see lib/language-context.tsx.
