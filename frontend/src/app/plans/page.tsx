@@ -726,6 +726,24 @@ function PlansPageInner() {
       )}
 
       {error && <p style={{ color: '#b91c1c', fontSize: 13, marginTop: 12 }}>{error}</p>}
+
+      {/* Nov 2026 — plain facts a student wants before paying (visitors said
+          they were afraid to pay). Presentation only; no payment logic here. */}
+      <div style={{ marginTop: 18, background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: '4px 16px' }}>
+        {[
+          { h: lang === 'ta' ? 'பாதுகாப்பான கட்டணம்' : 'Secure payment', p: lang === 'ta' ? 'கட்டணம் PayU கட்டண நுழைவாயில் வழியாகச் செலுத்தப்படுகிறது. UPI, கார்டு, நெட் பேங்கிங் பயன்படுத்தலாம்.' : 'Payments go through the PayU payment gateway. UPI, cards and net banking are accepted.' },
+          { h: lang === 'ta' ? 'பதிவு பெற்ற நிறுவனம்' : 'Registered company', p: 'ARLENA (OPC) Private Limited · CIN: U63122TN2026OPC197880' },
+          { h: lang === 'ta' ? 'உதவி தேவையா?' : 'Need help?', p: lang === 'ta' ? '99653 99896 என்ற எண்ணில் அழைக்கலாம் அல்லது WhatsApp-ல் கேட்கலாம்.' : 'Call or WhatsApp 99653 99896.' },
+        ].map((row, i) => (
+          <div key={row.h} style={{ padding: '12px 0', borderTop: i === 0 ? 'none' : `1px solid ${COLORS.line}` }}>
+            <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: COLORS.ink }}>{row.h}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 13.5, lineHeight: 1.6, color: COLORS.inkMuted }}>{row.p}</p>
+          </div>
+        ))}
+        <p style={{ margin: 0, padding: '10px 0 12px', borderTop: `1px solid ${COLORS.line}`, fontSize: 13 }}>
+          <a href="/refund-policy" style={{ color: COLORS.ink, fontWeight: 600, textDecoration: 'underline' }}>{lang === 'ta' ? 'பணம் திரும்பப் பெறும் கொள்கை' : 'Refund policy'}</a>
+        </p>
+      </div>
       </div>
 
       {sheet && (
