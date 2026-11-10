@@ -19,6 +19,8 @@ export default function robots(): MetadataRoute.Robots {
         '/offline-practice/',
         '/mistakes/',
         '/home/',
+        '/home-old',
+        '/home-preview',
         '/api/',
       ],
     },

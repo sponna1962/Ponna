@@ -14,7 +14,7 @@ import { usePathname } from 'next/navigation';
 // including Home and the policy pages, still shows it.
 // Nov 2026 — also hidden on the redesigned home preview, which carries its own
 // full footer with the same company details.
-const HIDDEN_ON = ['/test-your-ability', '/home-preview'];
+const HIDDEN_ON = ['/test-your-ability', '/home-preview', '/'];
 
 // Oct 2026 — full company block only where it matters (Home/login, Plans,
 // About, Help and the policy pages themselves — enough for Meta/Razorpay

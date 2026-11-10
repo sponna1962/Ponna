@@ -44,7 +44,10 @@ import { takeAfterLogin } from '../lib/after-login';
 import { getDeviceId, getDeviceLabel } from '../lib/device-id';
 import { detectInAppBrowser } from '../lib/in-app-browser';
 import { StudentMenu } from '../components/StudentMenu';
-import HomeDesignPreview from '../components/HomeDesignPreview';
+// Nov 2026 — the home page is now HomeV2 (the redesign). The previous page
+// (HomeDesignPreview) is kept untouched and still served at /home-old, so
+// switching back is this one import + the one usage below.
+import HomeV2 from '../components/HomeV2';
 import { LogoutIcon, ProfileIcon, DevicesIcon } from '../components/icons';
 import { COLORS, DISPLAY_FONT as FONT_FAMILY, BitterFontLinks } from '../lib/brand-theme';
 import { daysRemaining, shouldShowRemainingDays, formatValidUntil } from '../lib/pass-validity';
@@ -522,7 +525,7 @@ export default function IndexPage() {
   // flow's other views keep the old layout.
   if (view === 'main') {
     return (
-      <HomeDesignPreview
+      <HomeV2
         menu={<StudentMenu iconColor="#0B3864" />}
         onLogin={openLogin}
         account={isLoggedIn ? accountMenu : undefined}
