@@ -368,3 +368,39 @@
   .pn2 .status span.what{grid-column:1/-1;order:3}
   .pn2 .now-grid{grid-template-columns:1fr}
 }
+
+/* exam page: facts line, the parts bar, subject list, part cards */
+.pn2 .xfacts{display:flex;flex-wrap:wrap;gap:8px 12px;margin:18px 0 0;padding:0}
+.pn2 .xfacts li{list-style:none;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:7px 14px;font-size:15px;color:#EAF0FA}
+.pn2 .xfacts b{color:var(--gold);font-weight:700}
+.pn2 .xtabs{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:74px;z-index:20}
+.pn2 .xtabs .wrap{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.pn2 .xtabs .wrap::-webkit-scrollbar{display:none}
+.pn2 .xtabs a{flex:none;padding:15px 16px;font-weight:700;font-size:15.5px;color:var(--ink);border-bottom:3px solid transparent;white-space:nowrap}
+.pn2 .xtabs a:first-child{border-bottom-color:var(--gold);color:var(--navy);padding-left:2px}
+.pn2 .xtabs a:hover{color:var(--navy);border-bottom-color:var(--navy)}
+.pn2 .sec[id],.pn2 .parts>div[id],.pn2 .status>div[id]{scroll-margin-top:140px}
+.pn2 .subjects{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.pn2 .subjects>div{display:grid;grid-template-columns:1fr 130px 160px;gap:16px;align-items:center;padding:13px 22px;border-top:1px solid var(--line)}
+.pn2 .subjects>.subjects-head{border-top:0;background:var(--tint);font-size:13.5px;font-weight:700;color:var(--muted);padding:10px 22px}
+.pn2 .subjects b{font-size:16.5px;color:var(--navy);font-weight:600;line-height:1.45}
+.pn2 .subjects .num{font-family:'Anek Tamil',sans-serif;font-size:20px;font-weight:700;color:var(--ink)}
+.pn2 .subjects .btn{padding:8px 14px;font-size:14.5px}
+.pn2 .parts{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.pn2 .parts>div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.pn2 .parts h3{font-size:22px;font-weight:700}
+.pn2 .parts p{color:var(--muted);font-size:15px;line-height:1.65;flex:1}
+.pn2 .parts .row{display:flex;gap:10px;flex-wrap:wrap}
+@media (max-width:1260px){
+  .pn2 .xtabs{top:64px}
+  .pn2 .parts{grid-template-columns:1fr 1fr}
+}
+@media (max-width:640px){
+  .pn2 .xtabs a{padding:13px 12px;font-size:15px}
+  .pn2 .subjects>div{grid-template-columns:1fr auto;gap:4px 12px;padding:13px 16px}
+  .pn2 .subjects>.subjects-head{display:none}
+  .pn2 .subjects b{grid-column:1/-1;font-size:16px}
+  .pn2 .subjects .num{font-size:18px}
+  .pn2 .subjects .num::after{content:' கேள்விகள்';font-family:'Noto Sans Tamil',sans-serif;font-size:13.5px;font-weight:400;color:var(--muted)}
+  .pn2 .parts{grid-template-columns:1fr}
+}

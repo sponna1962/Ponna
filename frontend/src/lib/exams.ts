@@ -36,3 +36,22 @@ export const EXAMS: Exam[] = [
 
 export const examHref = (e: Exam) => `/exams/${e.slug}`;
 export const findExam = (slug: string) => EXAMS.find((e) => e.slug === slug);
+
+// Group 4 practice subjects with the number of published questions in the
+// question bank (both languages together), counted on 10 Nov 2026 and
+// rounded down. Shown on the Group 4 page so a visitor can see what is inside
+// before signing up. Update when large batches are added.
+export type ExamSubject = { name: string; count: string };
+export const GROUP4_SUBJECTS: ExamSubject[] = [
+  { name: 'பொது அறிவியல்', count: '7,700+' },
+  { name: 'தமிழ்', count: '7,700+' },
+  { name: 'பொது ஆங்கிலம்', count: '4,900+' },
+  { name: 'புவியியல்', count: '4,800+' },
+  { name: 'திறனறிவு (Aptitude)', count: '3,000+' },
+  { name: 'இந்திய ஆட்சியியல்', count: '2,900+' },
+  { name: 'இந்தியப் பொருளாதாரம், தமிழ்நாட்டில் வளர்ச்சி நிர்வாகம்', count: '1,800+' },
+  { name: 'காரணவியல் (Reasoning)', count: '1,200+' },
+  { name: 'தமிழ்நாட்டின் வரலாறு, பண்பாடு, மரபு', count: '1,100+' },
+  { name: 'இந்திய வரலாறு, பண்பாடு, தேசிய இயக்கம்', count: '900+' },
+];
+export const GROUP4_TOTAL = '36,000+';
