@@ -24,7 +24,7 @@ const FULL_ON = ['/', '/plans', '/about', '/help', '/terms', '/privacy', '/refun
 
 export function LegalFooter() {
   const pathname = usePathname();
-  if (pathname && HIDDEN_ON.includes(pathname)) return null;
+  if (pathname && (HIDDEN_ON.includes(pathname) || pathname.startsWith('/exams/'))) return null;
   const full = !!pathname && FULL_ON.includes(pathname.replace(/\/$/, '') || '/');
   if (!full) {
     return (

@@ -12,6 +12,8 @@
 
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import { apiUrl } from '../lib/api-config';
+import { EXAMS, EXAM_GROUPS, examHref } from '../lib/exams';
+import { SiteHeader, SiteFooter, Ico, PhonePath, PHONE_DISPLAY, useGroup4Days } from './site/SiteChrome';
 import './home-v2.css';
 
 type HomeProps = {
@@ -22,14 +24,6 @@ type HomeProps = {
   account?: ReactNode;
 };
 
-// Optional company details. Each is shown only when filled in.
-const COMPANY_ADDRESS = 'Vaigai Vilas Colony, Kochadi, Madurai – 625016';
-const FACEBOOK_URL = 'https://www.facebook.com/profile.php?id=61594326726262';
-const WHATSAPP_CHANNEL_URL = '';
-
-const PHONE_DISPLAY = '99653 99896';
-const PHONE_HREF = 'tel:+919965399896';
-const EXAM_DATE = { y: 2027, m: 1, d: 10 };
 
 type OptionKey = 'A' | 'B' | 'C' | 'D';
 const KEYS: OptionKey[] = ['A', 'B', 'C', 'D'];
@@ -49,14 +43,6 @@ const FALLBACK_RESULT: Result = { correctOption: 'B', explanation: 'பனை �
 
 type NewsItem = { id: string; date: string; headline: string };
 
-function Ico({ children, w = 1.8 }: { children: ReactNode; w?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {children}
-    </svg>
-  );
-}
-const PhonePath = <path d="M5 4h4l2 5-2.500 1.500a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />;
 
 function fitsCard(q: { questionText: string; optionA: string; optionB: string; optionC: string; optionD: string }) {
   const opts = [q.optionA, q.optionB, q.optionC, q.optionD];
@@ -70,24 +56,13 @@ function splitHeadline(headline: string) {
 }
 
 export default function HomeV2({ menu, onLogin, onStart, notice, account }: HomeProps = {}) {
-  const [days, setDays] = useState<number | null>(null);
+  const days = useGroup4Days();
   const [question, setQuestion] = useState<Question>(FALLBACK_QUESTION);
   const [picked, setPicked] = useState<OptionKey | null>(null);
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
 
-  useEffect(() => {
-    const update = () => {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      const exam = new Date(EXAM_DATE.y, EXAM_DATE.m - 1, EXAM_DATE.d).getTime();
-      setDays(Math.max(0, Math.ceil((exam - today) / 86400000)));
-    };
-    update();
-    const timer = window.setInterval(update, 60 * 60 * 1000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   // One real question from the question bank (the public free-practice
   // endpoint). A different one each visit.
@@ -140,7 +115,6 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
   }
 
   const startClick = onStart ? (e: MouseEvent) => { e.preventDefault(); onStart(); } : undefined;
-  const loginClick = onLogin ? (e: MouseEvent) => { e.preventDefault(); onLogin(); } : undefined;
 
   const explanation = result?.explanation
     ? (result.explanation.length > 280 ? `${result.explanation.slice(0, 277).trimEnd()}…` : result.explanation)
@@ -151,68 +125,7 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
 
   return (
     <main className="pn2">
-      <div className="util">
-        <div className="wrap">
-          <div>
-            <b>TNPSC Group 4 தேர்வு</b><span className="date">: 10 ஜனவரி 2027</span>
-            {days !== null && <> &nbsp;|&nbsp; <span className="days">இன்னும் {days} நாட்கள்</span></>}
-          </div>
-          <div className="help">
-            <a href={PHONE_HREF}><Ico w={2}>{PhonePath}</Ico>உதவிக்கு: <b>{PHONE_DISPLAY}</b></a>
-            <a href="/contact">தொடர்புக்கு</a>
-          </div>
-        </div>
-      </div>
-
-      <header className="head">
-        <div className="wrap">
-          {menu ? <div className="menu-slot">{menu}</div> : <button className="burger" aria-label="மெனு"><span /><span /><span /></button>}
-          <a className="logo" href="/"><img src="/logo-wordmark.png" alt="PONNA.in" width={982} height={264} /></a>
-          <ul className="nav">
-            <li>
-              <a href="#exams">தேர்வுகள்<i className="caret" /></a>
-              <ul className="drop">
-                <li><a href="/tnpsc-group-4/notification-2026"><b>TNPSC Group 4</b><small>அறிவிப்பு 2026, தேதிகள், பாடத்திட்டம்</small></a></li>
-                <li><a href="#exams"><b>Group 2 / 2A, Group 1</b><small>விரைவில்</small></a></li>
-              </ul>
-            </li>
-            <li>
-              <a href="/quiz" onClick={startClick}>பயிற்சி<i className="caret" /></a>
-              <ul className="drop">
-                <li><a href="/quiz" onClick={startClick}><b>Practice</b><small>பாடவாரியாகக் கேள்விப் பயிற்சி</small></a></li>
-                <li><a href="/live-exam"><b>Live Exam</b><small>தேர்வு போன்ற சூழலில் எழுதலாம்</small></a></li>
-                <li><a href="/adaptive-mock"><b>Adaptive Mock</b><small>உங்கள் நிலைக்கேற்ற மாதிரித் தேர்வு</small></a></li>
-                <li><a href="/mind-gym"><b>Mind Gym</b><small>நினைவாற்றல், வேகப் பயிற்சிகள்</small></a></li>
-              </ul>
-            </li>
-            <li>
-              <a href="/study-notes">படிப்பு<i className="caret" /></a>
-              <ul className="drop">
-                <li><a href="/daily-quiz"><b>Daily Challenge</b><small>தினசரி Current Affairs, Brain Challenge</small></a></li>
-                <li><a href="/study-notes"><b>Study Notes</b><small>முக்கியப் பாடக்குறிப்புகள்</small></a></li>
-                <li><a href="/current-affairs"><b>Current Affairs</b><small>தினசரி நடப்பு நிகழ்வுகள்</small></a></li>
-                <li><a href="/tnpsc-group-4/notification-2026"><b>Group 4 அறிவிப்பு 2026</b><small>முழு வழிகாட்டி</small></a></li>
-              </ul>
-            </li>
-            <li>
-              <a href="/dashboard">என் முன்னேற்றம்<i className="caret" /></a>
-              <ul className="drop">
-                <li><a href="/dashboard"><b>Performance</b><small>மதிப்பெண், முன்னேற்றம்</small></a></li>
-                <li><a href="/mistakes"><b>Review Mistakes</b><small>தவறிய கேள்விகளை மீண்டும் பார்க்க</small></a></li>
-                <li><a href="/cutoff-predictor"><b>Cut-off Predictor</b><small>கட்-ஆஃப் கணிப்பு</small></a></li>
-              </ul>
-            </li>
-            <li><a href="/ask-ponna">Ask PONNA</a></li>
-            <li><a href="/plans">திட்டங்கள்</a></li>
-          </ul>
-          <div className="acts">
-            {account
-              ? <div className="account-slot">{account}</div>
-              : <a className="btn btn-line" href="/?startLogin=1" onClick={loginClick}>உள்நுழைவு</a>}
-            <a className="btn btn-gold" href="/quiz" onClick={startClick}>இலவசப் பயிற்சி</a>
-          </div>
-        </div>
-      </header>
+      <SiteHeader menu={menu} account={account} onLogin={onLogin} onStart={onStart} />
 
       {notice && <div className="notice">{notice}</div>}
 
@@ -269,28 +182,44 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
       <section className="sec sec-tint" id="exams">
         <div className="wrap">
           <div className="sec-h">
-            <h2>உங்கள் தேர்வைத் தேர்ந்தெடுங்கள்</h2>
-            <p>இப்போது TNPSC Group 4 பயிற்சி முழுமையாகத் தயார். மற்ற TNPSC தேர்வுகள் அடுத்து வருகின்றன.</p>
+            <h2>TNPSC தேர்வுகள்</h2>
+            <p>உங்கள் தேர்வைத் தேர்ந்தெடுங்கள். Group 4 பயிற்சி இப்போது தயார்; மற்ற தேர்வுகள் ஒவ்வொன்றாகத் திறக்கப்படும்.</p>
           </div>
-          <div className="exams">
-            <div className="g4">
-              <div className="g4-head"><h3>TNPSC Group 4</h3><span className="tag">பயிற்சி தயார்</span></div>
-              <div className="facts">
-                <div><strong className="hot">{days !== null ? `${days} நாட்கள்` : '10 ஜனவரி'}</strong><span>தேர்வுக்கு மீதம்</span></div>
-                <div><strong>10.01.2027</strong><span>எழுத்துத் தேர்வு நாள்</span></div>
-                <div><strong>6,574</strong><span>காலிப்பணியிடங்கள்</span></div>
-              </div>
-              <div className="row">
-                <a className="btn btn-navy" href="/quiz" onClick={startClick}>Group 4 பயிற்சி தொடங்குங்கள்</a>
-                <a className="btn btn-line" href="/tnpsc-group-4/notification-2026">அறிவிப்பு முழு விவரம்</a>
-              </div>
+          <div className="g4">
+            <div className="g4-head">
+              <div><h3>TNPSC Group 4</h3><p className="g4-posts">VAO, இளநிலை உதவியாளர், தட்டச்சர் உள்ளிட்ட பதவிகள்</p></div>
+              <span className="tag">பயிற்சி தயார்</span>
             </div>
-            <div className="soon-list">
-              <div className="soon-card"><div><h3>TNPSC Group 2 / 2A</h3><p>பயிற்சிக் கேள்விகள் தயாராகின்றன</p></div><span className="tag soon">விரைவில்</span></div>
-              <div className="soon-card"><div><h3>TNPSC Group 1</h3><p>பயிற்சிக் கேள்விகள் தயாராகின்றன</p></div><span className="tag soon">விரைவில்</span></div>
-              <p className="soon-note">தேதிகள் TNPSC அறிவிப்பின் அடிப்படையில். மாற்றம் இருந்தால் tnpsc.gov.in-ல் சரிபார்க்கவும்.</p>
+            <div className="facts">
+              <div><strong className="hot">{days !== null ? `${days} நாட்கள்` : '10 ஜனவரி'}</strong><span>தேர்வுக்கு மீதம்</span></div>
+              <div><strong>10.01.2027</strong><span>எழுத்துத் தேர்வு நாள்</span></div>
+              <div><strong>6,574</strong><span>காலிப்பணியிடங்கள்</span></div>
+            </div>
+            <div className="row">
+              <a className="btn btn-navy" href="/quiz" onClick={startClick}>Group 4 பயிற்சி தொடங்குங்கள்</a>
+              <a className="btn btn-line" href="/exams/group-4">Group 4 பக்கம்</a>
+              <a className="btn btn-line" href="/tnpsc-group-4/notification-2026">அறிவிப்பு முழு விவரம்</a>
             </div>
           </div>
+          {EXAM_GROUPS.map((g) => {
+            const list = EXAMS.filter((e) => e.group === g.id && !e.ready);
+            if (list.length === 0) return null;
+            return (
+              <div key={g.id} className="exam-group">
+                <h3 className="exam-group-h">{g.title}</h3>
+                <div className="exam-grid">
+                  {list.map((e) => (
+                    <a key={e.slug} className="exam-tile" href={examHref(e)}>
+                      <span className="tag soon">விரைவில்</span>
+                      <b>{e.name}</b>
+                      {e.posts && <small>{e.posts}</small>}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          <p className="soon-note">தேதிகள் TNPSC அறிவிப்பின் அடிப்படையில். மாற்றம் இருந்தால் tnpsc.gov.in-ல் சரிபார்க்கவும்.</p>
         </div>
       </section>
 
@@ -351,7 +280,7 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
 
       <section className="stats" aria-label="PONNA.in எண்கள்">
         <div className="wrap">
-          <div><strong>50,000+</strong><span>கேள்விகளில் பயிற்சி</span></div>
+          <div><strong>1,50,000+</strong><span>கேள்விகளில் பயிற்சி</span></div>
           <div><strong>3,250+</strong><span>மாதாந்திர பயிற்சி</span></div>
           <div><strong>4,000+</strong><span>பயிற்சி முயற்சிகள்</span></div>
         </div>
@@ -420,7 +349,7 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
             <h2>TNPSC Group 4 Pass</h2>
             <p className="lead">முதலில் இலவசமாகப் பயிற்சி செய்து பாருங்கள். பிடித்திருந்தால் மட்டும் Pass எடுங்கள். ஒரே கட்டணம், தேர்வு நாள் வரை.</p>
             <ul className="ticks">
-              <li>50,000+ கேள்விகளில் பயிற்சி</li>
+              <li>Group 4 கேள்வி வங்கி முழுவதும்</li>
               <li>Live Exam, Adaptive Mock</li>
               <li>தினசரி Current Affairs</li>
               <li>Study Notes</li>
@@ -476,62 +405,7 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
         </div>
       </section>
 
-      <footer className="foot">
-        <div className="wrap">
-          <div className="foot-grid">
-            <div>
-              <div className="brand">PONNA<em>.in</em></div>
-              <p style={{ marginTop: 6 }}>அரசுப் போட்டித் தேர்வுகளுக்கான பயிற்சி</p>
-              <p className="co">
-                <b>ARLENA (OPC) PRIVATE LIMITED</b><br />
-                CIN: U63122TN2026OPC197880<br />
-                Director: HARSHA S S
-                {COMPANY_ADDRESS && <><br />{COMPANY_ADDRESS}</>}
-              </p>
-              {(FACEBOOK_URL || WHATSAPP_CHANNEL_URL) && (
-                <div className="social">
-                  {FACEBOOK_URL && <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.500 21v-7.500h2.500l.400-3h-2.900V8.600c0-.900.300-1.500 1.600-1.500h1.500V4.400c-.300 0-1.200-.100-2.200-.100-2.200 0-3.700 1.300-3.700 3.800v2.400H8.200v3h2.500V21z" /></svg>Facebook</a>}
-                  {WHATSAPP_CHANNEL_URL && <a href={WHATSAPP_CHANNEL_URL} target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20l1.300-4A8 8 0 1 1 8 18.700z" /></svg>WhatsApp Channel</a>}
-                </div>
-              )}
-            </div>
-            <div>
-              <h4>பயிற்சி</h4>
-              <ul>
-                <li><a href="/quiz" onClick={startClick}>Practice</a></li>
-                <li><a href="/live-exam">Live Exam</a></li>
-                <li><a href="/adaptive-mock">Adaptive Mock</a></li>
-                <li><a href="/mind-gym">Mind Gym</a></li>
-                <li><a href="/dashboard">Performance</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4>படிப்பு</h4>
-              <ul>
-                <li><a href="/daily-quiz">Daily Challenge</a></li>
-                <li><a href="/study-notes">Study Notes</a></li>
-                <li><a href="/current-affairs">Current Affairs</a></li>
-                <li><a href="/tnpsc-group-4/notification-2026">Group 4 அறிவிப்பு 2026</a></li>
-                <li><a href="/ask-ponna">Ask PONNA</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4>தொடர்பு</h4>
-              <ul>
-                <li>தொலைபேசி / WhatsApp:<br /><a href={PHONE_HREF} style={{ color: '#fff', fontWeight: 600 }}>+91 {PHONE_DISPLAY}</a></li>
-                <li><a href="mailto:ponna@arlena.in">ponna@arlena.in</a></li>
-                <li><a href="/contact">தொடர்புப் பக்கம்</a></li>
-                <li><a href="/about">PONNA.in பற்றி</a></li>
-                <li><a href="/teachers">ஆசிரியர்களுக்கு</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="foot-bot">
-            <span>© 2026 ARLENA (OPC) PRIVATE LIMITED. All rights reserved.</span>
-            <span><a href="/terms">Terms</a> &nbsp;|&nbsp; <a href="/privacy">Privacy</a> &nbsp;|&nbsp; <a href="/refund-policy">Refund Policy</a> &nbsp;|&nbsp; <a href="/shipping-policy">Delivery</a></span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter onStart={onStart} />
     </main>
   );
 }
