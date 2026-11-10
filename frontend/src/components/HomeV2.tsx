@@ -132,7 +132,7 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
       <section className="hero">
         <div className="wrap">
           <div>
-            <h1>TNPSC தேர்வுப் பயிற்சி<span>தமிழில், தினமும்.</span></h1>
+            <h1>TNPSC தேர்வுப் பயிற்சி <span>தமிழில், தினமும்.</span></h1>
             <p className="sub">கேள்விக்குப் பதில் சொன்ன உடனே சரியான விடை தெரியும். தவறிய கேள்விகளை மீண்டும் பயிற்சி செய்யலாம். கைப்பேசியிலும் கம்ப்யூட்டரிலும் படிக்கலாம்.</p>
             <div className="cta">
               <a className="btn btn-gold btn-lg" href="/quiz" onClick={startClick}>இலவசமாகப் பயிற்சி தொடங்குங்கள்</a>

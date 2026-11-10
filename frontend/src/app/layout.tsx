@@ -5,6 +5,7 @@ import { ThemeProvider } from '../lib/theme-context';
 import { ThemeStyles } from '../lib/brand-theme';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { LegalFooter } from '../components/LegalFooter';
+import { DesktopChrome } from '../components/site/DesktopChrome';
 import { VisitTracker } from '../components/VisitTracker';
 import { WhatsAppButton } from '../components/WhatsAppButton';
 import { InAppBrowserBanner } from '../components/InAppBrowserBanner';
@@ -141,6 +142,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {/* Oct 2026 — Facebook/Instagram in-app browser escape (Google
                   sign-in is blocked there). Renders nothing in normal browsers. */}
               <InAppBrowserBanner />
+              <DesktopChrome />
               <div style={{ flex: 1 }}>{children}</div>
               <LegalFooter />
             </div>

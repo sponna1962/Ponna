@@ -404,3 +404,10 @@
   .pn2 .subjects .num::after{content:' கேள்விகள்';font-family:'Noto Sans Tamil',sans-serif;font-size:13.5px;font-weight:400;color:var(--muted)}
   .pn2 .parts{grid-template-columns:1fr}
 }
+
+/* the shared top menu on inner pages — computers only */
+.pn2-chrome{display:none}
+@media (min-width:1261px){
+  .pn2-chrome{display:block;min-height:0;background:transparent}
+  .pn2-chrome .head{position:relative;z-index:35}
+}
