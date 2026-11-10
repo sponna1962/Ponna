@@ -23,8 +23,8 @@ type HomeProps = {
 };
 
 // Optional company details. Each is shown only when filled in.
-const COMPANY_ADDRESS = '';
-const FACEBOOK_URL = '';
+const COMPANY_ADDRESS = 'Vaigai Vilas Colony, Kochadi, Madurai – 625016';
+const FACEBOOK_URL = 'https://www.facebook.com/profile.php?id=61594326726262';
 const WHATSAPP_CHANNEL_URL = '';
 
 const PHONE_DISPLAY = '99653 99896';
