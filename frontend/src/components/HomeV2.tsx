@@ -250,29 +250,29 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
         <div className="wrap">
           <div className="sec-h">
             <h2>PONNA.in-ல் உள்ள வசதிகள்</h2>
-            <p>பயிற்சி, படிப்பு, உங்கள் முன்னேற்றம் என மூன்றும் ஒரே இடத்தில்.</p>
+            <p>உங்கள் தேர்வுக்கான பயிற்சி, எல்லாத் தேர்வுக்கும் பொதுவான பகுதிகள், உங்கள் முன்னேற்றம்.</p>
           </div>
           <div className="feat">
             <div className="feat-col">
-              <h3>பயிற்சி<small>கேள்விகளுக்குப் பதில் சொல்லிப் பழகுங்கள்</small></h3>
+              <h3>தேர்வுப் பயிற்சி<small>நீங்கள் தேர்ந்தெடுக்கும் தேர்வுக்கு ஏற்ப</small></h3>
               <a href="/quiz" onClick={startClick}><Ico><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></Ico><div><b>Practice</b><span>பாடவாரியாகக் கேள்விகள். உடனே விடை.</span></div></a>
               <a href="/live-exam"><Ico><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.500 2M9 2h6" /></Ico><div><b>Live Exam</b><span>தேர்வு போன்ற சூழலில், நேரக் கட்டுப்பாட்டுடன்.</span></div></a>
               <a href="/adaptive-mock"><Ico><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></Ico><div><b>Adaptive Mock</b><span>உங்கள் நிலைக்கேற்ப மாறும் மாதிரித் தேர்வு.</span></div></a>
-              <a href="/mind-gym"><Ico><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.500c.700.700 1 1.500 1 2.500h6c0-1 .300-1.800 1-2.500A6 6 0 0 0 12 3z" /></Ico><div><b>Mind Gym</b><span>நினைவாற்றல், வேகம், சிந்தனைப் பயிற்சிகள்.</span></div></a>
+              <a href="/study-notes"><Ico><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .500 8 2 2-1.500 5-2 8-2V4c-3 0-6 .500-8 2zM12 6v14" /></Ico><div><b>Study Notes</b><span>ஒவ்வொரு தேர்வின் பாடத்திட்டப்படி குறிப்புகள்.</span></div></a>
             </div>
             <div className="feat-col">
-              <h3>படிப்பு<small>தினமும் படிக்கவும் தெரிந்துகொள்ளவும்</small></h3>
-              <a href="/daily-quiz"><Ico><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></Ico><div><b>Daily Challenge</b><span>தினமும் Current Affairs, Brain Challenge.</span></div></a>
-              <a href="/study-notes"><Ico><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .500 8 2 2-1.500 5-2 8-2V4c-3 0-6 .500-8 2zM12 6v14" /></Ico><div><b>Study Notes</b><span>முக்கியப் பாடங்களின் குறிப்புகள்.</span></div></a>
+              <h3>எல்லாத் தேர்வுக்கும் பொது<small>எந்தத் தேர்வு எழுதினாலும் பயன்படும்</small></h3>
               <a href="/current-affairs"><Ico><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8h6v5H7zM16 8h1M16 12h1M7 16h10" /></Ico><div><b>Current Affairs</b><span>தேர்வுக்கான நடப்பு நிகழ்வுகள், தினமும் புதிது.</span></div></a>
-              <a href="/tnpsc-group-4/notification-2026"><Ico><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7" /></Ico><div><b>Group 4 அறிவிப்பு 2026</b><span>தகுதி, வயது வரம்பு, பாடத்திட்டம் தமிழில்.</span></div></a>
+              <a href="/daily-quiz"><Ico><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></Ico><div><b>Daily Challenge</b><span>தினமும் Current Affairs, Brain Challenge.</span></div></a>
+              <a href="/mind-gym"><Ico><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.500c.700.700 1 1.500 1 2.500h6c0-1 .300-1.800 1-2.500A6 6 0 0 0 12 3z" /></Ico><div><b>Mind Gym</b><span>நினைவாற்றல், வேகம், சிந்தனைப் பயிற்சிகள்.</span></div></a>
+              <a href="/ask-ponna"><Ico><path d="M4 5h16v11H9l-5 4z" /><path d="M10 9.500a2 2 0 1 1 2.800 1.800c-.500.300-.800.700-.800 1.200M12 14.500v.100" /></Ico><div><b>Ask PONNA</b><span>தேர்வு பற்றிய சந்தேகங்களுக்கு விளக்கம்.</span></div></a>
             </div>
             <div className="feat-col">
-              <h3>முன்னேற்றம், உதவி<small>எங்கே நிற்கிறீர்கள் என்று பாருங்கள்</small></h3>
+              <h3>என் முன்னேற்றம்<small>எங்கே நிற்கிறீர்கள் என்று பாருங்கள்</small></h3>
               <a href="/dashboard"><Ico><path d="M3 20h18M5 16l4-5 4 3 6-8" /></Ico><div><b>Performance</b><span>உங்கள் மதிப்பெண், பாடவாரி முன்னேற்றம்.</span></div></a>
               <a href="/mistakes"><Ico><path d="M4 12a8 8 0 1 0 3-6.200M4 4v4h4" /></Ico><div><b>Review Mistakes</b><span>தவறிய கேள்விகளை மீண்டும் பயிற்சி செய்ய.</span></div></a>
               <a href="/cutoff-predictor"><Ico><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.500" /><path d="M12 12h.010" /></Ico><div><b>Cut-off Predictor</b><span>உங்கள் மதிப்பெண்ணை வைத்து கட்-ஆஃப் கணிப்பு.</span></div></a>
-              <a href="/ask-ponna"><Ico><path d="M4 5h16v11H9l-5 4z" /><path d="M10 9.500a2 2 0 1 1 2.800 1.800c-.500.300-.800.700-.800 1.200M12 14.500v.100" /></Ico><div><b>Ask PONNA</b><span>தேர்வு பற்றிய சந்தேகங்களுக்கு விளக்கம்.</span></div></a>
+              <a href="/tnpsc-group-4/notification-2026"><Ico><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7" /></Ico><div><b>தேர்வு அறிவிப்புகள்</b><span>Group 4 அறிவிப்பு 2026: தகுதி, வயது, பாடத்திட்டம்.</span></div></a>
             </div>
           </div>
         </div>
@@ -346,10 +346,10 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
       <section className="sec" id="pass">
         <div className="wrap pass">
           <div>
-            <h2>TNPSC Group 4 Pass</h2>
-            <p className="lead">முதலில் இலவசமாகப் பயிற்சி செய்து பாருங்கள். பிடித்திருந்தால் மட்டும் Pass எடுங்கள். ஒரே கட்டணம், தேர்வு நாள் வரை.</p>
+            <h2>PONNA Pass</h2>
+            <p className="lead">எல்லா TNPSC தேர்வுகளுக்கும் ஒரே Pass. இப்போது Group 4 முழுமையாகத் திறந்துள்ளது; Pass காலத்தில் திறக்கப்படும் மற்ற தேர்வுகளும் இதே Pass-ல் கிடைக்கும். முதலில் இலவசமாகப் பயிற்சி செய்து பாருங்கள்; பிடித்திருந்தால் மட்டும் Pass எடுங்கள்.</p>
             <ul className="ticks">
-              <li>Group 4 கேள்வி வங்கி முழுவதும்</li>
+              <li>திறந்துள்ள தேர்வுகளின் கேள்விப் பயிற்சி</li>
               <li>Live Exam, Adaptive Mock</li>
               <li>தினசரி Current Affairs</li>
               <li>Study Notes</li>
@@ -359,9 +359,9 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
           </div>
           <div>
             <div className="price">
-              <div className="price-top">TNPSC Group 4 Pass</div>
+              <div className="price-top">PONNA Pass — எல்லா TNPSC தேர்வுகளுக்கும்</div>
               <div className="price-body">
-                <div className="amt">₹499<small>தேர்வு நாள் வரை</small></div>
+                <div className="amt">₹499<small>Group 4 தேர்வு நாள் வரை</small></div>
                 <a className="btn btn-gold btn-lg" href="/plans">Pass விவரம் பாருங்கள்</a>
                 <p className="pay">PayU வழியாகப் பாதுகாப்பான கட்டணம்</p>
               </div>
@@ -387,7 +387,7 @@ export default function HomeV2({ menu, onLogin, onStart, notice, account }: Home
           </div>
           <div>
             <details open><summary>இலவசமாக முயற்சி செய்ய முடியுமா?</summary><p>முடியும். பதிவு செய்யாமலேயே இலவசக் கேள்விகளுக்குப் பதில் சொல்லிப் பார்க்கலாம். பதிவு செய்தால் தினமும் இலவசக் கேள்விகள் கிடைக்கும்.</p></details>
-            <details><summary>Pass எடுத்தால் என்ன கிடைக்கும்?</summary><p>Group 4 பயிற்சிக் கேள்விகள், Live Exam, Adaptive Mock, Study Notes, Review Mistakes, Ask PONNA ஆகிய அனைத்தும் தேர்வு நாள் வரை கிடைக்கும்.</p></details>
+            <details><summary>Pass எடுத்தால் என்ன கிடைக்கும்?</summary><p>எல்லா TNPSC தேர்வுகளுக்கும் ஒரே PONNA Pass. இப்போது Group 4 பயிற்சிக் கேள்விகள், Live Exam, Adaptive Mock, Study Notes, Review Mistakes, Ask PONNA ஆகியவை கிடைக்கும். Pass காலத்தில் திறக்கப்படும் மற்ற தேர்வுகளும் இதே Pass-ல் சேரும்.</p></details>
             <details><summary>கட்டணம் எப்படிச் செலுத்துவது?</summary><p>Plans பக்கத்தில் PayU வழியாக UPI, டெபிட் / கிரெடிட் கார்டு அல்லது நெட் பேங்கிங் மூலம் செலுத்தலாம்.</p></details>
             <details><summary>செலுத்திய பணம் திரும்பக் கிடைக்குமா?</summary><p>PONNA.in-ல் பயிற்சி பெற்று அரசுப் பணியில் சேர்ந்தால், பயிற்சிக் கட்டணம் முழுவதும் திரும்பக் கிடைக்கும். ஹால் டிக்கெட் எண்ணைச் சுயவிவரத்தில் பதிவு செய்து சரிபார்க்க வேண்டும்.</p></details>
             <details><summary>PONNA.in-ஐ நடத்துவது யார்?</summary><p>தமிழ்நாட்டில் பதிவு செய்யப்பட்ட ARLENA (OPC) Private Limited நிறுவனம். நிறுவன விவரங்கள் இந்தப் பக்கத்தின் கீழே உள்ளன.</p></details>

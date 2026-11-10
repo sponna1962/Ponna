@@ -411,3 +411,4 @@
   .pn2-chrome{display:block;min-height:0;background:transparent}
   .pn2-chrome .head{position:relative;z-index:35}
 }
+.pn2 .drop .drop-h{font-size:13px;font-weight:700;color:var(--muted);padding:6px 12px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}

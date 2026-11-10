@@ -67,30 +67,36 @@ export function StudentMenu({ onOpenChange, iconColor, showBack }: { onOpenChang
     }
   }
 
-  const preparationItems: NavItem[] = [
+  // Nov 2026 — the site now covers every TNPSC exam, so the menu is split in
+  // two: what belongs to the chosen exam, and what is common to every exam
+  // (Current Affairs, Daily Challenge, Mind Gym, Ask PONNA).
+  const examItems: NavItem[] = [
     { href: '/quiz', label: t.menu.practice, Icon: PracticeIcon },
-    { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
-    { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
-    { href: '/study-notes', label: t.menu.studyNotes, Icon: StudyNotesIcon },
-    { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
     { href: '/live-exam', label: t.menu.liveExam, Icon: LiveExamIcon },
     { href: '/adaptive-mock', label: t.menu.adaptiveMock, Icon: PracticeIcon },
+    { href: '/study-notes', label: t.menu.studyNotes, Icon: StudyNotesIcon },
+    { href: '/mistakes', label: t.menu.reviewMistakes, Icon: MistakesIcon },
     { href: '/dashboard', label: t.menu.dashboard, Icon: ProgressIcon },
     { href: '/cutoff-predictor', label: t.menu.cutoffPredictor, Icon: CutoffPredictorIcon },
-    { href: '/mind-gym', label: 'Mind Gym', Icon: MindGymIcon },
   ];
+  const commonItems: NavItem[] = [
+    { href: '/current-affairs', label: 'Current Affairs', Icon: StudyNotesIcon },
+    { href: '/daily-quiz', label: t.menu.dailyQuiz, Icon: DailyQuizIcon },
+    { href: '/mind-gym', label: 'Mind Gym', Icon: MindGymIcon },
+    { href: '/ask-ponna', label: t.menu.askPonna, Icon: AskPonnaIcon },
+  ];
+  // Signed-out visitors: same rules as before — these stay open, Practice goes
+  // to sign-in, everything else shows as locked.
+  const OPEN_TO_ALL = ['/study-notes', '/ask-ponna', '/mind-gym', '/current-affairs'];
+  const forVisitor = (items: NavItem[]) => isLoggedIn ? items : items.map((i) => {
+    if (OPEN_TO_ALL.includes(i.href)) return i;
+    if (i.href === '/quiz') return { ...i, href: '/?startLogin=1' };
+    return { ...i, href: '/?startLogin=1', locked: true };
+  });
 
   const sections: { heading: string; items: NavItem[] }[] = [
-    {
-      heading: t.menu.sectionPreparation,
-      items: isLoggedIn ? preparationItems : preparationItems.map((i) => {
-        if (i.href === '/study-notes') return i;
-        if (i.href === '/ask-ponna') return i;
-        if (i.href === '/mind-gym') return i; // open to everyone, no sign-in needed
-        if (i.href === '/quiz') return { ...i, href: '/?startLogin=1' };
-        return { ...i, href: '/?startLogin=1', locked: true };
-      }),
-    },
+    { heading: 'தேர்வுப் பயிற்சி', items: forVisitor(examItems) },
+    { heading: 'எல்லாத் தேர்வுக்கும் பொது', items: forVisitor(commonItems) },
     {
       heading: t.menu.sectionSupport,
       items: [
@@ -166,7 +172,7 @@ export function StudentMenu({ onOpenChange, iconColor, showBack }: { onOpenChang
               <nav aria-label="PONNA menu">
                 <div style={{ paddingBottom: 6, borderBottom: '1px solid #E1E7EA' }}>
                   <MenuRow href="/" label={t.menu.home} Icon={HomeIcon} bold />
-                  <MenuRow href="/current-affairs" label="Current Affairs" Icon={StudyNotesIcon} bold />
+                  <MenuRow href="/#exams" label="TNPSC தேர்வுகள்" Icon={StudyNotesIcon} bold />
                   <MenuRow href="/tnpsc-group-4/notification-2026" label="Group 4 அறிவிப்பு 2026" Icon={StudyNotesIcon} bold isNew />
                 </div>
 

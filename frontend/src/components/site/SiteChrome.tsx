@@ -90,21 +90,23 @@ export function SiteHeader({ menu, account, onLogin, onStart }: HeaderProps) {
               </div>
             </li>
             <li>
-              <a href="/quiz" onClick={startClick}>பயிற்சி<i className="caret" /></a>
+              <a href="/quiz" onClick={startClick}>தேர்வுப் பயிற்சி<i className="caret" /></a>
               <ul className="drop">
                 <li><a href="/quiz" onClick={startClick}><b>Practice</b><small>பாடவாரியாகக் கேள்விப் பயிற்சி</small></a></li>
                 <li><a href="/live-exam"><b>Live Exam</b><small>தேர்வு போன்ற சூழலில் எழுதலாம்</small></a></li>
                 <li><a href="/adaptive-mock"><b>Adaptive Mock</b><small>உங்கள் நிலைக்கேற்ற மாதிரித் தேர்வு</small></a></li>
-                <li><a href="/daily-quiz"><b>Daily Challenge</b><small>தினசரி Current Affairs, Brain Challenge</small></a></li>
-                <li><a href="/mind-gym"><b>Mind Gym</b><small>நினைவாற்றல், வேகப் பயிற்சிகள்</small></a></li>
+                <li><a href="/study-notes"><b>Study Notes</b><small>தேர்வுவாரியாகப் பாடக்குறிப்புகள்</small></a></li>
+                <li><a href="/tnpsc-group-4/notification-2026"><b>தேர்வு அறிவிப்புகள்</b><small>Group 4 அறிவிப்பு 2026 முழு வழிகாட்டி</small></a></li>
               </ul>
             </li>
             <li>
-              <a href="/study-notes">படிப்பு<i className="caret" /></a>
+              <a href="/current-affairs">பொதுப் பகுதிகள்<i className="caret" /></a>
               <ul className="drop">
-                <li><a href="/study-notes"><b>Study Notes</b><small>தேர்வுவாரியாகப் பாடக்குறிப்புகள்</small></a></li>
+                <li className="drop-h">எல்லாத் தேர்வுக்கும் பொதுவானவை</li>
                 <li><a href="/current-affairs"><b>Current Affairs</b><small>தினசரி நடப்பு நிகழ்வுகள்</small></a></li>
-                <li><a href="/tnpsc-group-4/notification-2026"><b>தேர்வு அறிவிப்புகள்</b><small>Group 4 அறிவிப்பு 2026 முழு வழிகாட்டி</small></a></li>
+                <li><a href="/daily-quiz"><b>Daily Challenge</b><small>தினசரி Current Affairs, Brain Challenge</small></a></li>
+                <li><a href="/mind-gym"><b>Mind Gym</b><small>நினைவாற்றல், வேகப் பயிற்சிகள்</small></a></li>
+                <li><a href="/ask-ponna"><b>Ask PONNA</b><small>தேர்வு பற்றிய சந்தேகங்களுக்கு விளக்கம்</small></a></li>
               </ul>
             </li>
             <li>
@@ -115,7 +117,6 @@ export function SiteHeader({ menu, account, onLogin, onStart }: HeaderProps) {
                 <li><a href="/cutoff-predictor"><b>Cut-off Predictor</b><small>கட்-ஆஃப் கணிப்பு</small></a></li>
               </ul>
             </li>
-            <li><a href="/ask-ponna">Ask PONNA</a></li>
             <li><a href="/plans">திட்டங்கள்</a></li>
           </ul>
           <div className="acts">
@@ -162,14 +163,17 @@ export function SiteFooter({ onStart }: { onStart?: () => void }) {
             </ul>
           </div>
           <div>
-            <h4>பயிற்சி, படிப்பு</h4>
+            <h4>தேர்வுப் பயிற்சி</h4>
             <ul>
               <li><a href="/quiz" onClick={startClick}>Practice</a></li>
               <li><a href="/live-exam">Live Exam</a></li>
               <li><a href="/adaptive-mock">Adaptive Mock</a></li>
-              <li><a href="/daily-quiz">Daily Challenge</a></li>
               <li><a href="/study-notes">Study Notes</a></li>
+            </ul>
+            <h4 style={{ marginTop: 20 }}>எல்லாத் தேர்வுக்கும் பொது</h4>
+            <ul>
               <li><a href="/current-affairs">Current Affairs</a></li>
+              <li><a href="/daily-quiz">Daily Challenge</a></li>
               <li><a href="/mind-gym">Mind Gym</a></li>
               <li><a href="/ask-ponna">Ask PONNA</a></li>
             </ul>
